@@ -158,3 +158,8 @@ Counterexample example:
 1. Replace mock picker/prover path with actual LLM calls returning contract-compliant JSON
 2. Add structured JSON error outputs (instead of plain tracebacks) in `run_loop.py`
 3. Add lightweight execution logs for debugging and reproducibility
+
+## 参考文献
+
+* Xin et al. (2025). *BFS-Prover-V2*.
+* [kmd710/lean4-codex-skills](https://github.com/kmd710/lean4-codex-skills)
