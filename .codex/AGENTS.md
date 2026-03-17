@@ -157,7 +157,6 @@ Repo-local skills (rules/checklists) are under `.codex/skills/`:
 
 - `lean-rule`: Lean proof/implementation rules (plan → skeleton → iterate → finish)
 - `mathlib-usage`: Mathlib usage principles (import/search/existence check)
-- `lean-review-refactor-policy`: review-safe non-semantic refactor policy
 - `picker-interface`: picker I/O contract for equational loop selection
 - `prover-interface`: prover I/O contract for equational loop attempts
 

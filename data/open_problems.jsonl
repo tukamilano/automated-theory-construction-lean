@@ -1,3 +1,8 @@
-{"id":"op_000002","stmt":"forall {\u03b1 : Type u} [HasOp \u03b1], forall x y : \u03b1, op x y = op y x","src":"generated","n":0}
-{"id":"op_000003","stmt":"forall {\u03b1 : Type u} [HasOp \u03b1], forall x : \u03b1, op x x = x","src":"generated","n":0}
-{"id":"op_000001","stmt":"forall {\u03b1 : Type u} [HasOp \u03b1], forall x y z : \u03b1, op (op x y) z = op x (op y z)","src":"seed","n":1}
+{"id":"op_000001","stmt":"\u2200 {\u03b1 : Type u} [SemigroupLike01 \u03b1], \u2200 x y z : \u03b1, op (op x y) z = op x (op y z)","src":"seed","n":0}
+{"id":"op_000002","stmt":"\u2200 {\u03b1 : Type u} [SemigroupLike01 \u03b1], \u2200 x y : \u03b1, op x y = op y x","src":"seed","n":0}
+{"id":"op_000003","stmt":"\u2200 {\u03b1 : Type u} [SemigroupLike01 \u03b1], exists e : \u03b1, \u2200 x : \u03b1, op e x = x /\\ op x e = x","src":"seed","n":0}
+{"id":"op_000004","stmt":"\u2200 {\u03b1 : Type u} [SemigroupLike01 \u03b1], exists e : \u03b1, \u2200 x : \u03b1, exists y : \u03b1, op x y = e /\\ op y x = e","src":"seed","n":0}
+{"id":"op_000005","stmt":"\u2200 {\u03b1 : Type u} [SemigroupLike01 \u03b1], \u2200 join : \u03b1 -> \u03b1 -> \u03b1, \u2200 x y z : \u03b1, op x (join y z) = join (op x y) (op x z)","src":"seed","n":0}
+{"id":"op_000006","stmt":"\u2200 {\u03b1 : Type u} [SemigroupLike01 \u03b1], \u2200 x y z : \u03b1, op x y = op x z -> y = z","src":"seed","n":0}
+{"id":"op_000007","stmt":"\u2200 {\u03b1 : Type u} [SemigroupLike01 \u03b1], \u2200 x : \u03b1, op x x = x","src":"seed","n":0}
+{"id":"op_000008","stmt":"\u2200 {\u03b1 : Type u} [SemigroupLike01 \u03b1], \u2200 meet : \u03b1 -> \u03b1 -> \u03b1, \u2200 x y : \u03b1, op x (meet x y) = x","src":"seed","n":0}

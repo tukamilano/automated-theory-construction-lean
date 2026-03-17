@@ -40,7 +40,13 @@ Rules:
 - Attempt the original problem before proposing new problems.
 - New problems must arise from the attempt itself.
 - Avoid trivial variations (renaming-only, mirror-only, obvious duplicates).
+- Prefer generalized, non-trivial variants over one-step axiom restatements.
+- At least one suggested problem should have a meaningfully different shape from the current target.
 - Do not exceed two new problems.
+
+## Mathlib usage
+
+- Mathlib lemmas/tactics are allowed in `proof_text` as long as output remains valid Lean tactic code.
 
 ## Dedup and state boundary
 
@@ -52,3 +58,18 @@ Rules:
 
 - If target statement is not formalizable to Lean, downstream formalization may reject it.
 - Rejection handling is deterministic: keep problem in `open` and increment attempts.
+
+## proof_text format requirement
+
+- `proof_text` MUST contain Lean 4 tactic code only when `result` is `proof`.
+- The content is inserted verbatim into a `by` block in a Lean theorem file.
+- Do NOT put natural language, explanations, or comments in `proof_text`.
+- Example of valid `proof_text`:
+  ```
+  intro α _ x
+  exact SemigroupLike01.ax_left_idempotent x
+  ```
+- Example of INVALID `proof_text` (will cause Lean compile error):
+  ```
+  The statement follows from ax_left_idempotent.
+  ```

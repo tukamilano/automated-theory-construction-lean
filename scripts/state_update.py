@@ -68,6 +68,9 @@ def apply_state_update(
     elif not formalization_rejected and verify_success and result == "counterexample":
         counter_rows.append({"id": target["id"], "stmt": target["stmt"]})
         moved_to = "counterexample"
+    elif formalization_rejected:
+        # Keep it open without increasing n so it can be retried after prompt/format fixes.
+        remaining_open.append(target)
     else:
         updated_n = min(updated_n + 1, max_attempts)
         target["n"] = updated_n
