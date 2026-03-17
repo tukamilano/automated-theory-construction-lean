@@ -1,0 +1,1 @@
+{"id":"op_000001","stmt":"forall x y z, op (op x y) z = op x (op y z)","src":"seed","n":0}

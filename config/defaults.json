@@ -1,0 +1,5 @@
+{
+  "max_attempts": 5,
+  "max_new_problems_per_attempt": 2,
+  "repair_attempts": 1
+}
