@@ -7,10 +7,19 @@ from pathlib import Path
 from typing import Any
 
 from append_derived import append_theorem
-from common import read_jsonl, resolve_max_attempts
+from common import read_jsonl, resolve_max_attempts, write_jsonl_atomic
 from lean_verify import verify_scratch
 from llm_client import call_chat_completion_json, load_llm_settings
 from state_update import apply_state_update
+
+
+SCRATCH_TEMPLATE = (
+    "import AutomatedTheoryConstruction.Theory\n"
+    "import AutomatedTheoryConstruction.Derived\n\n"
+    "namespace AutomatedTheoryConstruction\n\n"
+    "-- Temporary Lean code generated for verification is written here.\n\n"
+    "end AutomatedTheoryConstruction\n"
+)
 
 
 def pick_next_problem(open_rows: list[dict[str, Any]], max_attempts: int) -> dict[str, Any] | None:
@@ -139,12 +148,30 @@ def parse_new_problems(raw_values: list[str]) -> list[str]:
     return values[:2]
 
 
+def initialize_runtime_state(data_dir: Path, seeds_file: Path, scratch_file: Path, reset_scratch: bool) -> None:
+    seed_rows = read_jsonl(seeds_file)
+    if not seed_rows:
+        raise ValueError(f"Seeds file is empty: {seeds_file}")
+
+    data_dir.mkdir(parents=True, exist_ok=True)
+    write_jsonl_atomic(data_dir / "open_problems.jsonl", seed_rows)
+    write_jsonl_atomic(data_dir / "solved_problems.jsonl", [])
+    write_jsonl_atomic(data_dir / "counterexamples.jsonl", [])
+
+    if reset_scratch:
+        scratch_file.parent.mkdir(parents=True, exist_ok=True)
+        scratch_file.write_text(SCRATCH_TEMPLATE, encoding="utf-8")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run one iteration of the minimal prototype loop.")
     parser.add_argument("--data-dir", default="data")
     parser.add_argument("--config", default="config/defaults.json")
+    parser.add_argument("--seeds-file", default="theories/semigroup_like_01/seeds.jsonl")
     parser.add_argument("--scratch-file", default="AutomatedTheoryConstruction/Scratch.lean")
     parser.add_argument("--derived-file", default="AutomatedTheoryConstruction/Derived.lean")
+    parser.add_argument("--initialize-on-start", action=argparse.BooleanOptionalAction, default=True)
+    parser.add_argument("--reset-scratch-on-start", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--max-attempts", type=int)
     parser.add_argument("--picker-output-json")
     parser.add_argument("--picker-output-file")
@@ -166,6 +193,16 @@ def main() -> None:
 
     data_dir = Path(args.data_dir)
     config_path = Path(args.config)
+    scratch_file = Path(args.scratch_file)
+
+    if args.initialize_on_start:
+        initialize_runtime_state(
+            data_dir=data_dir,
+            seeds_file=Path(args.seeds_file),
+            scratch_file=scratch_file,
+            reset_scratch=args.reset_scratch_on_start,
+        )
+
     max_attempts = resolve_max_attempts(args.max_attempts, config_path)
 
     open_rows = read_jsonl(data_dir / "open_problems.jsonl")
@@ -247,7 +284,6 @@ def main() -> None:
         if scratch_code is None:
             formalization_rejected = True
         else:
-            scratch_file = Path(args.scratch_file)
             scratch_file.write_text(scratch_code, encoding="utf-8")
             if args.skip_verify:
                 verify_success = True

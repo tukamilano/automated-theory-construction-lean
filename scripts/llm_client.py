@@ -81,6 +81,8 @@ def call_chat_completion_json(settings: LLMSettings, system_prompt: str, user_pa
         method="POST",
         headers={
             "Content-Type": "application/json",
+            "Accept": "application/json",
+            "User-Agent": "atc-prototype/0.1",
             "Authorization": f"Bearer {settings.api_key}",
         },
     )

@@ -1,1 +1,3 @@
-{"id":"op_000001","stmt":"forall x y z, op (op x y) z = op x (op y z)","src":"seed","n":0}
+{"id":"op_000002","stmt":"forall {\u03b1 : Type u} [HasOp \u03b1], forall x y : \u03b1, op x y = op y x","src":"generated","n":0}
+{"id":"op_000003","stmt":"forall {\u03b1 : Type u} [HasOp \u03b1], forall x : \u03b1, op x x = x","src":"generated","n":0}
+{"id":"op_000001","stmt":"forall {\u03b1 : Type u} [HasOp \u03b1], forall x y z : \u03b1, op (op x y) z = op x (op y z)","src":"seed","n":1}
