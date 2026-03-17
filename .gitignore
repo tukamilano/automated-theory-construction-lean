@@ -20,6 +20,3 @@ __pycache__/
 .idea/
 *.swp
 *.swo
-
-# Local agent config
-/.codex/
