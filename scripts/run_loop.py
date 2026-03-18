@@ -1050,7 +1050,7 @@ def main() -> None:
     args.prover_output_file = None
     args.theory_file = "AutomatedTheoryConstruction/Theory.lean"
     # Problem selection is deterministic local logic; the worker handles prover/repair/expand only.
-    args.prover_prompt_file = "prompts/prover_interactive.md"
+    args.prover_prompt_file = "prompts/prover_simple.md"
     args.expander_prompt_file = "prompts/new_problem_expander.md"
     args.prover_retries = 2
     args.formalization_retry_budget_sec = 300
