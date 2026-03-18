@@ -17,20 +17,17 @@ Implemented:
 - Lean module scaffold: `Theory.lean`, `Derived.lean`, `Scratch.lean`
 - `SemigroupLike01` axiom class (left idempotent, duplicate absorption, central swap)
 - Data/state files: open / solved / counterexamples (JSONL)
+- Natural-language proof notes in `data/proof_notes/`
+- Same-problem formalization history in `data/formalization_memory.json`
 - Deterministic state updates with atomic JSONL writes
 - Auto-initialize from seeds on startup (default on)
 - Orchestrator-to-worker wiring for prover/repair/expand tasks
 - Prover interface contract in `.codex/skills`
 
-Not implemented yet:
-
-- Heavy repair loops
-- Graph/candidate-queue/provenance infrastructure
-
 ## Repository Layout
 
 - `AutomatedTheoryConstruction/Theory.lean`: base symbols
-- `AutomatedTheoryConstruction/Derived.lean`: accumulated verified theorems
+- `AutomatedTheoryConstruction/Derived.lean`: accumulated verified theorems plus AI-friendly aliases
 - `AutomatedTheoryConstruction/Scratch.lean`: temporary generated verification file
 - `data/open_problems.jsonl`: open problems
 - `data/solved_problems.jsonl`: verified solved problems
@@ -74,6 +71,14 @@ lake build
 lake env lean AutomatedTheoryConstruction/Scratch.lean
 ```
 
+## Basic Usage
+
+To define the base theory, edit `AutomatedTheoryConstruction/Theory.lean` and put your symbols, structures, and axioms there.
+
+Then add a few seed statements to `theories/semigroup_like_01/seeds.jsonl`. These are the initial theorem candidates that the loop uses as starting points for theory development.
+
+At startup, the loop initializes open problems from this `seeds.jsonl` file by default.
+
 ## Run: Loop Mode (default)
 
 Uses a worker command invoked by the orchestrator (`scripts/run_loop.py`).
@@ -100,26 +105,31 @@ For `scripts/codex_worker.py`, `ATC_WORKER_TIMEOUT` also bounds the inner Codex 
 
 During loop execution, each prover attempt also writes a reusable natural-language note:
 
-- `data/proof_notes/<problem_id>.md`: statement, proof sketch, counterexample intuition, and Lean draft
+- `data/proof_notes/<problem_id>.md`: statement, proof sketch, and counterexample intuition
 
-Quick local smoke test worker:
+Recommended Codex worker invocation:
 
 ```bash
-ATC_WORKER_COMMAND="uv run scripts/mock_worker.py" \
-uv run scripts/run_loop.py --enable-worker --no-initialize-on-start
+ATC_WORKER_COMMAND="uv run scripts/codex_worker.py" \
+ATC_CODEX_TIMEOUT=390 \
+uv run scripts/run_loop.py --enable-worker --worker-timeout 420
 ```
 
-**Fresh start** (initializes from seeds):
+Equivalent env-based timeout configuration:
 
 ```bash
-ATC_WORKER_COMMAND="<worker command>" \
+ATC_WORKER_COMMAND="uv run scripts/codex_worker.py" \
+ATC_WORKER_TIMEOUT=420 \
+ATC_CODEX_TIMEOUT=390 \
 uv run scripts/run_loop.py --enable-worker
 ```
 
 **Resume** (skip re-initialization):
 
 ```bash
-ATC_WORKER_COMMAND="<worker command>" \
+ATC_WORKER_COMMAND="uv run scripts/codex_worker.py" \
+ATC_WORKER_TIMEOUT=420 \
+ATC_CODEX_TIMEOUT=390 \
 uv run scripts/run_loop.py --enable-worker --no-initialize-on-start
 ```
 
@@ -128,19 +138,19 @@ uv run scripts/run_loop.py --enable-worker --no-initialize-on-start
 Open problem example:
 
 ```json
-{"id":"op_000001","stmt":"∀ {α : Type u} [SemigroupLike01 α], ∀ x y z : α, op (op x y) z = op x (op y z)","src":"seed","n":0}
+{"id":"op_000001","stmt":"∀ {α : Type u} [SemigroupLike01 α], ∀ x y z : α, (x * y) * z = x * (y * z)","src":"seed","n":0}
 ```
 
 Solved problem example:
 
 ```json
-{"id":"op_000001","stmt":"∀ {α : Type u} [SemigroupLike01 α], ∀ x y z : α, op (op x y) z = op x (op y z)","thm":"thm_op_000001"}
+{"id":"op_000001","stmt":"∀ {α : Type u} [SemigroupLike01 α], ∀ x y z : α, (x * y) * z = x * (y * z)","thm":"thm_op_000001"}
 ```
 
 Counterexample example:
 
 ```json
-{"id":"op_000010","stmt":"∀ {α : Type u} [SemigroupLike01 α], ∀ x y : α, op x y = op y x"}
+{"id":"op_000002","stmt":"∀ {α : Type u} [SemigroupLike01 α], ∀ x y : α, x * y = y * x"}
 ```
 
 ## Notes on Formalization Policy
@@ -151,17 +161,11 @@ Counterexample example:
 - Same-problem formalization history is persisted in `data/formalization_memory.json` and reused by repair/expansion.
 - If a statement is not formalizable to Lean, the problem remains in `open` and its attempt count is incremented.
 
-## Next Recommended Steps
-
-1. Achieve a first successful proof in loop mode
-2. Verify that the proof round-trips through Lean (`--skip-verify` off)
-3. Begin exploration loop (loop mode with multiple iterations)
-
 ## License
 
 This repository is licensed under the MIT License. See `LICENSE`.
 
-## 参考文献
+## Reference
 
 * Xin et al. (2025). *BFS-Prover-V2*.
 * [kmd710/lean4-codex-skills](https://github.com/kmd710/lean4-codex-skills)

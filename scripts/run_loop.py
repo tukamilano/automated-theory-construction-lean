@@ -35,7 +35,7 @@ SCRATCH_TEMPLATE = (
 DERIVED_TEMPLATE = (
     "import AutomatedTheoryConstruction.Theory\n\n"
     "namespace AutomatedTheoryConstruction\n\n"
-    "-- Verified theorems are appended here by scripts/append_derived.py.\n\n"
+    "-- Verified theorems and AI-friendly aliases are appended here by scripts/append_derived.py.\n\n"
     "end AutomatedTheoryConstruction\n"
 )
 
@@ -152,7 +152,6 @@ def write_proof_note_markdown(
     result: str,
     proof_sketch: str,
     counterexample_text: str,
-    proof_text: str,
 ) -> tuple[Path, str]:
     """Persist natural-language reasoning as markdown for formalization reuse."""
     notes_dir.mkdir(parents=True, exist_ok=True)
@@ -172,11 +171,6 @@ def write_proof_note_markdown(
         "",
         "## Counterexample Intuition",
         (counterexample_text or "(empty)").strip(),
-        "",
-        "## Lean Draft",
-        "```lean",
-        (proof_text or "").rstrip(),
-        "```",
         "",
     ]
     content = "\n".join(sections)
@@ -400,7 +394,30 @@ def extract_derived_theorem_entries(derived_path: Path, max_theorems: int = 50) 
             entries.append({"name": match.group(1), "statement": statement})
             if len(entries) >= max_theorems:
                 break
-    return entries
+
+    def is_canonical_problem_theorem(name: str) -> bool:
+        return bool(re.fullmatch(r"thm_op_\d{6}(?:_is_false)?", name))
+
+    def name_priority(name: str) -> tuple[int, int, str]:
+        return (
+            1 if is_canonical_problem_theorem(name) else 0,
+            len(name),
+            name,
+        )
+
+    ordered_statements: list[str] = []
+    best_by_statement: dict[str, dict[str, str]] = {}
+    for entry in entries:
+        statement_key = normalize_stmt_text(entry["statement"])
+        current = best_by_statement.get(statement_key)
+        if current is None:
+            ordered_statements.append(statement_key)
+            best_by_statement[statement_key] = entry
+            continue
+        if name_priority(entry["name"]) < name_priority(current["name"]):
+            best_by_statement[statement_key] = entry
+
+    return [best_by_statement[key] for key in ordered_statements][:max_theorems]
 
 
 def classify_statement_shape(stmt: str) -> dict[str, bool]:
@@ -1162,7 +1179,6 @@ def main() -> None:
             result=result,
             proof_sketch=proof_sketch,
             counterexample_text=counterexample_text,
-            proof_text=proof_text,
         )
 
         prover_prompt_for_repair = load_prompt_text(args.prover_prompt_file) if worker_settings is not None else ""

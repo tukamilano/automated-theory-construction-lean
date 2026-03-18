@@ -1,1 +1,100 @@
-{}
+{
+  "op_000001": [
+    {
+      "result": "stuck",
+      "verify_success": false,
+      "proof_sketch": "Prover worker timed out before returning a valid response. Treating this iteration as stuck so the problem remains open and n increments. Details: Worker returned error: Command '['codex', 'exec', '-', '--sandbox', 'read-only', '--skip-git-repo-check', '--output-last-message', '/var/folders/2_/c2t72bmn00j3z7cnkfvqvyj80000gn/T/tmpfc5qmnsy']' timed out after 390 seconds",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "non_formalized_result",
+      "new_problems": []
+    }
+  ],
+  "op_000002": [
+    {
+      "result": "counterexample",
+      "verify_success": false,
+      "proof_sketch": "反例。α = Bool に左射影演算 x * y := x を入れると、x * x = x, x * (x * y) = x * y, (x * y) * z = (x * z) * y はすべて定義展開で rfl。だが true * false = true かつ false * true = false なので可換ではない。Lean ではこの局所インスタンスを `letI` で入れ、仮定を Bool 上の `true false` に適用して `true = false` を得て `cases` で矛盾にする。",
+      "proof_text": "intro h\nletI : SemigroupLike01 Bool where\n  mul x y := x\n  ax_left_idempotent := by\n    intro x\n    rfl\n  ax_right_absorb_duplicate := by\n    intro x y\n    rfl\n  ax_middle_swap := by\n    intro x y z\n    rfl\nhave hcomm : true = false := h (α := Bool) true false\ncases hcomm",
+      "counterexample_text": "Bool 上で x * y = x と定める。すると各公理はどの式も左引数に簡約されるので成立する。しかし true * false = true で、false * true = false だから、一般には x * y = y * x は成り立たない。",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:8:29: error: unexpected token 'where'; expected ':=' or '|'",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:8:29: error: unexpected token 'where'; expected ':=' or '|' | AutomatedTheoryConstruction/Scratch.lean:8:7: error: Missing cases: | AutomatedTheoryConstruction/Scratch.lean:6:100: error: unsolved goals",
+      "new_problems": [
+        "∀ {α : Type u} [SemigroupLike01 α], ∀ x y : α, (x * y) * x = x * y",
+        "∀ {α : Type u} [SemigroupLike01 α], ∀ x y : α, (x * y) * y = x * y"
+      ]
+    },
+    {
+      "result": "counterexample",
+      "verify_success": true,
+      "proof_sketch": "反例。任意の universe u で α := ULift Bool とし、演算を左射影 x * y := x と定める。すると `ax_left_idempotent`, `ax_right_absorb_duplicate`, `ax_middle_swap` はすべて定義計算で `rfl`。したがって仮に全ての `SemigroupLike01` で可換なら、`ULift Bool` 上で `⟨true⟩ * ⟨false⟩ = ⟨false⟩ * ⟨true⟩` から `⟨true⟩ = ⟨false⟩` を得るが、これは constructor の不一致で矛盾する。",
+      "proof_text": "intro h\nletI : SemigroupLike01 (ULift Bool) :=\n  { mul := fun x y => x\n    ax_left_idempotent := by\n      intro x\n      rfl\n    ax_right_absorb_duplicate := by\n      intro x y\n      rfl\n    ax_middle_swap := by\n      intro x y z\n      rfl }\nhave hcomm : ((⟨true⟩ : ULift Bool) = ⟨false⟩) := h (α := ULift Bool) ⟨true⟩ ⟨false⟩\ncases hcomm",
+      "counterexample_text": "任意の universe で `ULift Bool` に左射影演算 `x * y := x` を入れると、3 つの公理はすべて自明に成り立つ。しかし `⟨true⟩ * ⟨false⟩ = ⟨true⟩` と `⟨false⟩ * ⟨true⟩ = ⟨false⟩` なので可換ではない。",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:8:29: error: unexpected token 'where'; expected ':=' or '|'",
+      "lean_error_fingerprint": "no_diagnostics",
+      "new_problems": [
+        "∀ {α : Type u} [SemigroupLike01 α], ∀ x y : α, (x * y) * x = x * y",
+        "∀ {α : Type u} [SemigroupLike01 α], ∀ x y : α, (x * y) * y = x * y"
+      ]
+    }
+  ],
+  "op_000003": [
+    {
+      "result": "counterexample",
+      "verify_success": false,
+      "proof_sketch": "反例として `ULift Bool` に左射影演算 `x * y := x` を入れる。このとき 3 公理はすべて `rfl` で成り立つ。もし両側単位元 `e` があれば、左単位条件 `e * x = x` を `x = true, false` に適用して、それぞれ `e = true` と `e = false` を得るので矛盾する。したがって一般にはそのような `e` は存在しない。",
+      "proof_text": "by\n  intro h\n  letI : SemigroupLike01 (ULift Bool) :=\n    { mul := fun x y => x\n      ax_left_idempotent := by\n        intro x\n        rfl\n      ax_right_absorb_duplicate := by\n        intro x y\n        rfl\n      ax_middle_swap := by\n        intro x y z\n        rfl }\n  obtain ⟨e, he⟩ := h (α := ULift Bool)\n  have htrue := (he ⟨true⟩).1\n  change e = (⟨true⟩ : ULift Bool) at htrue\n  have hfalse := (he ⟨false⟩).1\n  change e = (⟨false⟩ : ULift Bool) at hfalse\n  have htf : ((⟨true⟩ : ULift Bool) = ⟨false⟩) := by\n    calc\n      (⟨true⟩ : ULift Bool) = e := htrue.symm\n      _ = ⟨false⟩ := hfalse\n  cases htf",
+      "counterexample_text": "反例は `ULift Bool` 上の演算 `x * y = x` である。これは常に左の引数を返すので、与えられた 3 つの公理は満たす。一方、もし全ての `x` に対して `e * x = x` を満たす元 `e` があるとすると、`x = true` から `e = true`、`x = false` から `e = false` となり矛盾する。したがって両側単位元の存在は一般には成り立たない。",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:6:117: error: unexpected token 'by'; expected '{' or tactic",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:6:117: error: unexpected token 'by'; expected '{' or tactic | AutomatedTheoryConstruction/Scratch.lean:6:115: error: unsolved goals | ⊢ ¬∀ {α : Type u} [inst : SemigroupLike01 α], ∃ e, ∀ (x : α), e * x = x ∧ x * e = x",
+      "new_problems": []
+    },
+    {
+      "result": "counterexample",
+      "verify_success": true,
+      "proof_sketch": "反例として `ULift Bool` に左射影演算 `x * y := x` を入れる。すると 3 公理はすべて `rfl` で成り立つ。仮に任意の `SemigroupLike01 α` で両側単位元 `e` が存在すると、この反例にもそのような `e` がある。だが左単位条件 `e * x = x` を `x = ⟨true⟩` と `x = ⟨false⟩` に適用すると `e = ⟨true⟩` と `e = ⟨false⟩` を得て矛盾する。したがって元の全称命題は偽。",
+      "proof_text": "intro h\nletI : SemigroupLike01 (ULift Bool) :=\n  { mul := fun x y => x\n    ax_left_idempotent := by\n      intro x\n      rfl\n    ax_right_absorb_duplicate := by\n      intro x y\n      rfl\n    ax_middle_swap := by\n      intro x y z\n      rfl }\nobtain ⟨e, he⟩ := h (α := ULift Bool)\nhave htrue := (he ⟨true⟩).1\nchange e = (⟨true⟩ : ULift Bool) at htrue\nhave hfalse := (he ⟨false⟩).1\nchange e = (⟨false⟩ : ULift Bool) at hfalse\nhave htf : ((⟨true⟩ : ULift Bool) = ⟨false⟩) := by\n  calc\n    (⟨true⟩ : ULift Bool) = e := htrue.symm\n    _ = ⟨false⟩ := hfalse\ncases htf",
+      "counterexample_text": "反例は `ULift Bool` 上の左射影演算 `x * y = x` である。この演算では、`x * x = x`、`x * (x * y) = x * y`、`(x * y) * z = (x * z) * y` がすべて自明に成り立つ。一方で、もし全ての元に対して `e * x = x` を満たす単位元 `e` が存在すると、`x = true` から `e = true`、`x = false` から `e = false` となって矛盾する。よって一般にはそのような両側単位元は存在しない。",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:6:117: error: unexpected token 'by'; expected '{' or tactic",
+      "lean_error_fingerprint": "no_diagnostics",
+      "new_problems": []
+    }
+  ],
+  "op_000004": [
+    {
+      "result": "counterexample",
+      "verify_success": true,
+      "proof_sketch": "Refute the universal statement with the two-element model `ULift Bool` and left-projection multiplication `x * y := x`. All `SemigroupLike01` axioms are immediate by `rfl`. If the target statement held, we would get some `e`. Applying the property to `true` yields a witness with `true * y = e`, which simplifies to `true = e`. Applying it to `false` yields `false = e`. Therefore `true = false`, contradiction.",
+      "proof_text": "intro h\nletI : SemigroupLike01 (ULift Bool) :=\n  { mul := fun x y => x\n    ax_left_idempotent := by\n      intro x\n      rfl\n    ax_right_absorb_duplicate := by\n      intro x y\n      rfl\n    ax_middle_swap := by\n      intro x y z\n      rfl }\nobtain ⟨e, he⟩ := h (α := ULift Bool)\nobtain ⟨_, htrue, _⟩ := he ⟨true⟩\nchange ((⟨true⟩ : ULift Bool) = e) at htrue\nobtain ⟨_, hfalse, _⟩ := he ⟨false⟩\nchange ((⟨false⟩ : ULift Bool) = e) at hfalse\nhave htf : ((⟨true⟩ : ULift Bool) = ⟨false⟩) := by\n  calc\n    (⟨true⟩ : ULift Bool) = e := htrue\n    _ = ⟨false⟩ := hfalse.symm\ncases htf",
+      "counterexample_text": "Take the two-element type ULift Bool and define the product to be the left input: multiplying x and y always returns x. Then the axioms in the theory context all hold. But now the requirement says there is a single element e such that for every x there exists y with x * y = e and y * x = e. Since x * y is always x, the first equation forces x = e for every x. In particular, both true and false must equal e, which is impossible.",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "no_diagnostics",
+      "new_problems": []
+    }
+  ],
+  "op_000005": [
+    {
+      "result": "stuck",
+      "verify_success": false,
+      "proof_sketch": "Prover worker timed out before returning a valid response. Treating this iteration as stuck so the problem remains open and n increments. Details: Worker returned error: Command '['codex', 'exec', '-', '--sandbox', 'read-only', '--skip-git-repo-check', '--output-last-message', '/var/folders/2_/c2t72bmn00j3z7cnkfvqvyj80000gn/T/tmpxzzdl1v4']' timed out after 390 seconds",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "non_formalized_result",
+      "new_problems": []
+    }
+  ],
+  "op_000006": [
+    {
+      "result": "counterexample",
+      "verify_success": true,
+      "proof_sketch": "反例は `α := ULift Bool` と左射影演算 `x * y := x`。このとき `ax_left_idempotent`, `ax_right_absorb_duplicate`, `ax_middle_swap` はすべて `rfl` で成り立つ。すると常に `x * y = x * z` なので、仮に左消去 `x * y = x * z → y = z` が全 `SemigroupLike01` で成り立つなら、`x = ⟨true⟩, y = ⟨true⟩, z = ⟨false⟩` を代入して `⟨true⟩ = ⟨false⟩` を得て矛盾。",
+      "proof_text": "intro h\nletI : SemigroupLike01 (ULift Bool) :=\n  { mul := fun x y => x\n    ax_left_idempotent := by\n      intro x\n      rfl\n    ax_right_absorb_duplicate := by\n      intro x y\n      rfl\n    ax_middle_swap := by\n      intro x y z\n      rfl }\nhave hbad : ((⟨true⟩ : ULift Bool) = ⟨false⟩) := by\n  apply h (α := ULift Bool) ⟨true⟩ ⟨true⟩ ⟨false⟩\n  rfl\ncases hbad",
+      "counterexample_text": "`ULift Bool` 上で演算を左射影 `x * y := x` とする。この構造は 3 つの公理を満たすが、`x * y` は右引数を完全に無視するので `x * y = x * z` が常に成り立つ。したがって `x = true, y = true, z = false` では前件は成り立つ一方、結論 `y = z` は偽であり、左消去則は成り立たない。",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "no_diagnostics",
+      "new_problems": []
+    }
+  ]
+}
