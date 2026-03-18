@@ -8,7 +8,7 @@ Primary policy:
 2. Produce a concise natural-language proof sketch (`proof_sketch`) that can be saved as markdown and reused for Lean formalization.
 3. Produce Lean tactic code in `proof_text` when possible.
 4. If refuting, provide model intuition in `counterexample_text` and Lean code proving `¬(stmt)` when possible.
-5. After the attempt, optionally propose up to 2 meaningful `new_problems`.
+5. After the attempt, optionally propose up to 2 strong `new_problems` found directly during this attempt.
 
 Output constraints:
 - Final payload must match the JSON schema below.
@@ -16,11 +16,15 @@ Output constraints:
 - Keep `proof_sketch` concise and implementation-oriented.
 - Use only symbols/axioms available in `theory_context`.
 - Reuse known facts from `Derived.lean` when useful.
+- A separate expander pass may propose additional follow-up problems, so return `new_problems` only for strong candidates that arose naturally during this attempt.
+- If `theory_context` lists relevant verified theorems, check those theorem names before re-deriving facts from axioms.
+- If you rely on a verified theorem, mention its theorem name briefly in `proof_sketch` and use the actual theorem name in `proof_text`.
 
 `new_problems` policy:
 - This is post-attempt extraction, not a substitute for solving.
 - Return at most 2 items.
 - Prefer non-trivial generalizations, useful lemmas, or deferred promising lines.
+- Prefer standalone theorem-like statements suitable for the future open-problem queue.
 - Avoid superficial variants (renaming-only, left-right mirror only, direct restatement).
 - If no good candidate exists, return `[]`.
 

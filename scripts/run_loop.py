@@ -118,6 +118,26 @@ def validate_prover_output(payload: dict[str, Any], expected_problem_id: str) ->
     return result, proof_sketch, proof_text, counterexample_text, new_problems
 
 
+def validate_expand_output(payload: dict[str, Any], expected_problem_id: str) -> list[str]:
+    required_keys = {"problem_id", "new_problems"}
+    if set(payload.keys()) != required_keys:
+        raise ValueError("expand output must contain exactly: problem_id, new_problems")
+
+    problem_id = payload.get("problem_id")
+    if problem_id != expected_problem_id:
+        raise ValueError("expand output problem_id does not match picked problem")
+
+    new_problems_value = payload.get("new_problems")
+    if not isinstance(new_problems_value, list):
+        raise ValueError("expand new_problems must be an array of strings")
+    if len(new_problems_value) > 2:
+        raise ValueError("expand new_problems must have length <= 2")
+    if any((not isinstance(item, str)) for item in new_problems_value):
+        raise ValueError("expand new_problems must contain only strings")
+
+    return [item.strip() for item in new_problems_value if item.strip()][:2]
+
+
 def load_json_payload_from_args(inline_json: str | None, json_file: str | None) -> dict[str, Any] | None:
     if inline_json is None and json_file is None:
         return None
@@ -383,61 +403,154 @@ def make_timeout_subgoals(
     return filter_generated_subgoals(candidates, stmt)
 
 
-def extract_derived_theorems(derived_path: Path, max_theorems: int = 50, max_chars: int = 8000) -> str:
-    """Extract theorem names and statements from Derived.lean to enrich theory context.
-    
-    Returns a formatted string summarizing verified theorems, suitable for injection into theory_context.
-    Includes guardrails: limits number of theorems and total character count to avoid token explosion.
-    """
+def extract_derived_theorem_entries(derived_path: Path, max_theorems: int = 50) -> list[dict[str, str]]:
+    """Extract theorem names and one-line statements from Derived.lean."""
     if not derived_path.exists():
-        return ""
-    
+        return []
+
     try:
         content = derived_path.read_text(encoding="utf-8")
     except Exception:
-        return ""
-    
-    # Skip header and extract theorem declarations
-    # Pattern: theorem <name> : <statement> := ...
-    theorem_decls: list[str] = []
+        return []
+
+    entries: list[dict[str, str]] = []
     theorem_pattern = re.compile(r"^\s*theorem\s+([A-Za-z0-9_']+)\s*:\s*(.+?)\s*:=")
-    
     for line in content.splitlines():
         match = theorem_pattern.search(line)
         if match:
-            theorem_name = match.group(1)
-            # Extract statement up to the next theorem or end
-            stmt_start = match.start(2)
-            # Find where the statement ends (before := or on previous line)
-            stmt_line = match.group(2).strip()
-            if stmt_line:
-                decl_text = f"theorem {theorem_name} : {stmt_line}"
-                theorem_decls.append(decl_text)
-                if len(theorem_decls) >= max_theorems:
-                    break
-    
-    if not theorem_decls:
+            statement = match.group(2).strip()
+            if not statement:
+                continue
+            entries.append({"name": match.group(1), "statement": statement})
+            if len(entries) >= max_theorems:
+                break
+    return entries
+
+
+def classify_statement_shape(stmt: str) -> dict[str, bool]:
+    normalized = normalize_stmt_text(stmt)
+    return {
+        "has_forall": "∀" in normalized,
+        "has_exists": "∃" in normalized,
+        "has_negation": "¬" in normalized,
+        "has_mul": "*" in normalized,
+        "has_eq": "=" in normalized,
+        "has_subsingleton": "Subsingleton" in normalized,
+    }
+
+
+def extract_relevance_keywords(stmt: str) -> set[str]:
+    words = re.findall(r"[A-Za-z_][A-Za-z0-9_']*", stmt)
+    stopwords = {
+        "Type",
+        "SemigroupLike01",
+        "Mul",
+        "op",
+        "x",
+        "y",
+        "z",
+        "h",
+        "by",
+        "fun",
+        "let",
+        "intro",
+        "have",
+        "show",
+    }
+    keywords = {word for word in words if len(word) >= 4 and word not in stopwords}
+    if "Subsingleton" in stmt:
+        keywords.add("Subsingleton")
+    return keywords
+
+
+def same_relevance_family(target_shape: dict[str, bool], entry_shape: dict[str, bool]) -> bool:
+    return (
+        target_shape["has_forall"] == entry_shape["has_forall"]
+        and target_shape["has_exists"] == entry_shape["has_exists"]
+        and target_shape["has_negation"] == entry_shape["has_negation"]
+        and target_shape["has_mul"] == entry_shape["has_mul"]
+        and target_shape["has_eq"] == entry_shape["has_eq"]
+        and target_shape["has_subsingleton"] == entry_shape["has_subsingleton"]
+    )
+
+
+def summarize_derived_statement(statement: str, max_chars: int = 120) -> str:
+    text = normalize_stmt_text(statement)
+    semigroup_prefix = "∀ {α : Type u} [SemigroupLike01 α], "
+    if text.startswith(semigroup_prefix):
+        text = text[len(semigroup_prefix) :]
+    if len(text) > max_chars:
+        return text[: max_chars - 3] + "..."
+    return text
+
+
+def shortlist_relevant_derived_entries(
+    entries: list[dict[str, str]],
+    stmt: str,
+    max_entries: int = 5,
+) -> list[dict[str, str]]:
+    if not entries:
+        return []
+
+    target_norm = normalize_stmt_text(stmt)
+    target_shape = classify_statement_shape(stmt)
+    target_keywords = extract_relevance_keywords(stmt)
+    shortlisted: list[dict[str, str]] = []
+    seen_names: set[str] = set()
+
+    def add_pass(predicate: Callable[[dict[str, str]], bool]) -> None:
+        for entry in entries:
+            if entry["name"] in seen_names:
+                continue
+            if normalize_stmt_text(entry["statement"]) == target_norm:
+                continue
+            if not predicate(entry):
+                continue
+            shortlisted.append(entry)
+            seen_names.add(entry["name"])
+            if len(shortlisted) >= max_entries:
+                return
+
+    def entry_shape(entry: dict[str, str]) -> dict[str, bool]:
+        return classify_statement_shape(entry["statement"])
+
+    add_pass(
+        lambda entry: same_relevance_family(target_shape, entry_shape(entry))
+        and bool(target_keywords & extract_relevance_keywords(entry["statement"]))
+    )
+    add_pass(lambda entry: same_relevance_family(target_shape, entry_shape(entry)))
+    add_pass(
+        lambda entry: target_shape["has_exists"] == entry_shape(entry)["has_exists"]
+        and target_shape["has_negation"] == entry_shape(entry)["has_negation"]
+        and target_shape["has_mul"] == entry_shape(entry)["has_mul"]
+    )
+    return shortlisted[:max_entries]
+
+
+def render_relevant_derived_context(entries: list[dict[str, str]], max_chars: int = 1200) -> str:
+    if not entries:
         return ""
-    
-    # Build summary string with guardrails
-    summary_lines = ["", "-- Already-verified theorems from Derived.lean (for reference):"]
-    for decl in theorem_decls:
-        summary_lines.append(f"-- {decl}")
-    
-    summary = "\n".join(summary_lines)
-    
-    # Enforce max character limit
+
+    lines = [
+        "",
+        "-- Relevant verified theorems from Derived.lean:",
+        "-- Check these theorem names before re-deriving from axioms.",
+    ]
+    for entry in entries:
+        lines.append(f"-- {entry['name']} :: {summarize_derived_statement(entry['statement'])}")
+
+    summary = "\n".join(lines)
     if len(summary) > max_chars:
-        summary = summary[:max_chars] + "\n-- (truncated due to size limits)"
-    
+        summary = summary[:max_chars] + "\n-- (relevant theorem list truncated)"
     return summary
 
 
-def inject_derived_context(theory_context: str, derived_path: Path) -> str:
-    """Append Derived.lean theorem inventory to theory_context for worker awareness."""
-    derived_summary = extract_derived_theorems(derived_path)
-    if derived_summary:
-        return theory_context + derived_summary
+def build_problem_theory_context(theory_context: str, derived_path: Path, stmt: str) -> str:
+    entries = extract_derived_theorem_entries(derived_path)
+    relevant_entries = shortlist_relevant_derived_entries(entries, stmt)
+    relevant_summary = render_relevant_derived_context(relevant_entries)
+    if relevant_summary:
+        return theory_context + relevant_summary
     return theory_context
 
 
@@ -939,6 +1052,7 @@ def main() -> None:
     args.theory_file = "AutomatedTheoryConstruction/Theory.lean"
     # Use simplified prover prompt for worker (picker is now deterministic local logic)
     args.prover_prompt_file = "prompts/prover_interactive.md"
+    args.expander_prompt_file = "prompts/new_problem_expander.md"
     args.prover_retries = 2
     args.formalization_retry_budget_sec = 300
     args.formalization_memory_file = "data/formalization_memory.json"
@@ -970,9 +1084,8 @@ def main() -> None:
         debug_log("Initialization build completed")
 
     max_attempts = resolve_max_attempts(args.max_attempts, config_path)
-    theory_context = load_optional_text(args.theory_file)
-    # Inject Derived.lean theorem inventory for worker awareness
-    theory_context = inject_derived_context(theory_context, Path(args.derived_file))
+    base_theory_context = load_optional_text(args.theory_file)
+    derived_path = Path(args.derived_file)
     open_path = data_dir / "open_problems.jsonl"
 
     worker_settings = None
@@ -1027,6 +1140,7 @@ def main() -> None:
 
         problem_id = str(picked["id"])
         stmt = str(picked.get("stmt", ""))
+        theory_context = build_problem_theory_context(base_theory_context, derived_path, stmt)
         emit_phase_log(args.phase_logs, "problem_selected", iteration=completed_iterations + 1, problem_id=problem_id)
 
         prover_payload = load_json_payload_from_args(args.prover_output_json, args.prover_output_file)
@@ -1108,6 +1222,57 @@ def main() -> None:
             natural_language_note_path=str(note_path),
             phase_logger=(lambda **fields: emit_phase_log(args.phase_logs, iteration=completed_iterations + 1, **fields)),
         )
+        solver_new_problem_suggestions = list(new_problems)
+        expander_new_problem_suggestions: list[str] = []
+        expander_worker_meta: dict[str, Any] = {}
+
+        if worker_settings is not None:
+            emit_phase_log(
+                args.phase_logs,
+                "expand",
+                iteration=completed_iterations + 1,
+                problem_id=problem_id,
+                mode="worker",
+            )
+            expand_prompt = load_prompt_text(args.expander_prompt_file)
+            same_problem_history_tail = load_formalization_memory(memory_path, problem_id)[-8:]
+            expand_payload: dict[str, Any] = {
+                "problem_id": problem_id,
+                "stmt": stmt,
+                "result": result,
+                "verify_success": verify_success,
+                "theory_context": theory_context,
+                "existing_new_problems": list(new_problems),
+                "verify_error_excerpt": verify_error_excerpt,
+                "same_problem_history_tail": same_problem_history_tail,
+            }
+            try:
+                expander_payload, expander_worker_meta = invoke_worker_json(
+                    settings=worker_settings,
+                    task_type="expand",
+                    system_prompt=expand_prompt,
+                    payload=expand_payload,
+                    metadata={"problem_id": problem_id, "iteration": completed_iterations + 1},
+                )
+                expander_new_problem_suggestions = validate_expand_output(expander_payload, problem_id)
+                new_problems = merge_new_problems(new_problems, expander_new_problem_suggestions)
+                emit_phase_log(
+                    args.phase_logs,
+                    "expand_result",
+                    iteration=completed_iterations + 1,
+                    problem_id=problem_id,
+                    generated_count=len(expander_new_problem_suggestions),
+                    final_count=len(new_problems),
+                )
+            except (RuntimeError, ValueError) as exc:
+                debug_log(f"Expander failed for {problem_id}: {exc}")
+                emit_phase_log(
+                    args.phase_logs,
+                    "expand_error",
+                    iteration=completed_iterations + 1,
+                    problem_id=problem_id,
+                    error=str(exc),
+                )
 
         if verify_success and result in {"proof", "counterexample"}:
             scratch_code = scratch_file.read_text(encoding="utf-8")
@@ -1141,12 +1306,18 @@ def main() -> None:
         report["prover_attempts_used"] = prover_attempts_used
         report["prover_proof_sketch"] = proof_sketch
         report["prover_counterexample_text"] = counterexample_text
-        report["prover_new_problem_suggestions"] = new_problems
+        report["prover_new_problem_suggestions"] = solver_new_problem_suggestions
+        report["expander_new_problem_suggestions"] = expander_new_problem_suggestions
+        report["final_new_problems"] = new_problems
         report["proof_note_path"] = str(note_path)
         report["worker_json_parse_attempts"] = int(prover_worker_meta.get("json_parse_attempts", 0) or 0)
         report["worker_raw_parse_fallback_used"] = bool(prover_worker_meta.get("raw_parse_fallback_used", False))
         report["client_json_parse_attempts"] = int(prover_worker_meta.get("client_json_parse_attempts", 0) or 0)
         report["client_raw_parse_fallback_used"] = bool(prover_worker_meta.get("client_raw_parse_fallback_used", False))
+        report["expander_worker_json_parse_attempts"] = int(expander_worker_meta.get("json_parse_attempts", 0) or 0)
+        report["expander_worker_raw_parse_fallback_used"] = bool(expander_worker_meta.get("raw_parse_fallback_used", False))
+        report["expander_client_json_parse_attempts"] = int(expander_worker_meta.get("client_json_parse_attempts", 0) or 0)
+        report["expander_client_raw_parse_fallback_used"] = bool(expander_worker_meta.get("client_raw_parse_fallback_used", False))
         report["iteration"] = completed_iterations
         print(report)
 

@@ -1,0 +1,8 @@
+{"id":"op_000007","stmt":"∀ {α : Type u} [SemigroupLike01 α], ∀ x : α, x * x = x","thm":"thm_op_000007"}
+{"id":"op_000009","stmt":"∀ {α : Type u} [SemigroupLike01 α], ∀ x y : α, (x * y) * x = x * y","thm":"thm_op_000009"}
+{"id":"op_000011","stmt":"∃ α : Type u, ∃ _ : SemigroupLike01 α, ¬ Subsingleton α","thm":"thm_op_000011"}
+{"id":"op_000012","stmt":"∃ α : Type u, ∃ _ : SemigroupLike01 α, ∃ x y z : α, x * y = x * z ∧ y ≠ z","thm":"thm_op_000012"}
+{"id":"op_000013","stmt":"∃ α : Type u, ∃ _ : SemigroupLike01 α, ∃ x y : α, x * y = x ∧ x ≠ y","thm":"thm_op_000013"}
+{"id":"op_000014","stmt":"∀ {α : Type u} [SemigroupLike01 α], ∀ x y z : α, (x * y) * (x * z) = (x * y) * z","thm":"thm_op_000014"}
+{"id":"op_000015","stmt":"∀ {α : Type u} [Nontrivial α], ∃ _ : SemigroupLike01 α, ¬ Subsingleton α","thm":"thm_op_000015"}
+{"id":"op_000016","stmt":"∀ α : Type u, ∃ _ : SemigroupLike01 α, ∀ x y : α, x * y = x","thm":"thm_op_000016"}

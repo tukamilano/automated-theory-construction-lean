@@ -9,6 +9,16 @@
       "lean_error_excerpt": "",
       "lean_error_fingerprint": "non_formalized_result",
       "new_problems": []
+    },
+    {
+      "result": "counterexample",
+      "verify_success": false,
+      "proof_sketch": "`Fin 3` 上で `op3 x y := if y = 1 then x else if x = y then x else 0` を入れる。これは有限個のケース分けで `SemigroupLike01` の3公理を満たす。だが `x=2, y=1, z=2` で `((2 * 1) * 2) = 2` に対し `2 * (1 * 2) = 0` なので結合律は壊れる。Lean ではこの具体モデルを `letI : SemigroupLike01 (Fin 3)` として与え、公理部分と失敗例を `decide` で閉じればよい。",
+      "proof_text": "intro h\nlet op3 : Fin 3 → Fin 3 → Fin 3 := fun x y => if y = 1 then x else if x = y then x else 0\nletI : SemigroupLike01 (Fin 3) :=\n  { mul := op3\n    ax_left_idempotent := by\n      intro x\n      change op3 x x = x\n      simp [op3]\n    ax_right_absorb_duplicate := by\n      intro x y\n      change op3 x (op3 x y) = op3 x y\n      decide\n    ax_middle_swap := by\n      intro x y z\n      change op3 (op3 x y) z = op3 (op3 x z) y\n      decide }\nhave hbad : ¬ (((2 : Fin 3) * 1) * 2 = (2 : Fin 3) * (1 * 2)) := by\n  change ¬ (op3 (op3 2 1) 2 = op3 2 (op3 1 2))\n  decide\nexact hbad (h (α := Fin 3) 2 1 2)",
+      "counterexample_text": "3元集合 `Fin 3 = {0,1,2}` 上で、積を「右引数が `1` なら左引数を返し、そうでなく左右が等しければその値を返し、それ以外は `0` を返す」と定める。この演算は左冪等、公理 `x * (x * y) = x * y`、公理 `(x * y) * z = (x * z) * y` をすべて満たす。しかし `x=2, y=1, z=2` とすると、左辺 `((2 * 1) * 2)` は `2`、右辺 `2 * (1 * 2)` は `0` になる。したがって与えられた結合律は一般には成り立たない。",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:18:8: error: Expected type must not contain free variables",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:18:8: error: Expected type must not contain free variables | (fun x y => if y = 1 then x else if x = y then x else 0) x | ((fun x y => if y = 1 then x else if x = y then x else 0) x y) =",
+      "new_problems": []
     }
   ],
   "op_000002": [
@@ -75,6 +85,250 @@
         "∀ {α : Type u} [SemigroupLike01 α], ∀ x y z : α, x * (y * z) = (x * y) * (x * z)",
         "∃ α : Type u, ∃ _ : SemigroupLike01 α, ¬ Subsingleton α"
       ]
+    }
+  ],
+  "op_000006": [
+    {
+      "result": "counterexample",
+      "verify_success": true,
+      "proof_sketch": "`α := ULift (Fin 3)` とし、`zero = 0`, `one = 1`, `top = 2` を取る。演算を `x * y := if x = y then x else top` と定めると、`SemigroupLike01` の 3 公理は有限計算で成り立つ。ところが `top * zero = top * one` である一方 `zero ≠ one` なので、左可約性 `x * y = x * z → y = z` はこのモデルで壊れる。",
+      "proof_text": "intro h\nlet α : Type u := ULift.{u} (Fin 3)\nlet zero : α := ⟨(0 : Fin 3)⟩\nlet one : α := ⟨(1 : Fin 3)⟩\nlet top : α := ⟨(2 : Fin 3)⟩\nlet op3 : α → α → α := fun x y => if x = y then x else top\nletI : Mul α := ⟨op3⟩\nletI : SemigroupLike01 α :=\n  { mul := op3\n    ax_left_idempotent := by\n      intro x\n      change op3 x x = x\n      simp [op3]\n    ax_right_absorb_duplicate := by\n      native_decide\n    ax_middle_swap := by\n      native_decide }\nhave hEq : top * zero = top * one := by\n  change op3 top zero = op3 top one\n  simp [op3, top, zero, one]\nhave hContra : zero = one := h (α := α) top zero one hEq\nhave hne : zero ≠ one := by\n  decide\nexact hne hContra",
+      "counterexample_text": "`ULift (Fin 3)` 上で、2 つが等しければその値、異なれば常に `top` を返す 3 元演算を考える。この演算は与えられた 3 公理を満たすが、`top * zero` と `top * one` はどちらも `top` になり、しかも `zero` と `one` は異なる。したがって左可約性は一般には成り立たない。",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "no_diagnostics",
+      "new_problems": [
+        "∃ α : Type u, ∃ _ : SemigroupLike01 α, ∃ x y z : α, x * y = x * z ∧ y ≠ z",
+        "∃ α : Type u, ∃ _ : SemigroupLike01 α, ∃ x y : α, x * y = x ∧ x ≠ y"
+      ]
+    }
+  ],
+  "op_000007": [
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "α, インスタンス, x を導入する。クラス公理 `SemigroupLike01.ax_left_idempotent` から `op x x = x` を得るので、`op` を展開して `x * x = x` に `simpa` で直す。",
+      "proof_text": "intro α _ x\nsimpa [op] using SemigroupLike01.ax_left_idempotent (α := α) x",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "no_diagnostics",
+      "new_problems": []
+    }
+  ],
+  "op_000008": [
+    {
+      "result": "stuck",
+      "verify_success": false,
+      "proof_sketch": "Prover worker timed out before returning a valid response. Treating this iteration as stuck so the problem remains open and n increments. Details: Worker returned error: Command '['codex', 'exec', '-', '--sandbox', 'read-only', '--skip-git-repo-check', '--output-last-message', '/var/folders/2_/c2t72bmn00j3z7cnkfvqvyj80000gn/T/tmpmy8xq7ui']' timed out after 390 seconds",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "non_formalized_result",
+      "new_problems": []
+    }
+  ],
+  "op_000009": [
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "`ax_middle_swap` に `z := x` を入れると `(x * y) * x = (x * x) * y`。さらに `ax_left_idempotent` から `x * x = x` なので、右辺は `x * y` に簡約される。",
+      "proof_text": "intro α _ x y\nhave hswap : (x * y) * x = (x * x) * y := by\n  simpa [op] using SemigroupLike01.ax_middle_swap (α := α) x y x\nhave hxx : x * x = x := by\n  simpa [op] using SemigroupLike01.ax_left_idempotent (α := α) x\nsimpa [hxx] using hswap",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "no_diagnostics",
+      "new_problems": [
+        "∀ {α : Type u} [SemigroupLike01 α], ∀ x y z : α, (x * y) * (x * z) = (x * y) * z"
+      ]
+    }
+  ],
+  "op_000010": [
+    {
+      "result": "stuck",
+      "verify_success": false,
+      "proof_sketch": "Prover worker timed out before returning a valid response. Treating this iteration as stuck so the problem remains open and n increments. Details: Worker returned error: Command '['codex', 'exec', '-', '--sandbox', 'read-only', '--skip-git-repo-check', '--output-last-message', '/var/folders/2_/c2t72bmn00j3z7cnkfvqvyj80000gn/T/tmpnbqugz4v']' timed out after 390 seconds",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "non_formalized_result",
+      "new_problems": []
+    }
+  ],
+  "op_000011": [
+    {
+      "result": "proof",
+      "verify_success": false,
+      "proof_sketch": "台集合として `α := ULift Bool` を取り、演算を左射影 `x * y := x` と定める。すると `x * x = x`, `x * (x * y) = x * y`, `(x * y) * z = (x * z) * y` はすべて定義通りで `rfl`。もし `Subsingleton α` なら、持ち上げた `true` と `false` が等しくなるが、`ULift.down` を作用させると `true = false` となり矛盾。",
+      "proof_text": "by\n  let α : Type u := ULift.{u} Bool\n  letI : Mul α := ⟨fun x _ => x⟩\n  refine ⟨α, ?_⟩\n  refine ⟨{ mul := fun x _ => x\n    ax_left_idempotent := by\n      intro x\n      rfl\n    ax_right_absorb_duplicate := by\n      intro x y\n      rfl\n    ax_middle_swap := by\n      intro x y z\n      rfl }, ?_⟩\n  intro h\n  have hEq : ((⟨true⟩ : α)) = (⟨false⟩ : α) := h.elim _ _\n  exact Bool.true_ne_false (congrArg ULift.down hEq)",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:6:85: error: unexpected token 'by'; expected '{' or tactic",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:6:85: error: unexpected token 'by'; expected '{' or tactic | AutomatedTheoryConstruction/Scratch.lean:6:83: error: unsolved goals | ⊢ ∃ α x, ¬Subsingleton α",
+      "new_problems": [
+        "∀ {α : Type u} [Nontrivial α], ∃ _ : SemigroupLike01 α, ¬ Subsingleton α",
+        "∀ α : Type u, ∃ _ : SemigroupLike01 α, ∀ x y : α, x * y = x"
+      ]
+    },
+    {
+      "result": "proof",
+      "verify_success": false,
+      "proof_sketch": "`α := ULift Bool` を取り、演算を左射影 `x * y := x` とする。このとき 3 つの公理はすべて定義展開で `rfl`。`Subsingleton α` を仮定すると `ULift.up true = ULift.up false` だが、`ULift.down` を作用させると `true = false` となり矛盾する。修正点は、`proof_text` を定理本体の `:= by` の後ろに挿入される前提に合わせて、先頭の余分な `by` を除くこと。",
+      "proof_text": "let α : Type u := ULift.{u} Bool\nletI : SemigroupLike01 α :=\n  { mul := fun x _ => x\n    ax_left_idempotent := by\n      intro x\n      rfl\n    ax_right_absorb_duplicate := by\n      intro x y\n      rfl\n    ax_middle_swap := by\n      intro x y z\n      rfl }\nrefine ⟨α, inferInstance, ?_⟩\nintro h\nhave hEq : (ULift.up true : α) = (ULift.up false : α) := Subsingleton.elim _ _\nexact Bool.true_ne_false (congrArg ULift.down hEq)",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:22:8: error(lean.unknownIdentifier): Unknown constant `Bool.true_ne_false`",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:22:8: error(lean.unknownIdentifier): Unknown constant `Bool.true_ne_false`",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "`α := ULift Bool` とし、積を左射影 `x * y := x` に取る。すると 3 公理はすべて定義展開で `rfl`。もし `Subsingleton α` なら `ULift.up true = ULift.up false` なので、`ULift.down` を作用させて `true = false` を得るが、これは `by decide` で得られる `true ≠ false` に反する。",
+      "proof_text": "let α : Type u := ULift.{u} Bool\nletI : SemigroupLike01 α :=\n  { mul := fun x _ => x\n    ax_left_idempotent := by\n      intro x\n      rfl\n    ax_right_absorb_duplicate := by\n      intro x y\n      rfl\n    ax_middle_swap := by\n      intro x y z\n      rfl }\nrefine ⟨α, inferInstance, ?_⟩\nintro h\nhave hEq : (ULift.up true : α) = (ULift.up false : α) := Subsingleton.elim _ _\nhave htf : (true : Bool) ≠ false := by\n  decide\nexact htf (congrArg ULift.down hEq)",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:22:8: error(lean.unknownIdentifier): Unknown constant `Bool.true_ne_false`",
+      "lean_error_fingerprint": "no_diagnostics",
+      "new_problems": [
+        "∀ {α : Type u} [Nontrivial α], ∃ _ : SemigroupLike01 α, ¬ Subsingleton α",
+        "∀ α : Type u, ∃ _ : SemigroupLike01 α, ∀ x y : α, x * y = x"
+      ]
+    }
+  ],
+  "op_000012": [
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "具体モデルとして `α = ULift Bool` に左射影演算 `x * y = x` を入れる。このとき 3 つの公理はすべて `rfl` で成り立つ。さらに `x = true`, `y = true`, `z = false` を取れば `(x * y) = x = (x * z)` で、`y ≠ z` は `ULift.down` を取って `true ≠ false` に帰着する。",
+      "proof_text": "let α : Type u := ULift.{u} Bool\nletI : SemigroupLike01 α :=\n  { mul := fun x _ => x\n    ax_left_idempotent := by\n      intro x\n      rfl\n    ax_right_absorb_duplicate := by\n      intro x y\n      rfl\n    ax_middle_swap := by\n      intro x y z\n      rfl }\nrefine ⟨α, inferInstance, ULift.up true, ULift.up true, ULift.up false, ?_⟩\nconstructor\n· rfl\n· intro h\n  have htf : (true : Bool) ≠ false := by\n    decide\n  exact htf (congrArg ULift.down h)",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "no_diagnostics",
+      "new_problems": []
+    }
+  ],
+  "op_000013": [
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "`α := ULift Bool` に左射影演算 `x * y := x` を入れる。すると `SemigroupLike01` の3公理はすべて定義通りに `rfl` で成り立つ。あとは `x := ULift.up true`, `y := ULift.up false` を取れば `x * y = x` は自明で、`x ≠ y` は `ULift.down` を作用させて `true ≠ false` に帰着する。",
+      "proof_text": "let α : Type u := ULift.{u} Bool\nletI : SemigroupLike01 α :=\n  { mul := fun x _ => x\n    ax_left_idempotent := by\n      intro x\n      rfl\n    ax_right_absorb_duplicate := by\n      intro x y\n      rfl\n    ax_middle_swap := by\n      intro x y z\n      rfl }\nrefine ⟨α, inferInstance, ULift.up true, ULift.up false, ?_⟩\nconstructor\n· rfl\n· intro h\n  have htf : (true : Bool) ≠ false := by\n    decide\n  exact htf (congrArg ULift.down h)",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "no_diagnostics",
+      "new_problems": [
+        "∀ α : Type u, [Nontrivial α], ∃ _ : SemigroupLike01 α, ∃ x y : α, x * y = x ∧ x ≠ y"
+      ]
+    }
+  ],
+  "op_000014": [
+    {
+      "result": "proof",
+      "verify_success": false,
+      "proof_sketch": "`ax_middle_swap` で左辺を `(x * (x * z)) * y` に変形し、`ax_right_absorb_duplicate` で `x * (x * z)` を `x * z` に簡約する。最後に `ax_middle_swap` を対称向きに使って `(x * z) * y = (x * y) * z` を得ればよい。",
+      "proof_text": "intro α _ x y z\nhave h1 : (x * y) * (x * z) = (x * (x * z)) * y := by\n  simpa [op] using SemigroupLike01.ax_middle_swap (α := α) x y (x * z)\nhave h2 : x * (x * z) = x * z := by\n  simpa [op] using SemigroupLike01.ax_right_absorb_duplicate (α := α) x z\nhave h3 : (x * z) * y = (x * y) * z := by\n  simpa [op] using (SemigroupLike01.ax_middle_swap (α := α) x z y).symm\ncalc\n  (x * y) * (x * z) = (x * (x * z)) * y := h1\n  _ = (x * z) * y := by rw [h2]\n  _ = (x * y) * z := h3",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:13:4: error: Type mismatch: After simplification, term",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:13:4: error: Type mismatch: After simplification, term | Eq.symm (SemigroupLike01.ax_middle_swap x z y) | has type",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "`ax_middle_swap` で `(x * y) * (x * z)` を `(x * (x * z)) * y` に変形し、`ax_right_absorb_duplicate` で内側を `x * z` に簡約する。最後に `ax_middle_swap x z y` をそのまま使って `(x * z) * y = (x * y) * z` を得る。前回の失敗はこの最後の等式を不必要に `symm` して向きを逆にした点だった。",
+      "proof_text": "intro α _ x y z\nhave h1 : (x * y) * (x * z) = (x * (x * z)) * y := by\n  simpa [op] using SemigroupLike01.ax_middle_swap (α := α) x y (x * z)\nhave h2 : x * (x * z) = x * z := by\n  simpa [op] using SemigroupLike01.ax_right_absorb_duplicate (α := α) x z\nhave h3 : (x * z) * y = (x * y) * z := by\n  simpa [op] using SemigroupLike01.ax_middle_swap (α := α) x z y\ncalc\n  (x * y) * (x * z) = (x * (x * z)) * y := h1\n  _ = (x * z) * y := by rw [h2]\n  _ = (x * y) * z := h3",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:13:4: error: Type mismatch: After simplification, term",
+      "lean_error_fingerprint": "no_diagnostics",
+      "new_problems": []
+    }
+  ],
+  "op_000015": [
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "任意の `α` に対し積を左射影 `x * y := x` と定めれば、3 つの公理はすべて定義展開で `rfl`。したがって `SemigroupLike01 α` が入る。あとは仮定 `[Nontrivial α]` から Mathlib の `not_subsingleton α` で `¬ Subsingleton α` が従う。",
+      "proof_text": "intro α _\nletI : SemigroupLike01 α :=\n  { mul := fun x _ => x\n    ax_left_idempotent := by\n      intro x\n      rfl\n    ax_right_absorb_duplicate := by\n      intro x y\n      rfl\n    ax_middle_swap := by\n      intro x y z\n      rfl }\nrefine ⟨inferInstance, ?_⟩\nexact not_subsingleton α",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "no_diagnostics",
+      "new_problems": []
+    }
+  ],
+  "op_000016": [
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "任意の型 α に対し、積を左射影 `x * y := x` と定める。このとき `x * x = x`、`x * (x * y) = x`、`(x * y) * z = x = (x * z) * y` なので `SemigroupLike01 α` の3公理はすべて定義展開で成り立つ。したがってそのインスタンスを与えれば、任意の `x y` について `x * y = x` も自明に従う。",
+      "proof_text": "intro α\nletI : SemigroupLike01 α :=\n  { mul := fun x _ => x\n    ax_left_idempotent := by\n      intro x\n      rfl\n    ax_right_absorb_duplicate := by\n      intro x y\n      rfl\n    ax_middle_swap := by\n      intro x y z\n      rfl }\nrefine ⟨inferInstance, ?_⟩\nintro x y\nrfl",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "no_diagnostics",
+      "new_problems": []
+    }
+  ],
+  "op_000017": [
+    {
+      "result": "proof",
+      "verify_success": false,
+      "proof_sketch": "任意の非自明型 α に対し、積を左射影 `x * y := x` で定める。このとき `x * x = x`, `x * (x * y) = x * y`, `(x * y) * z = (x * z) * y` はすべて定義展開で `rfl`。よって `SemigroupLike01 α` が入る。さらに `Nontrivial α` から `exists_pair_ne α` で異なる 2 点 `x ≠ y` を取り、左射影より `x * y = x`。これで所望の `x, y` が得られる。",
+      "proof_text": "intro α _\nletI : SemigroupLike01 α :=\n  { mul := fun x _ => x\n    ax_left_idempotent := by\n      intro x\n      rfl\n    ax_right_absorb_duplicate := by\n      intro x y\n      rfl\n    ax_middle_swap := by\n      intro x y z\n      rfl }\nobtain ⟨x, y, hne⟩ := exists_pair_ne α\nrefine ⟨inferInstance, x, y, ?_⟩\nexact ⟨rfl, hne⟩",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:6:52: error: unexpected token ','; expected ':=', 'where' or '|'",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:6:52: error: unexpected token ','; expected ':=', 'where' or '|' | AutomatedTheoryConstruction/Scratch.lean:6:38: error: type expected, got | ([Nontrivial α] : List Prop)",
+      "new_problems": [
+        "∀ α : Type u, [Nontrivial α], ∃ _ : SemigroupLike01 α, ∃ x y z : α, x * y = x * z ∧ y ≠ z",
+        "∀ α : Type u, [Nontrivial α], ∃ _ : SemigroupLike01 α, ∃ x y : α, x * y = x ∧ y * x = y ∧ x ≠ y"
+      ]
+    },
+    {
+      "result": "stuck",
+      "verify_success": false,
+      "proof_sketch": "数学的には左射影 `x * y := x` を入れれば成立する。実際、`x * x = x`、`x * (x * y) = x * y`、`(x * y) * z = (x * z) * y` はすべて定義展開で従い、`Nontrivial α` から異なる `x ≠ y` を取れば `x * y = x` となる。ただし今回の入力 stmt は `∀ α : Type u, [Nontrivial α], ...` という Lean では不正な binder 構文で、証明戦略ではなく statement 自体の修正が必要である。Lean では例えば `∀ {α : Type u} [Nontrivial α], ...` の形なら形式化できる。",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:6:49: error: type expected, got",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:6:49: error: type expected, got | ([Nontrivial α] : List Prop)",
+      "new_problems": []
+    }
+  ],
+  "op_000018": [
+    {
+      "result": "proof",
+      "verify_success": false,
+      "proof_sketch": "α 上で左射影演算 `x * y := x` を入れる。すると `SemigroupLike01` の3公理はすべて定義展開で `rfl`。あとは `exists_pair_ne α` で相異なる `y, z` を取り、`x := y` とすれば `x * y = y = x * z` なので所望の反単射例が得られる。",
+      "proof_text": "intro α _\nletI : SemigroupLike01 α :=\n  { mul := fun x _ => x\n    ax_left_idempotent := by\n      intro x\n      rfl\n    ax_right_absorb_duplicate := by\n      intro x y\n      rfl\n    ax_middle_swap := by\n      intro x y z\n      rfl }\nobtain ⟨y, z, hyz⟩ := exists_pair_ne α\nrefine ⟨inferInstance, y, y, z, ?_⟩\nconstructor\n· rfl\n· exact hyz",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:6:52: error: unexpected token ','; expected ':=', 'where' or '|'",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:6:52: error: unexpected token ','; expected ':=', 'where' or '|' | AutomatedTheoryConstruction/Scratch.lean:6:38: error: type expected, got | ([Nontrivial α] : List Prop)",
+      "new_problems": []
+    },
+    {
+      "result": "stuck",
+      "verify_success": false,
+      "proof_sketch": "命題自体は真で、左射影演算 `x * y := x` を入れれば `SemigroupLike01` の3公理はすべて `rfl` で従う。さらに `exists_pair_ne α` で相異なる `y, z` を取り、`x := y` とすれば `x * y = y = x * z` なので所望の例が得られる。ただし今回の失敗原因は証明ではなく文そのものの Lean 構文で、`∀ α : Type u, [Nontrivial α], ...` は宣言位置でパースされない。Lean では `∀ (α : Type u) [_ : Nontrivial α], ...` か `∀ {α : Type u} [Nontrivial α], ...` に直してからこの証明を入れる必要がある。",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:6:49: error: type expected, got",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:6:49: error: type expected, got | ([Nontrivial α] : List Prop)",
+      "new_problems": []
+    }
+  ],
+  "op_000019": [
+    {
+      "result": "proof",
+      "verify_success": false,
+      "proof_sketch": "既存定理 `thm_op_000016` を使って、任意の `α` に left-projection 型の `SemigroupLike01` 構造 `x * y = x` を入れる。`Nontrivial α` から `exists_pair_ne α` で異なる `x,y` を取れば、`x * y = x` と `y * x = y` はどちらもその構造の性質 `hmul` から直ちに従う。",
+      "proof_text": "intro α _\nobtain ⟨S, hmul⟩ := thm_op_000016 α\nletI : SemigroupLike01 α := S\nobtain ⟨x, y, hxy⟩ := exists_pair_ne α\nrefine ⟨S, x, y, ?_⟩\nconstructor\n· exact hmul x y\nconstructor\n· exact hmul y x\n· exact hxy",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:6:52: error: unexpected token ','; expected ':=', 'where' or '|'",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:6:52: error: unexpected token ','; expected ':=', 'where' or '|' | AutomatedTheoryConstruction/Scratch.lean:6:38: error: type expected, got | ([Nontrivial α] : List Prop)",
+      "new_problems": []
+    },
+    {
+      "result": "stuck",
+      "verify_success": false,
+      "proof_sketch": "`thm_op_000016` と `exists_pair_ne` により、数学的には left-projection 構造を入れて異なる `x,y` を取れば示せる。ただし入力 stmt の `∀ α : Type u, [Nontrivial α], ...` は Lean では不正な binder 構文で、theorem ヘッダの時点でパース失敗するため、`proof_text` の修正だけでは現行の検証を通せない。",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:6:49: error: type expected, got",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:6:49: error: type expected, got | ([Nontrivial α] : List Prop)",
+      "new_problems": []
     }
   ]
 }

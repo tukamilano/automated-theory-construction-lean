@@ -50,6 +50,14 @@ def _repair_result(payload: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _expand_result(payload: dict[str, Any]) -> dict[str, Any]:
+    problem_id = str(payload.get("problem_id", ""))
+    return {
+        "problem_id": problem_id,
+        "new_problems": [],
+    }
+
+
 def main() -> None:
     try:
         request = _read_request()
@@ -64,6 +72,8 @@ def main() -> None:
             result_payload = _prover_result(payload)
         elif task_type == "repair":
             result_payload = _repair_result(payload)
+        elif task_type == "expand":
+            result_payload = _expand_result(payload)
         else:
             raise ValueError(f"unsupported task_type: {task_type}")
 

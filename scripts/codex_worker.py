@@ -87,7 +87,7 @@ def _extract_json_object(text: str) -> tuple[dict[str, Any], int, bool]:
 
 def _build_prompt(task_type: str, system_prompt: str, payload: dict[str, Any]) -> str:
     return (
-        "You are an interactive theorem-proving worker.\n"
+        "You are an interactive worker in an automated theorem-construction loop.\n"
         f"Task type: {task_type}\n\n"
         "System instructions (must follow):\n"
         f"{system_prompt}\n\n"
@@ -174,7 +174,7 @@ def main() -> None:
         if not isinstance(payload, dict):
             raise ValueError("payload must be a JSON object")
 
-        if task_type not in {"picker", "prover", "repair"}:
+        if task_type not in {"picker", "prover", "repair", "expand"}:
             raise ValueError(f"unsupported task_type: {task_type}")
 
         outer_timeout = int((os.getenv("ATC_WORKER_TIMEOUT") or "180").strip())
