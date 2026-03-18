@@ -114,7 +114,7 @@ project/
     Scratch.lean
   prompts/
     picker.md
-    prover.md
+    prover_simple.md
   scripts/
     run_loop.py
     state_update.py

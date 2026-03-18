@@ -25,7 +25,7 @@ def read_jsonl(path: Path) -> list[dict[str, Any]]:
 
 def write_jsonl_atomic(path: Path, rows: list[dict[str, Any]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    payload = "".join(json.dumps(row, ensure_ascii=True, separators=(",", ":")) + "\n" for row in rows)
+    payload = "".join(json.dumps(row, ensure_ascii=False, separators=(",", ":")) + "\n" for row in rows)
     with tempfile.NamedTemporaryFile("w", encoding="utf-8", dir=str(path.parent), delete=False) as tmp:
         tmp.write(payload)
         tmp_path = Path(tmp.name)

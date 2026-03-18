@@ -33,7 +33,7 @@ def main() -> None:
         scratch_file=Path(args.scratch_file),
         timeout_sec=args.timeout,
     )
-    print(json.dumps(result, ensure_ascii=True))
+    print(json.dumps(result, ensure_ascii=False))
 
 
 if __name__ == "__main__":

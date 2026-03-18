@@ -58,7 +58,7 @@ Handle subgoal rewrites here first.
 - `aesop`
 - `grind`
 
-Use these only for small first-order goals; avoid as main weapons for measure/integral/CFC/spectrum goals.
+Use these only for small first-order goals; avoid relying on them as the main strategy for structured goals.
 
 ## `simp` rules
 
@@ -69,32 +69,29 @@ Use these only for small first-order goals; avoid as main weapons for measure/in
 - If `simp?` suggests `simp only`, consider pinning it.
 - Under binders, use `simp_rw` when order matters.
 
-## Field-specific patterns
+## Goal-oriented patterns
 
-### `Continuous*` / `Measurable*` / `Differentiable*`
+### Structural properties (`Continuous*`, `Measurable*`, `Differentiable*`, etc.)
 
-- Try `fun_prop` first.
-- For measure goals, try `measurability`.
-- If side goals are order constraints, add `positivity` or short `linarith`.
+- Try dedicated property tactics first (`fun_prop`, `measurability` when relevant).
+- If side goals reduce to inequalities/order facts, use `positivity` or short `linarith`.
 
-### `ENNReal` / integrals / measure
+### Algebraic normalization
 
-- Use `positivity` for nonnegativity.
-- Use `finiteness` for finiteness.
-- Under binders, prefer `simp_rw`.
-- Do not smash `lintegral`, `integral`, `Measure.restrict`, `indicator` with raw `simp [*]`.
+- Prefer `ring_nf` for polynomial-style normalization.
+- Use `field_simp` only where denominator management is required.
+- Use `linear_combination` when a linear relation should close the goal.
 
-### Commutative ring algebra
+### Rewriting-heavy goals
 
-- Prefer `ring_nf` for normalization.
-- Isolate `field_simp` for denominators into tiny helpers.
-- Consider `linear_combination` when applicable.
+- Under binders, prefer `simp_rw` over broad `simp [*]`.
+- Keep rewrite sets small and explicit (`simp only [...]`).
+- For associativity-sensitive expressions, use targeted local rewrites (for example, `rw [mul_assoc]`) rather than large AC bundles.
 
-### Matrices / operators / inequalities
+### Inequality and arithmetic side goals
 
-- Reduce to scalar side goals first.
-- Then try `gcongr` / `positivity` / `linarith` / `nlinarith`.
-- For noncommutative products, do not hand AC lemmas to `simp`; use targeted `rw [mul_assoc]` locally.
+- Try `positivity` first for nonnegativity obligations.
+- Then use `linarith` / `nlinarith` / `omega` depending on arithmetic domain.
 
 ## LSP helpers
 

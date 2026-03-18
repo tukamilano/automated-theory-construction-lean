@@ -14,11 +14,10 @@ Main entry points include:
 
 Use repository-local workflow and skill files under `.codex/` as supporting instructions, with this file as the primary source of truth.
 
-## Equational Loop Addendum (picker/prover integration)
+## Equational Loop Addendum (prover integration)
 
 This repository also runs a minimal equational-theory loop around three roles:
 
-- `picker`: chooses one open problem id
 - `prover`: attempts the problem and proposes at most two new problems
 - Lean formalization/verification: reuses the existing Lean workflow in this file
 
@@ -27,7 +26,6 @@ This addendum extends orchestration behavior only. It does not replace the Lean 
 ### Responsibility boundary
 
 - LLM responsibility:
-  - `picker` output: choose exactly one problem id
   - `prover` output: `proof | counterexample | stuck` with optional texts and 0-2 new problems
 - Script responsibility (deterministic):
   - JSONL read/write
@@ -41,7 +39,7 @@ Do not move transaction/state-update decisions into prompts.
 ### Formalization boundary (preserve existing operation)
 
 - Keep existing Lean formalization operation from this AGENTS file and repo skills (`lean-rule`, `mathlib-usage`).
-- Do not introduce a separate heavy formalizer workflow for picker/prover integration.
+- Do not introduce a separate heavy formalizer workflow for prover integration.
 - If a natural-language statement cannot be formalized to Lean, treat it as rejected formalization and keep it in `open` with incremented attempts (`n`).
 
 ### Module contract (Theory / Derived / Scratch)
@@ -157,7 +155,6 @@ Repo-local skills (rules/checklists) are under `.codex/skills/`:
 
 - `lean-rule`: Lean proof/implementation rules (plan → skeleton → iterate → finish)
 - `mathlib-usage`: Mathlib usage principles (import/search/existence check)
-- `picker-interface`: picker I/O contract for equational loop selection
 - `prover-interface`: prover I/O contract for equational loop attempts
 
 Use these as supporting guidance under the authority of this `AGENTS.md`.

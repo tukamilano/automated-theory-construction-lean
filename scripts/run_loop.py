@@ -3,15 +3,24 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import sys
 import time
 from pathlib import Path
+from typing import Callable
 from typing import Any
 
 from append_derived import append_theorem
 from common import read_jsonl, resolve_max_attempts, write_jsonl_atomic
 from lean_verify import verify_scratch
-from llm_client import call_chat_completion_json, load_llm_settings
 from state_update import apply_state_update
+from worker_client import invoke_worker_json, load_worker_settings
+
+
+def debug_log(msg: str) -> None:
+    """Print debug message to stderr with timestamp."""
+    timestamp = time.strftime("%H:%M:%S")
+    print(f"[{timestamp}] {msg}", file=sys.stderr, flush=True)
+
 
 
 SCRATCH_TEMPLATE = (
@@ -22,12 +31,34 @@ SCRATCH_TEMPLATE = (
     "end AutomatedTheoryConstruction\n"
 )
 
+DERIVED_TEMPLATE = (
+    "import AutomatedTheoryConstruction.Theory\n\n"
+    "namespace AutomatedTheoryConstruction\n\n"
+    "-- Verified theorems are appended here by scripts/append_derived.py.\n\n"
+    "end AutomatedTheoryConstruction\n"
+)
+
+
+def normalize_stmt_text(stmt: str) -> str:
+    return " ".join(stmt.split())
+
+
+def is_trivial_negation_style(stmt: str) -> bool:
+    normalized = normalize_stmt_text(stmt)
+    return normalized.startswith("¬(") or normalized.endswith("→ False")
+
 
 def pick_next_problem(open_rows: list[dict[str, Any]], max_attempts: int) -> dict[str, Any] | None:
     eligible = [row for row in open_rows if int(row.get("n", 0)) < max_attempts]
     if not eligible:
         return None
-    eligible.sort(key=lambda row: (int(row.get("n", 0)), str(row.get("id", ""))))
+    eligible.sort(
+        key=lambda row: (
+            int(row.get("n", 0)),
+            is_trivial_negation_style(str(row.get("stmt", ""))),
+            str(row.get("id", "")),
+        )
+    )
     return eligible[0]
 
 
@@ -55,8 +86,8 @@ def validate_picker_output(payload: dict[str, Any], open_rows: list[dict[str, An
     return selected_id
 
 
-def validate_prover_output(payload: dict[str, Any], expected_problem_id: str) -> tuple[str, str, str, list[str]]:
-    required_keys = {"problem_id", "result", "proof_text", "counterexample_text", "new_problems"}
+def validate_prover_output(payload: dict[str, Any], expected_problem_id: str) -> tuple[str, str, str, str, list[str]]:
+    required_keys = {"problem_id", "result", "proof_sketch", "proof_text", "counterexample_text", "new_problems"}
     if set(payload.keys()) != required_keys:
         raise ValueError("prover output keys mismatch required contract")
 
@@ -68,10 +99,11 @@ def validate_prover_output(payload: dict[str, Any], expected_problem_id: str) ->
     if result not in {"proof", "counterexample", "stuck"}:
         raise ValueError("prover result must be one of: proof, counterexample, stuck")
 
+    proof_sketch = payload.get("proof_sketch")
     proof_text = payload.get("proof_text")
     counterexample_text = payload.get("counterexample_text")
-    if not isinstance(proof_text, str) or not isinstance(counterexample_text, str):
-        raise ValueError("proof_text and counterexample_text must be strings")
+    if not isinstance(proof_sketch, str) or not isinstance(proof_text, str) or not isinstance(counterexample_text, str):
+        raise ValueError("proof_sketch, proof_text and counterexample_text must be strings")
 
     new_problems_value = payload.get("new_problems")
     if not isinstance(new_problems_value, list):
@@ -82,7 +114,7 @@ def validate_prover_output(payload: dict[str, Any], expected_problem_id: str) ->
         raise ValueError("new_problems must contain only strings")
 
     new_problems = [item.strip() for item in new_problems_value if item.strip()][:2]
-    return result, proof_text, counterexample_text, new_problems
+    return result, proof_sketch, proof_text, counterexample_text, new_problems
 
 
 def load_json_payload_from_args(inline_json: str | None, json_file: str | None) -> dict[str, Any] | None:
@@ -141,9 +173,13 @@ def formalize_to_scratch(
         raw_body = proof_text.strip() if proof_text.strip() else "sorry"
         body = "\n  ".join(line.rstrip() for line in raw_body.splitlines())
         theorem = f"theorem {theorem_name} : {stmt} := by\n  {body}\n"
-    else:
-        witness = counterexample_text.strip() if counterexample_text.strip() else "by\n  sorry"
-        theorem = f"theorem {theorem_name}_counterexample_placeholder : True := {witness}\n"
+    else:  # mode == "counterexample"
+        # For counterexample: proof_text contains the proof that the negation holds.
+        # We prove ¬(stmt), which is logically equivalent to disproving the original statement.
+        # The proof_text should construct a counterexample and derive a contradiction from stmt.
+        raw_body = proof_text.strip() if proof_text.strip() else "sorry"
+        body = "\n  ".join(line.rstrip() for line in raw_body.splitlines())
+        theorem = f"theorem {theorem_name}_is_false : ¬({stmt}) := by\n  {body}\n"
 
     import_block = ""
     if include_mathlib_import:
@@ -167,6 +203,190 @@ def parse_new_problems(raw_values: list[str]) -> list[str]:
         if text:
             values.append(text)
     return values[:2]
+
+
+def merge_new_problems(existing: list[str], incoming: list[str]) -> list[str]:
+    """Merge and deduplicate generated problems while keeping order and cap."""
+    merged: list[str] = []
+    seen: set[str] = set()
+
+    for item in list(existing) + list(incoming):
+        text = str(item).strip()
+        if not text:
+            continue
+        norm = normalize_stmt_text(text)
+        if norm in seen:
+            continue
+        seen.add(norm)
+        merged.append(text)
+        if len(merged) >= 2:
+            break
+
+    return merged
+
+
+def emit_phase_log(enabled: bool, phase: str, **fields: Any) -> None:
+    if not enabled:
+        return
+    payload: dict[str, Any] = {
+        "event": "phase",
+        "phase": phase,
+        "ts": int(time.time()),
+    }
+    payload.update(fields)
+    print(payload, flush=True)
+
+
+def is_worker_timeout_error(exc: Exception) -> bool:
+    message = str(exc).lower()
+    return "timed out" in message or "timeout" in message
+
+
+def filter_generated_subgoals(candidates: list[str], original_stmt: str) -> list[str]:
+    """Keep only meaningful, non-trivial generated subgoals.
+
+    Rejects direct logical-negation templates and duplicates to reduce queue pollution.
+    """
+    original_norm = normalize_stmt_text(original_stmt)
+    filtered: list[str] = []
+    seen_norms: set[str] = set()
+
+    for candidate in candidates:
+        text = str(candidate).strip()
+        if not text:
+            continue
+
+        norm = normalize_stmt_text(text)
+        if norm == original_norm:
+            continue
+
+        # Avoid mechanical timeout templates such as ¬(P) and P → False.
+        if is_trivial_negation_style(norm):
+            continue
+
+        if norm in seen_norms:
+            continue
+        seen_norms.add(norm)
+        filtered.append(text)
+
+    return filtered[:2]
+
+
+def collect_recent_subgoal_candidates(
+    memory_path: Path,
+    problem_id: str,
+    max_candidates: int = 16,
+) -> list[str]:
+    """Collect candidate subgoals from same-problem formalization memory only."""
+    if not memory_path.exists():
+        return []
+
+    try:
+        payload = json.loads(memory_path.read_text(encoding="utf-8"))
+    except Exception:
+        return []
+
+    if not isinstance(payload, dict):
+        return []
+
+    candidates: list[str] = []
+
+    def add_from_rows(rows: Any) -> None:
+        if not isinstance(rows, list):
+            return
+        # Prefer latest rows first.
+        for item in reversed(rows):
+            if not isinstance(item, dict):
+                continue
+            row_candidates = item.get("new_problems", [])
+            if not isinstance(row_candidates, list):
+                continue
+            for row_candidate in row_candidates:
+                if isinstance(row_candidate, str) and row_candidate.strip():
+                    candidates.append(row_candidate.strip())
+                    if len(candidates) >= max_candidates:
+                        return
+
+    # Use only same-problem history to respect proof-local reasoning context.
+    add_from_rows(payload.get(problem_id, []))
+    return candidates[:max_candidates]
+
+
+def make_timeout_subgoals(
+    stmt: str,
+    memory_path: Path,
+    problem_id: str,
+    fallback_candidates: list[str] | None = None,
+) -> list[str]:
+    """Generate follow-up subgoals from prior unresolved reasoning history.
+
+    Uses prior repair/prover proposals from formalization memory and avoids synthetic
+    logical-negation templates.
+    """
+    candidates = collect_recent_subgoal_candidates(memory_path, problem_id)
+
+    if fallback_candidates:
+        candidates.extend(fallback_candidates)
+
+    return filter_generated_subgoals(candidates, stmt)
+
+
+def extract_derived_theorems(derived_path: Path, max_theorems: int = 50, max_chars: int = 8000) -> str:
+    """Extract theorem names and statements from Derived.lean to enrich theory context.
+    
+    Returns a formatted string summarizing verified theorems, suitable for injection into theory_context.
+    Includes guardrails: limits number of theorems and total character count to avoid token explosion.
+    """
+    if not derived_path.exists():
+        return ""
+    
+    try:
+        content = derived_path.read_text(encoding="utf-8")
+    except Exception:
+        return ""
+    
+    # Skip header and extract theorem declarations
+    # Pattern: theorem <name> : <statement> := ...
+    theorem_decls: list[str] = []
+    theorem_pattern = re.compile(r"^\s*theorem\s+([A-Za-z0-9_']+)\s*:\s*(.+?)\s*:=")
+    
+    for line in content.splitlines():
+        match = theorem_pattern.search(line)
+        if match:
+            theorem_name = match.group(1)
+            # Extract statement up to the next theorem or end
+            stmt_start = match.start(2)
+            # Find where the statement ends (before := or on previous line)
+            stmt_line = match.group(2).strip()
+            if stmt_line:
+                decl_text = f"theorem {theorem_name} : {stmt_line}"
+                theorem_decls.append(decl_text)
+                if len(theorem_decls) >= max_theorems:
+                    break
+    
+    if not theorem_decls:
+        return ""
+    
+    # Build summary string with guardrails
+    summary_lines = ["", "-- Already-verified theorems from Derived.lean (for reference):"]
+    for decl in theorem_decls:
+        summary_lines.append(f"-- {decl}")
+    
+    summary = "\n".join(summary_lines)
+    
+    # Enforce max character limit
+    if len(summary) > max_chars:
+        summary = summary[:max_chars] + "\n-- (truncated due to size limits)"
+    
+    return summary
+
+
+def inject_derived_context(theory_context: str, derived_path: Path) -> str:
+    """Append Derived.lean theorem inventory to theory_context for worker awareness."""
+    derived_summary = extract_derived_theorems(derived_path)
+    if derived_summary:
+        return theory_context + derived_summary
+    return theory_context
 
 
 def analyze_lean_failure(stderr: str, stdout: str) -> dict[str, Any]:
@@ -198,7 +418,7 @@ def analyze_lean_failure(stderr: str, stdout: str) -> dict[str, Any]:
     }
 
 
-def load_formalization_memory(memory_path: Path, problem_id: str) -> list[dict[str, str]]:
+def load_formalization_memory(memory_path: Path, problem_id: str) -> list[dict[str, Any]]:
     if not memory_path.exists():
         return []
     try:
@@ -210,22 +430,29 @@ def load_formalization_memory(memory_path: Path, problem_id: str) -> list[dict[s
     rows = payload.get(problem_id, [])
     if not isinstance(rows, list):
         return []
-    safe_rows: list[dict[str, str]] = []
+    safe_rows: list[dict[str, Any]] = []
     for item in rows:
         if not isinstance(item, dict):
             continue
+        raw_new_problems = item.get("new_problems", [])
+        parsed_new_problems: list[str] = []
+        if isinstance(raw_new_problems, list):
+            parsed_new_problems = [str(v).strip() for v in raw_new_problems if str(v).strip()]
         safe_rows.append(
             {
                 "result": str(item.get("result", "")),
+                "proof_sketch": str(item.get("proof_sketch", "")),
                 "proof_text": str(item.get("proof_text", "")),
                 "counterexample_text": str(item.get("counterexample_text", "")),
                 "lean_error_excerpt": str(item.get("lean_error_excerpt", "")),
+                "lean_error_fingerprint": str(item.get("lean_error_fingerprint", "")),
+                "new_problems": parsed_new_problems[:2],
             }
         )
     return safe_rows
 
 
-def save_formalization_memory(memory_path: Path, problem_id: str, history: list[dict[str, str]]) -> None:
+def save_formalization_memory(memory_path: Path, problem_id: str, history: list[dict[str, Any]]) -> None:
     memory_path.parent.mkdir(parents=True, exist_ok=True)
     payload: dict[str, Any] = {}
     if memory_path.exists():
@@ -236,11 +463,11 @@ def save_formalization_memory(memory_path: Path, problem_id: str, history: list[
         except Exception:
             payload = {}
     payload[problem_id] = history[-20:]
-    memory_path.write_text(json.dumps(payload, ensure_ascii=True, indent=2), encoding="utf-8")
+    memory_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
 def query_prover_with_retries(
-    llm_settings: Any,
+    worker_settings: Any,
     prover_prompt: str,
     problem_id: str,
     stmt: str,
@@ -248,9 +475,11 @@ def query_prover_with_retries(
     max_attempts: int,
     prover_retries: int,
     theory_context: str,
-) -> tuple[str, str, str, list[str], int]:
+    memory_path: Path,
+) -> tuple[str, str, str, str, list[str], int]:
     retries = max(1, prover_retries)
     last_result = "stuck"
+    last_proof_sketch = ""
     last_proof_text = ""
     last_counterexample_text = ""
     last_new_problems: list[str] = []
@@ -284,21 +513,50 @@ def query_prover_with_retries(
                 "counterexample candidate in counterexample_text and up to two useful new_problems."
             )
             payload["previous_result"] = last_result
+            payload["previous_proof_sketch"] = last_proof_sketch
             payload["previous_counterexample_text"] = last_counterexample_text
             payload["previous_new_problems"] = last_new_problems
 
-        prover_payload = call_chat_completion_json(llm_settings, prover_prompt, payload)
-        result, proof_text, counterexample_text, new_problems = validate_prover_output(prover_payload, problem_id)
+        try:
+            debug_log(f"Calling prover for problem {problem_id}, attempt {attempt}/{retries}")
+            prover_start = time.monotonic()
+            prover_payload, _ = invoke_worker_json(
+                settings=worker_settings,
+                task_type="prover",
+                system_prompt=prover_prompt,
+                payload=payload,
+                metadata={"problem_id": problem_id, "attempt": attempt},
+            )
+            prover_elapsed = time.monotonic() - prover_start
+            debug_log(f"Prover returned for {problem_id}: {prover_payload.get('result', 'unknown')} (took {prover_elapsed:.1f}s)")
+        except RuntimeError as exc:
+            if is_worker_timeout_error(exc):
+                debug_log(f"Prover timed out for {problem_id}: {exc}")
+                timeout_sketch = (
+                    "Prover worker timed out before returning a valid response. "
+                    "Treating this iteration as stuck so the problem remains open and n increments. "
+                    f"Details: {exc}"
+                )
+                timeout_subgoals = make_timeout_subgoals(
+                    stmt=stmt,
+                    memory_path=memory_path,
+                    problem_id=problem_id,
+                    fallback_candidates=last_new_problems,
+                )
+                return "stuck", timeout_sketch, "", "", timeout_subgoals, attempt
+            raise
+        result, proof_sketch, proof_text, counterexample_text, new_problems = validate_prover_output(prover_payload, problem_id)
 
         last_result = result
+        last_proof_sketch = proof_sketch
         last_proof_text = proof_text
         last_counterexample_text = counterexample_text
         last_new_problems = new_problems
 
         if result != "stuck":
-            return result, proof_text, counterexample_text, new_problems, attempt
+            return result, proof_sketch, proof_text, counterexample_text, new_problems, attempt
 
-    return last_result, last_proof_text, last_counterexample_text, last_new_problems, retries
+    return last_result, last_proof_sketch, last_proof_text, last_counterexample_text, last_new_problems, retries
 
 
 def attempt_formalization_until_timeout(
@@ -306,12 +564,13 @@ def attempt_formalization_until_timeout(
     problem_id: str,
     stmt: str,
     result: str,
+    proof_sketch: str,
     proof_text: str,
     counterexample_text: str,
     new_problems: list[str],
     scratch_file: Path,
     skip_verify: bool,
-    llm_settings: Any,
+    worker_settings: Any,
     prover_prompt: str,
     open_rows: list[dict[str, Any]],
     max_attempts: int,
@@ -319,22 +578,45 @@ def attempt_formalization_until_timeout(
     verify_timeout_sec: int,
     formalization_retry_budget_sec: int,
     memory_path: Path,
-) -> tuple[bool, bool, str | None, str, str, str, list[str], str]:
+    phase_logger: Callable[..., None] | None = None,
+) -> tuple[bool, str | None, str, str, str, list[str], str]:
     verify_success = False
-    formalization_rejected = False
     theorem_name: str | None = None
     verify_error_excerpt = ""
     include_mathlib_import = False
+    retained_new_problems = list(new_problems)
 
     if result not in {"proof", "counterexample"}:
-        return verify_success, formalization_rejected, theorem_name, result, proof_text, counterexample_text, new_problems, verify_error_excerpt
+        # Preserve stuck/counterexample exploration history so future timeout handling
+        # can mine subgoal candidates from prior reasoning.
+        persisted_history = load_formalization_memory(memory_path, problem_id)
+        persisted_history.append(
+            {
+                "result": result,
+                "proof_sketch": proof_sketch,
+                "proof_text": proof_text,
+                "counterexample_text": counterexample_text,
+                "lean_error_excerpt": verify_error_excerpt,
+                "lean_error_fingerprint": "non_formalized_result",
+                "new_problems": list(new_problems)[:2],
+            }
+        )
+        save_formalization_memory(memory_path, problem_id, persisted_history)
+        return verify_success, theorem_name, result, proof_text, counterexample_text, new_problems, verify_error_excerpt
 
     deadline = time.monotonic() + max(1, formalization_retry_budget_sec)
     persisted_history = load_formalization_memory(memory_path, problem_id)
     repair_round = 0
-    repair_history: list[dict[str, str]] = list(persisted_history)
+    repair_history: list[dict[str, Any]] = list(persisted_history)
 
     while True:
+        if phase_logger is not None:
+            phase_logger(
+                phase="formalize_and_verify",
+                problem_id=problem_id,
+                result=result,
+                repair_round=repair_round,
+            )
         theorem_name, scratch_code = formalize_to_scratch(
             problem_id=problem_id,
             stmt=stmt,
@@ -379,26 +661,23 @@ def attempt_formalization_until_timeout(
             if verify_success:
                 return (
                     verify_success,
-                    False,
                     theorem_name,
                     result,
                     proof_text,
                     counterexample_text,
-                    new_problems,
+                    retained_new_problems,
                     verify_error_excerpt,
                 )
 
-        if llm_settings is None or time.monotonic() >= deadline:
-            formalization_rejected = True
+        if worker_settings is None or time.monotonic() >= deadline:
             save_formalization_memory(memory_path, problem_id, repair_history)
             return (
                 verify_success,
-                formalization_rejected,
                 theorem_name,
                 result,
                 proof_text,
                 counterexample_text,
-                new_problems,
+                retained_new_problems,
                 verify_error_excerpt,
             )
 
@@ -407,10 +686,12 @@ def attempt_formalization_until_timeout(
         repair_history.append(
             {
                 "result": result,
+                "proof_sketch": proof_sketch,
                 "proof_text": proof_text,
                 "counterexample_text": counterexample_text,
                 "lean_error_excerpt": verify_error_excerpt,
                 "lean_error_fingerprint": error_fingerprint,
+                "new_problems": list(new_problems)[:2],
             }
         )
         if len(repair_history) > 4:
@@ -418,6 +699,13 @@ def attempt_formalization_until_timeout(
         save_formalization_memory(memory_path, problem_id, repair_history)
 
         repair_round += 1
+        if phase_logger is not None:
+            phase_logger(
+                phase="repair",
+                problem_id=problem_id,
+                repair_round=repair_round,
+                error_fingerprint=error_fingerprint,
+            )
         repair_payload: dict[str, Any] = {
             "problem_id": problem_id,
             "stmt": stmt,
@@ -435,12 +723,13 @@ def attempt_formalization_until_timeout(
             },
             "retry_instruction": (
                 "Previous proof/counterexample failed Lean formalization or verification. "
-                "Read the Lean diagnostics carefully and return a corrected Lean-valid response. "
-                "If result is proof, proof_text must be Lean tactic code only."
+                "Read the Lean diagnostics carefully. Revise proof_sketch if the strategy was wrong, "
+                "then fix proof_text to match. proof_text must be Lean tactic code only."
             ),
             "error_fingerprint": error_fingerprint,
             "error_categories": verify_error_analysis.get("categories", []),
             "previous_result": result,
+            "previous_proof_sketch": proof_sketch,
             "previous_proof_text": proof_text,
             "previous_counterexample_text": counterexample_text,
             "previous_new_problems": new_problems,
@@ -453,9 +742,31 @@ def attempt_formalization_until_timeout(
             "deadline_note": "Keep trying corrections until a Lean-checkable output is found.",
         }
 
-        repaired = call_chat_completion_json(llm_settings, prover_prompt, repair_payload)
         try:
-            result, proof_text, counterexample_text, new_problems = validate_prover_output(repaired, problem_id)
+            repaired, _ = invoke_worker_json(
+                settings=worker_settings,
+                task_type="repair",
+                system_prompt=prover_prompt,
+                payload=repair_payload,
+                metadata={"problem_id": problem_id, "repair_round": repair_round},
+            )
+        except RuntimeError as exc:
+            if is_worker_timeout_error(exc):
+                verify_error_excerpt = f"repair worker timeout: {exc}"
+                save_formalization_memory(memory_path, problem_id, repair_history)
+                return (
+                    verify_success,
+                    theorem_name,
+                    result,
+                    proof_text,
+                    counterexample_text,
+                    retained_new_problems,
+                    verify_error_excerpt,
+                )
+            raise
+        try:
+            result, proof_sketch, proof_text, counterexample_text, new_problems = validate_prover_output(repaired, problem_id)
+            retained_new_problems = merge_new_problems(retained_new_problems, new_problems)
         except ValueError as exc:
             verify_error_excerpt = f"repair output invalid: {exc}"
             continue
@@ -466,112 +777,16 @@ def attempt_formalization_until_timeout(
             include_mathlib_import = True
 
 
-def run_single_shot_mode(args: argparse.Namespace) -> None:
-    if not args.single_shot_stmt:
-        raise ValueError("--single-shot-stmt is required when --mode single-shot")
-
-    problem_id = args.single_shot_problem_id
-    stmt = args.single_shot_stmt
-    scratch_file = Path(args.scratch_file)
-    memory_path = Path(args.formalization_memory_file)
-    theorem_name = None
-    verify_success = False
-    verify_error_excerpt = ""
-    formalization_rejected = False
-    prover_attempts_used = 1
-
-    prover_payload = load_json_payload_from_args(args.prover_output_json, args.prover_output_file)
-    llm_settings = None
-    theory_context = load_optional_text(args.theory_file)
-
-    if args.enable_llm:
-        llm_settings = load_llm_settings(
-            base_url_override=args.llm_base_url,
-            api_key_override=args.llm_api_key,
-            model_override=args.llm_model,
-            timeout_override=args.llm_timeout,
-        )
-
-    if prover_payload is not None:
-        result, proof_text, counterexample_text, new_problems = validate_prover_output(prover_payload, problem_id)
-    elif llm_settings is not None:
-        prover_prompt = load_prompt_text(args.prover_prompt_file)
-        result, proof_text, counterexample_text, new_problems, prover_attempts_used = query_prover_with_retries(
-            llm_settings=llm_settings,
-            prover_prompt=prover_prompt,
-            problem_id=problem_id,
-            stmt=stmt,
-            open_rows=[],
-            max_attempts=1,
-            prover_retries=args.prover_retries,
-            theory_context=theory_context,
-        )
-    else:
-        result = args.mock_result
-        proof_text = args.mock_proof_text
-        counterexample_text = args.mock_counterexample_text
-        new_problems = parse_new_problems(args.mock_new_problem)
-
-    prover_prompt = load_prompt_text(args.prover_prompt_file) if llm_settings is not None else ""
-    (
-        verify_success,
-        formalization_rejected,
-        theorem_name,
-        result,
-        proof_text,
-        counterexample_text,
-        new_problems,
-        verify_error_excerpt,
-    ) = attempt_formalization_until_timeout(
-        problem_id=problem_id,
-        stmt=stmt,
-        result=result,
-        proof_text=proof_text,
-        counterexample_text=counterexample_text,
-        new_problems=new_problems,
-        scratch_file=scratch_file,
-        skip_verify=args.skip_verify,
-        llm_settings=llm_settings,
-        prover_prompt=prover_prompt,
-        open_rows=[],
-        max_attempts=1,
-        theory_context=theory_context,
-        verify_timeout_sec=60,
-        formalization_retry_budget_sec=args.formalization_retry_budget_sec,
-        memory_path=memory_path,
-    )
-
-    if verify_success and result == "proof" and args.single_shot_append_derived:
-        scratch_code = scratch_file.read_text(encoding="utf-8")
-        theorem_body_match = re.search(
-            r"namespace AutomatedTheoryConstruction\n\n(.*)\nend AutomatedTheoryConstruction",
-            scratch_code,
-            re.DOTALL,
-        )
-        if theorem_body_match:
-            append_theorem(Path(args.derived_file), theorem_body_match.group(1), theorem_name)
-
-    report = {
-        "mode": "single-shot",
-        "problem_id": problem_id,
-        "stmt": stmt,
-        "result": result,
-        "verify_success": verify_success,
-        "verify_error_excerpt": verify_error_excerpt,
-        "formalization_rejected": formalization_rejected,
-        "theorem_name": theorem_name,
-        "prover_attempts_used": prover_attempts_used,
-        "prover_counterexample_text": counterexample_text,
-        "prover_new_problem_suggestions": new_problems,
-        "derived_appended": bool(verify_success and result == "proof" and args.single_shot_append_derived),
-    }
-    if llm_settings is not None:
-        report["llm_base_url"] = llm_settings.base_url
-        report["llm_model"] = llm_settings.model
-    print(report)
-
-
-def initialize_runtime_state(data_dir: Path, seeds_file: Path, scratch_file: Path, reset_scratch: bool) -> None:
+def initialize_runtime_state(
+    data_dir: Path,
+    seeds_file: Path,
+    scratch_file: Path,
+    reset_scratch: bool,
+    derived_file: Path,
+    reset_derived: bool,
+    formalization_memory_file: Path,
+    reset_formalization_memory: bool,
+) -> None:
     seed_rows = read_jsonl(seeds_file)
     if not seed_rows:
         raise ValueError(f"Seeds file is empty: {seeds_file}")
@@ -585,17 +800,22 @@ def initialize_runtime_state(data_dir: Path, seeds_file: Path, scratch_file: Pat
         scratch_file.parent.mkdir(parents=True, exist_ok=True)
         scratch_file.write_text(SCRATCH_TEMPLATE, encoding="utf-8")
 
+    if reset_derived:
+        derived_file.parent.mkdir(parents=True, exist_ok=True)
+        derived_file.write_text(DERIVED_TEMPLATE, encoding="utf-8")
+
+    if reset_formalization_memory:
+        formalization_memory_file.parent.mkdir(parents=True, exist_ok=True)
+        formalization_memory_file.write_text("{}\n", encoding="utf-8")
+
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run one iteration of the minimal prototype loop.")
-    parser.add_argument("--mode", choices=["loop", "single-shot"], default="loop")
     parser.add_argument("--initialize-on-start", action=argparse.BooleanOptionalAction, default=True)
-    parser.add_argument("--enable-llm", action="store_true")
-    parser.add_argument("--llm-base-url")
-    parser.add_argument("--llm-api-key")
-    parser.add_argument("--llm-model")
-    parser.add_argument("--llm-timeout", type=int, default=60)
-    parser.add_argument("--single-shot-stmt")
+    parser.add_argument("--enable-worker", action="store_true")
+    parser.add_argument("--worker-command")
+    parser.add_argument("--worker-timeout", type=int, default=180)
+    parser.add_argument("--phase-logs", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--skip-verify", action="store_true")
     args = parser.parse_args()
 
@@ -606,19 +826,19 @@ def main() -> None:
     args.scratch_file = "AutomatedTheoryConstruction/Scratch.lean"
     args.derived_file = "AutomatedTheoryConstruction/Derived.lean"
     args.reset_scratch_on_start = True
+    args.reset_derived_on_start = True
     args.max_attempts = None
     args.picker_output_json = None
     args.picker_output_file = None
     args.prover_output_json = None
     args.prover_output_file = None
     args.theory_file = "AutomatedTheoryConstruction/Theory.lean"
-    args.picker_prompt_file = "prompts/picker.md"
-    args.prover_prompt_file = "prompts/prover.md"
+    # Use simplified prover prompt for worker (picker is now deterministic local logic)
+    args.prover_prompt_file = "prompts/prover_simple.md"
     args.prover_retries = 1
     args.formalization_retry_budget_sec = 180
     args.formalization_memory_file = "data/formalization_memory.json"
-    args.single_shot_problem_id = "single_000001"
-    args.single_shot_append_derived = False
+    args.reset_formalization_memory_on_start = True
     args.mock_result = "stuck"
     args.mock_proof_text = ""
     args.mock_counterexample_text = ""
@@ -629,29 +849,29 @@ def main() -> None:
     scratch_file = Path(args.scratch_file)
     memory_path = Path(args.formalization_memory_file)
 
-    if args.mode == "single-shot":
-        run_single_shot_mode(args)
-        return
-
     if args.initialize_on_start:
         initialize_runtime_state(
             data_dir=data_dir,
             seeds_file=Path(args.seeds_file),
             scratch_file=scratch_file,
             reset_scratch=args.reset_scratch_on_start,
+            derived_file=Path(args.derived_file),
+            reset_derived=args.reset_derived_on_start,
+            formalization_memory_file=memory_path,
+            reset_formalization_memory=args.reset_formalization_memory_on_start,
         )
 
     max_attempts = resolve_max_attempts(args.max_attempts, config_path)
     theory_context = load_optional_text(args.theory_file)
+    # Inject Derived.lean theorem inventory for worker awareness
+    theory_context = inject_derived_context(theory_context, Path(args.derived_file))
     open_path = data_dir / "open_problems.jsonl"
 
-    llm_settings = None
-    if args.enable_llm:
-        llm_settings = load_llm_settings(
-            base_url_override=args.llm_base_url,
-            api_key_override=args.llm_api_key,
-            model_override=args.llm_model,
-            timeout_override=args.llm_timeout,
+    worker_settings = None
+    if args.enable_worker:
+        worker_settings = load_worker_settings(
+            command_override=args.worker_command,
+            timeout_override=args.worker_timeout,
         )
     completed_iterations = 0
     while True:
@@ -673,38 +893,21 @@ def main() -> None:
             })
             return
 
-        picker_payload = load_json_payload_from_args(args.picker_output_json, args.picker_output_file)
-        if llm_settings is not None and picker_payload is None:
-            picker_prompt = load_prompt_text(args.picker_prompt_file)
-            picker_payload = call_chat_completion_json(
-                llm_settings,
-                picker_prompt,
-                {
-                    "theory_context": theory_context,
-                    "open_problems": eligible_rows,
-                    "max_attempts": max_attempts,
-                },
-            )
+        iteration_num = completed_iterations + 1
+        debug_log(f"=== Iteration {iteration_num} START ===")
+        debug_log(f"{len(open_rows)} total problems, {len(eligible_rows)} eligible (n < {max_attempts})")
 
-        picked: dict[str, Any] | None = None
-        picker_fallback_used = False
-        if picker_payload is not None:
-            try:
-                selected_problem_id = validate_picker_output(picker_payload, open_rows, max_attempts)
-            except ValueError:
-                selected_problem_id = ""
-                picker_fallback_used = True
+        emit_phase_log(
+            args.phase_logs,
+            "iteration_start",
+            iteration=completed_iterations + 1,
+            open_problem_count=len(open_rows),
+            eligible_problem_count=len(eligible_rows),
+        )
 
-            if selected_problem_id:
-                for row in open_rows:
-                    if str(row.get("id", "")) == selected_problem_id:
-                        picked = row
-                        break
-            else:
-                picker_fallback_used = True
-                picked = pick_next_problem(open_rows, max_attempts)
-        else:
-            picked = pick_next_problem(open_rows, max_attempts)
+        # Select problem using local deterministic logic, no LLM needed
+        debug_log(f"Selecting problem locally from {len(eligible_rows)} eligible problems")
+        picked = pick_next_problem(open_rows, max_attempts)
 
         if picked is None:
             print({
@@ -716,15 +919,19 @@ def main() -> None:
 
         problem_id = str(picked["id"])
         stmt = str(picked.get("stmt", ""))
+        emit_phase_log(args.phase_logs, "problem_selected", iteration=completed_iterations + 1, problem_id=problem_id)
 
         prover_payload = load_json_payload_from_args(args.prover_output_json, args.prover_output_file)
         prover_attempts_used = 1
+        proof_sketch = ""
         if prover_payload is not None:
-            result, proof_text, counterexample_text, new_problems = validate_prover_output(prover_payload, problem_id)
-        elif llm_settings is not None:
+            emit_phase_log(args.phase_logs, "prover", iteration=completed_iterations + 1, problem_id=problem_id, mode="provided")
+            result, proof_sketch, proof_text, counterexample_text, new_problems = validate_prover_output(prover_payload, problem_id)
+        elif worker_settings is not None:
+            emit_phase_log(args.phase_logs, "prover", iteration=completed_iterations + 1, problem_id=problem_id, mode="worker")
             prover_prompt = load_prompt_text(args.prover_prompt_file)
-            result, proof_text, counterexample_text, new_problems, prover_attempts_used = query_prover_with_retries(
-                llm_settings=llm_settings,
+            result, proof_sketch, proof_text, counterexample_text, new_problems, prover_attempts_used = query_prover_with_retries(
+                worker_settings=worker_settings,
                 prover_prompt=prover_prompt,
                 problem_id=problem_id,
                 stmt=stmt,
@@ -732,17 +939,18 @@ def main() -> None:
                 max_attempts=max_attempts,
                 prover_retries=args.prover_retries,
                 theory_context=theory_context,
+                memory_path=memory_path,
             )
         else:
+            emit_phase_log(args.phase_logs, "prover", iteration=completed_iterations + 1, problem_id=problem_id, mode="mock")
             result = args.mock_result
             proof_text = args.mock_proof_text
             counterexample_text = args.mock_counterexample_text
             new_problems = parse_new_problems(args.mock_new_problem)
 
-        prover_prompt_for_repair = load_prompt_text(args.prover_prompt_file) if llm_settings is not None else ""
+        prover_prompt_for_repair = load_prompt_text(args.prover_prompt_file) if worker_settings is not None else ""
         (
             verify_success,
-            formalization_rejected,
             theorem_name,
             result,
             proof_text,
@@ -753,12 +961,13 @@ def main() -> None:
             problem_id=problem_id,
             stmt=stmt,
             result=result,
+            proof_sketch=proof_sketch,
             proof_text=proof_text,
             counterexample_text=counterexample_text,
             new_problems=new_problems,
             scratch_file=scratch_file,
             skip_verify=args.skip_verify,
-            llm_settings=llm_settings,
+            worker_settings=worker_settings,
             prover_prompt=prover_prompt_for_repair,
             open_rows=open_rows,
             max_attempts=max_attempts,
@@ -766,9 +975,10 @@ def main() -> None:
             verify_timeout_sec=60,
             formalization_retry_budget_sec=args.formalization_retry_budget_sec,
             memory_path=memory_path,
+            phase_logger=(lambda **fields: emit_phase_log(args.phase_logs, iteration=completed_iterations + 1, **fields)),
         )
 
-        if verify_success and result == "proof":
+        if verify_success and result in {"proof", "counterexample"}:
             scratch_code = scratch_file.read_text(encoding="utf-8")
             theorem_body_match = re.search(
                 r"namespace AutomatedTheoryConstruction\n\n(.*)\nend AutomatedTheoryConstruction",
@@ -776,7 +986,9 @@ def main() -> None:
                 re.DOTALL,
             )
             if theorem_body_match:
-                append_theorem(Path(args.derived_file), theorem_body_match.group(1), theorem_name)
+                # Auto-detect theorem name from the extracted theorem body so
+                # counterexample names like `<base>_is_false` are handled correctly.
+                append_theorem(Path(args.derived_file), theorem_body_match.group(1), None)
 
         report = apply_state_update(
             data_dir=data_dir,
@@ -786,22 +998,20 @@ def main() -> None:
             verify_success=verify_success,
             theorem_name=theorem_name,
             new_problems=new_problems,
-            formalization_rejected=formalization_rejected,
             max_attempts_override=args.max_attempts,
         )
+        emit_phase_log(args.phase_logs, "state_update", iteration=completed_iterations + 1, problem_id=problem_id)
         completed_iterations += 1
+        debug_log(f"=== Iteration {completed_iterations} END ({result}, verify={verify_success}) ===\n")
         report["picked_problem_id"] = problem_id
         report["result"] = result
         report["verify_success"] = verify_success
         report["verify_error_excerpt"] = verify_error_excerpt
         report["prover_attempts_used"] = prover_attempts_used
+        report["prover_proof_sketch"] = proof_sketch
         report["prover_counterexample_text"] = counterexample_text
         report["prover_new_problem_suggestions"] = new_problems
         report["iteration"] = completed_iterations
-        report["picker_fallback_used"] = picker_fallback_used
-        if llm_settings is not None:
-            report["llm_base_url"] = llm_settings.base_url
-            report["llm_model"] = llm_settings.model
         print(report)
 
 

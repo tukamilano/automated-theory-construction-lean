@@ -26,8 +26,6 @@ Use this quick routing table to select skills by situation.
   - Then apply `mathlib-usage` for lemma/import/search decisions.
 - Mathlib lemma discovery, import minimization, or "does this lemma exist":
   - Use `mathlib-usage`.
-- Equational loop problem selection JSON contract:
-  - Use `picker-interface`.
 - Equational loop prover JSON contract (proof/counterexample/stuck + new problems):
   - Use `prover-interface`.
 
@@ -35,7 +33,7 @@ When multiple skills are relevant, resolve priority as:
 
 1. `AGENTS.md` (source of truth)
 2. `lean-rule` (execution workflow for Lean proof work)
-3. Task-specific contract/policy skill (`mathlib-usage`, `picker-interface`, `prover-interface`)
+3. Task-specific contract/policy skill (`mathlib-usage`, `prover-interface`)
 
 ## Workflow
 

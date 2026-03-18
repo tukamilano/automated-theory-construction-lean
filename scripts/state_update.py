@@ -15,7 +15,6 @@ def apply_state_update(
     verify_success: bool,
     theorem_name: str | None,
     new_problems: list[str],
-    formalization_rejected: bool,
     max_attempts_override: int | None,
 ) -> dict[str, Any]:
     open_path = data_dir / "open_problems.jsonl"
@@ -60,17 +59,14 @@ def apply_state_update(
     moved_to = "open"
     updated_n = int(target.get("n", 0))
 
-    if not formalization_rejected and verify_success and result == "proof":
+    if verify_success and result == "proof":
         if not theorem_name:
             raise ValueError("theorem_name is required when result=proof and verify_success=true")
         solved_rows.append({"id": target["id"], "stmt": target["stmt"], "thm": theorem_name})
         moved_to = "solved"
-    elif not formalization_rejected and verify_success and result == "counterexample":
+    elif verify_success and result == "counterexample":
         counter_rows.append({"id": target["id"], "stmt": target["stmt"]})
         moved_to = "counterexample"
-    elif formalization_rejected:
-        # Keep it open without increasing n so it can be retried after prompt/format fixes.
-        remaining_open.append(target)
     else:
         updated_n = min(updated_n + 1, max_attempts)
         target["n"] = updated_n
@@ -86,7 +82,6 @@ def apply_state_update(
         "updated_n": updated_n,
         "max_attempts": max_attempts,
         "added_problem_ids": added_problem_ids,
-        "formalization_rejected": formalization_rejected,
     }
 
 
@@ -99,7 +94,6 @@ def main() -> None:
     parser.add_argument("--verify-success", action="store_true")
     parser.add_argument("--theorem-name")
     parser.add_argument("--new-problem", action="append", default=[])
-    parser.add_argument("--formalization-rejected", action="store_true")
     parser.add_argument("--max-attempts", type=int)
     args = parser.parse_args()
 
@@ -111,7 +105,6 @@ def main() -> None:
         verify_success=args.verify_success,
         theorem_name=args.theorem_name,
         new_problems=args.new_problem,
-        formalization_rejected=args.formalization_rejected,
         max_attempts_override=args.max_attempts,
     )
     print(report)

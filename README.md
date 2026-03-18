@@ -19,9 +19,8 @@ Implemented:
 - Data/state files: open / solved / counterexamples (JSONL)
 - Deterministic state updates with atomic JSONL writes
 - Auto-initialize from seeds on startup (default on)
-- LLM wiring via OpenAI-compatible Chat Completions (e.g. Groq)
+- Orchestrator-to-worker wiring for picker/prover/repair tasks
 - Picker/prover interface contracts in `.codex/skills`
-- Single-shot proof mode (`--mode single-shot`)
 
 Not implemented yet:
 
@@ -41,7 +40,7 @@ Not implemented yet:
 - `scripts/lean_verify.py`: Lean verification wrapper
 - `scripts/append_derived.py`: append theorem into `Derived.lean`
 - `prompts/picker.md`: picker prompt contract
-- `prompts/prover.md`: prover prompt contract
+- `prompts/prover_simple.md`: prover prompt contract
 - `.codex/skills/picker-interface/SKILL.md`: picker I/O contract
 - `.codex/skills/prover-interface/SKILL.md`: prover I/O contract
 
@@ -68,50 +67,39 @@ lake env lean AutomatedTheoryConstruction/Scratch.lean
 
 ## Run: Loop Mode (default)
 
-Uses an OpenAI-compatible Chat Completions endpoint.
+Uses a worker command invoked by the orchestrator (`scripts/run_loop.py`).
 
 Required environment variables:
 
-- `ATC_LLM_API_KEY`
-- Optional: `ATC_LLM_BASE_URL` (default: `https://api.openai.com/v1`)
-- Optional: `ATC_LLM_MODEL` (default: `gpt-4.1-mini`)
+- `ATC_WORKER_COMMAND` (example: your codex worker executable)
+- Optional: `ATC_WORKER_TIMEOUT` is available via CLI `--worker-timeout`
+
+Worker protocol (stdin -> stdout JSON):
+
+- Request envelope keys: `task_type`, `system_prompt`, `payload`, `metadata`
+- Response envelope keys: `result_payload`, `worker_meta`, `error`
+- `error` must be null/empty on success
+
+Quick local smoke test worker:
+
+```bash
+ATC_WORKER_COMMAND="uv run scripts/mock_worker.py" \
+uv run scripts/run_loop.py --enable-worker --no-initialize-on-start
+```
 
 **Fresh start** (initializes from seeds):
 
 ```bash
-ATC_LLM_API_KEY="<your_key>" \
-uv run scripts/run_loop.py --enable-llm
+ATC_WORKER_COMMAND="<worker command>" \
+uv run scripts/run_loop.py --enable-worker
 ```
 
 **Resume** (skip re-initialization):
 
 ```bash
-ATC_LLM_API_KEY="<your_key>" \
-uv run scripts/run_loop.py --enable-llm --no-initialize-on-start
+ATC_WORKER_COMMAND="<worker command>" \
+uv run scripts/run_loop.py --enable-worker --no-initialize-on-start
 ```
-
-**Using Groq** (recommended free-tier option):
-
-```bash
-ATC_LLM_API_KEY="<groq_key>" \
-ATC_LLM_BASE_URL=https://api.groq.com/openai/v1 \
-ATC_LLM_MODEL=llama-3.3-70b-versatile \
-uv run scripts/run_loop.py --enable-llm
-```
-
-## Run: Single-Shot Proof Mode
-
-Directly attempt to prove one statement without updating any state files:
-
-```bash
-ATC_LLM_API_KEY="<your_key>" \
-uv run scripts/run_loop.py \
-  --mode single-shot \
-  --enable-llm \
-  --single-shot-stmt "∀ {α : Type u} [SemigroupLike01 α], ∀ x y z : α, op (op x y) z = op x (op y z)"
-```
-
-Note: `single-shot` mode does not update `open/solved/counterexamples` JSONL files.
 
 ## Data Format (JSONL)
 
@@ -141,7 +129,7 @@ Counterexample example:
 
 ## Next Recommended Steps
 
-1. Achieve a first successful proof in single-shot mode
+1. Achieve a first successful proof in loop mode
 2. Verify that the proof round-trips through Lean (`--skip-verify` off)
 3. Begin exploration loop (loop mode with multiple iterations)
 

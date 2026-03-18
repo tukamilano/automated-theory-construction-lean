@@ -1,0 +1,13 @@
+{
+  "op_000001": [
+    {
+      "result": "stuck",
+      "proof_sketch": "Prover worker timed out before returning a valid response. Treating this iteration as stuck so the problem remains open and n increments. Details: Worker returned error: Command '['codex', 'exec', '-', '--sandbox', 'read-only', '--skip-git-repo-check', '--output-last-message', '/var/folders/2_/c2t72bmn00j3z7cnkfvqvyj80000gn/T/tmp4wgg3z7a']' timed out after 170 seconds",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "non_formalized_result",
+      "new_problems": []
+    }
+  ]
+}
