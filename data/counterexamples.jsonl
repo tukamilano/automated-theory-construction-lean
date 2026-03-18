@@ -1,3 +1,0 @@
-{"id":"op_000002","stmt":"∀ {α : Type u} [SemigroupLike01 α], ∀ x y : α, x * y = y * x"}
-{"id":"op_000003","stmt":"∀ {α : Type u} [SemigroupLike01 α], ∃ e : α, ∀ x : α, e * x = x ∧ x * e = x"}
-{"id":"op_000004","stmt":"∀ {α : Type u} [SemigroupLike01 α], ∃ e : α, ∀ x : α, ∃ y : α, x * y = e ∧ y * x = e"}

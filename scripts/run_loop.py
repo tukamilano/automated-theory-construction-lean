@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import shutil
 import subprocess
 import sys
 import time
@@ -971,6 +972,8 @@ def attempt_formalization_until_timeout(
 def initialize_runtime_state(
     data_dir: Path,
     seeds_file: Path,
+    proof_notes_dir: Path,
+    reset_proof_notes: bool,
     scratch_file: Path,
     reset_scratch: bool,
     derived_file: Path,
@@ -986,6 +989,10 @@ def initialize_runtime_state(
     write_jsonl_atomic(data_dir / "open_problems.jsonl", seed_rows)
     write_jsonl_atomic(data_dir / "solved_problems.jsonl", [])
     write_jsonl_atomic(data_dir / "counterexamples.jsonl", [])
+
+    if reset_proof_notes:
+        shutil.rmtree(proof_notes_dir, ignore_errors=True)
+        proof_notes_dir.mkdir(parents=True, exist_ok=True)
 
     if reset_scratch:
         scratch_file.parent.mkdir(parents=True, exist_ok=True)
@@ -1035,6 +1042,7 @@ def main() -> None:
     args.scratch_file = "AutomatedTheoryConstruction/Scratch.lean"
     args.derived_file = "AutomatedTheoryConstruction/Derived.lean"
     args.proof_notes_dir = "data/proof_notes"
+    args.reset_proof_notes_on_start = True
     args.reset_scratch_on_start = True
     args.reset_derived_on_start = True
     args.max_attempts = None
@@ -1063,6 +1071,8 @@ def main() -> None:
         initialize_runtime_state(
             data_dir=data_dir,
             seeds_file=Path(args.seeds_file),
+            proof_notes_dir=proof_notes_dir,
+            reset_proof_notes=args.reset_proof_notes_on_start,
             scratch_file=scratch_file,
             reset_scratch=args.reset_scratch_on_start,
             derived_file=Path(args.derived_file),
