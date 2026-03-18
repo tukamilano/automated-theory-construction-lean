@@ -1,8 +1,10 @@
-{"id":"op_000002","stmt":"∀ {α : Type u} [SemigroupLike01 α], ∀ x y : α, x * y = y * x","src":"seed","n":0}
-{"id":"op_000003","stmt":"∀ {α : Type u} [SemigroupLike01 α], ∃ e : α, ∀ x : α, e * x = x ∧ x * e = x","src":"seed","n":0}
-{"id":"op_000004","stmt":"∀ {α : Type u} [SemigroupLike01 α], ∃ e : α, ∀ x : α, ∃ y : α, x * y = e ∧ y * x = e","src":"seed","n":0}
-{"id":"op_000005","stmt":"∀ {α : Type u} [SemigroupLike01 α], ∀ join : α → α → α, ∀ x y z : α, x * (join y z) = join (x * y) (x * z)","src":"seed","n":0}
 {"id":"op_000006","stmt":"∀ {α : Type u} [SemigroupLike01 α], ∀ x y z : α, x * y = x * z → y = z","src":"seed","n":0}
 {"id":"op_000007","stmt":"∀ {α : Type u} [SemigroupLike01 α], ∀ x : α, x * x = x","src":"seed","n":0}
 {"id":"op_000008","stmt":"∀ {α : Type u} [SemigroupLike01 α], ∀ meet : α → α → α, ∀ x y : α, x * (meet x y) = x","src":"seed","n":0}
 {"id":"op_000001","stmt":"∀ {α : Type u} [SemigroupLike01 α], ∀ x y z : α, (x * y) * z = x * (y * z)","src":"seed","n":1}
+{"id":"op_000002","stmt":"∀ {α : Type u} [SemigroupLike01 α], ∀ x y : α, x * y = y * x","src":"seed","n":1}
+{"id":"op_000009","stmt":"∀ {α : Type u} [SemigroupLike01 α], ∀ x y : α, (x * y) * x = x * y","src":"generated","n":0}
+{"id":"op_000003","stmt":"∀ {α : Type u} [SemigroupLike01 α], ∃ e : α, ∀ x : α, e * x = x ∧ x * e = x","src":"seed","n":1}
+{"id":"op_000004","stmt":"∀ {α : Type u} [SemigroupLike01 α], ∃ e : α, ∀ x : α, ∃ y : α, x * y = e ∧ y * x = e","src":"seed","n":1}
+{"id":"op_000010","stmt":"∀ {α : Type u} [SemigroupLike01 α], ∀ x y z : α, x * (y * z) = (x * y) * (x * z)","src":"generated","n":0}
+{"id":"op_000011","stmt":"∃ α : Type u, ∃ _ : SemigroupLike01 α, ¬ Subsingleton α","src":"generated","n":0}

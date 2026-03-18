@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -147,14 +148,65 @@ def load_optional_text(file_path: str) -> str:
     return path.read_text(encoding="utf-8")
 
 
+def write_proof_note_markdown(
+    notes_dir: Path,
+    *,
+    problem_id: str,
+    stmt: str,
+    result: str,
+    proof_sketch: str,
+    counterexample_text: str,
+    proof_text: str,
+) -> tuple[Path, str]:
+    """Persist natural-language reasoning as markdown for formalization reuse."""
+    notes_dir.mkdir(parents=True, exist_ok=True)
+    note_path = notes_dir / f"{problem_id}.md"
+
+    sections = [
+        f"# Problem {problem_id}",
+        "",
+        "## Statement",
+        stmt.strip(),
+        "",
+        "## Attempt Result",
+        result.strip(),
+        "",
+        "## Natural Language Sketch",
+        (proof_sketch or "(empty)").strip(),
+        "",
+        "## Counterexample Intuition",
+        (counterexample_text or "(empty)").strip(),
+        "",
+        "## Lean Draft",
+        "```lean",
+        (proof_text or "").rstrip(),
+        "```",
+        "",
+    ]
+    content = "\n".join(sections)
+    note_path.write_text(content, encoding="utf-8")
+    return note_path, content
+
+
 def looks_formalizable(stmt: str) -> bool:
+    """Check if stmt has basic structure to attempt formalization.
+    
+    Flexible approach: requires quantifier + some logical structure, not specific symbols.
+    """
     simple_stmt = " ".join(stmt.split())
-    return (
-        ("∀" in simple_stmt or "∀" in simple_stmt)
-        and "=" in simple_stmt
-        and "op" in simple_stmt
-        and len(simple_stmt) < 2000
-    )
+    
+    # Must have quantifier
+    has_quantifier = "∀" in simple_stmt or "∃" in simple_stmt
+    if not has_quantifier:
+        return False
+    
+    # Must have reasonable length
+    if len(simple_stmt) < 10 or len(simple_stmt) > 2000:
+        return False
+    
+    # Must have some predicate/relation (broad check: =, <, >, ≠, *, op, :, →, ∧, ∨)
+    has_structure = any(sym in simple_stmt for sym in ["=", "<", ">", "≠", "*", "op", ":", "→", "∧", "∨", "¬"])
+    return has_structure
 
 
 def formalize_to_scratch(
@@ -441,6 +493,7 @@ def load_formalization_memory(memory_path: Path, problem_id: str) -> list[dict[s
         safe_rows.append(
             {
                 "result": str(item.get("result", "")),
+                "verify_success": bool(item.get("verify_success", False)),
                 "proof_sketch": str(item.get("proof_sketch", "")),
                 "proof_text": str(item.get("proof_text", "")),
                 "counterexample_text": str(item.get("counterexample_text", "")),
@@ -476,13 +529,14 @@ def query_prover_with_retries(
     prover_retries: int,
     theory_context: str,
     memory_path: Path,
-) -> tuple[str, str, str, str, list[str], int]:
+) -> tuple[str, str, str, str, list[str], int, dict[str, Any]]:
     retries = max(1, prover_retries)
     last_result = "stuck"
     last_proof_sketch = ""
     last_proof_text = ""
     last_counterexample_text = ""
     last_new_problems: list[str] = []
+    last_worker_meta: dict[str, Any] = {}
 
     for attempt in range(1, retries + 1):
         payload: dict[str, Any] = {
@@ -520,13 +574,14 @@ def query_prover_with_retries(
         try:
             debug_log(f"Calling prover for problem {problem_id}, attempt {attempt}/{retries}")
             prover_start = time.monotonic()
-            prover_payload, _ = invoke_worker_json(
+            prover_payload, worker_meta = invoke_worker_json(
                 settings=worker_settings,
                 task_type="prover",
                 system_prompt=prover_prompt,
                 payload=payload,
                 metadata={"problem_id": problem_id, "attempt": attempt},
             )
+            last_worker_meta = worker_meta
             prover_elapsed = time.monotonic() - prover_start
             debug_log(f"Prover returned for {problem_id}: {prover_payload.get('result', 'unknown')} (took {prover_elapsed:.1f}s)")
         except RuntimeError as exc:
@@ -543,7 +598,7 @@ def query_prover_with_retries(
                     problem_id=problem_id,
                     fallback_candidates=last_new_problems,
                 )
-                return "stuck", timeout_sketch, "", "", timeout_subgoals, attempt
+                return "stuck", timeout_sketch, "", "", timeout_subgoals, attempt, last_worker_meta
             raise
         result, proof_sketch, proof_text, counterexample_text, new_problems = validate_prover_output(prover_payload, problem_id)
 
@@ -554,9 +609,17 @@ def query_prover_with_retries(
         last_new_problems = new_problems
 
         if result != "stuck":
-            return result, proof_sketch, proof_text, counterexample_text, new_problems, attempt
+            return result, proof_sketch, proof_text, counterexample_text, new_problems, attempt, last_worker_meta
 
-    return last_result, last_proof_sketch, last_proof_text, last_counterexample_text, last_new_problems, retries
+    return (
+        last_result,
+        last_proof_sketch,
+        last_proof_text,
+        last_counterexample_text,
+        last_new_problems,
+        retries,
+        last_worker_meta,
+    )
 
 
 def attempt_formalization_until_timeout(
@@ -575,9 +638,11 @@ def attempt_formalization_until_timeout(
     open_rows: list[dict[str, Any]],
     max_attempts: int,
     theory_context: str,
-    verify_timeout_sec: int,
+    verify_timeout_sec: int = 180,
     formalization_retry_budget_sec: int,
     memory_path: Path,
+    natural_language_note_markdown: str,
+    natural_language_note_path: str,
     phase_logger: Callable[..., None] | None = None,
 ) -> tuple[bool, str | None, str, str, str, list[str], str]:
     verify_success = False
@@ -593,6 +658,7 @@ def attempt_formalization_until_timeout(
         persisted_history.append(
             {
                 "result": result,
+                "verify_success": verify_success,
                 "proof_sketch": proof_sketch,
                 "proof_text": proof_text,
                 "counterexample_text": counterexample_text,
@@ -659,6 +725,22 @@ def attempt_formalization_until_timeout(
                 )
 
             if verify_success:
+                success_fingerprint = str(verify_error_analysis.get("fingerprint", "verified"))
+                repair_history.append(
+                    {
+                        "result": result,
+                        "verify_success": True,
+                        "proof_sketch": proof_sketch,
+                        "proof_text": proof_text,
+                        "counterexample_text": counterexample_text,
+                        "lean_error_excerpt": verify_error_excerpt,
+                        "lean_error_fingerprint": success_fingerprint,
+                        "new_problems": list(retained_new_problems)[:2],
+                    }
+                )
+                if len(repair_history) > 20:
+                    repair_history = repair_history[-20:]
+                save_formalization_memory(memory_path, problem_id, repair_history)
                 return (
                     verify_success,
                     theorem_name,
@@ -686,6 +768,7 @@ def attempt_formalization_until_timeout(
         repair_history.append(
             {
                 "result": result,
+                "verify_success": verify_success,
                 "proof_sketch": proof_sketch,
                 "proof_text": proof_text,
                 "counterexample_text": counterexample_text,
@@ -733,6 +816,8 @@ def attempt_formalization_until_timeout(
             "previous_proof_text": proof_text,
             "previous_counterexample_text": counterexample_text,
             "previous_new_problems": new_problems,
+            "natural_language_proof_note_markdown": natural_language_note_markdown,
+            "natural_language_proof_note_path": natural_language_note_path,
             "repair_history_tail": repair_history[-8:],
             "lean_error_excerpt": verify_error_excerpt,
             "lean_error_top_lines": verify_error_analysis.get("top_lines", []),
@@ -809,12 +894,30 @@ def initialize_runtime_state(
         formalization_memory_file.write_text("{}\n", encoding="utf-8")
 
 
+def prebuild_lean_project() -> None:
+    """Build Lean artifacts once during initialization.
+
+    This keeps heavy compilation outside the per-problem solving path.
+    """
+    proc = subprocess.run(
+        ["lake", "build"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if proc.returncode != 0:
+        stderr = (proc.stderr or "").strip()
+        stdout = (proc.stdout or "").strip()
+        excerpt = stderr or stdout or "lake build failed without output"
+        raise RuntimeError(f"Initialization build failed: {excerpt}")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run one iteration of the minimal prototype loop.")
     parser.add_argument("--initialize-on-start", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--enable-worker", action="store_true")
     parser.add_argument("--worker-command")
-    parser.add_argument("--worker-timeout", type=int, default=180)
+    parser.add_argument("--worker-timeout", type=int, default=300)
     parser.add_argument("--phase-logs", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--skip-verify", action="store_true")
     args = parser.parse_args()
@@ -825,6 +928,7 @@ def main() -> None:
     args.seeds_file = "theories/semigroup_like_01/seeds.jsonl"
     args.scratch_file = "AutomatedTheoryConstruction/Scratch.lean"
     args.derived_file = "AutomatedTheoryConstruction/Derived.lean"
+    args.proof_notes_dir = "data/proof_notes"
     args.reset_scratch_on_start = True
     args.reset_derived_on_start = True
     args.max_attempts = None
@@ -834,9 +938,9 @@ def main() -> None:
     args.prover_output_file = None
     args.theory_file = "AutomatedTheoryConstruction/Theory.lean"
     # Use simplified prover prompt for worker (picker is now deterministic local logic)
-    args.prover_prompt_file = "prompts/prover_simple.md"
-    args.prover_retries = 1
-    args.formalization_retry_budget_sec = 180
+    args.prover_prompt_file = "prompts/prover_interactive.md"
+    args.prover_retries = 2
+    args.formalization_retry_budget_sec = 300
     args.formalization_memory_file = "data/formalization_memory.json"
     args.reset_formalization_memory_on_start = True
     args.mock_result = "stuck"
@@ -848,6 +952,7 @@ def main() -> None:
     config_path = Path(args.config)
     scratch_file = Path(args.scratch_file)
     memory_path = Path(args.formalization_memory_file)
+    proof_notes_dir = Path(args.proof_notes_dir)
 
     if args.initialize_on_start:
         initialize_runtime_state(
@@ -860,6 +965,9 @@ def main() -> None:
             formalization_memory_file=memory_path,
             reset_formalization_memory=args.reset_formalization_memory_on_start,
         )
+        debug_log("Running lake build during initialization")
+        prebuild_lean_project()
+        debug_log("Initialization build completed")
 
     max_attempts = resolve_max_attempts(args.max_attempts, config_path)
     theory_context = load_optional_text(args.theory_file)
@@ -924,13 +1032,14 @@ def main() -> None:
         prover_payload = load_json_payload_from_args(args.prover_output_json, args.prover_output_file)
         prover_attempts_used = 1
         proof_sketch = ""
+        prover_worker_meta: dict[str, Any] = {}
         if prover_payload is not None:
             emit_phase_log(args.phase_logs, "prover", iteration=completed_iterations + 1, problem_id=problem_id, mode="provided")
             result, proof_sketch, proof_text, counterexample_text, new_problems = validate_prover_output(prover_payload, problem_id)
         elif worker_settings is not None:
             emit_phase_log(args.phase_logs, "prover", iteration=completed_iterations + 1, problem_id=problem_id, mode="worker")
             prover_prompt = load_prompt_text(args.prover_prompt_file)
-            result, proof_sketch, proof_text, counterexample_text, new_problems, prover_attempts_used = query_prover_with_retries(
+            result, proof_sketch, proof_text, counterexample_text, new_problems, prover_attempts_used, prover_worker_meta = query_prover_with_retries(
                 worker_settings=worker_settings,
                 prover_prompt=prover_prompt,
                 problem_id=problem_id,
@@ -941,12 +1050,32 @@ def main() -> None:
                 theory_context=theory_context,
                 memory_path=memory_path,
             )
+            emit_phase_log(
+                args.phase_logs,
+                "worker_parse",
+                iteration=completed_iterations + 1,
+                problem_id=problem_id,
+                json_parse_attempts=int(prover_worker_meta.get("json_parse_attempts", 0) or 0),
+                raw_parse_fallback_used=bool(prover_worker_meta.get("raw_parse_fallback_used", False)),
+                client_json_parse_attempts=int(prover_worker_meta.get("client_json_parse_attempts", 0) or 0),
+                client_raw_parse_fallback_used=bool(prover_worker_meta.get("client_raw_parse_fallback_used", False)),
+            )
         else:
             emit_phase_log(args.phase_logs, "prover", iteration=completed_iterations + 1, problem_id=problem_id, mode="mock")
             result = args.mock_result
             proof_text = args.mock_proof_text
             counterexample_text = args.mock_counterexample_text
             new_problems = parse_new_problems(args.mock_new_problem)
+
+        note_path, note_markdown = write_proof_note_markdown(
+            proof_notes_dir,
+            problem_id=problem_id,
+            stmt=stmt,
+            result=result,
+            proof_sketch=proof_sketch,
+            counterexample_text=counterexample_text,
+            proof_text=proof_text,
+        )
 
         prover_prompt_for_repair = load_prompt_text(args.prover_prompt_file) if worker_settings is not None else ""
         (
@@ -972,9 +1101,11 @@ def main() -> None:
             open_rows=open_rows,
             max_attempts=max_attempts,
             theory_context=theory_context,
-            verify_timeout_sec=60,
+            verify_timeout_sec=180,
             formalization_retry_budget_sec=args.formalization_retry_budget_sec,
             memory_path=memory_path,
+            natural_language_note_markdown=note_markdown,
+            natural_language_note_path=str(note_path),
             phase_logger=(lambda **fields: emit_phase_log(args.phase_logs, iteration=completed_iterations + 1, **fields)),
         )
 
@@ -1011,6 +1142,11 @@ def main() -> None:
         report["prover_proof_sketch"] = proof_sketch
         report["prover_counterexample_text"] = counterexample_text
         report["prover_new_problem_suggestions"] = new_problems
+        report["proof_note_path"] = str(note_path)
+        report["worker_json_parse_attempts"] = int(prover_worker_meta.get("json_parse_attempts", 0) or 0)
+        report["worker_raw_parse_fallback_used"] = bool(prover_worker_meta.get("raw_parse_fallback_used", False))
+        report["client_json_parse_attempts"] = int(prover_worker_meta.get("client_json_parse_attempts", 0) or 0)
+        report["client_raw_parse_fallback_used"] = bool(prover_worker_meta.get("client_raw_parse_fallback_used", False))
         report["iteration"] = completed_iterations
         print(report)
 

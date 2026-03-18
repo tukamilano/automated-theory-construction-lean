@@ -4,6 +4,7 @@ import json
 import os
 import shlex
 import subprocess
+import re
 from dataclasses import dataclass
 from typing import Any
 
@@ -31,27 +32,77 @@ def load_worker_settings(
     return WorkerSettings(command=command, timeout_sec=timeout_sec)
 
 
-def _extract_json_object(text: str) -> dict[str, Any]:
+def _iter_braced_json_candidates(text: str) -> list[str]:
+    candidates: list[str] = []
+    start_idx: int | None = None
+    depth = 0
+    in_string = False
+    escape = False
+
+    for idx, ch in enumerate(text):
+        if in_string:
+            if escape:
+                escape = False
+            elif ch == "\\":
+                escape = True
+            elif ch == '"':
+                in_string = False
+            continue
+
+        if ch == '"':
+            in_string = True
+            continue
+
+        if ch == "{":
+            if depth == 0:
+                start_idx = idx
+            depth += 1
+            continue
+
+        if ch == "}" and depth > 0:
+            depth -= 1
+            if depth == 0 and start_idx is not None:
+                candidates.append(text[start_idx : idx + 1])
+                start_idx = None
+
+    return candidates
+
+
+def _extract_json_object(text: str) -> tuple[dict[str, Any], int, bool]:
     raw = text.strip()
     if not raw:
         raise ValueError("Worker response is empty")
 
+    parse_attempts = 0
+
     try:
+        parse_attempts += 1
         payload = json.loads(raw)
         if isinstance(payload, dict):
-            return payload
+            return payload, parse_attempts, False
     except json.JSONDecodeError:
         pass
 
-    start = raw.find("{")
-    end = raw.rfind("}")
-    if start == -1 or end == -1 or end <= start:
-        raise ValueError("Worker response did not contain a JSON object")
+    fenced_blocks = re.findall(r"```json\s*(\{.*?\})\s*```", raw, flags=re.DOTALL | re.IGNORECASE)
+    for block in fenced_blocks:
+        try:
+            parse_attempts += 1
+            payload = json.loads(block)
+            if isinstance(payload, dict):
+                return payload, parse_attempts, True
+        except json.JSONDecodeError:
+            continue
 
-    payload = json.loads(raw[start : end + 1])
-    if not isinstance(payload, dict):
-        raise ValueError("Worker JSON payload must be an object")
-    return payload
+    for candidate in _iter_braced_json_candidates(raw):
+        try:
+            parse_attempts += 1
+            payload = json.loads(candidate)
+            if isinstance(payload, dict):
+                return payload, parse_attempts, True
+        except json.JSONDecodeError:
+            continue
+
+    raise ValueError("Worker response did not contain a parseable JSON object")
 
 
 def invoke_worker_json(
@@ -91,7 +142,7 @@ def invoke_worker_json(
         stderr = (completed.stderr or "").strip()
         raise RuntimeError(f"Worker exited with code {completed.returncode}: {stderr}")
 
-    response = _extract_json_object(completed.stdout)
+    response, parse_attempts, parse_fallback_used = _extract_json_object(completed.stdout)
     if "error" in response and response["error"]:
         raise RuntimeError(f"Worker returned error: {response['error']}")
 
@@ -102,5 +153,7 @@ def invoke_worker_json(
     worker_meta = response.get("worker_meta")
     if not isinstance(worker_meta, dict):
         worker_meta = {}
+    worker_meta.setdefault("client_json_parse_attempts", parse_attempts)
+    worker_meta.setdefault("client_raw_parse_fallback_used", parse_fallback_used)
 
     return result_payload, worker_meta

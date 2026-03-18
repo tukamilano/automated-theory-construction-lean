@@ -2,12 +2,79 @@
   "op_000001": [
     {
       "result": "stuck",
-      "proof_sketch": "Prover worker timed out before returning a valid response. Treating this iteration as stuck so the problem remains open and n increments. Details: Worker returned error: Command '['codex', 'exec', '-', '--sandbox', 'read-only', '--skip-git-repo-check', '--output-last-message', '/var/folders/2_/c2t72bmn00j3z7cnkfvqvyj80000gn/T/tmp4wgg3z7a']' timed out after 170 seconds",
+      "verify_success": false,
+      "proof_sketch": "Prover worker timed out before returning a valid response. Treating this iteration as stuck so the problem remains open and n increments. Details: Worker returned error: Command '['codex', 'exec', '-', '--sandbox', 'read-only', '--skip-git-repo-check', '--output-last-message', '/var/folders/2_/c2t72bmn00j3z7cnkfvqvyj80000gn/T/tmp3o0btdcq']' timed out after 390 seconds",
       "proof_text": "",
       "counterexample_text": "",
       "lean_error_excerpt": "",
       "lean_error_fingerprint": "non_formalized_result",
       "new_problems": []
+    }
+  ],
+  "op_000002": [
+    {
+      "result": "stuck",
+      "verify_success": false,
+      "proof_sketch": "Prover worker timed out before returning a valid response. Treating this iteration as stuck so the problem remains open and n increments. Details: Worker returned error: Command '['codex', 'exec', '-', '--sandbox', 'read-only', '--skip-git-repo-check', '--output-last-message', '/var/folders/2_/c2t72bmn00j3z7cnkfvqvyj80000gn/T/tmpamhwwff8']' timed out after 390 seconds",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "non_formalized_result",
+      "new_problems": []
+    }
+  ],
+  "op_000003": [
+    {
+      "result": "counterexample",
+      "verify_success": false,
+      "proof_sketch": "反例として `Fin 3` 上に `x * y := if x = y then x else 2` を入れる。これは `{0,1}` の上に頂点 `2` を足した 3 元 join 半束で、与えられた 3 公理は有限個のケース分けで満たされる。だが単位元は存在しない。実際、`e = 0` は `x = 1` で失敗し、`e = 1` は `x = 0` で失敗し、`e = 2` は `x = 0` で失敗する。したがって全ての `SemigroupLike01` に単位元があるという主張は偽。",
+      "proof_text": "intro h\nlet op3 : Fin 3 → Fin 3 → Fin 3 := fun x y => if x = y then x else 2\nletI : SemigroupLike01 (Fin 3) :=\n  { mul := op3\n    ax_left_idempotent := by\n      intro x\n      simp [op, op3]\n    ax_right_absorb_duplicate := by\n      decide\n    ax_middle_swap := by\n      decide }\nhave hno : ¬ ∃ e : Fin 3, ∀ x : Fin 3, e * x = x ∧ x * e = x := by\n  decide\nexact hno (by simpa using h (α := Fin 3))",
+      "counterexample_text": "`α = Fin 3` とし、`x * y` を `x = y` のときは `x`、そうでなければ `2` と定める。すると `0 * 1 = 2`, `1 * 0 = 2`, `0 * 2 = 2`, `2 * 0 = 2` などとなり、`2` は頂点の役割をする。この演算は 3 公理を満たすが、単位元はない。候補 `e = 0` は `x = 1` で `e * x = 2 ≠ 1`、`e = 1` は `x = 0` で失敗し、`e = 2` は `x = 0` で `e * x = 2 ≠ 0` となる。",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:11:28: error: unsolved goals",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:11:28: error: unsolved goals | h : ∀ {α : Type u} [inst : SemigroupLike01 α], ∃ e, ∀ (x : α), e * x = x ∧ x * e = x | op3 : Fin 3 → Fin 3 → Fin 3 := fun x y => if x = y then x else 2",
+      "new_problems": [
+        "∀ {α : Type u} [SemigroupLike01 α], ∀ x y : α, (x * y) * x = x * y"
+      ]
+    }
+  ],
+  "op_000004": [
+    {
+      "result": "stuck",
+      "verify_success": false,
+      "proof_sketch": "Prover worker timed out before returning a valid response. Treating this iteration as stuck so the problem remains open and n increments. Details: Worker returned error: Command '['codex', 'exec', '-', '--sandbox', 'read-only', '--skip-git-repo-check', '--output-last-message', '/var/folders/2_/c2t72bmn00j3z7cnkfvqvyj80000gn/T/tmpvd9r9han']' timed out after 390 seconds",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "non_formalized_result",
+      "new_problems": []
+    }
+  ],
+  "op_000005": [
+    {
+      "result": "counterexample",
+      "verify_success": false,
+      "proof_sketch": "既存の `Scratch.lean` と同型の 3 要素モデルを使う。`α := ULift (Fin 3)`、`top := 2`、`op3 x y := if x = y then x else top` とおくと、`SemigroupLike01` の 3 公理は計算で成り立つ。そこで `join0` を常に `0` を返す定数関数にし、`x = 1, y = 0, z = 1` を代入する。仮定は `one * join0 zero one = join0 (one * zero) (one * one)` を与えるが、`simp` すると `top = zero` になり矛盾する。",
+      "proof_text": "intro h\nlet α : Type u := ULift.{u} (Fin 3)\nlet zero : α := ⟨(0 : Fin 3)⟩\nlet one : α := ⟨(1 : Fin 3)⟩\nlet top : α := ⟨(2 : Fin 3)⟩\nlet op3 : α → α → α := fun x y => if x = y then x else top\nlet join0 : α → α → α := fun _ _ => zero\nletI : Mul α := ⟨op3⟩\nletI : SemigroupLike01 α :=\n  { mul := op3\n    ax_left_idempotent := by\n      intro x\n      simp [op, op3]\n    ax_right_absorb_duplicate := by\n      native_decide\n    ax_middle_swap := by\n      native_decide }\nhave hEq : one * join0 zero one = join0 (one * zero) (one * one) := h (α := α) join0 one zero one\nsimp [join0, op3, zero, one, top] at hEq",
+      "counterexample_text": "`join` が完全に任意なので成り立たない。3 要素集合 `ULift (Fin 3)` 上で、積を `x = y` なら `x`、そうでなければ `top` を返す演算にすると `SemigroupLike01` 公理は満たされる。ここで `join` を常に `0` を返す定数関数に取り、`x = 1, y = 0, z = 1` とすると、左辺は `1 * 0 = top`、右辺は `join (1 * 0) (1 * 1) = 0` となって一致しない。",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:17:28: error: unsolved goals",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:17:28: error: unsolved goals | h : ∀ {α : Type u} [inst : SemigroupLike01 α] (join : α → α → α) (x y z : α), x * join y z = join (x * y) (x * z) | α : Type u := ULift.{u, 0} (Fin 3)",
+      "new_problems": [
+        "∀ {α : Type u} [SemigroupLike01 α], ∀ x y z : α, x * (y * z) = (x * y) * (x * z)",
+        "∃ α : Type u, ∃ _ : SemigroupLike01 α, ¬ Subsingleton α"
+      ]
+    },
+    {
+      "result": "counterexample",
+      "verify_success": true,
+      "proof_sketch": "反例を与える。3 要素型 `α := ULift (Fin 3)` に対し、`top := 2`、`op3 x y := if x = y then x else top` とおくと `SemigroupLike01` の 3 公理は満たされる。`join` は任意なので、定数関数 `join0 := fun _ _ => 0` を取る。すると `x = 1, y = 0, z = 1` で仮定は `op3 1 (join0 0 1) = join0 (op3 1 0) (op3 1 1)` を与えるが、左辺は `top`、右辺は `0` になり矛盾する。",
+      "proof_text": "intro h\nlet α : Type u := ULift.{u} (Fin 3)\nlet zero : α := ⟨(0 : Fin 3)⟩\nlet one : α := ⟨(1 : Fin 3)⟩\nlet top : α := ⟨(2 : Fin 3)⟩\nlet op3 : α → α → α := fun x y => if x = y then x else top\nlet join0 : α → α → α := fun _ _ => zero\nletI : Mul α := ⟨op3⟩\nletI : SemigroupLike01 α :=\n  { mul := op3\n    ax_left_idempotent := by\n      intro x\n      change op3 x x = x\n      simp [op3]\n    ax_right_absorb_duplicate := by\n      native_decide\n    ax_middle_swap := by\n      native_decide }\nhave hEq : one * join0 zero one = join0 (one * zero) (one * one) := h (α := α) join0 one zero one\nchange op3 one (join0 zero one) = join0 (op3 one zero) (op3 one one) at hEq\nsimp [join0, op3, zero, one] at hEq\nhave hne : top ≠ zero := by\n  decide\nexact hne hEq",
+      "counterexample_text": "`join` に何の条件もないので、分配法則は一般には成り立たない。3 要素集合 `ULift (Fin 3)` 上で、積を「2 つが等しければその値、異なれば `top`」と定めると `SemigroupLike01` 公理は満たされる。ここで `join` を常に `0` を返す定数関数にし、`x = 1, y = 0, z = 1` を代入すると、左辺は `top`、右辺は `0` になって一致しない。",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:17:28: error: unsolved goals",
+      "lean_error_fingerprint": "no_diagnostics",
+      "new_problems": [
+        "∀ {α : Type u} [SemigroupLike01 α], ∀ x y z : α, x * (y * z) = (x * y) * (x * z)",
+        "∃ α : Type u, ∃ _ : SemigroupLike01 α, ¬ Subsingleton α"
+      ]
     }
   ]
 }

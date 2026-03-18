@@ -9,7 +9,18 @@ from typing import Any
 
 def verify_scratch(problem_id: str, mode: str, scratch_file: Path, timeout_sec: int) -> dict[str, Any]:
     cmd = ["lake", "env", "lean", str(scratch_file)]
-    proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout_sec)
+    try:
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout_sec)
+    except subprocess.TimeoutExpired as exc:
+        stderr_text = (exc.stderr or "") if isinstance(exc.stderr, str) else ""
+        stdout_text = (exc.stdout or "") if isinstance(exc.stdout, str) else ""
+        return {
+            "problem_id": problem_id,
+            "success": False,
+            "mode": mode,
+            "stderr": f"Lean verification timed out after {timeout_sec}s\n{stderr_text}".strip(),
+            "stdout": stdout_text,
+        }
     return {
         "problem_id": problem_id,
         "success": proc.returncode == 0,

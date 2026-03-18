@@ -40,7 +40,7 @@ Not implemented yet:
 - `scripts/lean_verify.py`: Lean verification wrapper
 - `scripts/append_derived.py`: append theorem into `Derived.lean`
 - `prompts/picker.md`: picker prompt contract
-- `prompts/prover_simple.md`: prover prompt contract
+- `prompts/prover_interactive.md`: interactive prover prompt contract
 - `.codex/skills/picker-interface/SKILL.md`: picker I/O contract
 - `.codex/skills/prover-interface/SKILL.md`: prover I/O contract
 
@@ -79,6 +79,10 @@ Worker protocol (stdin -> stdout JSON):
 - Request envelope keys: `task_type`, `system_prompt`, `payload`, `metadata`
 - Response envelope keys: `result_payload`, `worker_meta`, `error`
 - `error` must be null/empty on success
+
+During loop execution, each prover attempt also writes a reusable natural-language note:
+
+- `data/proof_notes/<problem_id>.md`: statement, proof sketch, counterexample intuition, and Lean draft
 
 Quick local smoke test worker:
 
@@ -124,7 +128,8 @@ Counterexample example:
 ## Notes on Formalization Policy
 
 - Existing formalization workflow under `.codex` is intentionally preserved.
-- Picker/prover were added as interface contracts, not as replacements for Lean proof workflow.
+- Prover trial-and-error is delegated to Codex CLI interaction inside the worker.
+- Natural-language proof sketches are persisted as markdown and reused in repair/formalization flow.
 - If a statement is not formalizable to Lean, the problem remains in `open` and its attempt count is incremented.
 
 ## Next Recommended Steps
