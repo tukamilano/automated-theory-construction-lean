@@ -12,16 +12,6 @@ def _read_request() -> dict[str, Any]:
         raise ValueError("request must be a JSON object")
     return payload
 
-
-def _picker_result(payload: dict[str, Any]) -> dict[str, Any]:
-    open_rows = payload.get("open_problems", [])
-    if isinstance(open_rows, list) and open_rows:
-        selected = str(open_rows[0].get("id", ""))
-        if selected:
-            return {"selected_problem_id": selected}
-    return {"error": "no_selectable_problem"}
-
-
 def _prover_result(payload: dict[str, Any]) -> dict[str, Any]:
     problem_id = str(payload.get("problem_id", ""))
     return {
@@ -66,9 +56,7 @@ def main() -> None:
         if not isinstance(payload, dict):
             raise ValueError("payload must be a JSON object")
 
-        if task_type == "picker":
-            result_payload = _picker_result(payload)
-        elif task_type == "prover":
+        if task_type == "prover":
             result_payload = _prover_result(payload)
         elif task_type == "repair":
             result_payload = _repair_result(payload)

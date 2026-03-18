@@ -174,7 +174,7 @@ def main() -> None:
         if not isinstance(payload, dict):
             raise ValueError("payload must be a JSON object")
 
-        if task_type not in {"picker", "prover", "repair", "expand"}:
+        if task_type not in {"prover", "repair", "expand"}:
             raise ValueError(f"unsupported task_type: {task_type}")
 
         outer_timeout = int((os.getenv("ATC_WORKER_TIMEOUT") or "180").strip())

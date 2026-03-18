@@ -63,30 +63,6 @@ def pick_next_problem(open_rows: list[dict[str, Any]], max_attempts: int) -> dic
     return eligible[0]
 
 
-def validate_picker_output(payload: dict[str, Any], open_rows: list[dict[str, Any]], max_attempts: int) -> str:
-    if "error" in payload:
-        if payload.get("error") == "no_selectable_problem":
-            return ""
-        raise ValueError("picker output contains unsupported error value")
-
-    allowed_keys = {"selected_problem_id"}
-    if set(payload.keys()) != allowed_keys:
-        raise ValueError("picker output must contain exactly one key: selected_problem_id")
-
-    selected_id = payload.get("selected_problem_id")
-    if not isinstance(selected_id, str) or not selected_id:
-        raise ValueError("selected_problem_id must be a non-empty string")
-
-    eligible_ids = {
-        str(row.get("id", ""))
-        for row in open_rows
-        if int(row.get("n", 0)) < max_attempts
-    }
-    if selected_id not in eligible_ids:
-        raise ValueError("selected_problem_id is not eligible under current open problems and max_attempts")
-    return selected_id
-
-
 def validate_prover_output(payload: dict[str, Any], expected_problem_id: str) -> tuple[str, str, str, str, list[str]]:
     required_keys = {"problem_id", "result", "proof_sketch", "proof_text", "counterexample_text", "new_problems"}
     if set(payload.keys()) != required_keys:
@@ -1026,11 +1002,11 @@ def prebuild_lean_project() -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Run one iteration of the minimal prototype loop.")
+    parser = argparse.ArgumentParser(description="Run the minimal prototype loop.")
     parser.add_argument("--initialize-on-start", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--enable-worker", action="store_true")
     parser.add_argument("--worker-command")
-    parser.add_argument("--worker-timeout", type=int, default=300)
+    parser.add_argument("--worker-timeout", type=int)
     parser.add_argument("--phase-logs", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--skip-verify", action="store_true")
     args = parser.parse_args()
@@ -1045,12 +1021,10 @@ def main() -> None:
     args.reset_scratch_on_start = True
     args.reset_derived_on_start = True
     args.max_attempts = None
-    args.picker_output_json = None
-    args.picker_output_file = None
     args.prover_output_json = None
     args.prover_output_file = None
     args.theory_file = "AutomatedTheoryConstruction/Theory.lean"
-    # Use simplified prover prompt for worker (picker is now deterministic local logic)
+    # Problem selection is deterministic local logic; the worker handles prover/repair/expand only.
     args.prover_prompt_file = "prompts/prover_interactive.md"
     args.expander_prompt_file = "prompts/new_problem_expander.md"
     args.prover_retries = 2

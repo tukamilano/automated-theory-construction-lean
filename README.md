@@ -19,8 +19,8 @@ Implemented:
 - Data/state files: open / solved / counterexamples (JSONL)
 - Deterministic state updates with atomic JSONL writes
 - Auto-initialize from seeds on startup (default on)
-- Orchestrator-to-worker wiring for picker/prover/repair tasks
-- Picker/prover interface contracts in `.codex/skills`
+- Orchestrator-to-worker wiring for prover/repair/expand tasks
+- Prover interface contract in `.codex/skills`
 
 Not implemented yet:
 
@@ -35,13 +35,12 @@ Not implemented yet:
 - `data/open_problems.jsonl`: open problems
 - `data/solved_problems.jsonl`: verified solved problems
 - `data/counterexamples.jsonl`: verified counterexamples
-- `scripts/run_loop.py`: one-iteration orchestrator
+- `scripts/run_loop.py`: orchestrator loop
 - `scripts/state_update.py`: deterministic state transition logic
 - `scripts/lean_verify.py`: Lean verification wrapper
 - `scripts/append_derived.py`: append theorem into `Derived.lean`
-- `prompts/picker.md`: picker prompt contract
 - `prompts/prover_interactive.md`: interactive prover prompt contract
-- `.codex/skills/picker-interface/SKILL.md`: picker I/O contract
+- `prompts/new_problem_expander.md`: follow-up problem generation prompt
 - `.codex/skills/prover-interface/SKILL.md`: prover I/O contract
 
 ## Requirements
@@ -50,6 +49,16 @@ Not implemented yet:
 - Lake + Mathlib dependencies
 - Python environment
 - `uv` for Python script execution
+
+## Required Tools
+
+To use the workflow in this repository, you will need the following tools.
+
+* Codex CLI
+* lean-lsp-mcp  
+  [https://github.com/oOo0oOo/lean-lsp-mcp](https://github.com/oOo0oOo/lean-lsp-mcp)
+
+Install `lean-lsp-mcp` and configure it so that Codex can access the Lean Language Server.
 
 ## Setup
 
@@ -72,13 +81,22 @@ Uses a worker command invoked by the orchestrator (`scripts/run_loop.py`).
 Required environment variables:
 
 - `ATC_WORKER_COMMAND` (example: your codex worker executable)
-- Optional: `ATC_WORKER_TIMEOUT` is available via CLI `--worker-timeout`
+- Optional: `ATC_WORKER_TIMEOUT` sets the outer worker subprocess timeout when `--worker-timeout` is not passed
+
+Timeout precedence:
+
+- `--worker-timeout`
+- `ATC_WORKER_TIMEOUT`
+- default `180`
 
 Worker protocol (stdin -> stdout JSON):
 
 - Request envelope keys: `task_type`, `system_prompt`, `payload`, `metadata`
 - Response envelope keys: `result_payload`, `worker_meta`, `error`
 - `error` must be null/empty on success
+- Supported `task_type` values: `prover`, `repair`, `expand`
+
+For `scripts/codex_worker.py`, `ATC_WORKER_TIMEOUT` also bounds the inner Codex invocation unless `ATC_CODEX_TIMEOUT` is set explicitly.
 
 During loop execution, each prover attempt also writes a reusable natural-language note:
 
@@ -130,6 +148,7 @@ Counterexample example:
 - Existing formalization workflow under `.codex` is intentionally preserved.
 - Prover trial-and-error is delegated to Codex CLI interaction inside the worker.
 - Natural-language proof sketches are persisted as markdown and reused in repair/formalization flow.
+- Same-problem formalization history is persisted in `data/formalization_memory.json` and reused by repair/expansion.
 - If a statement is not formalizable to Lean, the problem remains in `open` and its attempt count is incremented.
 
 ## Next Recommended Steps
@@ -137,6 +156,10 @@ Counterexample example:
 1. Achieve a first successful proof in loop mode
 2. Verify that the proof round-trips through Lean (`--skip-verify` off)
 3. Begin exploration loop (loop mode with multiple iterations)
+
+## License
+
+This repository is licensed under the MIT License. See `LICENSE`.
 
 ## 参考文献
 

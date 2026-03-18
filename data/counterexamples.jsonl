@@ -1,2 +1,0 @@
-{"id":"op_000005","stmt":"∀ {α : Type u} [SemigroupLike01 α], ∀ join : α → α → α, ∀ x y z : α, x * (join y z) = join (x * y) (x * z)"}
-{"id":"op_000006","stmt":"∀ {α : Type u} [SemigroupLike01 α], ∀ x y z : α, x * y = x * z → y = z"}
