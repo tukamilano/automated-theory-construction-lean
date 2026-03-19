@@ -1,6 +1,6 @@
 # Automated Theory Construction (Minimal Prototype)
 
-This repository contains a minimal prototype for iterative theory growth on equational-style problems.
+This repository contains a minimal prototype for iterative theory growth in formal systems, where new statements are generated, tested, and accumulated from a given set of axioms and inference rules.
 
 The current loop is:
 
