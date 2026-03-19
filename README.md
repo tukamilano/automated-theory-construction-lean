@@ -168,4 +168,8 @@ This repository is licensed under the MIT License. See `LICENSE`.
 ## Reference
 
 * Xin et al. (2025). *BFS-Prover-V2*.
-* [kmd710/lean4-codex-skills](https://github.com/kmd710/lean4-codex-skills)
+
+## Acknowledgements
+
+The prompting strategy for solving Lean problems was partially inspired by a private repository (kmd710/lean4-codex-skills).
+This does not affect the theory construction framework itself, which is independently developed.
