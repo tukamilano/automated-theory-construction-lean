@@ -72,18 +72,45 @@ lake build
 lake env lean AutomatedTheoryConstruction/Scratch.lean
 ```
 
+## Quick Start
+
+For normal use, you only need to prepare two files and run the loop:
+
+1. Put your theory (symbols / axioms / structures you want to study) in `AutomatedTheoryConstruction/Theory.lean`
+2. Put your initial conjectures in `theories/semigroup_like_01/seeds.jsonl`
+3. Run the loop
+
+That is the main workflow of this prototype.
+
+In other words, if you want to try your own idea, you do **not** need to change the orchestrator code first. Just:
+
+- write the theory you want to explore in `AutomatedTheoryConstruction/Theory.lean`
+- write the starting statements you want the system to try in `theories/semigroup_like_01/seeds.jsonl`
+- execute the loop command
+
+Example:
+
+```bash
+ATC_WORKER_COMMAND="uv run scripts/codex_worker.py" \
+ATC_CODEX_TIMEOUT=390 \
+uv run scripts/run_loop.py --enable-worker --worker-timeout 420
+```
+
+On startup, the loop initializes open problems from `theories/semigroup_like_01/seeds.jsonl` by default.
+
 ## Basic Usage
 
-To define the base theory, edit `AutomatedTheoryConstruction/Theory.lean` and put the axiom system you want to grow there.
+`AutomatedTheoryConstruction/Theory.lean` is the place where you define the base theory you want to grow.
 
-Then place seed conjectures under `theories/`, for example in `theories/semigroup_like_01/seeds.jsonl`. These are the initial theorem candidates that the loop uses as starting points for theory development.
+`theories/semigroup_like_01/seeds.jsonl` is the place where you list the initial theorem candidates for that theory.
 
-In short:
+So the intended usage is simple:
 
-- Put the target axioms / structures / symbols in `AutomatedTheoryConstruction/Theory.lean`
-- Put the initial seed statements in `theories/.../seeds.jsonl`
+- edit `AutomatedTheoryConstruction/Theory.lean`
+- edit `theories/semigroup_like_01/seeds.jsonl`
+- run the loop
 
-At startup, the loop initializes open problems from this `seeds.jsonl` file by default.
+The loop will read that `seeds.jsonl` file on startup and initialize the open-problem state from it.
 
 ## Run: Loop Mode (default)
 
