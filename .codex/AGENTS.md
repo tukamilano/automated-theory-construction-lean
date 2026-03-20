@@ -18,7 +18,8 @@ Main entry points:
 
 Core loop role split:
 
-- LLM (`prover` / `repair`): propose `proof`, `counterexample`, or `stuck` plus optional new problems
+- LLM (`prover`): propose `proof`, `counterexample`, or `stuck` plus optional new problems in natural language
+- LLM (`formalize` / `repair`): translate a chosen direction into Lean code and repair it after diagnostics
 - Deterministic scripts: selection, state transitions, verification, and persistence
 
 Do not move deterministic state-transition logic into prompts.
@@ -35,7 +36,8 @@ Verification path:
 
 ## Formalization boundary
 
-- `proof_text` must be Lean tactic code only when result is `proof` or `counterexample`.
+- `prover` does not emit `proof_text`; it emits natural-language reasoning only.
+- `proof_text` belongs to `formalize` / `repair` and must be Lean tactic code only when result is `proof` or `counterexample`.
 - Lean verification decides success; natural-language plausibility is not enough.
 - If formalization or verification fails, keep the problem open unless deterministic update rules move it.
 
@@ -76,6 +78,12 @@ Verification path:
 - Do not run destructive git commands unless explicitly requested.
 - Do not commit unless explicitly requested.
 - Prefer deterministic behavior in orchestrator scripts; keep prompt-side logic lightweight.
+
+## Non-interactive worker runs
+
+- When invoked by `scripts/codex_worker.py` or another orchestrated worker path, treat the run as non-interactive.
+- Do not ask the user questions, request clarification, or wait for confirmation in that mode.
+- If the payload is incomplete or ambiguous, make the best conservative local inference and return a contract-compliant fallback result instead.
 
 ## Skills index
 

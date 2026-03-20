@@ -21,7 +21,7 @@ Implemented:
 - Same-problem formalization history in `data/formalization_memory.json`
 - Deterministic state updates with atomic JSONL writes
 - Auto-initialize from seeds on startup (default on)
-- Orchestrator-to-worker wiring for prover/repair/expand tasks
+- Orchestrator-to-worker wiring for prover/formalize/repair/expand tasks
 - Prover interface contract in `.codex/skills`
 
 ## Repository Layout
@@ -37,6 +37,7 @@ Implemented:
 - `scripts/lean_verify.py`: Lean verification wrapper
 - `scripts/append_derived.py`: append theorem into `Derived.lean`
 - `prompts/prover_simple.md`: prover prompt used by the loop worker
+- `prompts/formalizer_simple.md`: initial Lean formalization prompt
 - `prompts/new_problem_expander.md`: follow-up problem generation prompt
 - `.codex/skills/prover-interface/SKILL.md`: prover I/O contract
 
@@ -100,7 +101,7 @@ Worker protocol (stdin -> stdout JSON):
 - Response envelope keys: `result_payload`, `worker_meta`, `error`
 - `worker_meta` may include `raw_model_output`, the full model-output text for that worker call
 - `error` must be null/empty on success
-- Supported `task_type` values: `prover`, `repair`, `expand`
+- Supported `task_type` values: `prover`, `formalize`, `repair`, `expand`
 
 For `scripts/codex_worker.py`, `ATC_WORKER_TIMEOUT` also bounds the inner Codex invocation unless `ATC_CODEX_TIMEOUT` is set explicitly.
 
@@ -158,9 +159,9 @@ Counterexample example:
 
 - Existing formalization workflow under `.codex` is intentionally preserved.
 - Prover trial-and-error is delegated to Codex CLI interaction inside the worker.
-- Natural-language proof sketches are persisted as markdown and reused in repair/formalization flow.
+- Natural-language prover sketches are persisted as markdown and reused in formalize/repair flow.
 - Same-problem formalization history is persisted in `data/formalization_memory.json` and reused by repair/expansion.
-- Expansion also receives `current_iteration_full_logs`, which contains the current iteration's full prover/repair model outputs in memory only.
+- Expansion also receives `current_iteration_full_logs`, which contains the current iteration's full prover/formalize/repair model outputs in memory only.
 - If a statement is not formalizable to Lean, the problem remains in `open`.
 
 ## License

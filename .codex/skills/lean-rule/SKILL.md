@@ -26,7 +26,7 @@ Use this quick routing table to select skills by situation.
   - Then apply `mathlib-usage` for lemma/import/search decisions.
 - Mathlib lemma discovery, import minimization, or "does this lemma exist":
   - Use `mathlib-usage`.
-- The loop prover JSON contract (proof/counterexample/stuck + new problems):
+- The loop prover JSON contract (natural-language proof/counterexample/stuck + new problems):
   - Use `prover-interface`.
 
 When multiple skills are relevant, resolve priority as:
@@ -96,6 +96,7 @@ When multiple skills are relevant, resolve priority as:
 - Do not ask for routine confirmation.
 - If the next step can be determined from the theorem statement, local file context, diagnostics, proof goals, or nearby search results, take that step directly.
 - Treat user questions as a last resort.
+- In a non-interactive worker/orchestrator run, do not ask the user any questions; continue locally and return the contract-compliant best-effort result.
 - While compile errors, unsolved goals, elaboration failures, or relevant proof `sorry`s remain in the current target Lean file, prefer resolving them over asking the user for input or ending the turn.
 - While a relevant proof `sorry` remains in the current target Lean file, prefer resolving it over asking the user for input or ending the turn.
 - Ask only when the missing information or authority is genuinely outside the repository/context after checking the local file, visible goals, diagnostics, and obvious lemma/search paths.

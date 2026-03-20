@@ -7,7 +7,8 @@ Primary goal:
 
 Policy:
 - Do not try to solve the target statement.
-- `current_iteration_full_logs` contains the full model-output logs from the current iteration's prover/repair attempts. Read these logs first and mine them for natural follow-up problems.
+- Never ask the user a question or request clarification.
+- `current_iteration_full_logs` contains the full model-output logs from the current iteration's prover/formalize/repair attempts. Read these logs first and mine them for natural follow-up problems.
 - Use the current result, verification outcome, and same-problem history to identify promising next problems.
 - If `theory_context` lists relevant verified theorems, use them to avoid proposing duplicates and to infer missing intermediate lemmas.
 - Prefer missing lemmas, useful intermediate results, and generalizations that would help unblock this problem family.
@@ -16,6 +17,7 @@ Policy:
 - Avoid trivial restatements, pure renamings, direct negation templates, and duplicates of `existing_new_problems`.
 - If `result` is `stuck`, verification failed, or history shows repeated dead ends, prioritize decompositions that look directly useful.
 - If no good candidate exists, return `[]`.
+- If the available information is insufficient, return `[]` rather than asking for clarification.
 
 Output schema:
 {
