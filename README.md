@@ -88,12 +88,21 @@ Required environment variables:
 
 - `ATC_WORKER_COMMAND` (example: your codex worker executable)
 - Optional: `ATC_WORKER_TIMEOUT` sets the outer worker subprocess timeout when `--worker-timeout` is not passed
+- Optional: `ATC_FORMALIZE_WORKER_COMMAND` / `ATC_FORMALIZE_WORKER_TIMEOUT` override only the `formalize` task
+- Optional: `ATC_REPAIR_WORKER_COMMAND` / `ATC_REPAIR_WORKER_TIMEOUT` override only the `repair` task
 
 Timeout precedence:
 
 - `--worker-timeout`
 - `ATC_WORKER_TIMEOUT`
 - default `180`
+
+Task-specific overrides:
+
+- `formalize`: `--formalize-worker-command` / `ATC_FORMALIZE_WORKER_COMMAND`, `--formalize-worker-timeout` / `ATC_FORMALIZE_WORKER_TIMEOUT`
+- `repair`: `--repair-worker-command` / `ATC_REPAIR_WORKER_COMMAND`, `--repair-worker-timeout` / `ATC_REPAIR_WORKER_TIMEOUT`
+- If task-specific values are unset, the loop falls back to the shared worker command/timeout above.
+- `--repair-prompt-file` is optional; when omitted, `repair` reuses `--formalizer-prompt-file`.
 
 Worker protocol (stdin -> stdout JSON):
 
@@ -123,6 +132,18 @@ Equivalent env-based timeout configuration:
 ATC_WORKER_COMMAND="uv run scripts/codex_worker.py" \
 ATC_WORKER_TIMEOUT=420 \
 ATC_CODEX_TIMEOUT=390 \
+uv run scripts/run_loop.py --enable-worker
+```
+
+Use a different solver only for formalization and repair:
+
+```bash
+ATC_WORKER_COMMAND="uv run scripts/codex_worker.py" \
+ATC_WORKER_TIMEOUT=420 \
+ATC_FORMALIZE_WORKER_COMMAND="python external_formalizer.py" \
+ATC_FORMALIZE_WORKER_TIMEOUT=300 \
+ATC_REPAIR_WORKER_COMMAND="python external_formalizer.py" \
+ATC_REPAIR_WORKER_TIMEOUT=180 \
 uv run scripts/run_loop.py --enable-worker
 ```
 

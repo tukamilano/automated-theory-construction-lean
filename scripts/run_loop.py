@@ -15,7 +15,7 @@ from append_derived import append_theorem
 from common import read_jsonl, write_jsonl_atomic
 from lean_verify import verify_scratch
 from state_update import apply_state_update
-from worker_client import invoke_worker_json, load_worker_settings
+from worker_client import invoke_worker_json, load_task_worker_settings, load_worker_settings
 
 
 def debug_log(msg: str) -> None:
@@ -763,7 +763,7 @@ def query_prover_with_retries(
 
 def request_initial_formalization(
     *,
-    worker_settings: Any,
+    formalize_worker_settings: Any,
     formalizer_prompt: str,
     problem_id: str,
     stmt: str,
@@ -785,7 +785,7 @@ def request_initial_formalization(
         "mathlib_allowed": True,
     }
     formalized, formalize_worker_meta = invoke_worker_json(
-        settings=worker_settings,
+        settings=formalize_worker_settings,
         task_type="formalize",
         system_prompt=formalizer_prompt,
         payload=formalize_payload,
@@ -810,7 +810,8 @@ def attempt_formalization_until_timeout(
     new_problems: list[str],
     scratch_file: Path,
     skip_verify: bool,
-    worker_settings: Any,
+    formalize_worker_settings: Any,
+    repair_worker_settings: Any,
     formalizer_prompt: str,
     repair_prompt: str,
     open_rows: list[dict[str, Any]],
@@ -851,7 +852,7 @@ def attempt_formalization_until_timeout(
         return verify_success, theorem_name, result, proof_text, counterexample_text, new_problems, verify_error_excerpt
 
     if not proof_text.strip():
-        if worker_settings is None:
+        if formalize_worker_settings is None:
             persisted_history = load_formalization_memory(memory_path, problem_id)
             persisted_history.append(
                 {
@@ -870,7 +871,7 @@ def attempt_formalization_until_timeout(
 
         try:
             result, proof_sketch, proof_text, counterexample_text = request_initial_formalization(
-                worker_settings=worker_settings,
+                formalize_worker_settings=formalize_worker_settings,
                 formalizer_prompt=formalizer_prompt,
                 problem_id=problem_id,
                 stmt=stmt,
@@ -998,7 +999,7 @@ def attempt_formalization_until_timeout(
                     verify_error_excerpt,
                 )
 
-        if worker_settings is None or time.monotonic() >= deadline:
+        if repair_worker_settings is None or time.monotonic() >= deadline:
             save_formalization_memory(memory_path, problem_id, repair_history)
             return (
                 verify_success,
@@ -1075,7 +1076,7 @@ def attempt_formalization_until_timeout(
 
         try:
             repaired, repair_worker_meta = invoke_worker_json(
-                settings=worker_settings,
+                settings=repair_worker_settings,
                 task_type="repair",
                 system_prompt=repair_prompt,
                 payload=repair_payload,
@@ -1175,6 +1176,12 @@ def main() -> None:
     parser.add_argument("--enable-worker", action="store_true")
     parser.add_argument("--worker-command")
     parser.add_argument("--worker-timeout", type=int)
+    parser.add_argument("--formalize-worker-command")
+    parser.add_argument("--formalize-worker-timeout", type=int)
+    parser.add_argument("--repair-worker-command")
+    parser.add_argument("--repair-worker-timeout", type=int)
+    parser.add_argument("--formalizer-prompt-file", default="prompts/formalizer_simple.md")
+    parser.add_argument("--repair-prompt-file")
     parser.add_argument("--phase-logs", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--skip-verify", action="store_true")
     args = parser.parse_args()
@@ -1193,7 +1200,6 @@ def main() -> None:
     args.theory_file = "AutomatedTheoryConstruction/Theory.lean"
     # Problem selection is deterministic local logic; the worker handles prover/formalize/repair/expand.
     args.prover_prompt_file = "prompts/prover_simple.md"
-    args.formalizer_prompt_file = "prompts/formalizer_simple.md"
     args.expander_prompt_file = "prompts/new_problem_expander.md"
     args.prover_retries = 2
     args.formalization_retry_budget_sec = 300
@@ -1231,10 +1237,24 @@ def main() -> None:
     open_path = data_dir / "open_problems.jsonl"
 
     worker_settings = None
+    formalize_worker_settings = None
+    repair_worker_settings = None
     if args.enable_worker:
         worker_settings = load_worker_settings(
             command_override=args.worker_command,
             timeout_override=args.worker_timeout,
+        )
+        formalize_worker_settings = load_task_worker_settings(
+            task_name="formalize",
+            base_settings=worker_settings,
+            command_override=args.formalize_worker_command,
+            timeout_override=args.formalize_worker_timeout,
+        )
+        repair_worker_settings = load_task_worker_settings(
+            task_name="repair",
+            base_settings=worker_settings,
+            command_override=args.repair_worker_command,
+            timeout_override=args.repair_worker_timeout,
         )
     completed_iterations = 0
     while True:
@@ -1320,8 +1340,9 @@ def main() -> None:
             counterexample_text=counterexample_text,
         )
 
-        formalizer_prompt = load_prompt_text(args.formalizer_prompt_file) if worker_settings is not None else ""
-        repair_prompt = load_prompt_text(args.formalizer_prompt_file) if worker_settings is not None else ""
+        formalizer_prompt = load_prompt_text(args.formalizer_prompt_file) if formalize_worker_settings is not None else ""
+        repair_prompt_file = args.repair_prompt_file or args.formalizer_prompt_file
+        repair_prompt = load_prompt_text(repair_prompt_file) if repair_worker_settings is not None else ""
         (
             verify_success,
             theorem_name,
@@ -1335,12 +1356,12 @@ def main() -> None:
             stmt=stmt,
             result=result,
             proof_sketch=proof_sketch,
-            proof_text=proof_text,
             counterexample_text=counterexample_text,
             new_problems=new_problems,
             scratch_file=scratch_file,
             skip_verify=args.skip_verify,
-            worker_settings=worker_settings,
+            formalize_worker_settings=formalize_worker_settings,
+            repair_worker_settings=repair_worker_settings,
             formalizer_prompt=formalizer_prompt,
             repair_prompt=repair_prompt,
             open_rows=open_rows,
