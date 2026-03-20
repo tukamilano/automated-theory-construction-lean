@@ -21,6 +21,7 @@ Core loop role split:
 - LLM (`prover`): propose `proof`, `counterexample`, or `stuck` plus optional new problems in natural language
 - LLM (`formalize` / `repair`): translate a chosen direction into Lean code and repair it after diagnostics
 - Deterministic scripts: selection, state transitions, verification, and persistence
+- Open problems and `new_problems` may be either Lean-formal statements or semi-formal natural-language research prompts.
 
 Do not move deterministic state-transition logic into prompts.
 

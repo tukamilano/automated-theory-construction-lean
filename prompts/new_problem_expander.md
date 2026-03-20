@@ -18,7 +18,8 @@ Policy:
 - If the local problem family looks exhausted or circular, prefer stepping outward to a broader generalization or a more structural theory-growth question that still connects back to the current target.
 - It is acceptable, and sometimes preferred, to propose a more general problem that subsumes the current target rather than another nearby special case.
 - If you cannot propose a candidate with a genuinely different proof pattern, role, or level of generality from recent failed ideas, return `[]`.
-- Return standalone theorem-like statements that can be inserted into the future open-problem queue.
+- Return standalone follow-up problem statements that can be inserted into the future open-problem queue.
+- New problems may be Lean-formal statements or semi-formal natural-language research prompts, as long as they are specific and reusable.
 - Avoid trivial restatements, pure renamings, direct negation templates, and duplicates of `existing_new_problems`.
 - If `result` is `stuck`, verification failed, or history shows repeated dead ends, prioritize decompositions that look directly useful.
 - If no good candidate exists, return `[]`.

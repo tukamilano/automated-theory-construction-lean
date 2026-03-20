@@ -34,6 +34,7 @@ Rules:
 - `proof_sketch`: string.
 - `counterexample_text`: string. Empty string is allowed.
 - `new_problems`: array of strings, length 0-2.
+- Each `new_problems` entry may be either a Lean-formal statement or a semi-formal natural-language research prompt.
 - Do not ask clarifying questions or request user input; return JSON only.
 - If information is insufficient, return the most conservative valid JSON response (typically `stuck` and/or `[]`) instead of a question.
 

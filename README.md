@@ -123,6 +123,8 @@ During loop execution, each prover attempt also writes a reusable natural-langua
 
 - `data/proof_notes/<problem_id>.md`: statement, proof sketch, and counterexample intuition
 
+Open problems and generated `new_problems` may be either Lean-formal statements or semi-formal natural-language research prompts. If a problem later turns out not to be formalizable to Lean, it simply remains in `open`.
+
 Recommended Codex worker invocation:
 
 ```bash
