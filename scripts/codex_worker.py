@@ -94,7 +94,7 @@ def _build_prompt(task_type: str, system_prompt: str, payload: dict[str, Any]) -
         "Input payload JSON:\n"
         f"{json.dumps(payload, ensure_ascii=False, indent=2)}\n\n"
         "Output contract:\n"
-        "- You may think and explain briefly in natural language.\n"
+        "- Use English for any natural-language text you include.\n"
         "- The final answer must include one task-response JSON object.\n"
         "- Ensure the last JSON object in your final answer is the task-response payload.\n"
     )
@@ -194,6 +194,7 @@ def main() -> None:
                 "json_parse_attempts": parse_attempts,
                 "raw_parse_fallback_used": used_fallback,
                 "raw_output_chars": len(model_output),
+                "raw_model_output": model_output,
             },
             "error": None,
         }

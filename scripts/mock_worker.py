@@ -65,9 +65,14 @@ def main() -> None:
         else:
             raise ValueError(f"unsupported task_type: {task_type}")
 
+        raw_model_output = json.dumps(result_payload, ensure_ascii=False)
         response = {
             "result_payload": result_payload,
-            "worker_meta": {"worker": "mock_worker", "task_type": task_type},
+            "worker_meta": {
+                "worker": "mock_worker",
+                "task_type": task_type,
+                "raw_model_output": raw_model_output,
+            },
             "error": None,
         }
     except Exception as exc:

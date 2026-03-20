@@ -11,6 +11,7 @@ Hard constraints:
 - Output exactly one JSON object.
 - For `proof_text`, use only symbols/axioms from `theory_context`.
 - `proof_text` must be Lean tactic code only (no prose, no markdown).
+- Use English for every natural-language field and explanation.
 - Keep `proof_sketch` concise (3-8 sentences).
 - Keep total response short.
 
@@ -21,7 +22,7 @@ Reuse policy:
 Counterexample policy:
 - If choosing `counterexample`, try to provide Lean code that proves `¬(stmt)`.
 - If full Lean negation proof is not available, return `stuck` instead of verbose speculation.
-- Put concrete model intuition in `counterexample_text` (plain language only).
+- Put concrete model intuition in `counterexample_text` (plain English only).
 
 new_problems policy:
 - New problem generation is post-attempt extraction, not a substitute for solving the target problem.
@@ -37,8 +38,8 @@ Output schema:
 {
   "problem_id": "<match input>",
   "result": "proof|counterexample|stuck",
-  "proof_sketch": "short reasoning",
+  "proof_sketch": "short reasoning in English",
   "proof_text": "Lean tactic code (or empty for stuck)",
-  "counterexample_text": "plain language only",
+  "counterexample_text": "plain English only",
   "new_problems": ["stmt1", "stmt2"]
 }

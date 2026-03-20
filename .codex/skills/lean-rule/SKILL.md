@@ -26,7 +26,7 @@ Use this quick routing table to select skills by situation.
   - Then apply `mathlib-usage` for lemma/import/search decisions.
 - Mathlib lemma discovery, import minimization, or "does this lemma exist":
   - Use `mathlib-usage`.
-- Equational loop prover JSON contract (proof/counterexample/stuck + new problems):
+- The loop prover JSON contract (proof/counterexample/stuck + new problems):
   - Use `prover-interface`.
 
 When multiple skills are relevant, resolve priority as:

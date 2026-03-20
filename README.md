@@ -36,7 +36,7 @@ Implemented:
 - `scripts/state_update.py`: deterministic state transition logic
 - `scripts/lean_verify.py`: Lean verification wrapper
 - `scripts/append_derived.py`: append theorem into `Derived.lean`
-- `prompts/prover_interactive.md`: interactive prover prompt contract
+- `prompts/prover_simple.md`: prover prompt used by the loop worker
 - `prompts/new_problem_expander.md`: follow-up problem generation prompt
 - `.codex/skills/prover-interface/SKILL.md`: prover I/O contract
 
@@ -98,6 +98,7 @@ Worker protocol (stdin -> stdout JSON):
 
 - Request envelope keys: `task_type`, `system_prompt`, `payload`, `metadata`
 - Response envelope keys: `result_payload`, `worker_meta`, `error`
+- `worker_meta` may include `raw_model_output`, the full model-output text for that worker call
 - `error` must be null/empty on success
 - Supported `task_type` values: `prover`, `repair`, `expand`
 
@@ -138,7 +139,7 @@ uv run scripts/run_loop.py --enable-worker --no-initialize-on-start
 Open problem example:
 
 ```json
-{"id":"op_000001","stmt":"∀ {α : Type u} [SemigroupLike01 α], ∀ x y z : α, (x * y) * z = x * (y * z)","src":"seed","n":0}
+{"id":"op_000001","stmt":"∀ {α : Type u} [SemigroupLike01 α], ∀ x y z : α, (x * y) * z = x * (y * z)","src":"seed"}
 ```
 
 Solved problem example:
@@ -159,7 +160,8 @@ Counterexample example:
 - Prover trial-and-error is delegated to Codex CLI interaction inside the worker.
 - Natural-language proof sketches are persisted as markdown and reused in repair/formalization flow.
 - Same-problem formalization history is persisted in `data/formalization_memory.json` and reused by repair/expansion.
-- If a statement is not formalizable to Lean, the problem remains in `open` and its attempt count is incremented.
+- Expansion also receives `current_iteration_full_logs`, which contains the current iteration's full prover/repair model outputs in memory only.
+- If a statement is not formalizable to Lean, the problem remains in `open`.
 
 ## License
 
