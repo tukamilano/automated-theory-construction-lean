@@ -12,10 +12,10 @@ from typing import Callable
 from typing import Any
 
 from append_derived import append_theorem
-from common import read_jsonl, resolve_max_attempts, write_jsonl_atomic
+from common import read_jsonl, write_jsonl_atomic
 from lean_verify import verify_scratch
 from state_update import apply_state_update
-from worker_client import invoke_worker_json, load_worker_settings
+from worker_client import invoke_worker_json, load_task_worker_settings, load_worker_settings
 
 
 def debug_log(msg: str) -> None:
@@ -50,22 +50,12 @@ def is_trivial_negation_style(stmt: str) -> bool:
     return normalized.startswith("¬(") or normalized.endswith("→ False")
 
 
-def pick_next_problem(open_rows: list[dict[str, Any]], max_attempts: int) -> dict[str, Any] | None:
-    eligible = [row for row in open_rows if int(row.get("n", 0)) < max_attempts]
-    if not eligible:
-        return None
-    eligible.sort(
-        key=lambda row: (
-            int(row.get("n", 0)),
-            is_trivial_negation_style(str(row.get("stmt", ""))),
-            str(row.get("id", "")),
-        )
-    )
-    return eligible[0]
+def pick_next_problem(open_rows: list[dict[str, Any]]) -> dict[str, Any] | None:
+    return open_rows[0] if open_rows else None
 
 
-def validate_prover_output(payload: dict[str, Any], expected_problem_id: str) -> tuple[str, str, str, str, list[str]]:
-    required_keys = {"problem_id", "result", "proof_sketch", "proof_text", "counterexample_text", "new_problems"}
+def validate_prover_output(payload: dict[str, Any], expected_problem_id: str) -> tuple[str, str, str, list[str]]:
+    required_keys = {"problem_id", "result", "proof_sketch", "counterexample_text", "new_problems"}
     if set(payload.keys()) != required_keys:
         raise ValueError("prover output keys mismatch required contract")
 
@@ -78,10 +68,9 @@ def validate_prover_output(payload: dict[str, Any], expected_problem_id: str) ->
         raise ValueError("prover result must be one of: proof, counterexample, stuck")
 
     proof_sketch = payload.get("proof_sketch")
-    proof_text = payload.get("proof_text")
     counterexample_text = payload.get("counterexample_text")
-    if not isinstance(proof_sketch, str) or not isinstance(proof_text, str) or not isinstance(counterexample_text, str):
-        raise ValueError("proof_sketch, proof_text and counterexample_text must be strings")
+    if not isinstance(proof_sketch, str) or not isinstance(counterexample_text, str):
+        raise ValueError("proof_sketch and counterexample_text must be strings")
 
     new_problems_value = payload.get("new_problems")
     if not isinstance(new_problems_value, list):
@@ -92,7 +81,29 @@ def validate_prover_output(payload: dict[str, Any], expected_problem_id: str) ->
         raise ValueError("new_problems must contain only strings")
 
     new_problems = [item.strip() for item in new_problems_value if item.strip()][:2]
-    return result, proof_sketch, proof_text, counterexample_text, new_problems
+    return result, proof_sketch, counterexample_text, new_problems
+
+
+def validate_formalizer_output(payload: dict[str, Any], expected_problem_id: str) -> tuple[str, str, str, str]:
+    required_keys = {"problem_id", "result", "proof_sketch", "proof_text", "counterexample_text"}
+    if set(payload.keys()) != required_keys:
+        raise ValueError("formalizer output keys mismatch required contract")
+
+    problem_id = payload.get("problem_id")
+    if problem_id != expected_problem_id:
+        raise ValueError("formalizer output problem_id does not match picked problem")
+
+    result = payload.get("result")
+    if result not in {"proof", "counterexample", "stuck"}:
+        raise ValueError("formalizer result must be one of: proof, counterexample, stuck")
+
+    proof_sketch = payload.get("proof_sketch")
+    proof_text = payload.get("proof_text")
+    counterexample_text = payload.get("counterexample_text")
+    if not isinstance(proof_sketch, str) or not isinstance(proof_text, str) or not isinstance(counterexample_text, str):
+        raise ValueError("formalizer proof_sketch, proof_text and counterexample_text must be strings")
+
+    return result, proof_sketch, proof_text, counterexample_text
 
 
 def validate_expand_output(payload: dict[str, Any], expected_problem_id: str) -> list[str]:
@@ -266,6 +277,25 @@ def merge_new_problems(existing: list[str], incoming: list[str]) -> list[str]:
             break
 
     return merged
+
+
+def append_current_iteration_log(
+    current_iteration_full_logs: list[dict[str, Any]],
+    *,
+    stage: str,
+    index: int,
+    worker_meta: dict[str, Any],
+) -> None:
+    raw_model_output = worker_meta.get("raw_model_output")
+    if not isinstance(raw_model_output, str) or not raw_model_output.strip():
+        return
+    current_iteration_full_logs.append(
+        {
+            "stage": stage,
+            "index": index,
+            "raw_model_output": raw_model_output,
+        }
+    )
 
 
 def emit_phase_log(enabled: bool, phase: str, **fields: Any) -> None:
@@ -632,15 +662,14 @@ def query_prover_with_retries(
     problem_id: str,
     stmt: str,
     open_rows: list[dict[str, Any]],
-    max_attempts: int,
     prover_retries: int,
     theory_context: str,
     memory_path: Path,
-) -> tuple[str, str, str, str, list[str], int, dict[str, Any]]:
+    current_iteration_full_logs: list[dict[str, Any]],
+) -> tuple[str, str, str, list[str], int, dict[str, Any]]:
     retries = max(1, prover_retries)
     last_result = "stuck"
     last_proof_sketch = ""
-    last_proof_text = ""
     last_counterexample_text = ""
     last_new_problems: list[str] = []
     last_worker_meta: dict[str, Any] = {}
@@ -651,7 +680,6 @@ def query_prover_with_retries(
             "stmt": stmt,
             "theory_context": theory_context,
             "open_problems": open_rows,
-            "max_attempts": max_attempts,
             "prover_attempt_index": attempt,
             "prover_attempt_budget": retries,
             "mathlib_allowed": True,
@@ -689,6 +717,12 @@ def query_prover_with_retries(
                 metadata={"problem_id": problem_id, "attempt": attempt},
             )
             last_worker_meta = worker_meta
+            append_current_iteration_log(
+                current_iteration_full_logs,
+                stage="prover",
+                index=attempt,
+                worker_meta=worker_meta,
+            )
             prover_elapsed = time.monotonic() - prover_start
             debug_log(f"Prover returned for {problem_id}: {prover_payload.get('result', 'unknown')} (took {prover_elapsed:.1f}s)")
         except RuntimeError as exc:
@@ -696,7 +730,7 @@ def query_prover_with_retries(
                 debug_log(f"Prover timed out for {problem_id}: {exc}")
                 timeout_sketch = (
                     "Prover worker timed out before returning a valid response. "
-                    "Treating this iteration as stuck so the problem remains open and n increments. "
+                    "Treating this iteration as stuck so the problem remains open. "
                     f"Details: {exc}"
                 )
                 timeout_subgoals = make_timeout_subgoals(
@@ -705,28 +739,65 @@ def query_prover_with_retries(
                     problem_id=problem_id,
                     fallback_candidates=last_new_problems,
                 )
-                return "stuck", timeout_sketch, "", "", timeout_subgoals, attempt, last_worker_meta
+                return "stuck", timeout_sketch, "", timeout_subgoals, attempt, last_worker_meta
             raise
-        result, proof_sketch, proof_text, counterexample_text, new_problems = validate_prover_output(prover_payload, problem_id)
+        result, proof_sketch, counterexample_text, new_problems = validate_prover_output(prover_payload, problem_id)
 
         last_result = result
         last_proof_sketch = proof_sketch
-        last_proof_text = proof_text
         last_counterexample_text = counterexample_text
         last_new_problems = new_problems
 
         if result != "stuck":
-            return result, proof_sketch, proof_text, counterexample_text, new_problems, attempt, last_worker_meta
+            return result, proof_sketch, counterexample_text, new_problems, attempt, last_worker_meta
 
     return (
         last_result,
         last_proof_sketch,
-        last_proof_text,
         last_counterexample_text,
         last_new_problems,
         retries,
         last_worker_meta,
     )
+
+
+def request_initial_formalization(
+    *,
+    formalize_worker_settings: Any,
+    formalizer_prompt: str,
+    problem_id: str,
+    stmt: str,
+    result: str,
+    proof_sketch: str,
+    counterexample_text: str,
+    open_rows: list[dict[str, Any]],
+    theory_context: str,
+    current_iteration_full_logs: list[dict[str, Any]],
+) -> tuple[str, str, str, str]:
+    formalize_payload: dict[str, Any] = {
+        "problem_id": problem_id,
+        "stmt": stmt,
+        "result": result,
+        "proof_sketch": proof_sketch,
+        "counterexample_text": counterexample_text,
+        "theory_context": theory_context,
+        "open_problems": open_rows,
+        "mathlib_allowed": True,
+    }
+    formalized, formalize_worker_meta = invoke_worker_json(
+        settings=formalize_worker_settings,
+        task_type="formalize",
+        system_prompt=formalizer_prompt,
+        payload=formalize_payload,
+        metadata={"problem_id": problem_id},
+    )
+    append_current_iteration_log(
+        current_iteration_full_logs,
+        stage="formalize",
+        index=1,
+        worker_meta=formalize_worker_meta,
+    )
+    return validate_formalizer_output(formalized, problem_id)
 
 
 def attempt_formalization_until_timeout(
@@ -735,21 +806,23 @@ def attempt_formalization_until_timeout(
     stmt: str,
     result: str,
     proof_sketch: str,
-    proof_text: str,
     counterexample_text: str,
     new_problems: list[str],
     scratch_file: Path,
     skip_verify: bool,
-    worker_settings: Any,
-    prover_prompt: str,
+    formalize_worker_settings: Any,
+    repair_worker_settings: Any,
+    formalizer_prompt: str,
+    repair_prompt: str,
     open_rows: list[dict[str, Any]],
-    max_attempts: int,
     theory_context: str,
     verify_timeout_sec: int = 180,
     formalization_retry_budget_sec: int,
     memory_path: Path,
     natural_language_note_markdown: str,
     natural_language_note_path: str,
+    current_iteration_full_logs: list[dict[str, Any]],
+    initial_proof_text: str = "",
     phase_logger: Callable[..., None] | None = None,
 ) -> tuple[bool, str | None, str, str, str, list[str], str]:
     verify_success = False
@@ -757,6 +830,7 @@ def attempt_formalization_until_timeout(
     verify_error_excerpt = ""
     include_mathlib_import = False
     retained_new_problems = list(new_problems)
+    proof_text = initial_proof_text
 
     if result not in {"proof", "counterexample"}:
         # Preserve stuck/counterexample exploration history so future timeout handling
@@ -776,6 +850,73 @@ def attempt_formalization_until_timeout(
         )
         save_formalization_memory(memory_path, problem_id, persisted_history)
         return verify_success, theorem_name, result, proof_text, counterexample_text, new_problems, verify_error_excerpt
+
+    if not proof_text.strip():
+        if formalize_worker_settings is None:
+            persisted_history = load_formalization_memory(memory_path, problem_id)
+            persisted_history.append(
+                {
+                    "result": result,
+                    "verify_success": verify_success,
+                    "proof_sketch": proof_sketch,
+                    "proof_text": proof_text,
+                    "counterexample_text": counterexample_text,
+                    "lean_error_excerpt": verify_error_excerpt,
+                    "lean_error_fingerprint": "formalizer_unavailable",
+                    "new_problems": list(new_problems)[:2],
+                }
+            )
+            save_formalization_memory(memory_path, problem_id, persisted_history)
+            return verify_success, theorem_name, "stuck", proof_text, counterexample_text, new_problems, verify_error_excerpt
+
+        try:
+            result, proof_sketch, proof_text, counterexample_text = request_initial_formalization(
+                formalize_worker_settings=formalize_worker_settings,
+                formalizer_prompt=formalizer_prompt,
+                problem_id=problem_id,
+                stmt=stmt,
+                result=result,
+                proof_sketch=proof_sketch,
+                counterexample_text=counterexample_text,
+                open_rows=open_rows,
+                theory_context=theory_context,
+                current_iteration_full_logs=current_iteration_full_logs,
+            )
+        except RuntimeError as exc:
+            if is_worker_timeout_error(exc):
+                persisted_history = load_formalization_memory(memory_path, problem_id)
+                verify_error_excerpt = f"formalize worker timeout: {exc}"
+                persisted_history.append(
+                    {
+                        "result": "stuck",
+                        "verify_success": verify_success,
+                        "proof_sketch": proof_sketch,
+                        "proof_text": proof_text,
+                        "counterexample_text": counterexample_text,
+                        "lean_error_excerpt": verify_error_excerpt,
+                        "lean_error_fingerprint": "formalizer_timeout",
+                        "new_problems": list(new_problems)[:2],
+                    }
+                )
+                save_formalization_memory(memory_path, problem_id, persisted_history)
+                return verify_success, theorem_name, "stuck", proof_text, counterexample_text, new_problems, verify_error_excerpt
+            raise
+        if result not in {"proof", "counterexample"}:
+            persisted_history = load_formalization_memory(memory_path, problem_id)
+            persisted_history.append(
+                {
+                    "result": result,
+                    "verify_success": verify_success,
+                    "proof_sketch": proof_sketch,
+                    "proof_text": proof_text,
+                    "counterexample_text": counterexample_text,
+                    "lean_error_excerpt": verify_error_excerpt,
+                    "lean_error_fingerprint": "formalizer_returned_stuck",
+                    "new_problems": list(new_problems)[:2],
+                }
+            )
+            save_formalization_memory(memory_path, problem_id, persisted_history)
+            return verify_success, theorem_name, result, proof_text, counterexample_text, new_problems, verify_error_excerpt
 
     deadline = time.monotonic() + max(1, formalization_retry_budget_sec)
     persisted_history = load_formalization_memory(memory_path, problem_id)
@@ -858,7 +999,7 @@ def attempt_formalization_until_timeout(
                     verify_error_excerpt,
                 )
 
-        if worker_settings is None or time.monotonic() >= deadline:
+        if repair_worker_settings is None or time.monotonic() >= deadline:
             save_formalization_memory(memory_path, problem_id, repair_history)
             return (
                 verify_success,
@@ -901,7 +1042,6 @@ def attempt_formalization_until_timeout(
             "stmt": stmt,
             "theory_context": theory_context,
             "open_problems": open_rows,
-            "max_attempts": max_attempts,
             "prover_attempt_index": repair_round,
             "prover_attempt_budget": "until_formalization_timeout",
             "mathlib_allowed": True,
@@ -935,12 +1075,18 @@ def attempt_formalization_until_timeout(
         }
 
         try:
-            repaired, _ = invoke_worker_json(
-                settings=worker_settings,
+            repaired, repair_worker_meta = invoke_worker_json(
+                settings=repair_worker_settings,
                 task_type="repair",
-                system_prompt=prover_prompt,
+                system_prompt=repair_prompt,
                 payload=repair_payload,
                 metadata={"problem_id": problem_id, "repair_round": repair_round},
+            )
+            append_current_iteration_log(
+                current_iteration_full_logs,
+                stage="repair",
+                index=repair_round,
+                worker_meta=repair_worker_meta,
             )
         except RuntimeError as exc:
             if is_worker_timeout_error(exc):
@@ -957,8 +1103,7 @@ def attempt_formalization_until_timeout(
                 )
             raise
         try:
-            result, proof_sketch, proof_text, counterexample_text, new_problems = validate_prover_output(repaired, problem_id)
-            retained_new_problems = merge_new_problems(retained_new_problems, new_problems)
+            result, proof_sketch, proof_text, counterexample_text = validate_formalizer_output(repaired, problem_id)
         except ValueError as exc:
             verify_error_excerpt = f"repair output invalid: {exc}"
             continue
@@ -1031,13 +1176,18 @@ def main() -> None:
     parser.add_argument("--enable-worker", action="store_true")
     parser.add_argument("--worker-command")
     parser.add_argument("--worker-timeout", type=int)
+    parser.add_argument("--formalize-worker-command")
+    parser.add_argument("--formalize-worker-timeout", type=int)
+    parser.add_argument("--repair-worker-command")
+    parser.add_argument("--repair-worker-timeout", type=int)
+    parser.add_argument("--formalizer-prompt-file", default="prompts/formalizer_simple.md")
+    parser.add_argument("--repair-prompt-file")
     parser.add_argument("--phase-logs", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--skip-verify", action="store_true")
     args = parser.parse_args()
 
     # Fixed runtime paths and hidden compatibility defaults.
     args.data_dir = "data"
-    args.config = "config/defaults.json"
     args.seeds_file = "theories/semigroup_like_01/seeds.jsonl"
     args.scratch_file = "AutomatedTheoryConstruction/Scratch.lean"
     args.derived_file = "AutomatedTheoryConstruction/Derived.lean"
@@ -1045,11 +1195,10 @@ def main() -> None:
     args.reset_proof_notes_on_start = True
     args.reset_scratch_on_start = True
     args.reset_derived_on_start = True
-    args.max_attempts = None
     args.prover_output_json = None
     args.prover_output_file = None
     args.theory_file = "AutomatedTheoryConstruction/Theory.lean"
-    # Problem selection is deterministic local logic; the worker handles prover/repair/expand only.
+    # Problem selection is deterministic local logic; the worker handles prover/formalize/repair/expand.
     args.prover_prompt_file = "prompts/prover_simple.md"
     args.expander_prompt_file = "prompts/new_problem_expander.md"
     args.prover_retries = 2
@@ -1062,7 +1211,6 @@ def main() -> None:
     args.mock_new_problem = []
 
     data_dir = Path(args.data_dir)
-    config_path = Path(args.config)
     scratch_file = Path(args.scratch_file)
     memory_path = Path(args.formalization_memory_file)
     proof_notes_dir = Path(args.proof_notes_dir)
@@ -1084,16 +1232,29 @@ def main() -> None:
         prebuild_lean_project()
         debug_log("Initialization build completed")
 
-    max_attempts = resolve_max_attempts(args.max_attempts, config_path)
     base_theory_context = load_optional_text(args.theory_file)
     derived_path = Path(args.derived_file)
     open_path = data_dir / "open_problems.jsonl"
 
     worker_settings = None
+    formalize_worker_settings = None
+    repair_worker_settings = None
     if args.enable_worker:
         worker_settings = load_worker_settings(
             command_override=args.worker_command,
             timeout_override=args.worker_timeout,
+        )
+        formalize_worker_settings = load_task_worker_settings(
+            task_name="formalize",
+            base_settings=worker_settings,
+            command_override=args.formalize_worker_command,
+            timeout_override=args.formalize_worker_timeout,
+        )
+        repair_worker_settings = load_task_worker_settings(
+            task_name="repair",
+            base_settings=worker_settings,
+            command_override=args.repair_worker_command,
+            timeout_override=args.repair_worker_timeout,
         )
     completed_iterations = 0
     while True:
@@ -1106,37 +1267,23 @@ def main() -> None:
             print({"status": "no_open_problems", "iterations_completed": completed_iterations})
             return
 
-        eligible_rows = [row for row in open_rows if int(row.get("n", 0)) < max_attempts]
-        if not eligible_rows:
-            print({
-                "status": "no_eligible_open_problem",
-                "max_attempts": max_attempts,
-                "iterations_completed": completed_iterations,
-            })
-            return
-
         iteration_num = completed_iterations + 1
         debug_log(f"=== Iteration {iteration_num} START ===")
-        debug_log(f"{len(open_rows)} total problems, {len(eligible_rows)} eligible (n < {max_attempts})")
+        debug_log(f"{len(open_rows)} total problems in queue")
 
         emit_phase_log(
             args.phase_logs,
             "iteration_start",
             iteration=completed_iterations + 1,
             open_problem_count=len(open_rows),
-            eligible_problem_count=len(eligible_rows),
         )
 
         # Select problem using local deterministic logic, no LLM needed
-        debug_log(f"Selecting problem locally from {len(eligible_rows)} eligible problems")
-        picked = pick_next_problem(open_rows, max_attempts)
+        debug_log(f"Selecting problem locally from {len(open_rows)} queued problems")
+        picked = pick_next_problem(open_rows)
 
         if picked is None:
-            print({
-                "status": "no_eligible_open_problem",
-                "max_attempts": max_attempts,
-                "iterations_completed": completed_iterations,
-            })
+            print({"status": "no_open_problems", "iterations_completed": completed_iterations})
             return
 
         problem_id = str(picked["id"])
@@ -1147,23 +1294,25 @@ def main() -> None:
         prover_payload = load_json_payload_from_args(args.prover_output_json, args.prover_output_file)
         prover_attempts_used = 1
         proof_sketch = ""
+        proof_text = ""
         prover_worker_meta: dict[str, Any] = {}
+        current_iteration_full_logs: list[dict[str, Any]] = []
         if prover_payload is not None:
             emit_phase_log(args.phase_logs, "prover", iteration=completed_iterations + 1, problem_id=problem_id, mode="provided")
-            result, proof_sketch, proof_text, counterexample_text, new_problems = validate_prover_output(prover_payload, problem_id)
+            result, proof_sketch, counterexample_text, new_problems = validate_prover_output(prover_payload, problem_id)
         elif worker_settings is not None:
             emit_phase_log(args.phase_logs, "prover", iteration=completed_iterations + 1, problem_id=problem_id, mode="worker")
             prover_prompt = load_prompt_text(args.prover_prompt_file)
-            result, proof_sketch, proof_text, counterexample_text, new_problems, prover_attempts_used, prover_worker_meta = query_prover_with_retries(
+            result, proof_sketch, counterexample_text, new_problems, prover_attempts_used, prover_worker_meta = query_prover_with_retries(
                 worker_settings=worker_settings,
                 prover_prompt=prover_prompt,
                 problem_id=problem_id,
                 stmt=stmt,
                 open_rows=open_rows,
-                max_attempts=max_attempts,
                 prover_retries=args.prover_retries,
                 theory_context=theory_context,
                 memory_path=memory_path,
+                current_iteration_full_logs=current_iteration_full_logs,
             )
             emit_phase_log(
                 args.phase_logs,
@@ -1178,8 +1327,8 @@ def main() -> None:
         else:
             emit_phase_log(args.phase_logs, "prover", iteration=completed_iterations + 1, problem_id=problem_id, mode="mock")
             result = args.mock_result
-            proof_text = args.mock_proof_text
             counterexample_text = args.mock_counterexample_text
+            proof_text = args.mock_proof_text
             new_problems = parse_new_problems(args.mock_new_problem)
 
         note_path, note_markdown = write_proof_note_markdown(
@@ -1191,7 +1340,9 @@ def main() -> None:
             counterexample_text=counterexample_text,
         )
 
-        prover_prompt_for_repair = load_prompt_text(args.prover_prompt_file) if worker_settings is not None else ""
+        formalizer_prompt = load_prompt_text(args.formalizer_prompt_file) if formalize_worker_settings is not None else ""
+        repair_prompt_file = args.repair_prompt_file or args.formalizer_prompt_file
+        repair_prompt = load_prompt_text(repair_prompt_file) if repair_worker_settings is not None else ""
         (
             verify_success,
             theorem_name,
@@ -1205,21 +1356,23 @@ def main() -> None:
             stmt=stmt,
             result=result,
             proof_sketch=proof_sketch,
-            proof_text=proof_text,
             counterexample_text=counterexample_text,
             new_problems=new_problems,
             scratch_file=scratch_file,
             skip_verify=args.skip_verify,
-            worker_settings=worker_settings,
-            prover_prompt=prover_prompt_for_repair,
+            formalize_worker_settings=formalize_worker_settings,
+            repair_worker_settings=repair_worker_settings,
+            formalizer_prompt=formalizer_prompt,
+            repair_prompt=repair_prompt,
             open_rows=open_rows,
-            max_attempts=max_attempts,
             theory_context=theory_context,
             verify_timeout_sec=180,
             formalization_retry_budget_sec=args.formalization_retry_budget_sec,
             memory_path=memory_path,
             natural_language_note_markdown=note_markdown,
             natural_language_note_path=str(note_path),
+            current_iteration_full_logs=current_iteration_full_logs,
+            initial_proof_text=proof_text,
             phase_logger=(lambda **fields: emit_phase_log(args.phase_logs, iteration=completed_iterations + 1, **fields)),
         )
         solver_new_problem_suggestions = list(new_problems)
@@ -1244,6 +1397,7 @@ def main() -> None:
                 "theory_context": theory_context,
                 "existing_new_problems": list(new_problems),
                 "verify_error_excerpt": verify_error_excerpt,
+                "current_iteration_full_logs": list(current_iteration_full_logs),
                 "same_problem_history_tail": same_problem_history_tail,
             }
             try:
@@ -1288,13 +1442,11 @@ def main() -> None:
 
         report = apply_state_update(
             data_dir=data_dir,
-            config_path=config_path,
             problem_id=problem_id,
             result=result,
             verify_success=verify_success,
             theorem_name=theorem_name,
             new_problems=new_problems,
-            max_attempts_override=args.max_attempts,
         )
         emit_phase_log(args.phase_logs, "state_update", iteration=completed_iterations + 1, problem_id=problem_id)
         completed_iterations += 1

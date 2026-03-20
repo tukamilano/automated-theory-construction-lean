@@ -75,7 +75,7 @@ have h2 : x * 2 = 2 * x := by sorry
 
 When progress stalls, replan the remaining proof from the current theorem state, the already established local facts, and the current outstanding goals.
 
-Use the local file, current diagnostics, visible goals, and existing partial proof as the default source of truth. Do not ask the user to restate proven steps or stuck goals unless that information is genuinely unavailable.
+Use the local file, current diagnostics, visible goals, and existing partial proof as the default source of truth. In non-interactive formalize/repair worker runs, do not ask the user to restate proven steps or stuck goals; continue from the available context.
 
 ### Additional Rules
 
@@ -97,7 +97,7 @@ Insert new helper `have` steps in a natural logical order. Prefer smaller interm
 - Reuse proven local facts before introducing new ones.
 - Prefer narrowing the gap with smaller helper lemmas over discarding the whole plan.
 - Treat replanning as a way to continue implementation, not as a stopping point by itself.
-- Escalate to the user only if the intended statement, assumptions, or target direction are materially ambiguous.
+- Escalate to the user only in interactive sessions. In non-interactive worker runs, choose the most conservative locally supported continuation instead.
 
 ## Notes
 

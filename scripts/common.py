@@ -50,22 +50,3 @@ def next_problem_id(all_ids: list[str]) -> str:
         if idx is not None and idx > max_index:
             max_index = idx
     return f"op_{max_index + 1:06d}"
-
-
-def load_defaults(config_path: Path) -> dict[str, Any]:
-    if not config_path.exists():
-        return {}
-    return json.loads(config_path.read_text(encoding="utf-8"))
-
-
-def resolve_max_attempts(cli_value: int | None, config_path: Path) -> int:
-    if cli_value is not None:
-        return cli_value
-    env_value = os.getenv("ATC_MAX_ATTEMPTS")
-    if env_value is not None and env_value.strip().isdigit():
-        return max(1, int(env_value.strip()))
-    defaults = load_defaults(config_path)
-    from_config = defaults.get("max_attempts")
-    if isinstance(from_config, int) and from_config > 0:
-        return from_config
-    return 5

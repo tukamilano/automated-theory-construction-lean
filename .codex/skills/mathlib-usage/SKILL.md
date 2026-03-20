@@ -14,12 +14,13 @@ description: Mathlib usage principles (imports, search, existence checks, confir
 - Try existing Mathlib lemmas first; only if absent, add a minimal helper lemma (1–3 lines to close).
 - Never invent lemma names; confirm they exist before use.
 - Do not ask the user which lemma to try if the answer can be found from local search, diagnostics, or a small confirmation snippet.
+- In a non-interactive worker/orchestrator run, do not ask the user at all; make the best local choice and continue.
 
 ## Suggested search flow
 
 0. If `.lake/packages/mathlib/Mathlib` is missing, run `lake update`.
 1. Build keywords.
-   - Use synonyms (JP/EN, case variants).
+   - Use synonyms (case variants).
    - Include typeclass/structure names.
    - When notation is involved, search by string as needed.
 2. Narrow with `rg -n "<keyword>" .lake/packages/mathlib/Mathlib`.

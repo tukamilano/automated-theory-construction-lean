@@ -15,19 +15,50 @@ class WorkerSettings:
     timeout_sec: int
 
 
+def _resolve_timeout_seconds(timeout_text: str | None, default: int) -> int:
+    raw = (timeout_text or "").strip()
+    return int(raw) if raw else default
+
+
 def load_worker_settings(
     command_override: str | None,
     timeout_override: int | None,
 ) -> WorkerSettings:
     command = (command_override or os.getenv("ATC_WORKER_COMMAND") or "").strip()
-    timeout_text = (os.getenv("ATC_WORKER_TIMEOUT") or "").strip()
-    timeout_from_env = int(timeout_text) if timeout_text else 180
+    timeout_from_env = _resolve_timeout_seconds(os.getenv("ATC_WORKER_TIMEOUT"), 180)
     timeout_sec = timeout_override if timeout_override is not None else timeout_from_env
 
     if not command:
         raise ValueError("Worker command is required. Set --worker-command or ATC_WORKER_COMMAND.")
     if timeout_sec <= 0:
         raise ValueError("Worker timeout must be > 0 seconds.")
+
+    return WorkerSettings(command=command, timeout_sec=timeout_sec)
+
+
+def load_task_worker_settings(
+    *,
+    task_name: str,
+    base_settings: WorkerSettings,
+    command_override: str | None = None,
+    timeout_override: int | None = None,
+) -> WorkerSettings:
+    env_prefix = f"ATC_{task_name.upper()}_WORKER"
+    command = (
+        command_override
+        or os.getenv(f"{env_prefix}_COMMAND")
+        or base_settings.command
+    ).strip()
+    timeout_from_env = _resolve_timeout_seconds(
+        os.getenv(f"{env_prefix}_TIMEOUT"),
+        base_settings.timeout_sec,
+    )
+    timeout_sec = timeout_override if timeout_override is not None else timeout_from_env
+
+    if not command:
+        raise ValueError(f"{task_name} worker command must not be empty.")
+    if timeout_sec <= 0:
+        raise ValueError(f"{task_name} worker timeout must be > 0 seconds.")
 
     return WorkerSettings(command=command, timeout_sec=timeout_sec)
 

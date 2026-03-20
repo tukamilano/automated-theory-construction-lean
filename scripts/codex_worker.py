@@ -87,16 +87,37 @@ def _extract_json_object(text: str) -> tuple[dict[str, Any], int, bool]:
 
 def _build_prompt(task_type: str, system_prompt: str, payload: dict[str, Any]) -> str:
     return (
-        "You are an interactive worker in an automated theorem-construction loop.\n"
+        "You are a non-interactive worker in an automated theorem-construction loop.\n"
         f"Task type: {task_type}\n\n"
         "System instructions (must follow):\n"
         f"{system_prompt}\n\n"
         "Input payload JSON:\n"
         f"{json.dumps(payload, ensure_ascii=False, indent=2)}\n\n"
         "Output contract:\n"
-        "- You may think and explain briefly in natural language.\n"
+        "- Use English for any natural-language text you include.\n"
+        "- Never ask clarifying questions or request user input.\n"
+        "- If information is missing or ambiguous, make the best conservative inference and still return a valid task-response JSON object.\n"
+        "- If you cannot solve the task, return the contract-compliant fallback for that task instead of a question.\n"
         "- The final answer must include one task-response JSON object.\n"
         "- Ensure the last JSON object in your final answer is the task-response payload.\n"
+    )
+
+
+def _build_contract_repair_prompt(
+    task_type: str,
+    system_prompt: str,
+    payload: dict[str, Any],
+    previous_output: str,
+) -> str:
+    return (
+        _build_prompt(task_type=task_type, system_prompt=system_prompt, payload=payload)
+        + "\nPrevious response violated the output contract.\n"
+        + "Do not ask questions. Do not add explanations unless they are inside the required JSON fields.\n"
+        + "Return exactly one valid task-response JSON object now.\n"
+        + "If you remain uncertain, use the most conservative valid fallback (for example `stuck` or `[]`) instead of asking for clarification.\n\n"
+        + "Previous invalid response:\n"
+        + previous_output
+        + "\n"
     )
 
 
@@ -174,7 +195,7 @@ def main() -> None:
         if not isinstance(payload, dict):
             raise ValueError("payload must be a JSON object")
 
-        if task_type not in {"prover", "repair", "expand"}:
+        if task_type not in {"prover", "formalize", "repair", "expand"}:
             raise ValueError(f"unsupported task_type: {task_type}")
 
         outer_timeout = int((os.getenv("ATC_WORKER_TIMEOUT") or "180").strip())
@@ -183,7 +204,19 @@ def main() -> None:
         timeout_sec = int(codex_timeout_text) if codex_timeout_text else max(30, outer_timeout - 10)
         prompt = _build_prompt(task_type=task_type, system_prompt=system_prompt, payload=payload)
         model_output = _run_codex(prompt=prompt, timeout_sec=timeout_sec)
-        result_payload, parse_attempts, used_fallback = _extract_json_object(model_output)
+        contract_retry_used = False
+        try:
+            result_payload, parse_attempts, used_fallback = _extract_json_object(model_output)
+        except ValueError:
+            contract_retry_used = True
+            repair_prompt = _build_contract_repair_prompt(
+                task_type=task_type,
+                system_prompt=system_prompt,
+                payload=payload,
+                previous_output=model_output,
+            )
+            model_output = _run_codex(prompt=repair_prompt, timeout_sec=max(30, timeout_sec // 2))
+            result_payload, parse_attempts, used_fallback = _extract_json_object(model_output)
 
         response = {
             "result_payload": result_payload,
@@ -194,6 +227,8 @@ def main() -> None:
                 "json_parse_attempts": parse_attempts,
                 "raw_parse_fallback_used": used_fallback,
                 "raw_output_chars": len(model_output),
+                "raw_model_output": model_output,
+                "contract_retry_used": contract_retry_used,
             },
             "error": None,
         }

@@ -21,7 +21,7 @@ Return JSON only:
 {
   "problem_id": "op_000001",
   "result": "stuck",
-  "proof_text": "",
+  "proof_sketch": "",
   "counterexample_text": "",
   "new_problems": []
 }
@@ -31,9 +31,12 @@ Rules:
 
 - `problem_id`: must match input target problem id.
 - `result`: exactly one of `proof`, `counterexample`, `stuck`.
-- `proof_text`: string. Empty string is allowed.
+- `proof_sketch`: string.
 - `counterexample_text`: string. Empty string is allowed.
 - `new_problems`: array of strings, length 0-2.
+- Each `new_problems` entry may be either a Lean-formal statement or a semi-formal natural-language research prompt.
+- Do not ask clarifying questions or request user input; return JSON only.
+- If information is insufficient, return the most conservative valid JSON response (typically `stuck` and/or `[]`) instead of a question.
 
 ## Behavioral constraints
 
@@ -44,10 +47,6 @@ Rules:
 - At least one suggested problem should have a meaningfully different shape from the current target.
 - Do not exceed two new problems.
 
-## Mathlib usage
-
-- Mathlib lemmas/tactics are allowed in `proof_text` as long as output remains valid Lean tactic code.
-
 ## Dedup and state boundary
 
 - Prover performs best-effort duplicate avoidance.
@@ -56,20 +55,6 @@ Rules:
 
 ## Formalization boundary
 
+- Prover is a natural-language exploration stage; Lean formalization happens downstream.
 - If target statement is not formalizable to Lean, downstream formalization may reject it.
-- Rejection handling is deterministic: keep problem in `open` and increment attempts.
-
-## proof_text format requirement
-
-- `proof_text` MUST contain Lean 4 tactic code only when `result` is `proof`.
-- The content is inserted verbatim into a `by` block in a Lean theorem file.
-- Do NOT put natural language, explanations, or comments in `proof_text`.
-- Example of valid `proof_text`:
-  ```
-  intro α _ x
-  exact SemigroupLike01.ax_left_idempotent x
-  ```
-- Example of INVALID `proof_text` (will cause Lean compile error):
-  ```
-  The statement follows from ax_left_idempotent.
-  ```
+- Rejection handling is deterministic: keep problem in `open`.
