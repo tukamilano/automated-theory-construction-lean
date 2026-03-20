@@ -74,9 +74,14 @@ lake env lean AutomatedTheoryConstruction/Scratch.lean
 
 ## Basic Usage
 
-To define the base theory, edit `AutomatedTheoryConstruction/Theory.lean` and put your symbols, structures, and axioms there.
+To define the base theory, edit `AutomatedTheoryConstruction/Theory.lean` and put the axiom system you want to grow there.
 
-Then add a few seed statements to `theories/semigroup_like_01/seeds.jsonl`. These are the initial theorem candidates that the loop uses as starting points for theory development.
+Then place seed conjectures under `theories/`, for example in `theories/semigroup_like_01/seeds.jsonl`. These are the initial theorem candidates that the loop uses as starting points for theory development.
+
+In short:
+
+- Put the target axioms / structures / symbols in `AutomatedTheoryConstruction/Theory.lean`
+- Put the initial seed statements in `theories/.../seeds.jsonl`
 
 At startup, the loop initializes open problems from this `seeds.jsonl` file by default.
 
