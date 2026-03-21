@@ -39,7 +39,7 @@ SCRATCH_TEMPLATE = (
 DERIVED_TEMPLATE = (
     "import AutomatedTheoryConstruction.Theory\n\n"
     "namespace AutomatedTheoryConstruction\n\n"
-    "-- Verified theorems and helper aliases are appended here by scripts/append_derived.py.\n"
+    "-- Verified theorems are appended here by scripts/append_derived.py.\n"
     "-- Keep any short theorem docstrings/comments here instead of a separate metadata index.\n\n"
     "end AutomatedTheoryConstruction\n"
 )
@@ -457,7 +457,6 @@ def extract_derived_theorem_entries(
         {
             "name": str(entry.get("theorem_name", "")).strip(),
             "statement": str(entry.get("statement", "")).strip(),
-            "alias_names": [str(value).strip() for value in entry.get("alias_names", []) if str(value).strip()],
         }
         for entry in fallback_entries[:max_theorems]
         if str(entry.get("theorem_name", "")).strip() and str(entry.get("statement", "")).strip()
@@ -502,8 +501,6 @@ def extract_relevance_keywords(stmt: str) -> set[str]:
 
 def extract_entry_relevance_keywords(entry: dict[str, Any]) -> set[str]:
     keywords = set(extract_relevance_keywords(str(entry.get("statement", ""))))
-    for item in entry.get("alias_names", []):
-        keywords |= extract_relevance_keywords(str(item).replace("_", " "))
     keywords |= extract_relevance_keywords(str(entry.get("name", "")).replace("_", " "))
     return keywords
 
@@ -583,9 +580,6 @@ def render_relevant_derived_context(entries: list[dict[str, Any]], max_chars: in
     ]
     for entry in entries:
         lines.append(f"-- {entry['name']} :: {summarize_derived_statement(entry['statement'])}")
-        alias_names = [str(item).strip() for item in entry.get("alias_names", []) if str(item).strip()]
-        if alias_names:
-            lines.append(f"--   aliases: {', '.join(alias_names[:3])}")
 
     summary = "\n".join(lines)
     if len(summary) > max_chars:
@@ -622,8 +616,6 @@ def infer_mathlib_search_terms(stmt: str, entries: list[dict[str, Any]], max_ter
     if target_shape["has_forall"]:
         add("forall")
     for entry in entries:
-        for alias_name in entry.get("alias_names", []):
-            add(str(alias_name))
         add(str(entry.get("name", "")))
 
     return terms[:max_terms]

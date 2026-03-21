@@ -1,4 +1,3 @@
-{"id":"op_000069","stmt":"Prove the negation of the universal claim by exhibiting a concrete finite countermodel: there exists a nontrivial `SemigroupLike01` with some `e` such that `(∀ y, e * y = e)` and `¬ (∀ x, x * e = e)`.","src":"generated"}
 {"id":"op_000063","stmt":"∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α] (e : α), (∀ y : α, e * y = e) → ∀ x : α, x * e = e","src":"generated"}
 {"id":"op_000070","stmt":"∀ {α : Type _} [Fintype α] [AutomatedTheoryConstruction.SemigroupLike01 α] (e : α), (∀ y : α, e * y = e) → (¬ ∀ x : α, x * e = e) → Nontrivial α","src":"generated"}
 {"id":"op_000071","stmt":"∀ (α : Type _) [Nontrivial α], ∃ (_ : AutomatedTheoryConstruction.SemigroupLike01 α), ∃ e : α, (∀ y : α, e * y = e) ∧ ¬ ∀ x : α, x * e = e","src":"generated"}
@@ -9,3 +8,6 @@
 {"id":"op_000075","stmt":"Characterize which right factors p can be absorbed by a term built from the same left prefix in `SemigroupLike01`; for example, explain when a term of the form `t = (((a * b) * c) * d)` must satisfy `t * p = t`.","src":"generated"}
 {"id":"op_000076","stmt":"∀ (α : Type u) [Nontrivial α], ∃ s : AutomatedTheoryConstruction.SemigroupLike01 α, ¬ ∀ x y : α, s.mul x y = s.mul y x","src":"generated"}
 {"id":"op_000077","stmt":"∀ (α : Type u), ∃ s : AutomatedTheoryConstruction.SemigroupLike01 α, ∀ x y z : α, s.mul (s.mul x y) z = x","src":"generated"}
+{"id":"op_000078","stmt":"∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α] (e : α), (∀ y : α, e * y = e) → (∀ x : α, x * e = e) → Subsingleton α","src":"generated"}
+{"id":"op_000079","stmt":"Classify `SemigroupLike01` structures admitting a left-absorbing element `e`; in particular, determine whether the left-projection model `x * y := x` is the canonical source of examples where `∀ y, e * y = e` holds but `∀ x, x * e = e` fails.","src":"generated"}
+{"id":"op_000069","stmt":"Prove the negation of the universal claim by exhibiting a concrete finite countermodel: there exists a nontrivial `SemigroupLike01` with some `e` such that `(∀ y, e * y = e)` and `¬ (∀ x, x * e = e)`.","src":"generated"}
