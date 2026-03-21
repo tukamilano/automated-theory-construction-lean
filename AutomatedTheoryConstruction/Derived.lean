@@ -683,4 +683,21 @@ theorem thm_op_000068 : ∀ (α : Type u), ∃ s : AutomatedTheoryConstruction.S
   intro x y
   rfl
 
+
+theorem thm_op_000063_is_false : ¬(∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α] (e : α), (∀ y : α, e * y = e) → ∀ x : α, x * e = e) := by
+  intro h
+  obtain ⟨α, inst, e, x, he, hne⟩ := AutomatedTheoryConstruction.thm_op_000058
+  exact hne (@h α inst e he x)
+
+
+theorem thm_op_000070 : ∀ {α : Type _} [Fintype α] [AutomatedTheoryConstruction.SemigroupLike01 α] (e : α), (∀ y : α, e * y = e) → (¬ ∀ x : α, x * e = e) → Nontrivial α := by
+  intro α _ _ e he hne
+  rw [← not_subsingleton_iff_nontrivial]
+  intro hsub
+  apply hne
+  intro x
+  have hx : x = e := hsub.elim x e
+  rw [hx]
+  exact he e
+
 end AutomatedTheoryConstruction

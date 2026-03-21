@@ -1056,6 +1056,32 @@
       "lean_error_excerpt": "",
       "lean_error_fingerprint": "statement_formalization",
       "new_problems": []
+    },
+    {
+      "result": "counterexample",
+      "verify_success": false,
+      "proof_sketch": "Refute the universal claim with the concrete `SemigroupLike01` structure on `Bool` given by left projection `x * y := x`. Then `e := false` satisfies `∀ y, e * y = e`, but the claimed conclusion at `x := true` yields `true = false`.",
+      "proof_text": "intro h\nletI : AutomatedTheoryConstruction.SemigroupLike01 Bool where\n  mul := fun x _ => x\n  ax_left_idempotent := by\n    intro x\n    rfl\n  ax_right_absorb_duplicate := by\n    intro x y\n    rfl\n  ax_middle_swap := by\n    intro x y z\n    rfl\nhave hfalse : (true : Bool) = false := by\n  simpa using h (α := Bool) (e := false) (by\n    intro y\n    rfl) true\ncases hfalse",
+      "counterexample_text": "Take `Bool` with multiplication `x * y := x` and choose `e := false`. Then `e * y = e` for every `y`, but `true * e = true ≠ false`, so the statement is false.",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:8:57: error: unexpected token 'where'; expected ':=' or '|'",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:8:57: error: unexpected token 'where'; expected ':=' or '|' | AutomatedTheoryConstruction/Scratch.lean:8:7: error: Missing cases: | AutomatedTheoryConstruction/Scratch.lean:6:153: error: unsolved goals",
+      "new_problems": [
+        "∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α], (∀ x y : α, x * y = y * x) → ∀ e : α, (∀ y : α, e * y = e) → ∀ x : α, x * e = e",
+        "Identify natural extra axioms on `SemigroupLike01` weaker than full commutativity that force every left-absorbing element to be right-absorbing as well."
+      ]
+    },
+    {
+      "result": "counterexample",
+      "verify_success": true,
+      "proof_sketch": "Use `AutomatedTheoryConstruction.thm_op_000058`, which already provides a witness type `α` with a `SemigroupLike01` instance and elements `e x` such that `∀ y, e * y = e` and `x * e ≠ e`. Applying the universal claim to that witness gives `x * e = e`, contradicting the witness.",
+      "proof_text": "intro h\nobtain ⟨α, inst, e, x, he, hne⟩ := AutomatedTheoryConstruction.thm_op_000058\nexact hne (@h α inst e he x)",
+      "counterexample_text": "A verified counterexample already exists as `AutomatedTheoryConstruction.thm_op_000058`: there are `α`, a `SemigroupLike01` instance on `α`, and elements `e x : α` with `∀ y, e * y = e` but `x * e ≠ e`.",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:8:57: error: unexpected token 'where'; expected ':=' or '|'",
+      "lean_error_fingerprint": "no_diagnostics",
+      "new_problems": [
+        "∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α], (∀ x y : α, x * y = y * x) → ∀ e : α, (∀ y : α, e * y = e) → ∀ x : α, x * e = e",
+        "Identify natural extra axioms on `SemigroupLike01` weaker than full commutativity that force every left-absorbing element to be right-absorbing as well."
+      ]
     }
   ],
   "op_000064": [
@@ -1210,6 +1236,35 @@
       "new_problems": [
         "∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α] (e : α), (∀ y : α, e * y = e) → (∀ x : α, x * e = e) → Subsingleton α",
         "Classify `SemigroupLike01` structures admitting a left-absorbing element `e`; in particular, determine whether the left-projection model `x * y := x` is the canonical source of examples where `∀ y, e * y = e` holds but `∀ x, x * e = e` fails."
+      ]
+    }
+  ],
+  "op_000070": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∀ {α : Type _} [Fintype α] [AutomatedTheoryConstruction.SemigroupLike01 α] (e : α), (∀ y : α, e * y = e) → (¬ ∀ x : α, x * e = e) → Nontrivial α",
+      "formalized_statement": "∀ {α : Type _} [Fintype α] [AutomatedTheoryConstruction.SemigroupLike01 α] (e : α), (∀ y : α, e * y = e) → (¬ ∀ x : α, x * e = e) → Nontrivial α",
+      "statement_formalization_notes": "The input statement is already a valid Lean proposition using standard Mathlib notation.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "Rewrite the goal as `¬ Subsingleton α`. If `α` were subsingleton, then every `x` equals `e`, so `x * e = e` follows from the hypothesis `∀ y, e * y = e`, contradicting the second assumption.",
+      "proof_text": "intro α _ _ e he hne\nrw [← not_subsingleton_iff_nontrivial]\nintro hsub\napply hne\nintro x\nhave hx : x = e := hsub.elim x e\nrw [hx]\nexact he e",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "no_diagnostics",
+      "new_problems": [
+        "∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α] (e : α), (∀ y : α, e * y = e) → (¬ ∀ x : α, x * e = e) → Nontrivial α",
+        "∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α] (e : α), (∀ y : α, e * y = e) → Subsingleton α → ∀ x : α, x * e = e"
       ]
     }
   ]
