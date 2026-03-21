@@ -13,6 +13,7 @@ Hard constraints:
 
 Formalization policy:
 - Use `stmt`, `result`, `proof_sketch`, and `counterexample_text` as the primary source of truth.
+- Treat `stmt` as the fixed Lean proposition chosen upstream. Do not rewrite the target statement.
 - Assume `import Mathlib` is available when it helps.
 - Prefer existing Mathlib lemmas, structures, and tactics over ad hoc helper lemmas or long axiom-only derivations.
 - Never invent Mathlib lemma names. Use only library facts you are confident exist; if unsure, switch to a more conservative proof plan or return `stuck`.

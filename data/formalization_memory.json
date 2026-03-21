@@ -699,6 +699,119 @@
         "∀ {α : Type u} [SemigroupLike01 α], ∀ x y z : α, (((x * z) * y) * x) = (x * y) * z",
         "∀ {α : Type u} [SemigroupLike01 α], ∀ x y z : α, (((x * y) * x) * z) = (x * y) * z"
       ]
+    },
+    {
+      "result": "proof",
+      "verify_success": false,
+      "proof_sketch": "Rewrite `(((x * y) * z) * x)` to `(((x * y) * x) * z)` using `ax_middle_swap` with `a := x * y`, `b := z`, `c := x`, then use `mul_right_absorb_lhs_op_000010` on `(x * y)` and `z`.",
+      "proof_text": "intro α _ x y z\nhave hswap : ((x * y) * z) * x = ((x * y) * x) * z := by\n  simpa [AutomatedTheoryConstruction.op] using\n    (AutomatedTheoryConstruction.SemigroupLike01.ax_middle_swap (α := α) (x := x * y) (y := z) (z := x))\nrw [hswap, AutomatedTheoryConstruction.mul_right_absorb_lhs_op_000010 (x := x * y) (y := z)]",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:11:13: error: Tactic `rewrite` failed: Did not find an occurrence of the pattern",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:11:13: error: Tactic `rewrite` failed: Did not find an occurrence of the pattern | x * y * z * (x * y) | in the target expression",
+      "new_problems": [
+        "∀ {α : Type u} [SemigroupLike01 α], ∀ x y z : α, (((x * z) * y) * x) = (x * y) * z",
+        "∀ {α : Type u} [SemigroupLike01 α], ∀ x y z : α, (((x * y) * x) * z) = (x * y) * z"
+      ]
+    },
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "Use `ax_middle_swap` with `x := x * y`, `y := z`, `z := x` to rewrite `(((x * y) * z) * x)` as `(((x * y) * x) * z)`, then apply `mul_right_absorb_lhs_op_000010` to simplify `((x * y) * x)` to `x * y`.",
+      "proof_text": "intro α _ x y z\nhave hswap : ((x * y) * z) * x = ((x * y) * x) * z := by\n  simpa [AutomatedTheoryConstruction.op] using\n    (AutomatedTheoryConstruction.SemigroupLike01.ax_middle_swap (α := α) (x := x * y) (y := z) (z := x))\ncalc\n  (((x * y) * z) * x) = (((x * y) * x) * z) := hswap\n  _ = (x * y) * z := by\n    rw [AutomatedTheoryConstruction.mul_right_absorb_lhs_op_000010 (x := x) (y := y)]",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:11:13: error: Tactic `rewrite` failed: Did not find an occurrence of the pattern",
+      "lean_error_fingerprint": "no_diagnostics",
+      "new_problems": [
+        "∀ {α : Type u} [SemigroupLike01 α], ∀ x y z : α, (((x * z) * y) * x) = (x * y) * z",
+        "∀ {α : Type u} [SemigroupLike01 α], ∀ x y z : α, (((x * y) * x) * z) = (x * y) * z"
+      ]
+    }
+  ],
+  "op_000044": [
+    {
+      "result": "counterexample",
+      "verify_success": true,
+      "proof_sketch": "The requested proof direction is false. A 3-element model on `ULift (Bool ⊕ Unit)` satisfies the axioms of `SemigroupLike01`, but with `x = two`, `y = one`, and `z = one` we get `((x * y) * (z * x)) = zero` while `(x * y) * z = two`.",
+      "proof_text": "intro h\nlet α := ULift (Bool ⊕ Unit)\nlet zero : α := ⟨Sum.inl false⟩\nlet one : α := ⟨Sum.inl true⟩\nlet two : α := ⟨Sum.inr ()⟩\nlet mulBase : Bool ⊕ Unit → Bool ⊕ Unit → Bool ⊕ Unit\n  | Sum.inl false, _ => Sum.inl false\n  | Sum.inl true, Sum.inl false => Sum.inl false\n  | Sum.inl true, Sum.inl true => Sum.inl true\n  | Sum.inl true, Sum.inr () => Sum.inl false\n  | Sum.inr (), Sum.inl false => Sum.inl false\n  | Sum.inr (), Sum.inl true => Sum.inr ()\n  | Sum.inr (), Sum.inr () => Sum.inr ()\nlet mul : α → α → α := fun a b => ⟨mulBase a.down b.down⟩\nletI : Mul α := ⟨mul⟩\nletI : AutomatedTheoryConstruction.SemigroupLike01 α := by\n  refine\n    { ax_left_idempotent := ?_\n      ax_right_absorb_duplicate := ?_\n      ax_middle_swap := ?_ }\n  · intro x\n    cases x with\n    | up x =>\n        cases x with\n        | inl b => cases b <;> rfl\n        | inr u => cases u; rfl\n  · intro x y\n    cases x with\n    | up x =>\n        cases y with\n        | up y =>\n            cases x with\n            | inl b =>\n                cases b <;> cases y with\n                | inl b => cases b <;> rfl\n                | inr u => cases u; rfl\n            | inr u =>\n                cases u\n                cases y with\n                | inl b => cases b <;> rfl\n                | inr u => cases u; rfl\n  · intro x y z\n    cases x with\n    | up x =>\n        cases y with\n        | up y =>\n            cases z with\n            | up z =>\n                cases x with\n                | inl b =>\n                    cases b <;> cases y with\n                    | inl b =>\n                        cases b <;> cases z with\n                        | inl b => cases b <;> rfl\n                        | inr u => cases u; rfl\n                    | inr u =>\n                        cases u\n                        cases z with\n                        | inl b => cases b <;> rfl\n                        | inr u => cases u; rfl\n                | inr u =>\n                    cases u\n                    cases y with\n                    | inl b =>\n                        cases b <;> cases z with\n                        | inl b => cases b <;> rfl\n                        | inr u => cases u; rfl\n                    | inr u =>\n                        cases u\n                        cases z with\n                        | inl b => cases b <;> rfl\n                        | inr u => cases u; rfl\nhave h' := h (α := α) (x := two) (y := one) (z := one)\nchange zero = two at h'\ninjection h' with hbase\ncases hbase",
+      "counterexample_text": "Take the 3-element carrier `ULift (Bool ⊕ Unit)` with multiplication defined by the table encoded in `mulBase`. This model satisfies `ax_left_idempotent`, `ax_right_absorb_duplicate`, and `ax_middle_swap`. For `x = two`, `y = one`, `z = one`, we have `x * y = two`, `z * x = one * two = zero`, so `((x * y) * (z * x)) = two * zero = zero`, while `(x * y) * z = two * one = two`. Hence the statement is false.",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "no_diagnostics",
+      "new_problems": [
+        "∀ {α : Type u} [AutomatedTheoryConstruction.SemigroupLike01 α], ∀ a b c : α, (a * (b * c)) = (a * b) * c",
+        "∀ {α : Type u} [AutomatedTheoryConstruction.SemigroupLike01 α], ∀ x y z w : α, ((x * y) * (z * w)) = ((x * y) * z) * w"
+      ]
+    }
+  ],
+  "op_000045": [
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "Instantiate the verified theorem mul_right_absorb_rhs_op_000011 with x := x * y and y := z. This gives (((x * y) * z) * z) = (x * y) * z directly.",
+      "proof_text": "intro α _ x y z\nsimpa using (mul_right_absorb_rhs_op_000011 (x * y) z)",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "no_diagnostics",
+      "new_problems": [
+        "∀ {α : Type u} [AutomatedTheoryConstruction.SemigroupLike01 α], ∀ x y z : α, (x * y) * ((x * y) * z) = (x * y) * z"
+      ]
+    }
+  ],
+  "op_000046": [
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "Instantiate the class axiom `ax_right_absorb_duplicate` at `x := x * y` and `y := z`. After unfolding `AutomatedTheoryConstruction.op`, the goal matches exactly.",
+      "proof_text": "intro α _ x y z\nsimpa [AutomatedTheoryConstruction.op] using\n  (AutomatedTheoryConstruction.SemigroupLike01.ax_right_absorb_duplicate (x := x * y) (y := z))",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "no_diagnostics",
+      "new_problems": [
+        "∀ {α : Type u} [AutomatedTheoryConstruction.SemigroupLike01 α], ∀ x y z : α, ((x * y) * z) * (x * y) = (x * y) * z",
+        "∀ {α : Type u} [AutomatedTheoryConstruction.SemigroupLike01 α], ∀ x y z : α, ((x * y) * (z * x)) = (x * y) * z"
+      ]
+    }
+  ],
+  "op_000047": [
+    {
+      "result": "counterexample",
+      "verify_success": false,
+      "proof_sketch": "Instantiate the quantified type with `ULift Bool` and define multiplication by left projection: `x * y := x`. This satisfies the three `SemigroupLike01` axioms by reflexivity. For `e = false`, the premise `∀ x, e * x = e` holds, but the conclusion forces `true * false = false`, while the operation gives `true * false = true`, a contradiction.",
+      "proof_text": "intro h\nletI : AutomatedTheoryConstruction.SemigroupLike01 (ULift.{u} Bool) :=\n  { mul := fun x y => x\n    ax_left_idempotent := by\n      intro x\n      rfl\n    ax_right_absorb_duplicate := by\n      intro x y\n      rfl\n    ax_middle_swap := by\n      intro x y z\n      rfl }\nhave h' := h (α := ULift.{u} Bool) (e := (⟨false⟩ : ULift.{u} Bool))\nhave hleft : ∀ x : ULift.{u} Bool, (⟨false⟩ : ULift.{u} Bool) * x = ⟨false⟩ := by\n  intro x\n  rfl\nhave hright := h' hleft\nhave hcontra : ((⟨true⟩ : ULift.{u} Bool) * (⟨false⟩ : ULift.{u} Bool)) = ⟨false⟩ := hright ⟨true⟩\nhave : (true : Bool) = false := by\n  simpa using congrArg ULift.down hcontra\ncases this",
+      "counterexample_text": "Take `α = ULift Bool` with multiplication `x * y := x`. Let `e := ⟨false⟩` and `x := ⟨true⟩`. Then `e * y = e` for every `y`, but `x * e = x = ⟨true⟩ ≠ ⟨false⟩ = e`.",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:24:87: error: Type mismatch",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:24:87: error: Type mismatch | hright { down := true } | has type",
+      "new_problems": [
+        "∃ (α : Type) (_ : AutomatedTheoryConstruction.SemigroupLike01 α) (e x : α), (∀ y : α, e * y = e) ∧ x * e ≠ e",
+        "Find a natural additional axiom on `AutomatedTheoryConstruction.SemigroupLike01` that is strong enough to make `∀ e, (∀ x, e * x = e) → ∀ x, x * e = e` provable, and verify it in Lean."
+      ]
+    },
+    {
+      "result": "counterexample",
+      "verify_success": true,
+      "proof_sketch": "Use the left-projection operation on `ULift Bool`: define `x * y := x`. This satisfies all `SemigroupLike01` axioms by case split. Let `e := false`. Then `e * x = e` for all `x`, but the conclusion would force `true * e = e`, i.e. `true = false`, contradiction.",
+      "proof_text": "intro h\nlet α := ULift Bool\nlet mul : α → α → α := fun x _ => ⟨x.down⟩\nletI : Mul α := ⟨mul⟩\nletI : AutomatedTheoryConstruction.SemigroupLike01 α := by\n  refine\n    { ax_left_idempotent := ?_\n      ax_right_absorb_duplicate := ?_\n      ax_middle_swap := ?_ }\n  · intro x\n    cases x with\n    | up x =>\n        cases x <;> rfl\n  · intro x y\n    cases x with\n    | up x =>\n        cases x <;> rfl\n  · intro x y z\n    cases x with\n    | up x =>\n        cases x <;> rfl\nlet zero : α := ⟨false⟩\nlet one : α := ⟨true⟩\nhave h' := h (α := α) (e := zero)\nhave hzero : ∀ x : α, zero * x = zero := by\n  intro x\n  cases x with\n  | up x =>\n      cases x <;> rfl\nhave hone := h' hzero one\nchange one = zero at hone\ninjection hone with hbase\ncases hbase",
+      "counterexample_text": "Take `α = ULift Bool` with multiplication `x * y := x`. Let `e := ⟨false⟩` and `x := ⟨true⟩`. Then `e * y = e` for every `y`, but `x * e = x = ⟨true⟩ ≠ ⟨false⟩ = e`.",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:24:87: error: Type mismatch",
+      "lean_error_fingerprint": "no_diagnostics",
+      "new_problems": [
+        "∃ (α : Type) (_ : AutomatedTheoryConstruction.SemigroupLike01 α) (e x : α), (∀ y : α, e * y = e) ∧ x * e ≠ e",
+        "Find a natural additional axiom on `AutomatedTheoryConstruction.SemigroupLike01` that is strong enough to make `∀ e, (∀ x, e * x = e) → ∀ x, x * e = e` provable, and verify it in Lean."
+      ]
+    }
+  ],
+  "op_000056": [
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "Reuse the verified absorption lemma `thm_op_000010` with `x := x * y` and `y := z`. This yields exactly `(((x * y) * z) * (x * y)) = (x * y) * z`.",
+      "proof_text": "intro α _ x y z\nsimpa using (thm_op_000010 (x * y) z)",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "no_diagnostics",
+      "new_problems": [
+        "∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α] (a b c : α), ((a * b) * c) * a = (a * b) * c",
+        "Find a useful normal-form lemma characterizing additional right factors `t` for which `((a * b) * c) * t = (a * b) * c` holds in every `AutomatedTheoryConstruction.SemigroupLike01` model."
+      ]
     }
   ]
 }

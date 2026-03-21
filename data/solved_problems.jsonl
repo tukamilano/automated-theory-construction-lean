@@ -12,3 +12,6 @@
 {"id":"op_000040","stmt":"∀ {α : Type u} [Mul α], ∀ e f : α, (∀ x : α, x * e = e) → (∀ x : α, f * x = f) → e = f","thm":"thm_op_000040"}
 {"id":"op_000041","stmt":"∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α], ∀ e : α, (∀ x : α, x * e = e) → ∀ x : α, e * x = e","thm":"thm_op_000041"}
 {"id":"op_000042","stmt":"∀ {α : Type u} [SemigroupLike01 α], ∀ x y z : α, (x * y) * (x * z) = (x * y) * z","thm":"thm_op_000042"}
+{"id":"op_000043","stmt":"∀ {α : Type u} [SemigroupLike01 α], ∀ x y z : α, (((x * y) * z) * x) = (x * y) * z","thm":"thm_op_000043"}
+{"id":"op_000045","stmt":"∀ {α : Type u} [SemigroupLike01 α], ∀ x y z : α, (((x * y) * z) * z) = (x * y) * z","thm":"thm_op_000045"}
+{"id":"op_000046","stmt":"∀ {α : Type u} [SemigroupLike01 α], ∀ x y z : α, (x * y) * ((x * y) * z) = (x * y) * z","thm":"thm_op_000046"}

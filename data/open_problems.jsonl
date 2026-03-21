@@ -1,9 +1,4 @@
-{"id":"op_000043","stmt":"∀ {α : Type u} [SemigroupLike01 α], ∀ x y z : α, (((x * y) * z) * x) = (x * y) * z","src":"generated"}
-{"id":"op_000044","stmt":"∀ {α : Type u} [AutomatedTheoryConstruction.SemigroupLike01 α], ∀ x y z : α, ((x * y) * (z * x)) = (x * y) * z","src":"generated"}
-{"id":"op_000045","stmt":"∀ {α : Type u} [SemigroupLike01 α], ∀ x y z : α, (((x * y) * z) * z) = (x * y) * z","src":"generated"}
-{"id":"op_000046","stmt":"∀ {α : Type u} [SemigroupLike01 α], ∀ x y z : α, (x * y) * ((x * y) * z) = (x * y) * z","src":"generated"}
-{"id":"op_000047","stmt":"∀ {α : Type u} [AutomatedTheoryConstruction.SemigroupLike01 α], ∀ e : α, (∀ x : α, e * x = e) → ∀ x : α, x * e = e","src":"generated"}
-{"id":"op_000048","stmt":"∀ {α : Type u} [AutomatedTheoryConstruction.SemigroupLike01 α], ∀ e f : α, ((∀ x : α, x * e = e) ∨ (∀ x : α, e * x = e)) → ((∀ x : α, x * f = f) ∨ (∀ x : α, f * x = f)) → e = f","src":"generated"}
-{"id":"op_000049","stmt":"∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α], ∀ e f : α, (∀ x : α, e * x = e) → (∀ x : α, f * x = f) → e = f","src":"generated"}
-{"id":"op_000050","stmt":"∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α], ∀ e f : α, (∀ x : α, e * x = e) → (∀ x : α, x * f = f) → e = f","src":"generated"}
-{"id":"op_000051","stmt":"∀ {α : Type u} [AutomatedTheoryConstruction.SemigroupLike01 α], ∀ x y z : α, (x * y) * (z * y) = (x * z) * y","src":"generated"}
+{"id":"op_000056","stmt":"For every type with the same axioms and all elements x, y, z, one has ((x * y) * z) * (x * y) = (x * y) * z.","src":"generated"}
+{"id":"op_000057","stmt":"∀ {α : Type u} [AutomatedTheoryConstruction.SemigroupLike01 α], ∀ x y z : α, ((x * y) * z) * (x * y) = (x * y) * z","src":"generated"}
+{"id":"op_000058","stmt":"∃ (α : Type) (_ : AutomatedTheoryConstruction.SemigroupLike01 α) (e x : α), (∀ y : α, e * y = e) ∧ x * e ≠ e","src":"generated"}
+{"id":"op_000059","stmt":"Find a natural additional axiom on `AutomatedTheoryConstruction.SemigroupLike01` that is strong enough to make `∀ e, (∀ x, e * x = e) → ∀ x, x * e = e` provable, and verify it in Lean.","src":"generated"}
