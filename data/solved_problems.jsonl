@@ -24,3 +24,5 @@
 {"id":"op_000066","stmt":"∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α], ∀ x y z : α, ((x * y) * z) * (x * y) = (x * y) * z","thm":"thm_op_000066"}
 {"id":"op_000067","stmt":"∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α], ∀ a b c d : α, (((a * b) * c) * d) * (a * b) = ((a * b) * c) * d","thm":"thm_op_000067"}
 {"id":"op_000068","stmt":"Show formally that the left-projection operation `x * y := x` defines an instance of `AutomatedTheoryConstruction.SemigroupLike01` on any type.","thm":"thm_op_000068"}
+{"id":"op_000070","stmt":"∀ {α : Type _} [Fintype α] [AutomatedTheoryConstruction.SemigroupLike01 α] (e : α), (∀ y : α, e * y = e) → (¬ ∀ x : α, x * e = e) → Nontrivial α","thm":"thm_op_000070"}
+{"id":"op_000071","stmt":"∀ (α : Type _) [Nontrivial α], ∃ (_ : AutomatedTheoryConstruction.SemigroupLike01 α), ∃ e : α, (∀ y : α, e * y = e) ∧ ¬ ∀ x : α, x * e = e","thm":"thm_op_000071"}

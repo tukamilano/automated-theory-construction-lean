@@ -8,3 +8,4 @@
 {"id":"op_000044","stmt":"∀ {α : Type u} [AutomatedTheoryConstruction.SemigroupLike01 α], ∀ x y z : α, ((x * y) * (z * x)) = (x * y) * z"}
 {"id":"op_000047","stmt":"∀ {α : Type u} [AutomatedTheoryConstruction.SemigroupLike01 α], ∀ e : α, (∀ x : α, e * x = e) → ∀ x : α, x * e = e"}
 {"id":"op_000063","stmt":"∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α] (e : α), (∀ y : α, e * y = e) → ∀ x : α, x * e = e"}
+{"id":"op_000064","stmt":"Classify whether the left-projection operation `x * y := x` is the minimal finite model witnessing `∃ α, SemigroupLike01 α` together with a left-absorbing but not right-absorbing element."}

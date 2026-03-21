@@ -700,4 +700,38 @@ theorem thm_op_000070 : ∀ {α : Type _} [Fintype α] [AutomatedTheoryConstruct
   rw [hx]
   exact he e
 
+
+theorem thm_op_000071 : ∀ (α : Type _) [Nontrivial α], ∃ s : AutomatedTheoryConstruction.SemigroupLike01 α, ∃ e : α, letI : Mul α := s.toMul; (∀ y : α, e * y = e) ∧ ¬ ∀ x : α, x * e = e := by
+  intro α _
+  classical
+  let s : AutomatedTheoryConstruction.SemigroupLike01 α :=
+    { mul := fun x _ => x
+      ax_left_idempotent := by
+        intro x
+        rfl
+      ax_right_absorb_duplicate := by
+        intro x y
+        rfl
+      ax_middle_swap := by
+        intro x y z
+        rfl }
+  let e : α := Classical.choice (inferInstance : Nonempty α)
+  refine ⟨s, e, ?_⟩
+  change (∀ y : α, s.mul e y = e) ∧ ¬ ∀ x : α, s.mul x e = e
+  constructor
+  · intro y
+    rfl
+  · intro h
+    obtain ⟨x, hx⟩ := exists_ne e
+    exact hx (by simpa using h x)
+
+
+theorem thm_op_000064_is_false : ¬((∃ (_ : AutomatedTheoryConstruction.SemigroupLike01 Bool), (∀ x y : Bool, x * y = x) ∧ ∃ e : Bool, (∀ y : Bool, e * y = e) ∧ ¬ ∀ x : Bool, x * e = e) ∧ ∀ (α : Type _) (_ : Fintype α) (_ : AutomatedTheoryConstruction.SemigroupLike01 α), (∃ e : α, (∀ y : α, e * y = e) ∧ ¬ ∀ x : α, x * e = e) → 2 ≤ Fintype.card α) := by
+  intro h
+  rcases h with ⟨hBool, _⟩
+  rcases hBool with ⟨_, hproj, _⟩
+  have htf : true * false = true := hproj true false
+  change false = true at htf
+  cases htf
+
 end AutomatedTheoryConstruction
