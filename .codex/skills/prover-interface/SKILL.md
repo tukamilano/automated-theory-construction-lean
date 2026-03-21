@@ -5,7 +5,7 @@ description: I/O contract for proof/counterexample/stuck attempts and post-attem
 
 # Prover interface
 
-This skill defines the contract for the prover role in the equational loop.
+This skill defines the contract for the prover role in the repository's theory-construction loop.
 
 ## Scope
 
