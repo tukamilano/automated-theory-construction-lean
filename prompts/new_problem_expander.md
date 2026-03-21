@@ -13,16 +13,22 @@ Policy:
 - Use the current result, verification outcome, and same-problem history to identify promising next problems.
 - If `expand_generation_policy` is present, follow it strictly.
 - If `theory_context` lists relevant verified theorems, use them to avoid proposing duplicates and to infer missing intermediate lemmas.
-- If the current problem was not solved (`result = stuck` or `verify_success = false`), do not broaden to a more general problem. Instead, propose concrete subgoals or intermediate lemmas that would directly unblock the current target.
-- If the current problem was solved and verified (`verify_success = true` and `result = proof|counterexample`), prefer outward-looking follow-up problems: natural generalizations, reusable abstractions, stronger/weaker variants, converses, or adjacent structural laws that build on the solved result.
-- In the unsolved case, prefer subgoals that arose naturally in the current iteration logs, Lean diagnostics, or same-problem history over broader theory-growth ideas.
-- In the solved case, prefer theory-growth ideas over narrow local decompositions, unless a local decomposition is clearly the most interesting next theorem.
-- In the unsolved case, prefer same-problem decompositions and structural intermediate lemmas over outward generalization.
 - Prefer follow-up problems that arose naturally in the current iteration logs over generic guesses.
 - Avoid local one-step variants of the current target or recent failed follow-up ideas when they do not add a genuinely new proof pattern.
 - Prefer diversity across candidates: if you return two candidates, they should differ meaningfully in shape or role, not just in variable names or superficial rewrites.
-- If the local problem family looks exhausted or circular and the current problem is unsolved, prefer a different decomposition of the same target before stepping outward.
-- If the current problem is solved, it is good to return at least one candidate that meaningfully generalizes, abstracts, or reuses the verified result beyond the immediate local target.
+
+When the current problem is unsolved (`result = stuck` or `verify_success = false`):
+- Do not broaden to a more general problem.
+- Prefer concrete subgoals, decompositions, or intermediate lemmas that would directly unblock the current target.
+- Prefer ideas that arose naturally in the current iteration logs, Lean diagnostics, or same-problem history over broader theory-growth ideas.
+- If the local problem family looks exhausted or circular, prefer a different decomposition of the same target before stepping outward.
+
+When the current problem is solved and verified (`verify_success = true` and `result = proof|counterexample`):
+- Prefer outward-looking follow-up problems: natural generalizations, reusable abstractions, stronger/weaker variants, converses, or adjacent structural laws that build on the solved result.
+- Prefer theory-growth ideas over narrow local decompositions, unless a local decomposition is clearly the most interesting next theorem.
+- It is good to return at least one candidate that meaningfully generalizes, abstracts, or reuses the verified result beyond the immediate local target.
+
+Candidate format constraints:
 - Return standalone problem statements only. Each candidate may be either:
   - a Lean proposition statement, or
   - a precise natural-language mathematical statement.
@@ -32,7 +38,6 @@ Policy:
   - it does not contain undefined evaluative language or ask the reader to search for something
   - it does not leave the choice of an additional axiom or auxiliary predicate to the reader
 - Avoid trivial restatements, pure renamings, direct negation templates, and duplicates of `existing_new_problems`.
-- If `result` is `stuck`, verification failed, or history shows repeated dead ends, prioritize decompositions that look directly useful.
 - If no good candidate exists, including when the available information is insufficient or recent ideas do not yield a genuinely different candidate, return an empty `candidates` array.
 
 Output schema:

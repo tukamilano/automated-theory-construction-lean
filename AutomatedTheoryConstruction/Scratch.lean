@@ -3,12 +3,24 @@ import AutomatedTheoryConstruction.Derived
 
 namespace AutomatedTheoryConstruction
 
-theorem thm_op_000064_is_false : ¬((∃ (_ : AutomatedTheoryConstruction.SemigroupLike01 Bool), (∀ x y : Bool, x * y = x) ∧ ∃ e : Bool, (∀ y : Bool, e * y = e) ∧ ¬ ∀ x : Bool, x * e = e) ∧ ∀ (α : Type _) (_ : Fintype α) (_ : AutomatedTheoryConstruction.SemigroupLike01 α), (∃ e : α, (∀ y : α, e * y = e) ∧ ¬ ∀ x : α, x * e = e) → 2 ≤ Fintype.card α) := by
+theorem thm_op_000006_is_false : ¬(∀ {α : Type u} [SemigroupLike01 α], ∀ x y z : α, x * y = x * z → y = z) := by
   intro h
-  rcases h with ⟨hBool, _⟩
-  rcases hBool with ⟨_, hproj, _⟩
-  have htf : true * false = true := hproj true false
-  change false = true at htf
+  let T : Type u := ULift Bool
+  let s : SemigroupLike01 T :=
+    { mul := fun x _ => x
+      ax_left_idempotent := by
+        intro x
+        rfl
+      ax_right_absorb_duplicate := by
+        intro x y
+        rfl
+      ax_middle_swap := by
+        intro x y z
+        rfl }
+  letI : SemigroupLike01 T := s
+  have hc := h (α := T) (x := ULift.up true) (y := ULift.up false) (z := ULift.up true) rfl
+  change (ULift.up false : T) = ULift.up true at hc
+  have htf : false = true := congrArg ULift.down hc
   cases htf
 
 end AutomatedTheoryConstruction

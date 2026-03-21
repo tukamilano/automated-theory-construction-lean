@@ -10,6 +10,17 @@ from pathlib import Path
 from typing import Any
 
 
+def _task_env_key(task_type: str, suffix: str) -> str:
+    return f"ATC_{task_type.upper()}_{suffix}"
+
+
+def _resolve_task_env(task_type: str, suffix: str, default: str = "") -> str:
+    task_override = (os.getenv(_task_env_key(task_type, suffix)) or "").strip()
+    if task_override:
+        return task_override
+    return (os.getenv(f"ATC_{suffix}") or default).strip()
+
+
 def _iter_braced_json_candidates(text: str) -> list[str]:
     candidates: list[str] = []
     start_idx: int | None = None
@@ -121,8 +132,8 @@ def _build_contract_repair_prompt(
     )
 
 
-def _run_codex(prompt: str, timeout_sec: int) -> str:
-    model = (os.getenv("ATC_CODEX_MODEL") or "").strip()
+def _run_codex(task_type: str, prompt: str, timeout_sec: int) -> tuple[str, str]:
+    model = _resolve_task_env(task_type, "CODEX_MODEL")
     base_cmd: list[str] = [
         "codex",
         "exec",
@@ -173,7 +184,7 @@ def _run_codex(prompt: str, timeout_sec: int) -> str:
         text = output_path.read_text(encoding="utf-8") if output_path.exists() else ""
         if not text.strip():
             text = (completed.stdout or "").strip()
-        return text
+        return text, model
     finally:
         try:
             output_path.unlink(missing_ok=True)
@@ -198,12 +209,12 @@ def main() -> None:
         if task_type not in {"prover_statement", "prover", "formalize", "repair", "expand"}:
             raise ValueError(f"unsupported task_type: {task_type}")
 
-        outer_timeout = int((os.getenv("ATC_WORKER_TIMEOUT") or "180").strip())
-        codex_timeout_text = (os.getenv("ATC_CODEX_TIMEOUT") or "").strip()
+        outer_timeout = int(_resolve_task_env(task_type, "WORKER_TIMEOUT", "180"))
+        codex_timeout_text = _resolve_task_env(task_type, "CODEX_TIMEOUT")
         # Keep inner timeout slightly below outer timeout to avoid subprocess timeout races.
         timeout_sec = int(codex_timeout_text) if codex_timeout_text else max(30, outer_timeout - 10)
         prompt = _build_prompt(task_type=task_type, system_prompt=system_prompt, payload=payload)
-        model_output = _run_codex(prompt=prompt, timeout_sec=timeout_sec)
+        model_output, resolved_model = _run_codex(task_type=task_type, prompt=prompt, timeout_sec=timeout_sec)
         contract_retry_used = False
         try:
             result_payload, parse_attempts, used_fallback = _extract_json_object(model_output)
@@ -215,7 +226,11 @@ def main() -> None:
                 payload=payload,
                 previous_output=model_output,
             )
-            model_output = _run_codex(prompt=repair_prompt, timeout_sec=max(30, timeout_sec // 2))
+            model_output, resolved_model = _run_codex(
+                task_type=task_type,
+                prompt=repair_prompt,
+                timeout_sec=max(30, timeout_sec // 2),
+            )
             result_payload, parse_attempts, used_fallback = _extract_json_object(model_output)
 
         response = {
@@ -223,7 +238,7 @@ def main() -> None:
             "worker_meta": {
                 "worker": "codex_worker",
                 "task_type": task_type,
-                "model": (os.getenv("ATC_CODEX_MODEL") or "").strip(),
+                "model": resolved_model,
                 "json_parse_attempts": parse_attempts,
                 "raw_parse_fallback_used": used_fallback,
                 "raw_output_chars": len(model_output),
