@@ -13,7 +13,14 @@ Hard constraints:
 
 Formalization policy:
 - Use `stmt`, `result`, `proof_sketch`, and `counterexample_text` as the primary source of truth.
+- Assume `import Mathlib` is available when it helps.
+- Prefer existing Mathlib lemmas, structures, and tactics over ad hoc helper lemmas or long axiom-only derivations.
+- Never invent Mathlib lemma names. Use only library facts you are confident exist; if unsure, switch to a more conservative proof plan or return `stuck`.
+- When the goal matches a standard Mathlib concept, rewrite the proof around that concept instead of manually expanding low-level equalities.
+- Prefer concise Mathlib-supported proof scripts such as `simpa`, `rw`, `constructor`, `aesop`, `grind`, `omega`, `linarith`, `nlinarith`, `ring_nf`, or `positivity` when they genuinely fit the goal.
+- If a short proof can be obtained by combining a relevant theorem from `Derived.lean` with a standard Mathlib fact, prefer that route.
 - Reuse theorems already listed in `Derived.lean` when applicable.
+- In `Scratch.lean`, prefer proving goals by reusing relevant results from `Derived.lean`; only re-derive from axioms when no listed theorem fits.
 - For `proof`, `proof_text` should prove `stmt`.
 - For `counterexample`, `proof_text` should prove `¬(stmt)`.
 - If the incoming direction is not defensible after reading the context, you may revise `result`.

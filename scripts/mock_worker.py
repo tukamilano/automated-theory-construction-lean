@@ -57,7 +57,17 @@ def _expand_result(payload: dict[str, Any]) -> dict[str, Any]:
     problem_id = str(payload.get("problem_id", ""))
     return {
         "problem_id": problem_id,
-        "new_problems": [],
+        "candidates": [],
+    }
+
+
+def _expand_formalize_result(payload: dict[str, Any]) -> dict[str, Any]:
+    problem_id = str(payload.get("problem_id", ""))
+    return {
+        "problem_id": problem_id,
+        "result": "stuck",
+        "lean_statement": "",
+        "notes": "mock_worker: no new-problem formalization generated",
     }
 
 
@@ -77,6 +87,8 @@ def main() -> None:
             result_payload = _repair_result(payload)
         elif task_type == "expand":
             result_payload = _expand_result(payload)
+        elif task_type == "expand_formalize":
+            result_payload = _expand_formalize_result(payload)
         else:
             raise ValueError(f"unsupported task_type: {task_type}")
 
