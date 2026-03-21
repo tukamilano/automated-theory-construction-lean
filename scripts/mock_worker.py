@@ -23,6 +23,17 @@ def _prover_result(payload: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _prover_statement_result(payload: dict[str, Any]) -> dict[str, Any]:
+    problem_id = str(payload.get("problem_id", ""))
+    stmt = str(payload.get("stmt", "")).strip()
+    return {
+        "problem_id": problem_id,
+        "result": "ok" if stmt else "stuck",
+        "lean_statement": stmt,
+        "notes": "mock_worker: echoed input statement" if stmt else "mock_worker: no statement provided",
+    }
+
+
 def _formalize_result(payload: dict[str, Any]) -> dict[str, Any]:
     problem_id = str(payload.get("problem_id", ""))
     requested_result = str(payload.get("result", "stuck"))
@@ -57,7 +68,7 @@ def _expand_result(payload: dict[str, Any]) -> dict[str, Any]:
     problem_id = str(payload.get("problem_id", ""))
     return {
         "problem_id": problem_id,
-        "new_problems": [],
+        "candidates": [],
     }
 
 
@@ -69,7 +80,9 @@ def main() -> None:
         if not isinstance(payload, dict):
             raise ValueError("payload must be a JSON object")
 
-        if task_type == "prover":
+        if task_type == "prover_statement":
+            result_payload = _prover_statement_result(payload)
+        elif task_type == "prover":
             result_payload = _prover_result(payload)
         elif task_type == "formalize":
             result_payload = _formalize_result(payload)

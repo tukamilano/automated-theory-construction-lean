@@ -43,7 +43,8 @@ Rules:
 - Attempt the original problem before proposing new problems.
 - New problems must arise from the attempt itself.
 - Avoid trivial variations (renaming-only, mirror-only, obvious duplicates).
-- Prefer generalized, non-trivial variants over one-step axiom restatements.
+- If the attempt is unresolved, prefer concrete subgoals or intermediate lemmas over broader generalizations.
+- Avoid one-step axiom restatements and other shallow variants.
 - At least one suggested problem should have a meaningfully different shape from the current target.
 - Do not exceed two new problems.
 

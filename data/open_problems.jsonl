@@ -1,8 +1,14 @@
-{"id":"op_000001","stmt":"∀ {α : Type u} [SemigroupLike01 α], ∀ x y z : α, (x * y) * z = x * (y * z)","src":"seed"}
-{"id":"op_000002","stmt":"∀ {α : Type u} [SemigroupLike01 α], ∀ x y : α, x * y = y * x","src":"seed"}
-{"id":"op_000003","stmt":"∀ {α : Type u} [SemigroupLike01 α], ∃ e : α, ∀ x : α, e * x = x ∧ x * e = x","src":"seed"}
-{"id":"op_000004","stmt":"∀ {α : Type u} [SemigroupLike01 α], ∃ e : α, ∀ x : α, ∃ y : α, x * y = e ∧ y * x = e","src":"seed"}
-{"id":"op_000005","stmt":"∀ {α : Type u} [SemigroupLike01 α], ∀ join : α → α → α, ∀ x y z : α, x * (join y z) = join (x * y) (x * z)","src":"seed"}
-{"id":"op_000006","stmt":"∀ {α : Type u} [SemigroupLike01 α], ∀ x y z : α, x * y = x * z → y = z","src":"seed"}
-{"id":"op_000007","stmt":"∀ {α : Type u} [SemigroupLike01 α], ∀ x : α, x * x = x","src":"seed"}
-{"id":"op_000008","stmt":"∀ {α : Type u} [SemigroupLike01 α], ∀ meet : α → α → α, ∀ x y : α, x * (meet x y) = x","src":"seed"}
+{"id":"op_000070","stmt":"∀ {α : Type _} [Fintype α] [AutomatedTheoryConstruction.SemigroupLike01 α] (e : α), (∀ y : α, e * y = e) → (¬ ∀ x : α, x * e = e) → Nontrivial α","src":"generated"}
+{"id":"op_000071","stmt":"∀ (α : Type _) [Nontrivial α], ∃ (_ : AutomatedTheoryConstruction.SemigroupLike01 α), ∃ e : α, (∀ y : α, e * y = e) ∧ ¬ ∀ x : α, x * e = e","src":"generated"}
+{"id":"op_000064","stmt":"Classify whether the left-projection operation `x * y := x` is the minimal finite model witnessing `∃ α, SemigroupLike01 α` together with a left-absorbing but not right-absorbing element.","src":"generated"}
+{"id":"op_000072","stmt":"∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α], ∀ x y z : α, ((x * y) * z) * x = (x * y) * z","src":"generated"}
+{"id":"op_000073","stmt":"∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α], ∀ x y z w : α, (((x * y) * z) * w) * (x * y) = ((x * y) * z) * w","src":"generated"}
+{"id":"op_000074","stmt":"∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α], ∀ a b c d e : α, (((((a * b) * c) * d) * e) * (a * b)) = ((((a * b) * c) * d) * e)","src":"generated"}
+{"id":"op_000075","stmt":"Characterize which right factors p can be absorbed by a term built from the same left prefix in `SemigroupLike01`; for example, explain when a term of the form `t = (((a * b) * c) * d)` must satisfy `t * p = t`.","src":"generated"}
+{"id":"op_000076","stmt":"∀ (α : Type u) [Nontrivial α], ∃ s : AutomatedTheoryConstruction.SemigroupLike01 α, ¬ ∀ x y : α, s.mul x y = s.mul y x","src":"generated"}
+{"id":"op_000077","stmt":"∀ (α : Type u), ∃ s : AutomatedTheoryConstruction.SemigroupLike01 α, ∀ x y z : α, s.mul (s.mul x y) z = x","src":"generated"}
+{"id":"op_000078","stmt":"∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α] (e : α), (∀ y : α, e * y = e) → (∀ x : α, x * e = e) → Subsingleton α","src":"generated"}
+{"id":"op_000079","stmt":"Classify `SemigroupLike01` structures admitting a left-absorbing element `e`; in particular, determine whether the left-projection model `x * y := x` is the canonical source of examples where `∀ y, e * y = e` holds but `∀ x, x * e = e` fails.","src":"generated"}
+{"id":"op_000069","stmt":"Prove the negation of the universal claim by exhibiting a concrete finite countermodel: there exists a nontrivial `SemigroupLike01` with some `e` such that `(∀ y, e * y = e)` and `¬ (∀ x, x * e = e)`.","src":"generated"}
+{"id":"op_000080","stmt":"∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α], (∀ x y : α, x * y = y * x) → ∀ e : α, (∀ y : α, e * y = e) → ∀ x : α, x * e = e","src":"generated"}
+{"id":"op_000081","stmt":"Identify natural extra axioms on `SemigroupLike01` weaker than full commutativity that force every left-absorbing element to be right-absorbing as well.","src":"generated"}

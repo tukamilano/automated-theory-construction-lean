@@ -11,7 +11,10 @@ from pathlib import Path
 from typing import Callable
 from typing import Any
 
-from append_derived import append_theorem
+from append_derived import (
+    append_theorem,
+    build_derived_entries_from_file,
+)
 from common import read_jsonl, write_jsonl_atomic
 from lean_verify import verify_scratch
 from state_update import apply_state_update
@@ -36,7 +39,8 @@ SCRATCH_TEMPLATE = (
 DERIVED_TEMPLATE = (
     "import AutomatedTheoryConstruction.Theory\n\n"
     "namespace AutomatedTheoryConstruction\n\n"
-    "-- Verified theorems and AI-friendly aliases are appended here by scripts/append_derived.py.\n\n"
+    "-- Verified theorems are appended here by scripts/append_derived.py.\n"
+    "-- Keep any short theorem docstrings/comments here instead of a separate metadata index.\n\n"
     "end AutomatedTheoryConstruction\n"
 )
 
@@ -84,6 +88,29 @@ def validate_prover_output(payload: dict[str, Any], expected_problem_id: str) ->
     return result, proof_sketch, counterexample_text, new_problems
 
 
+def validate_prover_statement_output(payload: dict[str, Any], expected_problem_id: str) -> tuple[str, str, str]:
+    required_keys = {"problem_id", "result", "lean_statement", "notes"}
+    if set(payload.keys()) != required_keys:
+        raise ValueError("prover_statement output must contain exactly: problem_id, result, lean_statement, notes")
+
+    problem_id = payload.get("problem_id")
+    if problem_id != expected_problem_id:
+        raise ValueError("prover_statement output problem_id does not match picked problem")
+
+    result = payload.get("result")
+    if result not in {"ok", "stuck"}:
+        raise ValueError("prover_statement result must be one of: ok, stuck")
+
+    lean_statement = payload.get("lean_statement")
+    notes = payload.get("notes")
+    if not isinstance(lean_statement, str) or not isinstance(notes, str):
+        raise ValueError("prover_statement lean_statement and notes must be strings")
+    if result == "ok" and not lean_statement.strip():
+        raise ValueError("prover_statement lean_statement must be non-empty when result=ok")
+
+    return result, lean_statement.strip(), notes.strip()
+
+
 def validate_formalizer_output(payload: dict[str, Any], expected_problem_id: str) -> tuple[str, str, str, str]:
     required_keys = {"problem_id", "result", "proof_sketch", "proof_text", "counterexample_text"}
     if set(payload.keys()) != required_keys:
@@ -106,24 +133,40 @@ def validate_formalizer_output(payload: dict[str, Any], expected_problem_id: str
     return result, proof_sketch, proof_text, counterexample_text
 
 
-def validate_expand_output(payload: dict[str, Any], expected_problem_id: str) -> list[str]:
-    required_keys = {"problem_id", "new_problems"}
+def validate_expand_output(payload: dict[str, Any], expected_problem_id: str) -> list[dict[str, str]]:
+    required_keys = {"problem_id", "candidates"}
     if set(payload.keys()) != required_keys:
-        raise ValueError("expand output must contain exactly: problem_id, new_problems")
+        raise ValueError("expand output must contain exactly: problem_id, candidates")
 
     problem_id = payload.get("problem_id")
     if problem_id != expected_problem_id:
         raise ValueError("expand output problem_id does not match picked problem")
 
-    new_problems_value = payload.get("new_problems")
-    if not isinstance(new_problems_value, list):
-        raise ValueError("expand new_problems must be an array of strings")
-    if len(new_problems_value) > 2:
-        raise ValueError("expand new_problems must have length <= 2")
-    if any((not isinstance(item, str)) for item in new_problems_value):
-        raise ValueError("expand new_problems must contain only strings")
+    candidates_value = payload.get("candidates")
+    if not isinstance(candidates_value, list):
+        raise ValueError("expand candidates must be an array of objects")
+    if len(candidates_value) > 2:
+        raise ValueError("expand candidates must have length <= 2")
 
-    return [item.strip() for item in new_problems_value if item.strip()][:2]
+    parsed: list[dict[str, str]] = []
+    seen_norms: set[str] = set()
+    for item in candidates_value:
+        if not isinstance(item, dict) or set(item.keys()) != {"statement", "rationale"}:
+            raise ValueError("each expand candidate must contain exactly: statement, rationale")
+        statement = item.get("statement")
+        rationale = item.get("rationale")
+        if not isinstance(statement, str) or not isinstance(rationale, str):
+            raise ValueError("expand candidate statement and rationale must be strings")
+        normalized_statement = statement.strip()
+        if not normalized_statement:
+            continue
+        norm = normalize_stmt_text(normalized_statement)
+        if norm in seen_norms:
+            continue
+        seen_norms.add(norm)
+        parsed.append({"statement": normalized_statement, "rationale": rationale.strip()})
+
+    return parsed[:2]
 
 
 def load_json_payload_from_args(inline_json: str | None, json_file: str | None) -> dict[str, Any] | None:
@@ -404,51 +447,20 @@ def make_timeout_subgoals(
     return filter_generated_subgoals(candidates, stmt)
 
 
-def extract_derived_theorem_entries(derived_path: Path, max_theorems: int = 50) -> list[dict[str, str]]:
-    """Extract theorem names and one-line statements from Derived.lean."""
-    if not derived_path.exists():
-        return []
-
-    try:
-        content = derived_path.read_text(encoding="utf-8")
-    except Exception:
-        return []
-
-    entries: list[dict[str, str]] = []
-    theorem_pattern = re.compile(r"^\s*theorem\s+([A-Za-z0-9_']+)\s*:\s*(.+?)\s*:=")
-    for line in content.splitlines():
-        match = theorem_pattern.search(line)
-        if match:
-            statement = match.group(2).strip()
-            if not statement:
-                continue
-            entries.append({"name": match.group(1), "statement": statement})
-            if len(entries) >= max_theorems:
-                break
-
-    def is_canonical_problem_theorem(name: str) -> bool:
-        return bool(re.fullmatch(r"thm_op_\d{6}(?:_is_false)?", name))
-
-    def name_priority(name: str) -> tuple[int, int, str]:
-        return (
-            1 if is_canonical_problem_theorem(name) else 0,
-            len(name),
-            name,
-        )
-
-    ordered_statements: list[str] = []
-    best_by_statement: dict[str, dict[str, str]] = {}
-    for entry in entries:
-        statement_key = normalize_stmt_text(entry["statement"])
-        current = best_by_statement.get(statement_key)
-        if current is None:
-            ordered_statements.append(statement_key)
-            best_by_statement[statement_key] = entry
-            continue
-        if name_priority(entry["name"]) < name_priority(current["name"]):
-            best_by_statement[statement_key] = entry
-
-    return [best_by_statement[key] for key in ordered_statements][:max_theorems]
+def extract_derived_theorem_entries(
+    derived_path: Path,
+    max_theorems: int = 50,
+) -> list[dict[str, Any]]:
+    """Extract theorem entries directly from Derived.lean."""
+    fallback_entries = build_derived_entries_from_file(derived_path, max_theorems=max_theorems)
+    return [
+        {
+            "name": str(entry.get("theorem_name", "")).strip(),
+            "statement": str(entry.get("statement", "")).strip(),
+        }
+        for entry in fallback_entries[:max_theorems]
+        if str(entry.get("theorem_name", "")).strip() and str(entry.get("statement", "")).strip()
+    ]
 
 
 def classify_statement_shape(stmt: str) -> dict[str, bool]:
@@ -487,6 +499,12 @@ def extract_relevance_keywords(stmt: str) -> set[str]:
     return keywords
 
 
+def extract_entry_relevance_keywords(entry: dict[str, Any]) -> set[str]:
+    keywords = set(extract_relevance_keywords(str(entry.get("statement", ""))))
+    keywords |= extract_relevance_keywords(str(entry.get("name", "")).replace("_", " "))
+    return keywords
+
+
 def same_relevance_family(target_shape: dict[str, bool], entry_shape: dict[str, bool]) -> bool:
     return (
         target_shape["has_forall"] == entry_shape["has_forall"]
@@ -509,20 +527,20 @@ def summarize_derived_statement(statement: str, max_chars: int = 120) -> str:
 
 
 def shortlist_relevant_derived_entries(
-    entries: list[dict[str, str]],
+    entries: list[dict[str, Any]],
     stmt: str,
     max_entries: int = 5,
-) -> list[dict[str, str]]:
+) -> list[dict[str, Any]]:
     if not entries:
         return []
 
     target_norm = normalize_stmt_text(stmt)
     target_shape = classify_statement_shape(stmt)
     target_keywords = extract_relevance_keywords(stmt)
-    shortlisted: list[dict[str, str]] = []
+    shortlisted: list[dict[str, Any]] = []
     seen_names: set[str] = set()
 
-    def add_pass(predicate: Callable[[dict[str, str]], bool]) -> None:
+    def add_pass(predicate: Callable[[dict[str, Any]], bool]) -> None:
         for entry in entries:
             if entry["name"] in seen_names:
                 continue
@@ -535,12 +553,12 @@ def shortlist_relevant_derived_entries(
             if len(shortlisted) >= max_entries:
                 return
 
-    def entry_shape(entry: dict[str, str]) -> dict[str, bool]:
+    def entry_shape(entry: dict[str, Any]) -> dict[str, bool]:
         return classify_statement_shape(entry["statement"])
 
     add_pass(
         lambda entry: same_relevance_family(target_shape, entry_shape(entry))
-        and bool(target_keywords & extract_relevance_keywords(entry["statement"]))
+        and bool(target_keywords & extract_entry_relevance_keywords(entry))
     )
     add_pass(lambda entry: same_relevance_family(target_shape, entry_shape(entry)))
     add_pass(
@@ -551,7 +569,7 @@ def shortlist_relevant_derived_entries(
     return shortlisted[:max_entries]
 
 
-def render_relevant_derived_context(entries: list[dict[str, str]], max_chars: int = 1200) -> str:
+def render_relevant_derived_context(entries: list[dict[str, Any]], max_chars: int = 1800) -> str:
     if not entries:
         return ""
 
@@ -569,13 +587,114 @@ def render_relevant_derived_context(entries: list[dict[str, str]], max_chars: in
     return summary
 
 
-def build_problem_theory_context(theory_context: str, derived_path: Path, stmt: str) -> str:
+def infer_mathlib_search_terms(stmt: str, entries: list[dict[str, Any]], max_terms: int = 10) -> list[str]:
+    target_shape = classify_statement_shape(stmt)
+    terms: list[str] = []
+
+    def add(term: str) -> None:
+        cleaned = term.strip()
+        if not cleaned or cleaned in terms:
+            return
+        terms.append(cleaned)
+
+    for keyword in sorted(extract_relevance_keywords(stmt)):
+        add(keyword)
+
+    if target_shape["has_subsingleton"]:
+        add("Subsingleton")
+        add("Subsingleton.elim")
+    if target_shape["has_exists"]:
+        add("Exists")
+        add("Classical.choose")
+    if target_shape["has_negation"]:
+        add("False")
+        add("by_contra")
+    if target_shape["has_mul"]:
+        add("mul")
+    if target_shape["has_eq"]:
+        add("Eq")
+    if target_shape["has_forall"]:
+        add("forall")
+    for entry in entries:
+        add(str(entry.get("name", "")))
+
+    return terms[:max_terms]
+
+
+def infer_tactic_hints(stmt: str, entries: list[dict[str, Any]], max_tactics: int = 8) -> list[str]:
+    target_shape = classify_statement_shape(stmt)
+    tactics: list[str] = []
+
+    def add(tactic: str) -> None:
+        cleaned = tactic.strip()
+        if not cleaned or cleaned in tactics:
+            return
+        tactics.append(cleaned)
+
+    for tactic in ["simpa", "exact", "rw", "apply", "have", "calc"]:
+        add(tactic)
+
+    if target_shape["has_forall"]:
+        add("intro")
+    if target_shape["has_exists"]:
+        add("refine")
+        add("constructor")
+        add("use")
+        add("rcases")
+    if target_shape["has_negation"]:
+        add("intro")
+        add("exfalso")
+    if target_shape["has_subsingleton"]:
+        add("Subsingleton.elim")
+    if target_shape["has_eq"] and target_shape["has_mul"]:
+        add("simp only")
+    for entry in entries:
+        if entry.get("name"):
+            add(f"simpa using {entry['name']}")
+
+    for tactic in ["aesop", "grind", "omega", "linarith", "nlinarith", "ring_nf", "positivity"]:
+        add(tactic)
+
+    return tactics[:max_tactics]
+
+
+def render_mathlib_hint_context(stmt: str, entries: list[dict[str, Any]], max_chars: int = 900) -> str:
+    search_terms = infer_mathlib_search_terms(stmt, entries)
+    tactic_hints = infer_tactic_hints(stmt, entries)
+    if not search_terms and not tactic_hints:
+        return ""
+
+    lines = [
+        "",
+        "-- Mathlib reuse hints:",
+    ]
+    if search_terms:
+        lines.append(f"-- search keywords: {', '.join(search_terms)}")
+    if tactic_hints:
+        lines.append(f"-- tactic candidates: {', '.join(tactic_hints)}")
+    lines.append("-- Prefer a short proof using existing Mathlib or Derived facts over axiom-only reconstruction.")
+
+    summary = "\n".join(lines)
+    if len(summary) > max_chars:
+        summary = summary[:max_chars] + "\n-- (mathlib hints truncated)"
+    return summary
+
+
+def build_problem_theory_context(
+    theory_context: str,
+    derived_path: Path,
+    stmt: str,
+) -> str:
     entries = extract_derived_theorem_entries(derived_path)
     relevant_entries = shortlist_relevant_derived_entries(entries, stmt)
     relevant_summary = render_relevant_derived_context(relevant_entries)
+    mathlib_summary = render_mathlib_hint_context(stmt, relevant_entries)
+    context = theory_context
     if relevant_summary:
-        return theory_context + relevant_summary
-    return theory_context
+        context += relevant_summary
+    if mathlib_summary:
+        context += mathlib_summary
+    return context
 
 
 def analyze_lean_failure(stderr: str, stdout: str) -> dict[str, Any]:
@@ -629,6 +748,10 @@ def load_formalization_memory(memory_path: Path, problem_id: str) -> list[dict[s
             parsed_new_problems = [str(v).strip() for v in raw_new_problems if str(v).strip()]
         safe_rows.append(
             {
+                "stage": str(item.get("stage", "")),
+                "source_statement": str(item.get("source_statement", "")),
+                "formalized_statement": str(item.get("formalized_statement", "")),
+                "statement_formalization_notes": str(item.get("statement_formalization_notes", "")),
                 "result": str(item.get("result", "")),
                 "verify_success": bool(item.get("verify_success", False)),
                 "proof_sketch": str(item.get("proof_sketch", "")),
@@ -656,16 +779,31 @@ def save_formalization_memory(memory_path: Path, problem_id: str, history: list[
     memory_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
+def append_formalization_memory_entry(
+    memory_path: Path,
+    problem_id: str,
+    entry: dict[str, Any],
+) -> list[dict[str, Any]]:
+    history = load_formalization_memory(memory_path, problem_id)
+    history.append(entry)
+    if len(history) > 20:
+        history = history[-20:]
+    save_formalization_memory(memory_path, problem_id, history)
+    return history
+
+
 def query_prover_with_retries(
     worker_settings: Any,
     prover_prompt: str,
     problem_id: str,
     stmt: str,
+    original_stmt: str,
     open_rows: list[dict[str, Any]],
     prover_retries: int,
     theory_context: str,
     memory_path: Path,
     current_iteration_full_logs: list[dict[str, Any]],
+    same_problem_history_tail: list[dict[str, Any]],
 ) -> tuple[str, str, str, list[str], int, dict[str, Any]]:
     retries = max(1, prover_retries)
     last_result = "stuck"
@@ -678,13 +816,17 @@ def query_prover_with_retries(
         payload: dict[str, Any] = {
             "problem_id": problem_id,
             "stmt": stmt,
+            "original_stmt": original_stmt,
             "theory_context": theory_context,
             "open_problems": open_rows,
+            "same_problem_history_tail": same_problem_history_tail,
             "prover_attempt_index": attempt,
             "prover_attempt_budget": retries,
             "mathlib_allowed": True,
             "new_problem_generation_policy": {
-                "prefer_generalization": True,
+                "prefer_subgoals_when_stuck": True,
+                "avoid_generalization_when_stuck": True,
+                "prefer_intermediate_lemmas": True,
                 "avoid_direct_axiom_instantiation": True,
                 "avoid_variable_renaming_only": True,
                 "target_novelty": "medium_or_high",
@@ -773,6 +915,7 @@ def request_initial_formalization(
     open_rows: list[dict[str, Any]],
     theory_context: str,
     current_iteration_full_logs: list[dict[str, Any]],
+    same_problem_history_tail: list[dict[str, Any]],
 ) -> tuple[str, str, str, str]:
     formalize_payload: dict[str, Any] = {
         "problem_id": problem_id,
@@ -782,6 +925,7 @@ def request_initial_formalization(
         "counterexample_text": counterexample_text,
         "theory_context": theory_context,
         "open_problems": open_rows,
+        "same_problem_history_tail": same_problem_history_tail,
         "mathlib_allowed": True,
     }
     formalized, formalize_worker_meta = invoke_worker_json(
@@ -798,6 +942,91 @@ def request_initial_formalization(
         worker_meta=formalize_worker_meta,
     )
     return validate_formalizer_output(formalized, problem_id)
+
+
+def request_prover_statement_formalization(
+    *,
+    worker_settings: Any,
+    prover_statement_prompt: str,
+    problem_id: str,
+    stmt: str,
+    open_rows: list[dict[str, Any]],
+    theory_context: str,
+    current_iteration_full_logs: list[dict[str, Any]],
+    same_problem_history_tail: list[dict[str, Any]],
+) -> tuple[str, str, str, dict[str, Any]]:
+    statement_payload: dict[str, Any] = {
+        "problem_id": problem_id,
+        "stmt": stmt,
+        "theory_context": theory_context,
+        "open_problems": open_rows,
+        "same_problem_history_tail": same_problem_history_tail,
+        "mathlib_allowed": True,
+    }
+    formalized, worker_meta = invoke_worker_json(
+        settings=worker_settings,
+        task_type="prover_statement",
+        system_prompt=prover_statement_prompt,
+        payload=statement_payload,
+        metadata={"problem_id": problem_id},
+    )
+    append_current_iteration_log(
+        current_iteration_full_logs,
+        stage="prover_statement",
+        index=1,
+        worker_meta=worker_meta,
+    )
+    result, lean_statement, notes = validate_prover_statement_output(formalized, problem_id)
+    return result, lean_statement, notes, worker_meta
+
+
+def request_expand_candidates(
+    *,
+    worker_settings: Any,
+    expand_prompt: str,
+    problem_id: str,
+    stmt: str,
+    original_stmt: str,
+    result: str,
+    verify_success: bool,
+    theory_context: str,
+    existing_new_problems: list[str],
+    verify_error_excerpt: str,
+    current_iteration_full_logs: list[dict[str, Any]],
+    same_problem_history_tail: list[dict[str, Any]],
+) -> tuple[list[dict[str, str]], dict[str, Any]]:
+    expand_payload: dict[str, Any] = {
+        "problem_id": problem_id,
+        "stmt": stmt,
+        "original_stmt": original_stmt,
+        "result": result,
+        "verify_success": verify_success,
+        "theory_context": theory_context,
+        "existing_new_problems": list(existing_new_problems),
+        "verify_error_excerpt": verify_error_excerpt,
+        "current_iteration_full_logs": list(current_iteration_full_logs),
+        "same_problem_history_tail": same_problem_history_tail,
+        "expand_generation_policy": {
+            "prefer_subgoals_for_unsolved": True,
+            "avoid_generalization_for_unsolved": True,
+            "prefer_same_problem_decomposition": True,
+            "prefer_intermediate_lemmas": True,
+        },
+    }
+    expanded, expand_worker_meta = invoke_worker_json(
+        settings=worker_settings,
+        task_type="expand",
+        system_prompt=expand_prompt,
+        payload=expand_payload,
+        metadata={"problem_id": problem_id},
+    )
+    append_current_iteration_log(
+        current_iteration_full_logs,
+        stage="expand",
+        index=1,
+        worker_meta=expand_worker_meta,
+    )
+    return validate_expand_output(expanded, problem_id), expand_worker_meta
 
 
 def attempt_formalization_until_timeout(
@@ -870,6 +1099,7 @@ def attempt_formalization_until_timeout(
             return verify_success, theorem_name, "stuck", proof_text, counterexample_text, new_problems, verify_error_excerpt
 
         try:
+            same_problem_history_tail = load_formalization_memory(memory_path, problem_id)[-8:]
             result, proof_sketch, proof_text, counterexample_text = request_initial_formalization(
                 formalize_worker_settings=formalize_worker_settings,
                 formalizer_prompt=formalizer_prompt,
@@ -881,6 +1111,7 @@ def attempt_formalization_until_timeout(
                 open_rows=open_rows,
                 theory_context=theory_context,
                 current_iteration_full_logs=current_iteration_full_logs,
+                same_problem_history_tail=same_problem_history_tail,
             )
         except RuntimeError as exc:
             if is_worker_timeout_error(exc):
@@ -1046,7 +1277,9 @@ def attempt_formalization_until_timeout(
             "prover_attempt_budget": "until_formalization_timeout",
             "mathlib_allowed": True,
             "new_problem_generation_policy": {
-                "prefer_generalization": True,
+                "prefer_subgoals_when_stuck": True,
+                "avoid_generalization_when_stuck": True,
+                "prefer_intermediate_lemmas": True,
                 "avoid_direct_axiom_instantiation": True,
                 "avoid_variable_renaming_only": True,
                 "target_novelty": "medium_or_high",
@@ -1176,10 +1409,13 @@ def main() -> None:
     parser.add_argument("--enable-worker", action="store_true")
     parser.add_argument("--worker-command")
     parser.add_argument("--worker-timeout", type=int)
+    parser.add_argument("--prover-statement-worker-command")
+    parser.add_argument("--prover-statement-worker-timeout", type=int)
     parser.add_argument("--formalize-worker-command")
     parser.add_argument("--formalize-worker-timeout", type=int)
     parser.add_argument("--repair-worker-command")
     parser.add_argument("--repair-worker-timeout", type=int)
+    parser.add_argument("--prover-statement-prompt-file", default="prompts/prover_statement_formalizer.md")
     parser.add_argument("--formalizer-prompt-file", default="prompts/formalizer_simple.md")
     parser.add_argument("--repair-prompt-file")
     parser.add_argument("--phase-logs", action=argparse.BooleanOptionalAction, default=True)
@@ -1198,7 +1434,7 @@ def main() -> None:
     args.prover_output_json = None
     args.prover_output_file = None
     args.theory_file = "AutomatedTheoryConstruction/Theory.lean"
-    # Problem selection is deterministic local logic; the worker handles prover/formalize/repair/expand.
+    # Problem selection is deterministic local logic; the worker handles prover_statement/prover/formalize/repair/expand.
     args.prover_prompt_file = "prompts/prover_simple.md"
     args.expander_prompt_file = "prompts/new_problem_expander.md"
     args.prover_retries = 2
@@ -1237,12 +1473,19 @@ def main() -> None:
     open_path = data_dir / "open_problems.jsonl"
 
     worker_settings = None
+    prover_statement_worker_settings = None
     formalize_worker_settings = None
     repair_worker_settings = None
     if args.enable_worker:
         worker_settings = load_worker_settings(
             command_override=args.worker_command,
             timeout_override=args.worker_timeout,
+        )
+        prover_statement_worker_settings = load_task_worker_settings(
+            task_name="prover_statement",
+            base_settings=worker_settings,
+            command_override=args.prover_statement_worker_command,
+            timeout_override=args.prover_statement_worker_timeout,
         )
         formalize_worker_settings = load_task_worker_settings(
             task_name="formalize",
@@ -1287,17 +1530,121 @@ def main() -> None:
             return
 
         problem_id = str(picked["id"])
-        stmt = str(picked.get("stmt", ""))
-        theory_context = build_problem_theory_context(base_theory_context, derived_path, stmt)
+        original_stmt = str(picked.get("stmt", ""))
+        initial_theory_context = build_problem_theory_context(base_theory_context, derived_path, original_stmt)
         emit_phase_log(args.phase_logs, "problem_selected", iteration=completed_iterations + 1, problem_id=problem_id)
+
+        current_iteration_full_logs: list[dict[str, Any]] = []
+        solver_stmt = original_stmt if looks_formalizable(original_stmt) else ""
+        statement_formalization_result = "ok" if solver_stmt else "stuck"
+        statement_formalization_notes = (
+            "Using the existing statement directly."
+            if solver_stmt
+            else "Original statement is not obviously Lean-formalizable."
+        )
+        prover_statement_worker_meta: dict[str, Any] = {}
+        same_problem_history_tail = load_formalization_memory(memory_path, problem_id)[-8:]
+
+        if prover_statement_worker_settings is not None:
+            emit_phase_log(
+                args.phase_logs,
+                "prover_statement",
+                iteration=completed_iterations + 1,
+                problem_id=problem_id,
+                mode="worker",
+            )
+            prover_statement_prompt = load_prompt_text(args.prover_statement_prompt_file)
+            try:
+                (
+                    statement_formalization_result,
+                    formalized_stmt,
+                    statement_formalization_notes,
+                    prover_statement_worker_meta,
+                ) = request_prover_statement_formalization(
+                    worker_settings=prover_statement_worker_settings,
+                    prover_statement_prompt=prover_statement_prompt,
+                    problem_id=problem_id,
+                    stmt=original_stmt,
+                    open_rows=open_rows,
+                    theory_context=initial_theory_context,
+                    current_iteration_full_logs=current_iteration_full_logs,
+                    same_problem_history_tail=same_problem_history_tail,
+                )
+            except RuntimeError as exc:
+                if is_worker_timeout_error(exc):
+                    statement_formalization_result = "stuck"
+                    formalized_stmt = ""
+                    statement_formalization_notes = f"prover_statement worker timeout: {exc}"
+                else:
+                    raise
+            else:
+                emit_phase_log(
+                    args.phase_logs,
+                    "prover_statement_parse",
+                    iteration=completed_iterations + 1,
+                    problem_id=problem_id,
+                    json_parse_attempts=int(prover_statement_worker_meta.get("json_parse_attempts", 0) or 0),
+                    raw_parse_fallback_used=bool(prover_statement_worker_meta.get("raw_parse_fallback_used", False)),
+                    client_json_parse_attempts=int(prover_statement_worker_meta.get("client_json_parse_attempts", 0) or 0),
+                    client_raw_parse_fallback_used=bool(prover_statement_worker_meta.get("client_raw_parse_fallback_used", False)),
+                )
+            if statement_formalization_result == "ok":
+                solver_stmt = formalized_stmt
+            elif solver_stmt:
+                statement_formalization_result = "ok"
+                statement_formalization_notes = (
+                    f"{statement_formalization_notes} Falling back to the existing statement because it already looks Lean-formalizable."
+                ).strip()
+            else:
+                solver_stmt = ""
+            emit_phase_log(
+                args.phase_logs,
+                "prover_statement_result",
+                iteration=completed_iterations + 1,
+                problem_id=problem_id,
+                formalized=statement_formalization_result == "ok",
+                notes=statement_formalization_notes,
+            )
+
+        append_formalization_memory_entry(
+            memory_path,
+            problem_id,
+            {
+                "stage": "statement_formalization",
+                "source_statement": original_stmt,
+                "formalized_statement": solver_stmt,
+                "statement_formalization_notes": statement_formalization_notes,
+                "result": statement_formalization_result,
+                "verify_success": statement_formalization_result == "ok" and bool(solver_stmt),
+                "proof_sketch": "",
+                "proof_text": "",
+                "counterexample_text": "",
+                "lean_error_excerpt": "",
+                "lean_error_fingerprint": "statement_formalization",
+                "new_problems": [],
+            },
+        )
+        same_problem_history_tail = load_formalization_memory(memory_path, problem_id)[-8:]
+
+        theory_context = build_problem_theory_context(
+            base_theory_context,
+            derived_path,
+            solver_stmt if solver_stmt else original_stmt,
+        )
 
         prover_payload = load_json_payload_from_args(args.prover_output_json, args.prover_output_file)
         prover_attempts_used = 1
         proof_sketch = ""
         proof_text = ""
+        counterexample_text = ""
         prover_worker_meta: dict[str, Any] = {}
-        current_iteration_full_logs: list[dict[str, Any]] = []
-        if prover_payload is not None:
+        new_problems: list[str] = []
+        if statement_formalization_result != "ok" or not solver_stmt:
+            result = "stuck"
+            proof_sketch = statement_formalization_notes or "Statement formalization failed before proof search."
+            counterexample_text = ""
+            new_problems = []
+        elif prover_payload is not None:
             emit_phase_log(args.phase_logs, "prover", iteration=completed_iterations + 1, problem_id=problem_id, mode="provided")
             result, proof_sketch, counterexample_text, new_problems = validate_prover_output(prover_payload, problem_id)
         elif worker_settings is not None:
@@ -1307,12 +1654,14 @@ def main() -> None:
                 worker_settings=worker_settings,
                 prover_prompt=prover_prompt,
                 problem_id=problem_id,
-                stmt=stmt,
+                stmt=solver_stmt,
+                original_stmt=original_stmt,
                 open_rows=open_rows,
                 prover_retries=args.prover_retries,
                 theory_context=theory_context,
                 memory_path=memory_path,
                 current_iteration_full_logs=current_iteration_full_logs,
+                same_problem_history_tail=same_problem_history_tail,
             )
             emit_phase_log(
                 args.phase_logs,
@@ -1334,7 +1683,7 @@ def main() -> None:
         note_path, note_markdown = write_proof_note_markdown(
             proof_notes_dir,
             problem_id=problem_id,
-            stmt=stmt,
+            stmt=solver_stmt if solver_stmt else original_stmt,
             result=result,
             proof_sketch=proof_sketch,
             counterexample_text=counterexample_text,
@@ -1353,7 +1702,7 @@ def main() -> None:
             verify_error_excerpt,
         ) = attempt_formalization_until_timeout(
             problem_id=problem_id,
-            stmt=stmt,
+            stmt=solver_stmt if solver_stmt else original_stmt,
             result=result,
             proof_sketch=proof_sketch,
             counterexample_text=counterexample_text,
@@ -1375,59 +1724,6 @@ def main() -> None:
             initial_proof_text=proof_text,
             phase_logger=(lambda **fields: emit_phase_log(args.phase_logs, iteration=completed_iterations + 1, **fields)),
         )
-        solver_new_problem_suggestions = list(new_problems)
-        expander_new_problem_suggestions: list[str] = []
-        expander_worker_meta: dict[str, Any] = {}
-
-        if worker_settings is not None:
-            emit_phase_log(
-                args.phase_logs,
-                "expand",
-                iteration=completed_iterations + 1,
-                problem_id=problem_id,
-                mode="worker",
-            )
-            expand_prompt = load_prompt_text(args.expander_prompt_file)
-            same_problem_history_tail = load_formalization_memory(memory_path, problem_id)[-8:]
-            expand_payload: dict[str, Any] = {
-                "problem_id": problem_id,
-                "stmt": stmt,
-                "result": result,
-                "verify_success": verify_success,
-                "theory_context": theory_context,
-                "existing_new_problems": list(new_problems),
-                "verify_error_excerpt": verify_error_excerpt,
-                "current_iteration_full_logs": list(current_iteration_full_logs),
-                "same_problem_history_tail": same_problem_history_tail,
-            }
-            try:
-                expander_payload, expander_worker_meta = invoke_worker_json(
-                    settings=worker_settings,
-                    task_type="expand",
-                    system_prompt=expand_prompt,
-                    payload=expand_payload,
-                    metadata={"problem_id": problem_id, "iteration": completed_iterations + 1},
-                )
-                expander_new_problem_suggestions = validate_expand_output(expander_payload, problem_id)
-                new_problems = merge_new_problems(new_problems, expander_new_problem_suggestions)
-                emit_phase_log(
-                    args.phase_logs,
-                    "expand_result",
-                    iteration=completed_iterations + 1,
-                    problem_id=problem_id,
-                    generated_count=len(expander_new_problem_suggestions),
-                    final_count=len(new_problems),
-                )
-            except (RuntimeError, ValueError) as exc:
-                debug_log(f"Expander failed for {problem_id}: {exc}")
-                emit_phase_log(
-                    args.phase_logs,
-                    "expand_error",
-                    iteration=completed_iterations + 1,
-                    problem_id=problem_id,
-                    error=str(exc),
-                )
-
         if verify_success and result in {"proof", "counterexample"}:
             scratch_code = scratch_file.read_text(encoding="utf-8")
             theorem_body_match = re.search(
@@ -1436,9 +1732,65 @@ def main() -> None:
                 re.DOTALL,
             )
             if theorem_body_match:
-                # Auto-detect theorem name from the extracted theorem body so
-                # counterexample names like `<base>_is_false` are handled correctly.
-                append_theorem(Path(args.derived_file), theorem_body_match.group(1), None)
+                # Append the newly verified theorem before expansion so follow-up
+                # generation can immediately reuse the latest derived facts.
+                append_theorem(
+                    Path(args.derived_file),
+                    theorem_body_match.group(1),
+                    None,
+                )
+                theory_context = build_problem_theory_context(base_theory_context, derived_path, solver_stmt)
+
+        solver_new_problem_suggestions = list(new_problems)
+        expander_new_problem_suggestions: list[str] = []
+        expander_worker_meta: dict[str, Any] = {}
+        expand_target_stmt = solver_stmt if solver_stmt else original_stmt
+
+        new_problems = list(solver_new_problem_suggestions)
+
+        if worker_settings is not None:
+            emit_phase_log(
+                args.phase_logs,
+                "expand_generate",
+                iteration=completed_iterations + 1,
+                problem_id=problem_id,
+                mode="worker",
+            )
+            expand_prompt = load_prompt_text(args.expander_prompt_file)
+            same_problem_history_tail = load_formalization_memory(memory_path, problem_id)[-8:]
+            try:
+                expander_candidates, expander_worker_meta = request_expand_candidates(
+                    worker_settings=worker_settings,
+                    expand_prompt=expand_prompt,
+                    problem_id=problem_id,
+                    stmt=expand_target_stmt,
+                    original_stmt=original_stmt,
+                    result=result,
+                    verify_success=verify_success,
+                    theory_context=theory_context,
+                    existing_new_problems=solver_new_problem_suggestions,
+                    verify_error_excerpt=verify_error_excerpt,
+                    current_iteration_full_logs=current_iteration_full_logs,
+                    same_problem_history_tail=same_problem_history_tail,
+                )
+                emit_phase_log(
+                    args.phase_logs,
+                    "expand_generate_result",
+                    iteration=completed_iterations + 1,
+                    problem_id=problem_id,
+                    generated_count=len(expander_candidates),
+                )
+                expander_new_problem_suggestions = [item["statement"] for item in expander_candidates]
+                new_problems = merge_new_problems(new_problems, expander_new_problem_suggestions)
+            except (RuntimeError, ValueError) as exc:
+                debug_log(f"Expander failed for {problem_id}: {exc}")
+                emit_phase_log(
+                    args.phase_logs,
+                    "expand_generate_error",
+                    iteration=completed_iterations + 1,
+                    problem_id=problem_id,
+                    error=str(exc),
+                )
 
         report = apply_state_update(
             data_dir=data_dir,
@@ -1455,6 +1807,10 @@ def main() -> None:
         report["result"] = result
         report["verify_success"] = verify_success
         report["verify_error_excerpt"] = verify_error_excerpt
+        report["original_stmt"] = original_stmt
+        report["formalized_stmt"] = solver_stmt
+        report["prover_statement_result"] = statement_formalization_result
+        report["prover_statement_notes"] = statement_formalization_notes
         report["prover_attempts_used"] = prover_attempts_used
         report["prover_proof_sketch"] = proof_sketch
         report["prover_counterexample_text"] = counterexample_text
@@ -1462,6 +1818,10 @@ def main() -> None:
         report["expander_new_problem_suggestions"] = expander_new_problem_suggestions
         report["final_new_problems"] = new_problems
         report["proof_note_path"] = str(note_path)
+        report["prover_statement_worker_json_parse_attempts"] = int(prover_statement_worker_meta.get("json_parse_attempts", 0) or 0)
+        report["prover_statement_worker_raw_parse_fallback_used"] = bool(prover_statement_worker_meta.get("raw_parse_fallback_used", False))
+        report["prover_statement_client_json_parse_attempts"] = int(prover_statement_worker_meta.get("client_json_parse_attempts", 0) or 0)
+        report["prover_statement_client_raw_parse_fallback_used"] = bool(prover_statement_worker_meta.get("client_raw_parse_fallback_used", False))
         report["worker_json_parse_attempts"] = int(prover_worker_meta.get("json_parse_attempts", 0) or 0)
         report["worker_raw_parse_fallback_used"] = bool(prover_worker_meta.get("raw_parse_fallback_used", False))
         report["client_json_parse_attempts"] = int(prover_worker_meta.get("client_json_parse_attempts", 0) or 0)
