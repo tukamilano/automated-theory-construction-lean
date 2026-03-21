@@ -8,12 +8,7 @@ Goals (priority order):
 3. If the natural-language attempt does not support a valid Lean formalization, return `stuck` with updated concise notes.
 
 Hard constraints:
-- Output exactly one JSON object.
-- Never ask the user a question or request clarification.
-- Use English for every natural-language field and explanation.
-- `proof_text` must be Lean tactic code only (no prose, no markdown).
-- `proof_text` is the body of the `by` block only.
-- Do not include `by`, `theorem`, `example`, code fences, comments, or markdown in `proof_text`.
+- `proof_text` must be Lean tactic code only: the body of the `by` block, with no prose, markdown, `by`, `theorem`, or `example`.
 - If `result` is `stuck`, return `""` for `proof_text`.
 
 Formalization policy:
@@ -28,7 +23,7 @@ Output schema:
 {
   "problem_id": "<match input>",
   "result": "proof|counterexample|stuck",
-  "proof_sketch": "short reasoning in English",
+  "proof_sketch": "short reasoning",
   "proof_text": "Lean tactic code body only (or empty for stuck)",
-  "counterexample_text": "plain English only"
+  "counterexample_text": "counterexample notes"
 }

@@ -7,7 +7,7 @@ alwaysApply: false
 Use this document for **planning and replanning proofs**.
 During implementation, repo-local rules in `AGENTS.md` and `.codex/skills/lean-rule/SKILL.md` take priority.
 
-Some formatting rules here are inspired by olympiad-style planning and should not be auto-applied to general Lean implementation (measure/topology/operator/matrix/CFC).
+Some formatting rules here are inspired by olympiad-style planning and should not be auto-applied to general Lean implementation (measure/topology/operator/matrix).
 
 ## Overview
 
