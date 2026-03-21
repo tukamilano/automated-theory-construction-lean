@@ -1086,6 +1086,10 @@
   ],
   "op_000064": [
     {
+      "stage": "",
+      "source_statement": "",
+      "formalized_statement": "",
+      "statement_formalization_notes": "",
       "result": "proof",
       "verify_success": false,
       "proof_sketch": "Use the left-projection operation on Bool. For the general finite lower bound, extract x with x * e ≠ e, show x ≠ e using the left-absorbing hypothesis at e, then obtain Nontrivial α via nontrivial_of_ne and conclude 2 ≤ Fintype.card α from Fintype.one_lt_card_iff_nontrivial.",
@@ -1099,6 +1103,10 @@
       ]
     },
     {
+      "stage": "",
+      "source_statement": "",
+      "formalized_statement": "",
+      "statement_formalization_notes": "",
       "result": "proof",
       "verify_success": false,
       "proof_sketch": "Prove the conjunction directly. For the existential part, define the left-projection multiplication on Bool by local `Mul` and `SemigroupLike01` instances, then witness `e = false`; left absorption is immediate and right absorption fails at `x = true`. For the universal lower bound, given a finite `SemigroupLike01 α` with some left-absorbing `e` that is not right-absorbing, obtain `x` with `x * e ≠ e`, deduce `x ≠ e` because `e * e = e`, get `Nontrivial α` from `nontrivial_of_ne`, and conclude `2 <= Fintype.card α` via `Fintype.one_lt_card_iff_nontrivial`.",
@@ -1109,6 +1117,46 @@
       "new_problems": [
         "∀ {α : Type _} [Fintype α] [AutomatedTheoryConstruction.SemigroupLike01 α] (e : α), (∀ y : α, e * y = e) → (¬ ∀ x : α, x * e = e) → Nontrivial α",
         "∀ (α : Type _) [Nontrivial α], ∃ (_ : AutomatedTheoryConstruction.SemigroupLike01 α), ∃ e : α, (∀ y : α, e * y = e) ∧ ¬ ∀ x : α, x * e = e"
+      ]
+    },
+    {
+      "stage": "statement_formalization",
+      "source_statement": "Classify whether the left-projection operation `x * y := x` is the minimal finite model witnessing `∃ α, SemigroupLike01 α` together with a left-absorbing but not right-absorbing element.",
+      "formalized_statement": "(∃ (_ : AutomatedTheoryConstruction.SemigroupLike01 Bool), (∀ x y : Bool, x * y = x) ∧ ∃ e : Bool, (∀ y : Bool, e * y = e) ∧ ¬ ∀ x : Bool, x * e = e) ∧ ∀ (α : Type _) (_ : Fintype α) (_ : AutomatedTheoryConstruction.SemigroupLike01 α), (∃ e : α, (∀ y : α, e * y = e) ∧ ¬ ∀ x : α, x * e = e) → 2 ≤ Fintype.card α",
+      "statement_formalization_notes": "Formalized minimal finite model as a 2-element left-projection witness together with a universal lower bound on the cardinality of any finite witness.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": false,
+      "proof_sketch": "Instantiate `Bool` with the left-projection multiplication `x * y = x`; then `false` is left-absorbing and not right-absorbing. For the universal bound, from `¬ ∀ x, x * e = e` obtain `x` with `x * e ≠ e`; if `x = e` then `x * e = e * e = e` by left-absorption, contradiction. So `x ≠ e`, hence `α` is nontrivial, and therefore `1 < Fintype.card α`, giving `2 ≤ Fintype.card α`.",
+      "proof_text": "constructor\n· let mul : Bool → Bool → Bool := fun x _ => x\n  letI : Mul Bool := ⟨mul⟩\n  letI : AutomatedTheoryConstruction.SemigroupLike01 Bool := by\n    refine\n      { ax_left_idempotent := ?_\n        ax_right_absorb_duplicate := ?_\n        ax_middle_swap := ?_ }\n    · intro x\n      cases x <;> rfl\n    · intro x y\n      cases x <;> rfl\n    · intro x y z\n      cases x <;> rfl\n  let s : AutomatedTheoryConstruction.SemigroupLike01 Bool := inferInstance\n  letI : AutomatedTheoryConstruction.SemigroupLike01 Bool := s\n  refine ⟨s, ?_⟩\n  constructor\n  · intro x y\n    change mul x y = x\n    rfl\n  · refine ⟨false, ?_⟩\n    constructor\n    · intro y\n      change mul false y = false\n      rfl\n    · intro h\n      have htf : mul true false = false := h true\n      change true = false at htf\n      cases htf\n· intro α _ _\n  rintro ⟨e, he_left, hnot_right⟩\n  push_neg at hnot_right\n  obtain ⟨x, hx⟩ := hnot_right\n  have hxe : x ≠ e := by\n    intro hxe\n    apply hx\n    simpa [hxe] using he_left e\n  haveI : Nontrivial α := nontrivial_of_ne x e hxe\n  exact Nat.succ_le_of_lt (Fintype.one_lt_card_iff_nontrivial.mpr ‹Nontrivial α›)",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:26:6: error: 'change' tactic failed, pattern",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:26:6: error: 'change' tactic failed, pattern | mul x y = x | is not definitionally equal to target",
+      "new_problems": [
+        "∀ {α : Type _} [Fintype α] [AutomatedTheoryConstruction.SemigroupLike01 α] (e : α), (∀ y : α, e * y = e) → (¬ ∀ x : α, x * e = e) → Nontrivial α",
+        "∀ (α : Type u) [Nontrivial α], ∃ (_ : AutomatedTheoryConstruction.SemigroupLike01 α), ∃ e : α, (∀ y : α, e * y = e) ∧ ¬ ∀ x : α, x * e = e"
+      ]
+    },
+    {
+      "result": "counterexample",
+      "verify_success": true,
+      "proof_sketch": "The fixed Lean statement is false. In the `Bool` part, the formula `∀ x y : Bool, x * y = x` uses the ambient `Mul Bool` instance from Mathlib, not the existentially chosen `SemigroupLike01 Bool` witness. Since `Bool` multiplication is conjunction, `true * false = false`, so the required equation fails at `x = true`, `y = false`.",
+      "proof_text": "intro h\nrcases h with ⟨hBool, _⟩\nrcases hBool with ⟨_, hproj, _⟩\nhave htf : true * false = true := hproj true false\nchange false = true at htf\ncases htf",
+      "counterexample_text": "The formalized statement quantifies over a `SemigroupLike01 Bool` witness, but the displayed equation `∀ x y : Bool, x * y = x` is already elaborated using the ambient `Mul Bool`. In Mathlib, `Bool` multiplication is `and`, so `true * false = false`, not `true`. Hence the first conjunct of the statement is impossible.",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:26:6: error: 'change' tactic failed, pattern",
+      "lean_error_fingerprint": "no_diagnostics",
+      "new_problems": [
+        "∀ {α : Type _} [Fintype α] [AutomatedTheoryConstruction.SemigroupLike01 α] (e : α), (∀ y : α, e * y = e) → (¬ ∀ x : α, x * e = e) → Nontrivial α",
+        "∀ (α : Type u) [Nontrivial α], ∃ (_ : AutomatedTheoryConstruction.SemigroupLike01 α), ∃ e : α, (∀ y : α, e * y = e) ∧ ¬ ∀ x : α, x * e = e"
       ]
     }
   ],
@@ -1266,6 +1314,51 @@
         "∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α] (e : α), (∀ y : α, e * y = e) → (¬ ∀ x : α, x * e = e) → Nontrivial α",
         "∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α] (e : α), (∀ y : α, e * y = e) → Subsingleton α → ∀ x : α, x * e = e"
       ]
+    }
+  ],
+  "op_000071": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∀ (α : Type _) [Nontrivial α], ∃ (_ : AutomatedTheoryConstruction.SemigroupLike01 α), ∃ e : α, (∀ y : α, e * y = e) ∧ ¬ ∀ x : α, x * e = e",
+      "formalized_statement": "∀ (α : Type _) [Nontrivial α], ∃ s : AutomatedTheoryConstruction.SemigroupLike01 α, ∃ e : α, letI : Mul α := s.toMul; (∀ y : α, e * y = e) ∧ ¬ ∀ x : α, x * e = e",
+      "statement_formalization_notes": "Formalized the existential SemigroupLike01 structure explicitly and used letI to expose its Mul instance for the * notation.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "Use the left-projection structure `mul x y := x`. Its three axioms are immediate by reflexivity. Choose any `e : α` from `Nonempty α`, obtained from `[Nontrivial α]`. Then `e * y = e` for all `y`, while `exists_ne e` gives some `x ≠ e`; since `x * e = x` in this model, the claim `∀ x, x * e = e` would force `x = e`, contradiction.",
+      "proof_text": "intro α _\nclassical\nlet s : AutomatedTheoryConstruction.SemigroupLike01 α :=\n  { mul := fun x _ => x\n    ax_left_idempotent := by\n      intro x\n      rfl\n    ax_right_absorb_duplicate := by\n      intro x y\n      rfl\n    ax_middle_swap := by\n      intro x y z\n      rfl }\nlet e : α := Classical.choice (inferInstance : Nonempty α)\nrefine ⟨s, e, ?_⟩\nchange (∀ y : α, s.mul e y = e) ∧ ¬ ∀ x : α, s.mul x e = e\nconstructor\n· intro y\n  rfl\n· intro h\n  obtain ⟨x, hx⟩ := exists_ne e\n  exact hx (by simpa using h x)",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "no_diagnostics",
+      "new_problems": [
+        "∀ (α : Type u), ∃ s : AutomatedTheoryConstruction.SemigroupLike01 α, ∀ x y : α, s.mul x y = x",
+        "For fixed `{α : Type u} [AutomatedTheoryConstruction.SemigroupLike01 α]` and `e : α` with `∀ y : α, e * y = e`, characterize additional hypotheses under which one can force `∀ x : α, x * e = e`."
+      ]
+    }
+  ],
+  "op_000072": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α], ∀ x y z : α, ((x * y) * z) * x = (x * y) * z",
+      "formalized_statement": "∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α], ∀ x y z : α, ((x * y) * z) * x = (x * y) * z",
+      "statement_formalization_notes": "Direct formalization of the given statement using the repository's existing notation and typeclass.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
     }
   ]
 }
