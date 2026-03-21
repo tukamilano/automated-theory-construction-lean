@@ -1,4 +1,11 @@
-{"id":"op_000056","stmt":"For every type with the same axioms and all elements x, y, z, one has ((x * y) * z) * (x * y) = (x * y) * z.","src":"generated"}
-{"id":"op_000057","stmt":"∀ {α : Type u} [AutomatedTheoryConstruction.SemigroupLike01 α], ∀ x y z : α, ((x * y) * z) * (x * y) = (x * y) * z","src":"generated"}
-{"id":"op_000058","stmt":"∃ (α : Type) (_ : AutomatedTheoryConstruction.SemigroupLike01 α) (e x : α), (∀ y : α, e * y = e) ∧ x * e ≠ e","src":"generated"}
-{"id":"op_000059","stmt":"Find a natural additional axiom on `AutomatedTheoryConstruction.SemigroupLike01` that is strong enough to make `∀ e, (∀ x, e * x = e) → ∀ x, x * e = e` provable, and verify it in Lean.","src":"generated"}
+{"id":"op_000069","stmt":"Prove the negation of the universal claim by exhibiting a concrete finite countermodel: there exists a nontrivial `SemigroupLike01` with some `e` such that `(∀ y, e * y = e)` and `¬ (∀ x, x * e = e)`.","src":"generated"}
+{"id":"op_000063","stmt":"∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α] (e : α), (∀ y : α, e * y = e) → ∀ x : α, x * e = e","src":"generated"}
+{"id":"op_000070","stmt":"∀ {α : Type _} [Fintype α] [AutomatedTheoryConstruction.SemigroupLike01 α] (e : α), (∀ y : α, e * y = e) → (¬ ∀ x : α, x * e = e) → Nontrivial α","src":"generated"}
+{"id":"op_000071","stmt":"∀ (α : Type _) [Nontrivial α], ∃ (_ : AutomatedTheoryConstruction.SemigroupLike01 α), ∃ e : α, (∀ y : α, e * y = e) ∧ ¬ ∀ x : α, x * e = e","src":"generated"}
+{"id":"op_000064","stmt":"Classify whether the left-projection operation `x * y := x` is the minimal finite model witnessing `∃ α, SemigroupLike01 α` together with a left-absorbing but not right-absorbing element.","src":"generated"}
+{"id":"op_000072","stmt":"∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α], ∀ x y z : α, ((x * y) * z) * x = (x * y) * z","src":"generated"}
+{"id":"op_000073","stmt":"∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α], ∀ x y z w : α, (((x * y) * z) * w) * (x * y) = ((x * y) * z) * w","src":"generated"}
+{"id":"op_000074","stmt":"∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α], ∀ a b c d e : α, (((((a * b) * c) * d) * e) * (a * b)) = ((((a * b) * c) * d) * e)","src":"generated"}
+{"id":"op_000075","stmt":"Characterize which right factors p can be absorbed by a term built from the same left prefix in `SemigroupLike01`; for example, explain when a term of the form `t = (((a * b) * c) * d)` must satisfy `t * p = t`.","src":"generated"}
+{"id":"op_000076","stmt":"∀ (α : Type u) [Nontrivial α], ∃ s : AutomatedTheoryConstruction.SemigroupLike01 α, ¬ ∀ x y : α, s.mul x y = s.mul y x","src":"generated"}
+{"id":"op_000077","stmt":"∀ (α : Type u), ∃ s : AutomatedTheoryConstruction.SemigroupLike01 α, ∀ x y z : α, s.mul (s.mul x y) z = x","src":"generated"}

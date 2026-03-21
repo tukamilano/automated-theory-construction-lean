@@ -15,3 +15,12 @@
 {"id":"op_000043","stmt":"∀ {α : Type u} [SemigroupLike01 α], ∀ x y z : α, (((x * y) * z) * x) = (x * y) * z","thm":"thm_op_000043"}
 {"id":"op_000045","stmt":"∀ {α : Type u} [SemigroupLike01 α], ∀ x y z : α, (((x * y) * z) * z) = (x * y) * z","thm":"thm_op_000045"}
 {"id":"op_000046","stmt":"∀ {α : Type u} [SemigroupLike01 α], ∀ x y z : α, (x * y) * ((x * y) * z) = (x * y) * z","thm":"thm_op_000046"}
+{"id":"op_000056","stmt":"For every type with the same axioms and all elements x, y, z, one has ((x * y) * z) * (x * y) = (x * y) * z.","thm":"thm_op_000056"}
+{"id":"op_000057","stmt":"∀ {α : Type u} [AutomatedTheoryConstruction.SemigroupLike01 α], ∀ x y z : α, ((x * y) * z) * (x * y) = (x * y) * z","thm":"thm_op_000057"}
+{"id":"op_000058","stmt":"∃ (α : Type) (_ : AutomatedTheoryConstruction.SemigroupLike01 α) (e x : α), (∀ y : α, e * y = e) ∧ x * e ≠ e","thm":"thm_op_000058"}
+{"id":"op_000060","stmt":"∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α] (a b c : α), ((a * b) * c) * a = (a * b) * c","thm":"thm_op_000060"}
+{"id":"op_000062","stmt":"∀ {α : Type u} [AutomatedTheoryConstruction.SemigroupLike01 α], ∀ a b c t : α, t = a * b → ((a * b) * c) * t = (a * b) * c","thm":"thm_op_000062"}
+{"id":"op_000065","stmt":"∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α] (a b c d : α), (((a * b) * c) * d) * a = ((a * b) * c) * d","thm":"thm_op_000065"}
+{"id":"op_000066","stmt":"∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α], ∀ x y z : α, ((x * y) * z) * (x * y) = (x * y) * z","thm":"thm_op_000066"}
+{"id":"op_000067","stmt":"∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α], ∀ a b c d : α, (((a * b) * c) * d) * (a * b) = ((a * b) * c) * d","thm":"thm_op_000067"}
+{"id":"op_000068","stmt":"Show formally that the left-projection operation `x * y := x` defines an instance of `AutomatedTheoryConstruction.SemigroupLike01` on any type.","thm":"thm_op_000068"}

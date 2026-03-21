@@ -813,5 +813,272 @@
         "Find a useful normal-form lemma characterizing additional right factors `t` for which `((a * b) * c) * t = (a * b) * c` holds in every `AutomatedTheoryConstruction.SemigroupLike01` model."
       ]
     }
+  ],
+  "op_000057": [
+    {
+      "result": "proof",
+      "verify_success": false,
+      "proof_sketch": "A direct proof from the axioms is shorter than reusing a derived lemma. Apply `ax_middle_swap` with `x := x * y`, `y := z`, `z := x * y` to rewrite `((x * y) * z) * (x * y)` as `((x * y) * (x * y)) * z`, then use `ax_left_idempotent` at `x * y` to reduce `((x * y) * (x * y))` to `x * y`.",
+      "proof_text": "rw [AutomatedTheoryConstruction.SemigroupLike01.ax_middle_swap (x := x * y) (y := z) (z := x * y)]\nrw [AutomatedTheoryConstruction.SemigroupLike01.ax_left_idempotent (x := x * y)]",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:7:71: error(lean.unknownIdentifier): Unknown identifier `x`",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:7:71: error(lean.unknownIdentifier): Unknown identifier `x` | AutomatedTheoryConstruction/Scratch.lean:7:75: error(lean.unknownIdentifier): Unknown identifier `y` | AutomatedTheoryConstruction/Scratch.lean:7:84: error(lean.unknownIdentifier): Unknown identifier `z`",
+      "new_problems": [
+        "∀ {α : Type u} [AutomatedTheoryConstruction.SemigroupLike01 α], ∀ a b c t : α, t = a * b → ((a * b) * c) * t = (a * b) * c",
+        "Find a useful normal-form criterion describing which right factors `t` satisfy `∀ a b c, ((a * b) * c) * t = (a * b) * c` in every `AutomatedTheoryConstruction.SemigroupLike01` model."
+      ]
+    },
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "Reuse the verified derived lemma `thm_op_000010 : ∀ x y, (x * y) * x = x * y` with `x := x * y` and `y := z`. The previous formalization failed only because it omitted the needed introductions for the outer `∀`-binders.",
+      "proof_text": "intro α _ x y z\nsimpa using (thm_op_000010 (x := x * y) (y := z))",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:7:71: error(lean.unknownIdentifier): Unknown identifier `x`",
+      "lean_error_fingerprint": "no_diagnostics",
+      "new_problems": [
+        "∀ {α : Type u} [AutomatedTheoryConstruction.SemigroupLike01 α], ∀ a b c t : α, t = a * b → ((a * b) * c) * t = (a * b) * c",
+        "Find a useful normal-form criterion describing which right factors `t` satisfy `∀ a b c, ((a * b) * c) * t = (a * b) * c` in every `AutomatedTheoryConstruction.SemigroupLike01` model."
+      ]
+    }
+  ],
+  "op_000058": [
+    {
+      "result": "proof",
+      "verify_success": false,
+      "proof_sketch": "Witness `Bool` with multiplication defined by left projection `x * y = x`. Then every element is left-absorbing, so `e := false` satisfies `∀ y, e * y = e`, and `x := true` gives `x * e = true ≠ false`.",
+      "proof_text": "refine ⟨Bool, { mul := fun x _ => x\n                ax_left_idempotent := by\n                  intro x\n                  rfl\n                ax_right_absorb_duplicate := by\n                  intro x y\n                  rfl\n                ax_middle_swap := by\n                  intro x y z\n                  rfl }, false, true, ?_⟩\nconstructor\n· intro y\n  rfl\n· decide",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:7:10: error: Application type mismatch: The argument",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:7:10: error: Application type mismatch: The argument | Bool | has type",
+      "new_problems": [
+        "∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α] (e : α), (∀ y : α, e * y = e) → ∀ x : α, x * e = e",
+        "Classify whether the left-projection operation `x * y := x` is the minimal finite model witnessing `∃ α, SemigroupLike01 α` together with a left-absorbing but not right-absorbing element."
+      ]
+    },
+    {
+      "result": "proof",
+      "verify_success": false,
+      "proof_sketch": "Use a universe-polymorphic lift of `Bool` as the witness type. On `ULift Bool`, define multiplication by left projection `x * y := x`. Then all three `SemigroupLike01` axioms are definitionally true. Taking `e := ULift.up false` and `x := ULift.up true`, we have `∀ y, e * y = e`, while `x * e = x = ULift.up true ≠ ULift.up false = e`.",
+      "proof_text": "refine ⟨ULift Bool, { mul := fun x _ => x\n                     ax_left_idempotent := by\n                       intro x\n                       rfl\n                     ax_right_absorb_duplicate := by\n                       intro x y\n                       rfl\n                     ax_middle_swap := by\n                       intro x y z\n                       rfl }, ULift.up false, ULift.up true, ?_⟩\nconstructor\n· intro y\n  rfl\n· decide",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:7:43: error: unexpected identifier; expected '}'",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:7:43: error: unexpected identifier; expected '}' | AutomatedTheoryConstruction/Scratch.lean:7:22: error: invalid {...} notation, structure type expected | ∃ x e x_1, (∀ (y : ULift.{u_1, 0} Bool), e * y = e) ∧ x_1 * e ≠ e",
+      "new_problems": [
+        "∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α] (e : α), (∀ y : α, e * y = e) → ∀ x : α, x * e = e",
+        "Classify whether the left-projection operation `x * y := x` is the minimal finite model witnessing `∃ α, SemigroupLike01 α` together with a left-absorbing but not right-absorbing element."
+      ]
+    },
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "Use `ULift Bool` with multiplication given by left projection. Define a local `SemigroupLike01` instance, then witness `e = ULift.up false` and `x = ULift.up true`. Every element is left-absorbing, while `x * e = x ≠ e`.",
+      "proof_text": "letI : SemigroupLike01 (ULift Bool) :=\n  { mul := fun x _ => x\n    ax_left_idempotent := by\n      intro x\n      rfl\n    ax_right_absorb_duplicate := by\n      intro x y\n      rfl\n    ax_middle_swap := by\n      intro x y z\n      rfl }\nrefine ⟨ULift Bool, inferInstance, ULift.up false, ULift.up true, ?_⟩\nconstructor\n· intro y\n  rfl\n· decide",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:7:43: error: unexpected identifier; expected '}'",
+      "lean_error_fingerprint": "no_diagnostics",
+      "new_problems": [
+        "∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α] (e : α), (∀ y : α, e * y = e) → ∀ x : α, x * e = e",
+        "Classify whether the left-projection operation `x * y := x` is the minimal finite model witnessing `∃ α, SemigroupLike01 α` together with a left-absorbing but not right-absorbing element."
+      ]
+    }
+  ],
+  "op_000060": [
+    {
+      "result": "proof",
+      "verify_success": false,
+      "proof_sketch": "Reuse the already verified theorem `thm_op_000037`, which has exactly the same statement up to variable names.",
+      "proof_text": "intro α _ a b c\nsimpa using (AutomatedTheoryConstruction.thm_op_000037 (α := α) (x := a) (y := b) (z := c))",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:8:15: error(lean.unknownIdentifier): Unknown identifier `AutomatedTheoryConstruction.thm_op_000037`",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:8:15: error(lean.unknownIdentifier): Unknown identifier `AutomatedTheoryConstruction.thm_op_000037`",
+      "new_problems": [
+        "∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α] (a b c d : α), (((a * b) * c) * d) * a = ((a * b) * c) * d",
+        "∀ {α : Type u} [AutomatedTheoryConstruction.SemigroupLike01 α], ∀ a b c t : α, t = a * b → ((a * b) * c) * t = (a * b) * c"
+      ]
+    },
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "Use `ax_middle_swap` with `x := a * b`, `y := c`, `z := a` to rewrite `((a * b) * c) * a` as `((a * b) * a) * c`, then rewrite `(a * b) * a` to `a * b` by `mul_right_absorb_lhs_op_000010`.",
+      "proof_text": "intro α _ a b c\nhave hswap : ((a * b) * c) * a = ((a * b) * a) * c := by\n  simpa [AutomatedTheoryConstruction.op] using\n    (AutomatedTheoryConstruction.SemigroupLike01.ax_middle_swap (α := α) (x := a * b) (y := c) (z := a))\ncalc\n  (((a * b) * c) * a) = (((a * b) * a) * c) := hswap\n  _ = (a * b) * c := by\n    rw [AutomatedTheoryConstruction.mul_right_absorb_lhs_op_000010 (x := a) (y := b)]",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:8:15: error(lean.unknownIdentifier): Unknown identifier `AutomatedTheoryConstruction.thm_op_000037`",
+      "lean_error_fingerprint": "no_diagnostics",
+      "new_problems": [
+        "∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α] (a b c d : α), (((a * b) * c) * d) * a = ((a * b) * c) * d",
+        "∀ {α : Type u} [AutomatedTheoryConstruction.SemigroupLike01 α], ∀ a b c t : α, t = a * b → ((a * b) * c) * t = (a * b) * c"
+      ]
+    }
+  ],
+  "op_000062": [
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "Rewrite with the hypothesis `t = a * b`, then apply the derived absorption theorem `thm_op_000010` with `x := a * b` and `y := c`.",
+      "proof_text": "intro α _ a b c t ht\nrw [ht]\nsimpa using (thm_op_000010 (x := a * b) (y := c))",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "no_diagnostics",
+      "new_problems": [
+        "∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α], ∀ x y z : α, ((x * y) * z) * (x * y) = (x * y) * z",
+        "∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α], ∀ a b c d : α, (((a * b) * c) * d) * (a * b) = ((a * b) * c) * d"
+      ]
+    }
+  ],
+  "op_000063": [
+    {
+      "result": "counterexample",
+      "verify_success": false,
+      "proof_sketch": "Use the existing theorem `thm_op_000058`, which provides a type with `SemigroupLike01`, an element `e` such that `∀ y, e * y = e`, and an element `x` with `x * e ≠ e`. Applying the universal claim to that witness yields `x * e = e`, contradicting the witness property.",
+      "proof_text": "intro h\nobtain ⟨α, inst, e, x, he, hne⟩ := AutomatedTheoryConstruction.thm_op_000058\nletI : AutomatedTheoryConstruction.SemigroupLike01 α := inst\nexact hne (h (α := α) e he x)",
+      "counterexample_text": "A verified countermodel already exists in `thm_op_000058`: on `ULift Bool` with multiplication `x * y := x`, every `e` is left-absorbing, but for distinct `x` and `e` we have `x * e = x ≠ e`.",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:8:37: error(lean.unknownIdentifier): Unknown identifier `AutomatedTheoryConstruction.thm_op_000058`",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:8:37: error(lean.unknownIdentifier): Unknown identifier `AutomatedTheoryConstruction.thm_op_000058` | AutomatedTheoryConstruction/Scratch.lean:8:9: error: Tactic `rcases` failed: `x✝ : ?m.14` is not an inductive datatype",
+      "new_problems": [
+        "Show formally that the left-projection operation `x * y := x` defines an instance of `AutomatedTheoryConstruction.SemigroupLike01` on any type.",
+        "Prove the negation of the universal claim by exhibiting a concrete finite countermodel: there exists a nontrivial `SemigroupLike01` with some `e` such that `(∀ y, e * y = e)` and `¬ (∀ x, x * e = e)`."
+      ]
+    },
+    {
+      "result": "counterexample",
+      "verify_success": false,
+      "proof_sketch": "Reuse the already verified theorem `AutomatedTheoryConstruction.thm_op_000047_is_false`. Its statement is definitionally the same negation as `stmt`; only binder names and universe notation differ, so `simpa` closes the goal.",
+      "proof_text": "simpa using (AutomatedTheoryConstruction.thm_op_000047_is_false)",
+      "counterexample_text": "A concrete countermodel is `ULift Bool` with multiplication `x * y := x`. Then every `e` satisfies `∀ y, e * y = e`, but for `x ≠ e` we have `x * e = x ≠ e`, so the universal statement is false.",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:7:15: error(lean.unknownIdentifier): Unknown identifier `AutomatedTheoryConstruction.thm_op_000047_is_false`",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:7:15: error(lean.unknownIdentifier): Unknown identifier `AutomatedTheoryConstruction.thm_op_000047_is_false`",
+      "new_problems": [
+        "Show formally that the left-projection operation `x * y := x` defines an instance of `AutomatedTheoryConstruction.SemigroupLike01` on any type.",
+        "Prove the negation of the universal claim by exhibiting a concrete finite countermodel: there exists a nontrivial `SemigroupLike01` with some `e` such that `(∀ y, e * y = e)` and `¬ (∀ x, x * e = e)`."
+      ]
+    }
+  ],
+  "op_000064": [
+    {
+      "result": "proof",
+      "verify_success": false,
+      "proof_sketch": "Use the left-projection operation on Bool. For the general finite lower bound, extract x with x * e ≠ e, show x ≠ e using the left-absorbing hypothesis at e, then obtain Nontrivial α via nontrivial_of_ne and conclude 2 ≤ Fintype.card α from Fintype.one_lt_card_iff_nontrivial.",
+      "proof_text": "refine ⟨\n  { mul := fun x y => x\n    ax_left_idempotent := by\n      intro x\n      rfl\n    ax_right_absorb_duplicate := by\n      intro x y\n      rfl\n    ax_middle_swap := by\n      intro x y z\n      rfl },\n  ?_⟩\nconstructor\n· constructor\n  · intro x y\n    rfl\n  · refine ⟨false, ?_, ?_⟩\n    · intro y\n      rfl\n    · intro h\n      have htf : true = false := by\n        simpa using h true\n      cases htf\n· intro α _ _\n  rintro ⟨e, he_left, hnot_right⟩\n  push_neg at hnot_right\n  obtain ⟨x, hx⟩ := hnot_right\n  have hxe : x ≠ e := by\n    intro hxe\n    apply hx\n    simpa [hxe] using he_left e\n  exact Nat.succ_le_of_lt (Fintype.one_lt_card_iff_nontrivial.mpr (nontrivial_of_ne x e hxe))",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:8:4: error: invalid {...} notation, structure type expected",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:8:4: error: invalid {...} notation, structure type expected | ∃ x, (∀ (x y : Bool), x * y = x) ∧ ∃ e, (∀ (y : Bool), e * y = e) ∧ ¬∀ (x : Bool), x * e = e | AutomatedTheoryConstruction/Scratch.lean:19:2: error: Tactic `constructor` failed: target is not an inductive datatype",
+      "new_problems": [
+        "∀ {α : Type _} [Fintype α] [AutomatedTheoryConstruction.SemigroupLike01 α] (e : α), (∀ y : α, e * y = e) → (¬ ∀ x : α, x * e = e) → Nontrivial α",
+        "∀ (α : Type _) [Nontrivial α], ∃ (_ : AutomatedTheoryConstruction.SemigroupLike01 α), ∃ e : α, (∀ y : α, e * y = e) ∧ ¬ ∀ x : α, x * e = e"
+      ]
+    },
+    {
+      "result": "proof",
+      "verify_success": false,
+      "proof_sketch": "Prove the conjunction directly. For the existential part, define the left-projection multiplication on Bool by local `Mul` and `SemigroupLike01` instances, then witness `e = false`; left absorption is immediate and right absorption fails at `x = true`. For the universal lower bound, given a finite `SemigroupLike01 α` with some left-absorbing `e` that is not right-absorbing, obtain `x` with `x * e ≠ e`, deduce `x ≠ e` because `e * e = e`, get `Nontrivial α` from `nontrivial_of_ne`, and conclude `2 <= Fintype.card α` via `Fintype.one_lt_card_iff_nontrivial`.",
+      "proof_text": "constructor\n· let mul : Bool → Bool → Bool := fun x _ => x\n  letI : Mul Bool := ⟨mul⟩\n  letI : SemigroupLike01 Bool := by\n    refine\n      { ax_left_idempotent := ?_\n        ax_right_absorb_duplicate := ?_\n        ax_middle_swap := ?_ }\n    · intro x\n      cases x <;> rfl\n    · intro x y\n      cases x <;> rfl\n    · intro x y z\n      cases x <;> rfl\n  refine ⟨(show SemigroupLike01 Bool from inferInstance), ?_⟩\n  constructor\n  · intro x y\n    rfl\n  · refine ⟨false, ?_, ?_⟩\n    · intro y\n      rfl\n    · intro h\n      have htf : true = false := by\n        simpa using h true\n      cases htf\n· intro α hF hS\n  letI : Fintype α := hF\n  letI : SemigroupLike01 α := hS\n  rintro ⟨e, he_left, hnot_right⟩\n  push_neg at hnot_right\n  obtain ⟨x, hx⟩ := hnot_right\n  have hxe : x ≠ e := by\n    intro hxe\n    apply hx\n    simpa [hxe] using he_left e\n  exact Nat.succ_le_of_lt\n    (Fintype.one_lt_card_iff_nontrivial.mpr (nontrivial_of_ne x e hxe))",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:24:6: error: Tactic `rfl` failed: The left-hand side",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:24:6: error: Tactic `rfl` failed: The left-hand side | x * y | is not definitionally equal to the right-hand side",
+      "new_problems": [
+        "∀ {α : Type _} [Fintype α] [AutomatedTheoryConstruction.SemigroupLike01 α] (e : α), (∀ y : α, e * y = e) → (¬ ∀ x : α, x * e = e) → Nontrivial α",
+        "∀ (α : Type _) [Nontrivial α], ∃ (_ : AutomatedTheoryConstruction.SemigroupLike01 α), ∃ e : α, (∀ y : α, e * y = e) ∧ ¬ ∀ x : α, x * e = e"
+      ]
+    }
+  ],
+  "op_000065": [
+    {
+      "result": "proof",
+      "verify_success": false,
+      "proof_sketch": "Use ax_middle_swap to move the final a left across d, reducing the goal to showing (((a * b) * c) * a) = ((a * b) * c). Apply ax_middle_swap again to rewrite (((a * b) * c) * a) as (((a * b) * a) * c), then use mul_right_absorb_lhs_op_000010 on (a, b).",
+      "proof_text": "intro a b c d\nhave h1 : ((((a * b) * c) * d) * a) = ((((a * b) * c) * a) * d) := by\n  simpa [AutomatedTheoryConstruction.op] using\n    (AutomatedTheoryConstruction.SemigroupLike01.ax_middle_swap (((a * b) * c)) d a)\nhave h2 : (((a * b) * c) * a) = ((a * b) * c) := by\n  calc\n    (((a * b) * c) * a) = (((a * b) * a) * c) := by\n      simpa [AutomatedTheoryConstruction.op] using\n        (AutomatedTheoryConstruction.SemigroupLike01.ax_middle_swap (a * b) c a)\n    _ = ((a * b) * c) := by\n      rw [mul_right_absorb_lhs_op_000010 a b]\ncalc\n  ((((a * b) * c) * d) * a) = ((((a * b) * c) * a) * d) := h1\n  _ = (((a * b) * c) * d) := by\n    rw [h2]",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:8:16: error(lean.synthInstanceFailed): failed to synthesize instance of type class",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:8:16: error(lean.synthInstanceFailed): failed to synthesize instance of type class | HMul (Type u_1) (SemigroupLike01 a) ?m.41 | Hint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command.",
+      "new_problems": [
+        "∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α], ∀ x y z : α, ((x * y) * z) * x = (x * y) * z",
+        "∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α], ∀ x y z w : α, (((x * y) * z) * w) * (x * y) = ((x * y) * z) * w"
+      ]
+    },
+    {
+      "result": "proof",
+      "verify_success": false,
+      "proof_sketch": "Reuse the verified theorem `thm_op_000037`, which states `((x * y) * z) * x = (x * y) * z`. Instantiate it with `x := a * b`, `y := c`, and `z := d`.",
+      "proof_text": "intro α _ a b c d\nsimpa using (AutomatedTheoryConstruction.thm_op_000037 (α := α) (x := a * b) (y := c) (z := d))",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:8:2: error: Type mismatch: After simplification, term",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:8:2: error: Type mismatch: After simplification, term | thm_op_000037 (a * b) c d | has type",
+      "new_problems": [
+        "∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α], ∀ x y z : α, ((x * y) * z) * x = (x * y) * z",
+        "∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α], ∀ x y z w : α, (((x * y) * z) * w) * (x * y) = ((x * y) * z) * w"
+      ]
+    },
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "Use `ax_middle_swap` to swap the final `a` left across `d`, reducing the goal to `((((a * b) * c) * a) * d) = (((a * b) * c) * d)`. Then reuse the verified theorem `thm_op_000060`, which gives `(((a * b) * c) * a) = ((a * b) * c)`, and rewrite.",
+      "proof_text": "intro α _ a b c d\nhave hswap : ((((a * b) * c) * d) * a) = ((((a * b) * c) * a) * d) := by\n  simpa [AutomatedTheoryConstruction.op] using\n    (AutomatedTheoryConstruction.SemigroupLike01.ax_middle_swap\n      (α := α) (x := (a * b) * c) (y := d) (z := a))\nhave hfix : (((a * b) * c) * a) = ((a * b) * c) := by\n  simpa using (AutomatedTheoryConstruction.thm_op_000060 (α := α) (a := a) (b := b) (c := c))\ncalc\n  ((((a * b) * c) * d) * a) = ((((a * b) * c) * a) * d) := hswap\n  _ = (((a * b) * c) * d) := by\n    rw [hfix]",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:8:2: error: Type mismatch: After simplification, term",
+      "lean_error_fingerprint": "no_diagnostics",
+      "new_problems": [
+        "∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α], ∀ x y z : α, ((x * y) * z) * x = (x * y) * z",
+        "∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α], ∀ x y z w : α, (((x * y) * z) * w) * (x * y) = ((x * y) * z) * w"
+      ]
+    }
+  ],
+  "op_000066": [
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "Instantiate the verified absorption theorem `thm_op_000010` at `x := x * y` and `y := z`. This gives `((x * y) * z) * (x * y) = (x * y) * z`, which is exactly the goal.",
+      "proof_text": "intro α _ x y z\nsimpa using (thm_op_000010 (x := x * y) (y := z))",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "no_diagnostics",
+      "new_problems": [
+        "∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α], ∀ x y z : α, ((x * y) * z) * x = (x * y) * z",
+        "∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α], ∀ a b c d : α, (((a * b) * c) * d) * (a * b) = ((a * b) * c) * d"
+      ]
+    }
+  ],
+  "op_000067": [
+    {
+      "result": "proof",
+      "verify_success": false,
+      "proof_sketch": "Use `ax_middle_swap` to move the final `a * b` left across `d`, then apply `thm_op_000066` to simplify `(((a * b) * c) * (a * b))` to `((a * b) * c)`.",
+      "proof_text": "intro α _ a b c d\nhave hswap : ((((a * b) * c) * d) * (a * b)) = ((((a * b) * c) * (a * b)) * d) := by\n  simpa [AutomatedTheoryConstruction.op] using\n    (AutomatedTheoryConstruction.SemigroupLike01.ax_middle_swap\n      (α := α) (x := (a * b) * c) (y := d) (z := a * b))\ncalc\n  ((((a * b) * c) * d) * (a * b)) = ((((a * b) * c) * (a * b)) * d) := hswap\n  _ = (((a * b) * c) * d) := by\n    rw [AutomatedTheoryConstruction.thm_op_000066 (α := α) (x := a) (y := b) (z := c)]",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:15:10: error(lean.unknownIdentifier): Unknown identifier `AutomatedTheoryConstruction.thm_op_000066`",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:15:10: error(lean.unknownIdentifier): Unknown identifier `AutomatedTheoryConstruction.thm_op_000066` | AutomatedTheoryConstruction/Scratch.lean:14:31: error: unsolved goals | α : Type u_1",
+      "new_problems": [
+        "∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α], ∀ a b c d e : α, (((((a * b) * c) * d) * e) * (a * b)) = ((((a * b) * c) * d) * e)",
+        "Characterize which right factors p can be absorbed by a term built from the same left prefix in `SemigroupLike01`; for example, explain when a term of the form `t = (((a * b) * c) * d)` must satisfy `t * p = t`."
+      ]
+    },
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "Use `ax_middle_swap` to move the final `a * b` across `d`, then apply `mul_right_absorb_lhs_op_000010` with `x := a * b` and `y := c` to simplify `(((a * b) * c) * (a * b))` to `((a * b) * c)`.",
+      "proof_text": "intro α _ a b c d\nhave hswap : ((((a * b) * c) * d) * (a * b)) = ((((a * b) * c) * (a * b)) * d) := by\n  simpa [AutomatedTheoryConstruction.op] using\n    (AutomatedTheoryConstruction.SemigroupLike01.ax_middle_swap\n      (α := α) (x := (a * b) * c) (y := d) (z := a * b))\nrw [hswap, AutomatedTheoryConstruction.mul_right_absorb_lhs_op_000010 (x := a * b) (y := c)]",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:15:10: error(lean.unknownIdentifier): Unknown identifier `AutomatedTheoryConstruction.thm_op_000066`",
+      "lean_error_fingerprint": "no_diagnostics",
+      "new_problems": [
+        "∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α], ∀ a b c d e : α, (((((a * b) * c) * d) * e) * (a * b)) = ((((a * b) * c) * d) * e)",
+        "Characterize which right factors p can be absorbed by a term built from the same left prefix in `SemigroupLike01`; for example, explain when a term of the form `t = (((a * b) * c) * d)` must satisfy `t * p = t`."
+      ]
+    }
+  ],
+  "op_000068": [
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "Use the left-projection multiplication `mul x y := x` as the witness. Then all three `SemigroupLike01` axioms and the target identity `s.mul x y = x` reduce definitionally to `rfl`.",
+      "proof_text": "intro α\nrefine ⟨{\n  mul := fun x _ => x\n  ax_left_idempotent := by\n    intro x\n    rfl\n  ax_right_absorb_duplicate := by\n    intro x y\n    rfl\n  ax_middle_swap := by\n    intro x y z\n    rfl\n}, ?_⟩\nintro x y\nrfl",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "no_diagnostics",
+      "new_problems": [
+        "∀ (α : Type u) [Nontrivial α], ∃ s : AutomatedTheoryConstruction.SemigroupLike01 α, ¬ ∀ x y : α, s.mul x y = s.mul y x",
+        "∀ (α : Type u), ∃ s : AutomatedTheoryConstruction.SemigroupLike01 α, ∀ x y z : α, s.mul (s.mul x y) z = x"
+      ]
+    }
   ]
 }

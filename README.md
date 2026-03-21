@@ -231,3 +231,4 @@ This repository is licensed under the MIT License. See `LICENSE`.
 
 The prompting strategy for solving Lean problems was partially inspired by a private repository (kmd710/lean4-codex-skills).
 This does not affect the theory construction framework itself, which is independently developed.
+This repository also includes one file that was copied and then adapted from SnO2WMaN's `provability-toy` repository: <https://github.com/SnO2WMaN/provability-toy>. The original source repository should be consulted for the upstream context and licensing details of that borrowed material.

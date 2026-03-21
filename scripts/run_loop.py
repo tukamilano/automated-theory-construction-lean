@@ -756,6 +756,10 @@ def load_formalization_memory(memory_path: Path, problem_id: str) -> list[dict[s
             parsed_new_problems = [str(v).strip() for v in raw_new_problems if str(v).strip()]
         safe_rows.append(
             {
+                "stage": str(item.get("stage", "")),
+                "source_statement": str(item.get("source_statement", "")),
+                "formalized_statement": str(item.get("formalized_statement", "")),
+                "statement_formalization_notes": str(item.get("statement_formalization_notes", "")),
                 "result": str(item.get("result", "")),
                 "verify_success": bool(item.get("verify_success", False)),
                 "proof_sketch": str(item.get("proof_sketch", "")),
@@ -783,6 +787,19 @@ def save_formalization_memory(memory_path: Path, problem_id: str, history: list[
     memory_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
+def append_formalization_memory_entry(
+    memory_path: Path,
+    problem_id: str,
+    entry: dict[str, Any],
+) -> list[dict[str, Any]]:
+    history = load_formalization_memory(memory_path, problem_id)
+    history.append(entry)
+    if len(history) > 20:
+        history = history[-20:]
+    save_formalization_memory(memory_path, problem_id, history)
+    return history
+
+
 def query_prover_with_retries(
     worker_settings: Any,
     prover_prompt: str,
@@ -794,6 +811,7 @@ def query_prover_with_retries(
     theory_context: str,
     memory_path: Path,
     current_iteration_full_logs: list[dict[str, Any]],
+    same_problem_history_tail: list[dict[str, Any]],
 ) -> tuple[str, str, str, list[str], int, dict[str, Any]]:
     retries = max(1, prover_retries)
     last_result = "stuck"
@@ -809,6 +827,7 @@ def query_prover_with_retries(
             "original_stmt": original_stmt,
             "theory_context": theory_context,
             "open_problems": open_rows,
+            "same_problem_history_tail": same_problem_history_tail,
             "prover_attempt_index": attempt,
             "prover_attempt_budget": retries,
             "mathlib_allowed": True,
@@ -904,6 +923,7 @@ def request_initial_formalization(
     open_rows: list[dict[str, Any]],
     theory_context: str,
     current_iteration_full_logs: list[dict[str, Any]],
+    same_problem_history_tail: list[dict[str, Any]],
 ) -> tuple[str, str, str, str]:
     formalize_payload: dict[str, Any] = {
         "problem_id": problem_id,
@@ -913,6 +933,7 @@ def request_initial_formalization(
         "counterexample_text": counterexample_text,
         "theory_context": theory_context,
         "open_problems": open_rows,
+        "same_problem_history_tail": same_problem_history_tail,
         "mathlib_allowed": True,
     }
     formalized, formalize_worker_meta = invoke_worker_json(
@@ -940,12 +961,14 @@ def request_prover_statement_formalization(
     open_rows: list[dict[str, Any]],
     theory_context: str,
     current_iteration_full_logs: list[dict[str, Any]],
+    same_problem_history_tail: list[dict[str, Any]],
 ) -> tuple[str, str, str, dict[str, Any]]:
     statement_payload: dict[str, Any] = {
         "problem_id": problem_id,
         "stmt": stmt,
         "theory_context": theory_context,
         "open_problems": open_rows,
+        "same_problem_history_tail": same_problem_history_tail,
         "mathlib_allowed": True,
     }
     formalized, worker_meta = invoke_worker_json(
@@ -1084,6 +1107,7 @@ def attempt_formalization_until_timeout(
             return verify_success, theorem_name, "stuck", proof_text, counterexample_text, new_problems, verify_error_excerpt
 
         try:
+            same_problem_history_tail = load_formalization_memory(memory_path, problem_id)[-8:]
             result, proof_sketch, proof_text, counterexample_text = request_initial_formalization(
                 formalize_worker_settings=formalize_worker_settings,
                 formalizer_prompt=formalizer_prompt,
@@ -1095,6 +1119,7 @@ def attempt_formalization_until_timeout(
                 open_rows=open_rows,
                 theory_context=theory_context,
                 current_iteration_full_logs=current_iteration_full_logs,
+                same_problem_history_tail=same_problem_history_tail,
             )
         except RuntimeError as exc:
             if is_worker_timeout_error(exc):
@@ -1526,6 +1551,7 @@ def main() -> None:
             else "Original statement is not obviously Lean-formalizable."
         )
         prover_statement_worker_meta: dict[str, Any] = {}
+        same_problem_history_tail = load_formalization_memory(memory_path, problem_id)[-8:]
 
         if prover_statement_worker_settings is not None:
             emit_phase_log(
@@ -1550,6 +1576,7 @@ def main() -> None:
                     open_rows=open_rows,
                     theory_context=initial_theory_context,
                     current_iteration_full_logs=current_iteration_full_logs,
+                    same_problem_history_tail=same_problem_history_tail,
                 )
             except RuntimeError as exc:
                 if is_worker_timeout_error(exc):
@@ -1587,6 +1614,26 @@ def main() -> None:
                 notes=statement_formalization_notes,
             )
 
+        append_formalization_memory_entry(
+            memory_path,
+            problem_id,
+            {
+                "stage": "statement_formalization",
+                "source_statement": original_stmt,
+                "formalized_statement": solver_stmt,
+                "statement_formalization_notes": statement_formalization_notes,
+                "result": statement_formalization_result,
+                "verify_success": statement_formalization_result == "ok" and bool(solver_stmt),
+                "proof_sketch": "",
+                "proof_text": "",
+                "counterexample_text": "",
+                "lean_error_excerpt": "",
+                "lean_error_fingerprint": "statement_formalization",
+                "new_problems": [],
+            },
+        )
+        same_problem_history_tail = load_formalization_memory(memory_path, problem_id)[-8:]
+
         theory_context = build_problem_theory_context(
             base_theory_context,
             derived_path,
@@ -1622,6 +1669,7 @@ def main() -> None:
                 theory_context=theory_context,
                 memory_path=memory_path,
                 current_iteration_full_logs=current_iteration_full_logs,
+                same_problem_history_tail=same_problem_history_tail,
             )
             emit_phase_log(
                 args.phase_logs,

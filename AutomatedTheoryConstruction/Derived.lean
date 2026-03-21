@@ -684,4 +684,107 @@ theorem thm_op_000056 : ∀ {α : Type _} [AutomatedTheoryConstruction.Semigroup
 
 theorem automatedtheoryconstruction_mul_eq_op_000056 : ∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α] (x y z : α), ((x * y) * z) * (x * y) = (x * y) * z := thm_op_000056
 
+
+theorem thm_op_000057 : ∀ {α : Type u} [AutomatedTheoryConstruction.SemigroupLike01 α], ∀ x y z : α, ((x * y) * z) * (x * y) = (x * y) * z := by
+  intro α _ x y z
+  simpa using (thm_op_000010 (x := x * y) (y := z))
+
+theorem automatedtheoryconstruction_mul_eq_op_000057 : ∀ {α : Type u} [AutomatedTheoryConstruction.SemigroupLike01 α], ∀ x y z : α, ((x * y) * z) * (x * y) = (x * y) * z := thm_op_000057
+
+
+theorem thm_op_000058 : ∃ (α : Type _) (_ : AutomatedTheoryConstruction.SemigroupLike01 α) (e x : α), (∀ y : α, e * y = e) ∧ x * e ≠ e := by
+  letI : SemigroupLike01 (ULift Bool) :=
+    { mul := fun x _ => x
+      ax_left_idempotent := by
+        intro x
+        rfl
+      ax_right_absorb_duplicate := by
+        intro x y
+        rfl
+      ax_middle_swap := by
+        intro x y z
+        rfl }
+  refine ⟨ULift Bool, inferInstance, ULift.up false, ULift.up true, ?_⟩
+  constructor
+  · intro y
+    rfl
+  · decide
+
+theorem automatedtheoryconstruction_e_mul_eq_and_op_000058 : ∃ (α : Type _) (_ : AutomatedTheoryConstruction.SemigroupLike01 α) (e x : α), (∀ y : α, e * y = e) ∧ x * e ≠ e := thm_op_000058
+
+
+theorem thm_op_000060 : ∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α] (a b c : α), ((a * b) * c) * a = (a * b) * c := by
+  intro α _ a b c
+  have hswap : ((a * b) * c) * a = ((a * b) * a) * c := by
+    simpa [AutomatedTheoryConstruction.op] using
+      (AutomatedTheoryConstruction.SemigroupLike01.ax_middle_swap (α := α) (x := a * b) (y := c) (z := a))
+  calc
+    (((a * b) * c) * a) = (((a * b) * a) * c) := hswap
+    _ = (a * b) * c := by
+      rw [AutomatedTheoryConstruction.mul_right_absorb_lhs_op_000010 (x := a) (y := b)]
+
+theorem automatedtheoryconstruction_a_b_c_mul_op_000060 : ∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α] (a b c : α), ((a * b) * c) * a = (a * b) * c := thm_op_000060
+
+
+theorem thm_op_000062 : ∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α], ∀ a b c t : α, t = a * b → ((a * b) * c) * t = (a * b) * c := by
+  intro α _ a b c t ht
+  rw [ht]
+  simpa using (thm_op_000010 (x := a * b) (y := c))
+
+theorem automatedtheoryconstruction_a_b_c_t_op_000062 : ∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α], ∀ a b c t : α, t = a * b → ((a * b) * c) * t = (a * b) * c := thm_op_000062
+
+
+theorem thm_op_000065 : ∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α] (a b c d : α), (((a * b) * c) * d) * a = ((a * b) * c) * d := by
+  intro α _ a b c d
+  have hswap : ((((a * b) * c) * d) * a) = ((((a * b) * c) * a) * d) := by
+    simpa [AutomatedTheoryConstruction.op] using
+      (AutomatedTheoryConstruction.SemigroupLike01.ax_middle_swap
+        (α := α) (x := (a * b) * c) (y := d) (z := a))
+  have hfix : (((a * b) * c) * a) = ((a * b) * c) := by
+    simpa using (AutomatedTheoryConstruction.thm_op_000060 (α := α) (a := a) (b := b) (c := c))
+  calc
+    ((((a * b) * c) * d) * a) = ((((a * b) * c) * a) * d) := hswap
+    _ = (((a * b) * c) * d) := by
+      rw [hfix]
+
+theorem automatedtheoryconstruction_a_b_c_d_op_000065 : ∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α] (a b c d : α), (((a * b) * c) * d) * a = ((a * b) * c) * d := thm_op_000065
+
+
+theorem thm_op_000066 : ∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α], ∀ x y z : α, ((x * y) * z) * (x * y) = (x * y) * z := by
+  intro α _ x y z
+  simpa using (thm_op_000010 (x := x * y) (y := z))
+
+theorem automatedtheoryconstruction_mul_eq_op_000066 : ∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α], ∀ x y z : α, ((x * y) * z) * (x * y) = (x * y) * z := thm_op_000066
+
+
+theorem thm_op_000067 : ∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α], ∀ a b c d : α, ((((a * b) * c) * d) * (a * b)) = (((a * b) * c) * d) := by
+  intro α _ a b c d
+  have hswap : ((((a * b) * c) * d) * (a * b)) = ((((a * b) * c) * (a * b)) * d) := by
+    simpa [AutomatedTheoryConstruction.op] using
+      (AutomatedTheoryConstruction.SemigroupLike01.ax_middle_swap
+        (α := α) (x := (a * b) * c) (y := d) (z := a * b))
+  rw [hswap, AutomatedTheoryConstruction.mul_right_absorb_lhs_op_000010 (x := a * b) (y := c)]
+
+theorem automatedtheoryconstruction_a_b_c_d_op_000067 : ∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α], ∀ a b c d : α, ((((a * b) * c) * d) * (a * b)) = (((a * b) * c) * d) := thm_op_000067
+
+
+theorem thm_op_000068 : ∀ (α : Type u), ∃ s : AutomatedTheoryConstruction.SemigroupLike01 α, ∀ x y : α, s.mul x y = x := by
+  intro α
+  refine ⟨{
+    mul := fun x _ => x
+    ax_left_idempotent := by
+      intro x
+      rfl
+    ax_right_absorb_duplicate := by
+      intro x y
+      rfl
+    ax_middle_swap := by
+      intro x y z
+      rfl
+  }, ?_⟩
+  intro x y
+  rfl
+
+theorem s_automatedtheoryconstruction_mul_eq_op_000068 : ∀ (α : Type u), ∃ s : AutomatedTheoryConstruction.SemigroupLike01 α, ∀ x y : α, s.mul x y = x := thm_op_000068
+
 end AutomatedTheoryConstruction
