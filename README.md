@@ -74,8 +74,6 @@ The system does not only accumulate positive laws. It can also reject tempting b
 
 is accompanied by a certified concrete witness rather than only a failed proof search.
 
-Just as importantly, the long-term direction is not limited to equational reasoning inside the operation language itself. The project is meant to move outward toward statements involving external structure, such as existence, finiteness, cardinality, and model-level constraints. In that sense, the goal is not only to derive more identities, but to discover when a sparse axiom system starts forcing global facts about the kinds of models it can or cannot have.
-
 For a first-time reader, the core idea is:
 
 - `AutomatedTheoryConstruction/Theory.lean` defines the starting symbols and axioms
@@ -293,3 +291,4 @@ The prompting strategy for solving Lean problems was partially inspired by a pri
 
 This repository also includes one file that was copied and then adapted from SnO2WMaN's `provability-toy` repository:
 <https://github.com/SnO2WMaN/provability-toy>
+
