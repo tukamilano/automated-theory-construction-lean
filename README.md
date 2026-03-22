@@ -1,6 +1,87 @@
 # Automated Theory Construction
 
-This repository implements an automated theory-construction loop on top of Lean 4 + Mathlib.
+This repository aims to start from a small set of axioms and automatically build up a growing collection of derived theorems.
+
+The longer-term goal is more ambitious than simply producing many theorems: the system should push toward statements in the most general form it can discover, move beyond the current internal language when needed, and remain usable even for niche axiom systems that are not already well-tooled or neatly standardized.
+
+Here, "moving beyond the internal language" means not stopping at equations built only from the primitive operation and variables, but also searching for statements about existence, nonexistence, uniqueness, finite-model behavior, cardinality bounds, and other global constraints on the models of the axioms.
+
+In other words, this repository is aimed at exploratory theorem generation in underdeveloped formal settings, not only automation inside familiar, well-prepared theories.
+
+It implements an automated theory-construction loop on top of Lean 4 + Mathlib. Given a base theory, the system proposes candidate statements, attempts to formalize and prove them in Lean, verifies successful results, and accumulates the verified theorems into the derived theory.
+
+## Most Important Principle
+
+The most important part of this repository is the solved-and-verified follow-up policy in `prompts/new_problem_expander.md`.
+
+If you read only one design rule, read this one: when the current problem is solved and verified (`verify_success = true` and `result = proof|counterexample`), the system should prefer outward-looking follow-up problems that extend the theory rather than merely staying near the last proof script.
+
+More concretely, follow-up generation should favor, roughly in this order:
+
+1. natural generalizations or reusable abstractions
+2. converses, strict separations, or failure-of-converse statements
+3. existence, uniqueness, impossibility, or rigidity phenomena
+4. finite-model behavior, extremal behavior, boundary cases, or classification fragments
+5. adjacent structural consequences that clarify the global shape of the theory
+
+At least one candidate should ideally broaden, reinterpret, or reuse the verified result beyond the immediate local target. Prefer candidates that teach something non-obvious about the theory or its models. If a more informative model-level, structural, or boundary-case follow-up is available, prefer it over a nearby local rewrite.
+
+## Quick Mental Model
+
+```text
+[Theory.lean]
+  base symbols + axioms
+        ↓
+[scripts/run_loop.py]
+  generate / formalize / prove / repair
+        ↓
+[Scratch.lean]
+  temporary Lean verification
+        ↓
+[Derived.lean]
+  accumulated verified theorems
+```
+
+## Illustrative Results
+
+These are representative examples from the current repository state. They are intentionally cherry-picked to show the kind of output the loop can already produce, not to claim broad coverage or maturity yet.
+
+Starting from the three axioms of `SemigroupLike01`, the system has automatically derived nontrivial universal consequences such as:
+
+```lean
+∀ {α : Type u} [SemigroupLike01 α], ∀ x y : α, (x * y) * x = x * y
+```
+
+and
+
+```lean
+∀ {α : Type _} [SemigroupLike01 α], ∀ e : α,
+  (∀ x : α, x * e = e) → ∀ x : α, e * x = e
+```
+
+It has also produced stronger derived identities, for example:
+
+```lean
+∀ {α : Type u} [SemigroupLike01 α], ∀ x y z : α,
+  (x * y) * (x * z) = (x * y) * z
+```
+
+The system does not only accumulate positive laws. It can also reject tempting but false universal conjectures by constructing explicit finite countermodels. For example, it verified a 3-element model satisfying the three axioms while failing associativity, so:
+
+```lean
+¬(∀ {α : Type u} [SemigroupLike01 α], ∀ x y z : α, (x * y) * z = x * (y * z))
+```
+
+is accompanied by a certified concrete witness rather than only a failed proof search.
+
+Just as importantly, the long-term direction is not limited to equational reasoning inside the operation language itself. The project is meant to move outward toward statements involving external structure, such as existence, finiteness, cardinality, and model-level constraints. In that sense, the goal is not only to derive more identities, but to discover when a sparse axiom system starts forcing global facts about the kinds of models it can or cannot have.
+
+For a first-time reader, the core idea is:
+
+- `AutomatedTheoryConstruction/Theory.lean` defines the starting symbols and axioms
+- `AutomatedTheoryConstruction/Scratch.lean` is the temporary file used for Lean verification
+- `AutomatedTheoryConstruction/Derived.lean` stores the verified theorems discovered so far
+- `scripts/run_loop.py` orchestrates the full loop
 
 The current design is a single runtime pipeline with:
 

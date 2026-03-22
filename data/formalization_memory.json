@@ -15,39 +15,11 @@
       "new_problems": []
     },
     {
-      "stage": "",
-      "source_statement": "",
-      "formalized_statement": "",
-      "statement_formalization_notes": "",
-      "result": "stuck",
-      "verify_success": false,
-      "proof_sketch": "A counterexample direction is the right one here. A brute-force search on a 3-element magma found the table with rows 0:[0,0,0], 1:[0,1,0], 2:[0,2,2]. This operation satisfies all three axioms: idempotence x*x=x, duplicate absorption x*(x*y)=x*y, and middle swap (x*y)*z=(x*z)*y. However, associativity fails at x=2, y=1, z=2: (2*1)*2 = 2*2 = 2, while 2*(1*2) = 2*0 = 0. Therefore the target statement is false in general.",
-      "proof_text": "",
-      "counterexample_text": "Take α = {0,1,2} with multiplication given by the Cayley table rows 0:[0,0,0], 1:[0,1,0], 2:[0,2,2]. This is a concrete model of SemigroupLike01, but it is not associative. The witness is x=2, y=1, z=2, where (x*y)*z = 2 and x*(y*z) = 0.",
-      "lean_error_excerpt": "formalize worker timeout: Worker returned error: Command '['codex', 'exec', '-', '--sandbox', 'read-only', '--skip-git-repo-check', '--output-last-message', '/var/folders/2_/c2t72bmn00j3z7cnkfvqvyj80000gn/T/tmp0j_k13vy']' timed out after 390 seconds",
-      "lean_error_fingerprint": "formalizer_timeout",
-      "new_problems": []
-    },
-    {
-      "stage": "statement_formalization",
-      "source_statement": "∀ {α : Type u} [SemigroupLike01 α], ∀ x y z : α, (x * y) * z = x * (y * z)",
-      "formalized_statement": "∀ {α : Type u} [SemigroupLike01 α], ∀ x y z : α, (x * y) * z = x * (y * z)",
-      "statement_formalization_notes": "Using the existing statement directly.",
-      "result": "ok",
-      "verify_success": true,
-      "proof_sketch": "",
-      "proof_text": "",
-      "counterexample_text": "",
-      "lean_error_excerpt": "",
-      "lean_error_fingerprint": "statement_formalization",
-      "new_problems": []
-    },
-    {
       "result": "counterexample",
       "verify_success": true,
-      "proof_sketch": "Instantiate the universal claim on the lifted finite type `ULift (Fin 3)` with the 3-element operation from the given table. The three `SemigroupLike01` axioms are decidable and hold by computation, but associativity fails at the witness corresponding to `2, 1, 2`, yielding a contradiction.",
-      "proof_text": "intro h\nlet T := ULift.{u, 0} (Fin 3)\nlet mulT : T → T → T := fun x y => ⟨if x.down = 0 then 0 else if x.down = 1 then if y.down = 1 then 1 else 0 else if y.down = 0 then 0 else 2⟩\nletI : Mul T := ⟨mulT⟩\nhave h_left : ∀ x : T, op x x = x := by\n  decide\nhave h_absorb : ∀ x y : T, op x (op x y) = op x y := by\n  decide\nhave h_swap : ∀ x y z : T, op (op x y) z = op (op x z) y := by\n  decide\nlet semigroupLikeT : SemigroupLike01 T :=\n  { mul := mulT\n    ax_left_idempotent := h_left\n    ax_right_absorb_duplicate := h_absorb\n    ax_middle_swap := h_swap }\nletI : SemigroupLike01 T := semigroupLikeT\nhave hAssoc := h (α := T) ⟨2⟩ ⟨1⟩ ⟨2⟩\nhave hNotAssoc : ¬ (((⟨2⟩ : T) * ⟨1⟩) * ⟨2⟩ = (⟨2⟩ : T) * (⟨1⟩ * ⟨2⟩)) := by\n  decide\nexact hNotAssoc hAssoc",
-      "counterexample_text": "Use `ULift (Fin 3)` so the countermodel lives in the same ambient universe `Type u`. Define multiplication by the table with rows `0:[0,0,0]`, `1:[0,1,0]`, `2:[0,2,2]` on the underlying `Fin 3`. Computation shows the three `SemigroupLike01` axioms hold, while associativity fails at the lifted witnesses `2, 1, 2`.",
+      "proof_sketch": "Instantiate the universal claim with `ULift (Fin 3)` carrying the specified 3-element multiplication. The three axioms hold by finite computation, while the instance of associativity at `2,1,2` reduces to `2 = 0`, a contradiction.",
+      "proof_text": "intro h\nlet T : Type u := ULift (Fin 3)\nlet a0 : T := ULift.up (0 : Fin 3)\nlet a1 : T := ULift.up (1 : Fin 3)\nlet a2 : T := ULift.up (2 : Fin 3)\nlet mulFin : Fin 3 → Fin 3 → Fin 3 := fun a b =>\n  if a = 0 then 0\n  else if a = 1 then\n    if b = 1 then 1 else 0\n  else\n    if b = 0 then 0 else 2\nlet mulT : T → T → T := fun a b => ULift.up (mulFin a.down b.down)\nlet mulInst : Mul T := ⟨mulT⟩\nlet sg : SemigroupLike01 T := by\n  letI : Mul T := mulInst\n  refine\n    { mul := mulT\n      ax_left_idempotent := ?_\n      ax_right_absorb_duplicate := ?_\n      ax_middle_swap := ?_ }\n  · native_decide\n  · native_decide\n  · native_decide\nletI : SemigroupLike01 T := sg\nhave h' := h (α := T) a2 a1 a2\nchange a2 = a0 at h'\nhave hne : a2 ≠ a0 := by\n  native_decide\nexact hne h'",
+      "counterexample_text": "Use the 3-element model with carrier `ULift (Fin 3)` and multiplication table `0:[0,0,0]`, `1:[0,1,0]`, `2:[0,2,2]`. It satisfies the three axioms, but at `x=2, y=1, z=2` we get `(x * y) * z = 2` and `x * (y * z) = 0`.",
       "lean_error_excerpt": "",
       "lean_error_fingerprint": "no_diagnostics",
       "new_problems": []
@@ -70,21 +42,11 @@
     },
     {
       "result": "counterexample",
-      "verify_success": false,
-      "proof_sketch": "Instantiate the universal claim on `T := ULift Bool` with left-projection multiplication `x * y = x`. The three axioms are all definitionally true by `rfl`, while commutativity would force `ULift.up true = ULift.up false`, contradicting `Bool.true_ne_false` after applying `ULift.down`.",
-      "proof_text": "intro h\nlet T : Type u := ULift Bool\nlet s : SemigroupLike01 T :=\n  { mul := fun x _ => x\n    ax_left_idempotent := by\n      intro x\n      rfl\n    ax_right_absorb_duplicate := by\n      intro x y\n      rfl\n    ax_middle_swap := by\n      intro x y z\n      rfl }\nletI : SemigroupLike01 T := s\nhave hc := h (α := T) (x := ULift.up true) (y := ULift.up false)\nchange (ULift.up true : T) = ULift.up false at hc\nexact Bool.true_ne_false (congrArg ULift.down hc)",
-      "counterexample_text": "Use `α := ULift Bool` and define multiplication by `x * y = x`. Then `x * x = x`, `x * (x * y) = x * y`, and `(x * y) * z = (x * z) * y` all hold by reflexivity. But `ULift.up true * ULift.up false = ULift.up true` and `ULift.up false * ULift.up true = ULift.up false`, so commutativity fails.",
-      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:23:8: error(lean.unknownIdentifier): Unknown constant `Bool.true_ne_false`",
-      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:23:8: error(lean.unknownIdentifier): Unknown constant `Bool.true_ne_false`",
-      "new_problems": []
-    },
-    {
-      "result": "counterexample",
       "verify_success": true,
-      "proof_sketch": "Use the type `ULift Bool` with multiplication defined by left projection, `x * y = x`. All three axioms hold by reflexivity. Applying the assumed universal commutativity theorem to `ULift.up true` and `ULift.up false` yields an equality whose `ULift.down` image is `true = false`, contradiction.",
-      "proof_text": "intro h\nlet T : Type u := ULift Bool\nlet s : SemigroupLike01 T :=\n  { mul := fun x _ => x\n    ax_left_idempotent := by\n      intro x\n      rfl\n    ax_right_absorb_duplicate := by\n      intro x y\n      rfl\n    ax_middle_swap := by\n      intro x y z\n      rfl }\nletI : SemigroupLike01 T := s\nhave hc := h (α := T) (x := ULift.up true) (y := ULift.up false)\nchange (ULift.up true : T) = ULift.up false at hc\nhave htf : true = false := congrArg ULift.down hc\ncases htf",
-      "counterexample_text": "Take `α := ULift Bool` and define multiplication by `x * y = x`. Then `x * x = x`, `x * (x * y) = x * y`, and `(x * y) * z = (x * z) * y` all hold by reflexivity. But `ULift.up true * ULift.up false = ULift.up true` while `ULift.up false * ULift.up true = ULift.up false`, so commutativity fails.",
-      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:23:8: error(lean.unknownIdentifier): Unknown constant `Bool.true_ne_false`",
+      "proof_sketch": "Instantiate the axioms on `ULift (Fin 2)` with left-projection multiplication `x * y := x`. The axioms are immediate by reflexivity, but commutativity would force `0 = 1` after specializing at the two distinct elements.",
+      "proof_text": "intro h\nlet T : Type u := ULift (Fin 2)\nlet a0 : T := ULift.up (0 : Fin 2)\nlet a1 : T := ULift.up (1 : Fin 2)\nlet mulT : T → T → T := fun a _ => a\nlet mulInst : Mul T := ⟨mulT⟩\nlet sg : SemigroupLike01 T := by\n  letI : Mul T := mulInst\n  refine\n    { mul := mulT\n      ax_left_idempotent := ?_\n      ax_right_absorb_duplicate := ?_\n      ax_middle_swap := ?_ }\n  · intro x\n    rfl\n  · intro x y\n    rfl\n  · intro x y z\n    rfl\nletI : SemigroupLike01 T := sg\nhave h' := h (α := T) a0 a1\nchange a0 = a1 at h'\nhave hne : a0 ≠ a1 := by\n  native_decide\nexact hne h'",
+      "counterexample_text": "Use the nontrivial model `T := ULift (Fin 2)` with multiplication defined by left projection: `x * y = x`. Then all three axioms hold, but `ULift.up 0 * ULift.up 1 = ULift.up 0` and `ULift.up 1 * ULift.up 0 = ULift.up 1`, so commutativity fails.",
+      "lean_error_excerpt": "",
       "lean_error_fingerprint": "no_diagnostics",
       "new_problems": []
     }
@@ -107,20 +69,20 @@
     {
       "result": "counterexample",
       "verify_success": false,
-      "proof_sketch": "Use the type `ULift Bool` with multiplication `x * y := x`. This satisfies all `SemigroupLike01` axioms by reflexivity. If a two-sided identity `e` existed, then from `e * true = true` and `e * false = false` we get `e = true` and `e = false`, hence `true = false`, impossible.",
-      "proof_text": "intro h\nlet T : Type u := ULift Bool\nlet s : SemigroupLike01 T :=\n  { mul := fun x _ => x\n    ax_left_idempotent := by\n      intro x\n      rfl\n    ax_right_absorb_duplicate := by\n      intro x y\n      rfl\n    ax_middle_swap := by\n      intro x y z\n      rfl }\nletI : SemigroupLike01 T := s\nobtain ⟨e, he⟩ := h (α := T)\nhave htrue : e = ULift.up true := by\n  have h := (he (ULift.up true)).1\n  change e = ULift.up true at h\n  exact h\nhave hfalse : e = ULift.up false := by\n  have h := (he (ULift.up false)).1\n  change e = ULift.up false at h\n  exact h\nhave htf : true = false := congrArg ULift.down (htrue.trans hfalse.symm)\ncases htf",
-      "counterexample_text": "Take `ULift Bool` with multiplication `x * y := x` (left projection). Then `x * x = x`, `x * (x * y) = x * y`, and `(x * y) * z = (x * z) * y` all hold. But any supposed identity `e` would satisfy `e * x = x`, which in this structure means `e = x` for every `x`, impossible since `true ≠ false`.",
-      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:30:62: error: Application type mismatch: The argument",
-      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:30:62: error: Application type mismatch: The argument | Eq.symm hfalse | has type",
+      "proof_sketch": "Use the universe-polymorphic countermodel `T := ULift Bool` with multiplication `x * y := x`. The three axioms hold by `rfl`. If the universal statement were true, this model would have an element `e` with `e * x = x` for all `x`. But under left projection, `e * x = e`, so in particular `e = ULift.up true` and `e = ULift.up false`, a contradiction.",
+      "proof_text": "intro h\nlet T : Type u := ULift Bool\nlet t : T := ULift.up true\nlet f : T := ULift.up false\nlet semigroupLikeT : SemigroupLike01 T :=\n  { mul := fun x y => x\n    ax_left_idempotent := by\n      intro x\n      rfl\n    ax_right_absorb_duplicate := by\n      intro x y\n      rfl\n    ax_middle_swap := by\n      intro x y z\n      rfl }\nletI : SemigroupLike01 T := semigroupLikeT\nobtain ⟨e, he⟩ := h (α := T)\nhave ht : e = t := by\n  simpa [t] using (he t).1\nhave hf : e = f := by\n  simpa [f] using (he f).1\nhave htf : t = f := ht.symm.trans hf\nhave htf' : (ULift.up true : T) = ULift.up false := by\n  simpa [t, f] using htf\ncases htf'",
+      "counterexample_text": "Take `α = ULift Bool` and define `x * y := x`. Then all three axioms are immediate, but no two-sided identity exists: `e * x = e` for every `x`, so `e * x = x` for all `x` would force all elements to be equal.",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:30:4: error: Type mismatch: After simplification, term",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:30:4: error: Type mismatch: After simplification, term | htf | has type",
       "new_problems": []
     },
     {
       "result": "counterexample",
       "verify_success": true,
-      "proof_sketch": "Use the model `ULift Bool` with multiplication given by left projection, `x * y = x`. All three axioms hold by reflexivity. If a two-sided identity `e` existed, then from `e * true = true` and `e * false = false` we get `e = true` and `e = false`, hence `true = false`, contradiction.",
-      "proof_text": "intro h\nlet T : Type u := ULift Bool\nlet s : SemigroupLike01 T :=\n  { mul := fun x _ => x\n    ax_left_idempotent := by\n      intro x\n      rfl\n    ax_right_absorb_duplicate := by\n      intro x y\n      rfl\n    ax_middle_swap := by\n      intro x y z\n      rfl }\nletI : SemigroupLike01 T := s\nobtain ⟨e, he⟩ := h (α := T)\nhave htrue : e = ULift.up true := by\n  have h := (he (ULift.up true)).1\n  change e = ULift.up true at h\n  exact h\nhave hfalse : e = ULift.up false := by\n  have h := (he (ULift.up false)).1\n  change e = ULift.up false at h\n  exact h\nhave htf' : (ULift.up true : T) = ULift.up false := htrue.symm.trans hfalse\nhave htf : true = false := congrArg ULift.down htf'\ncases htf",
-      "counterexample_text": "Take `ULift Bool` with multiplication `x * y := x`. Then `x * x = x`, `x * (x * y) = x * y`, and `(x * y) * z = (x * z) * y` all hold. But if `e` were a two-sided identity, then `e * x = x` forces `e = x` for every `x`. Applying this to `true` and `false` yields a contradiction.",
-      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:30:62: error: Application type mismatch: The argument",
+      "proof_sketch": "Use the universe-polymorphic model `T := ULift Bool` with multiplication `x * y := x`. The axioms hold by reflexivity. If a two-sided identity `e` existed, then from `e * t = t` and `e * f = f` we get `e = t` and `e = f`, hence `t = f`. Applying `ULift.down` yields `true = false`, contradiction.",
+      "proof_text": "intro h\nlet T : Type u := ULift Bool\nlet t : T := ULift.up true\nlet f : T := ULift.up false\nlet semigroupLikeT : SemigroupLike01 T :=\n  { mul := fun x y => x\n    ax_left_idempotent := by\n      intro x\n      rfl\n    ax_right_absorb_duplicate := by\n      intro x y\n      rfl\n    ax_middle_swap := by\n      intro x y z\n      rfl }\nletI : SemigroupLike01 T := semigroupLikeT\nobtain ⟨e, he⟩ := h (α := T)\nhave ht : e = t := by\n  simpa [t] using (he t).1\nhave hf : e = f := by\n  simpa [f] using (he f).1\nhave htf : t = f := ht.symm.trans hf\nhave hbool : true = false := by\n  simpa [t, f] using congrArg ULift.down htf\ncases hbool",
+      "counterexample_text": "Take `α = ULift Bool` with multiplication `x * y := x`. Then `x * x = x`, `x * (x * y) = x * y`, and `(x * y) * z = (x * z) * y` all hold definitionally. But any putative identity `e` would satisfy `e * x = e` for every `x`, so requiring `e * x = x` for all `x` forces all elements to be equal, impossible since `ULift.up true ≠ ULift.up false`.",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:30:4: error: Type mismatch: After simplification, term",
       "lean_error_fingerprint": "no_diagnostics",
       "new_problems": []
     }
@@ -143,11 +105,11 @@
     {
       "result": "counterexample",
       "verify_success": true,
-      "proof_sketch": "Use the standard countermodel on ULift Bool with multiplication x * y := x. Then x * y = e forces x = e, so applying the assumed statement at x = true and x = false makes both elements equal to the same e, contradiction.",
-      "proof_text": "intro h\nlet T : Type u := ULift Bool\nlet s : SemigroupLike01 T :=\n  { mul := fun x _ => x\n    ax_left_idempotent := by\n      intro x\n      rfl\n    ax_right_absorb_duplicate := by\n      intro x y\n      rfl\n    ax_middle_swap := by\n      intro x y z\n      rfl }\nletI : SemigroupLike01 T := s\nobtain ⟨e, he⟩ := h (α := T)\nhave htrue : (ULift.up true : T) = e := by\n  obtain ⟨y, hy⟩ := he (ULift.up true)\n  have hye := hy.1\n  change (ULift.up true : T) = e at hye\n  exact hye\nhave hfalse : (ULift.up false : T) = e := by\n  obtain ⟨y, hy⟩ := he (ULift.up false)\n  have hye := hy.1\n  change (ULift.up false : T) = e at hye\n  exact hye\nhave htf' : (ULift.up true : T) = ULift.up false := htrue.trans hfalse.symm\nhave htf : true = false := congrArg ULift.down htf'\ncases htf",
-      "counterexample_text": "Take α = ULift Bool with multiplication x * y := x. This satisfies the SemigroupLike01 axioms by rfl. For any e, the equation x * y = e reduces to x = e, so the required property can hold only for x = e. Applying it to both boolean values forces true = false.",
+      "proof_sketch": "Use `T := ULift Int` with multiplication induced by `min`. This satisfies the three `SemigroupLike01` axioms. If the target statement held, we would get some `e : T` such that for every `x : T` there is `y` with `x * y = e`. Unfolding the operation gives `min x.down y.down = e.down`, hence `e.down ≤ x.down` for every `x`. Taking `x = ULift.up (e.down - 1)` yields `e.down ≤ e.down - 1`, a contradiction by arithmetic.",
+      "proof_text": "intro h\nlet T : Type u := ULift Int\nlet mulT : T → T → T := fun a b => ULift.up (min a.down b.down)\nlet mulInst : Mul T := ⟨mulT⟩\nlet sg : SemigroupLike01 T := by\n  letI : Mul T := mulInst\n  refine\n    { mul := mulT\n      ax_left_idempotent := ?_\n      ax_right_absorb_duplicate := ?_\n      ax_middle_swap := ?_ }\n  · intro x\n    change ULift.up (min x.down x.down) = x\n    cases x\n    simp [mulT]\n  · intro x y\n    change ULift.up (min x.down (min x.down y.down)) = ULift.up (min x.down y.down)\n    simp [← min_assoc]\n  · intro x y z\n    change ULift.up (min (min x.down y.down) z.down) = ULift.up (min (min x.down z.down) y.down)\n    exact congrArg ULift.up (min_right_comm x.down y.down z.down)\nletI : SemigroupLike01 T := sg\nobtain ⟨e, he⟩ := h (α := T)\nhave hbelow : ∀ x : T, e.down ≤ x.down := by\n  intro x\n  obtain ⟨y, hxy, hyx⟩ := he x\n  change ULift.up (min x.down y.down) = e at hxy\n  have hxy' : min x.down y.down = e.down := by\n    simpa using congrArg ULift.down hxy\n  rw [← hxy']\n  exact min_le_left _ _\nhave hbad : e.down ≤ e.down - 1 := hbelow (ULift.up (e.down - 1))\nomega",
+      "counterexample_text": "Take `α = ULift Int` and define `x * y := ULift.up (min x.down y.down)`. This is a `SemigroupLike01` model, but any element `e` satisfying the target conclusion would force `e.down ≤ n` for every integer `n`, so `e.down` would be a least integer. Choosing `n = e.down - 1` shows this is impossible.",
       "lean_error_excerpt": "",
-      "lean_error_fingerprint": "no_diagnostics",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:21:12: warning: This simp argument is unused: | mulT | Hint: Omit it from the simp argument list.",
       "new_problems": []
     }
   ],
@@ -168,21 +130,11 @@
     },
     {
       "result": "counterexample",
-      "verify_success": false,
-      "proof_sketch": "Instantiate the universal claim at `α := ULift Bool` with left-projection multiplication and a constant-`false` join. For `x = true` and `y = z = false`, the claimed equality reduces to `ULift.up true = ULift.up false`, which is impossible.",
-      "proof_text": "intro h\nlet α : Type u := ULift Bool\nlet tt : α := ULift.up true\nlet ff : α := ULift.up false\nlet join : α → α → α := fun _ _ => ff\nlet model : SemigroupLike01 α :=\n  { mul := fun x _ => x\n    ax_left_idempotent := by\n      intro x\n      rfl\n    ax_right_absorb_duplicate := by\n      intro x y\n      rfl\n    ax_middle_swap := by\n      intro x y z\n      rfl }\nletI : SemigroupLike01 α := model\nhave htf : tt = ff := by\n  have h' := h (α := α) join tt ff ff\n  change tt = ff at h'\n  exact h'\ncases htf",
-      "counterexample_text": "Use `α = ULift Bool` so the countermodel lives in the ambient universe. Define `x * y := x`, which satisfies all three `SemigroupLike01` axioms by reflexivity. Let `join` be the constant function with value `ULift.up false`. Then at `x = ULift.up true` and `y = z = ULift.up false`, the claimed distributivity equation becomes `ULift.up true = ULift.up false`.",
-      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:28:2: error: Dependent elimination failed: Failed to solve equation",
-      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:28:2: error: Dependent elimination failed: Failed to solve equation | ff = tt",
-      "new_problems": []
-    },
-    {
-      "result": "counterexample",
       "verify_success": true,
-      "proof_sketch": "Instantiate the statement with `T := ULift Bool`, the semigroup operation `x * y := x`, and a constant join returning `ULift.up false`. Then the claimed identity at `x = ULift.up true` and `y = z = ULift.up false` reduces to `ULift.up true = ULift.up false`, and applying `ULift.down` yields `true = false`.",
-      "proof_text": "intro h\nlet T : Type u := ULift Bool\nlet join : T → T → T := fun _ _ => ULift.up false\nlet s : SemigroupLike01 T :=\n  { mul := fun x _ => x\n    ax_left_idempotent := by\n      intro x\n      rfl\n    ax_right_absorb_duplicate := by\n      intro x y\n      rfl\n    ax_middle_swap := by\n      intro x y z\n      rfl }\nletI : SemigroupLike01 T := s\nhave hc := h (α := T) join (ULift.up true) (ULift.up false) (ULift.up false)\nchange (ULift.up true : T) = ULift.up false at hc\nhave htf : true = false := congrArg ULift.down hc\ncases htf",
-      "counterexample_text": "Take `α = ULift Bool`, define multiplication by `x * y := x`, and define `join` to be constantly `ULift.up false`. The three `SemigroupLike01` axioms hold by reflexivity. For `x = ULift.up true` and `y = z = ULift.up false`, the target equation becomes `ULift.up true = ULift.up false`, which is impossible.",
-      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:28:2: error: Dependent elimination failed: Failed to solve equation",
+      "proof_sketch": "Refute the universal statement by taking a universe-polymorphic two-point type `T := ULift (Sum (Fin 1) (Fin 1))`, equipping it with left-projection multiplication `x * y := x`, and choosing `join` to be constant at one point `a`. Then for the other point `b`, the claimed equality forces `b = a`, which collapses to the impossible equation `Sum.inr 0 = Sum.inl 0`.",
+      "proof_text": "intro h\nlet T : Type u := ULift.{u, 0} (Sum (Fin 1) (Fin 1))\nlet a : T := ULift.up (Sum.inl 0)\nlet b : T := ULift.up (Sum.inr 0)\nlet join : T → T → T := fun _ _ => a\nlet inst : SemigroupLike01 T :=\n  { mul := fun x y => x\n    ax_left_idempotent := by\n      intro x\n      rfl\n    ax_right_absorb_duplicate := by\n      intro x y\n      rfl\n    ax_middle_swap := by\n      intro x y z\n      rfl }\nletI : SemigroupLike01 T := inst\nhave hEq : b * join a a = join (b * a) (b * a) :=\n  h (α := T) join b a a\nhave hba : b = a := by\n  simpa [a, b, join, inst] using hEq\nhave hs : (Sum.inr (0 : Fin 1) : Sum (Fin 1) (Fin 1)) = Sum.inl (0 : Fin 1) := by\n  simpa [a, b] using congrArg ULift.down hba\ncases hs",
+      "counterexample_text": "Use `T := ULift (Sum (Fin 1) (Fin 1))` with multiplication `x * y := x`. This satisfies all `SemigroupLike01` axioms by reflexivity. Let `a := ULift.up (Sum.inl 0)`, `b := ULift.up (Sum.inr 0)`, and define `join _ _ := a`. Then the target equation at `x = b`, `y = a`, `z = a` becomes `b = a`, impossible.",
+      "lean_error_excerpt": "",
       "lean_error_fingerprint": "no_diagnostics",
       "new_problems": []
     }
@@ -205,9 +157,9 @@
     {
       "result": "counterexample",
       "verify_success": true,
-      "proof_sketch": "Use the left-projection model on `ULift Bool`, with multiplication `x * y = x`. Then `x * y = x * z` is always true, so specializing to `x = true`, `y = false`, and `z = true` forces `false = true`.",
-      "proof_text": "intro h\nlet T : Type u := ULift Bool\nlet s : SemigroupLike01 T :=\n  { mul := fun x _ => x\n    ax_left_idempotent := by\n      intro x\n      rfl\n    ax_right_absorb_duplicate := by\n      intro x y\n      rfl\n    ax_middle_swap := by\n      intro x y z\n      rfl }\nletI : SemigroupLike01 T := s\nhave hc := h (α := T) (x := ULift.up true) (y := ULift.up false) (z := ULift.up true) rfl\nchange (ULift.up false : T) = ULift.up true at hc\nhave htf : false = true := congrArg ULift.down hc\ncases htf",
-      "counterexample_text": "Take `T := ULift Bool` and define multiplication by left projection: `x * y = x`. This satisfies all `SemigroupLike01` axioms. Then for `x = ULift.up true`, `y = ULift.up false`, and `z = ULift.up true`, the premise `x * y = x * z` holds by reflexivity, but the conclusion would give `ULift.up false = ULift.up true`, impossible.",
+      "proof_sketch": "Use the two-element left-projection model on ULift (Fin 2): define x * y = x. All SemigroupLike01 axioms hold by reflexivity. Then with x = a0, y = a0, z = a1, the premise x * y = x * z is true by rfl, so the statement would force a0 = a1, contradiction.",
+      "proof_text": "intro h\nlet T : Type u := ULift.{u, 0} (Fin 2)\nlet a0 : T := ULift.up (0 : Fin 2)\nlet a1 : T := ULift.up (1 : Fin 2)\nlet semigroupLikeT : SemigroupLike01 T :=\n  { mul := fun x _ => x\n    ax_left_idempotent := by\n      intro x\n      rfl\n    ax_right_absorb_duplicate := by\n      intro x y\n      rfl\n    ax_middle_swap := by\n      intro x y z\n      rfl }\nletI : SemigroupLike01 T := semigroupLikeT\nhave h01 : a0 = a1 := by\n  apply h (α := T) a0 a0 a1\n  rfl\nhave hne : a0 ≠ a1 := by\n  native_decide\nexact hne h01",
+      "counterexample_text": "Take T = ULift (Fin 2) with multiplication x * y = x. Then x * y ignores the right input, so left cancellation fails: for distinct a0 and a1, we have a0 * a0 = a0 * a1 but a0 ≠ a1.",
       "lean_error_excerpt": "",
       "lean_error_fingerprint": "no_diagnostics",
       "new_problems": []
@@ -231,8 +183,8 @@
     {
       "result": "proof",
       "verify_success": true,
-      "proof_sketch": "Introduce the type, instance, and element. Then use the class axiom `ax_left_idempotent`, which states `op x x = x`, and simplify `op` to `(*)`.",
-      "proof_text": "intro α _ x\nsimpa [AutomatedTheoryConstruction.op] using (SemigroupLike01.ax_left_idempotent (α := α) x)",
+      "proof_sketch": "Apply the class axiom `SemigroupLike01.ax_left_idempotent` to `x` and simplify the definition of `op`.",
+      "proof_text": "intro α _ x\nsimpa [AutomatedTheoryConstruction.op] using\n  (AutomatedTheoryConstruction.SemigroupLike01.ax_left_idempotent (α := α) x)",
       "counterexample_text": "",
       "lean_error_excerpt": "",
       "lean_error_fingerprint": "no_diagnostics",
@@ -255,36 +207,42 @@
       "new_problems": []
     },
     {
-      "stage": "statement_formalization",
-      "source_statement": "∀ {α : Type u} [SemigroupLike01 α], ∀ meet : α → α → α, ∀ x y : α, x * (meet x y) = x",
-      "formalized_statement": "∀ {α : Type u} [SemigroupLike01 α], ∀ meet : α → α → α, ∀ x y : α, x * (meet x y) = x",
-      "statement_formalization_notes": "Using the existing statement directly.",
-      "result": "ok",
-      "verify_success": true,
-      "proof_sketch": "",
-      "proof_text": "",
-      "counterexample_text": "",
-      "lean_error_excerpt": "",
-      "lean_error_fingerprint": "statement_formalization",
+      "result": "counterexample",
+      "verify_success": false,
+      "proof_sketch": "Instantiate the universal claim at `Bool` with multiplication `x * y := x && y` and `meet := fun _ _ => false`. The class axioms hold by case split, while the claimed conclusion at `x = true`, `y = true` simplifies to `false = true`.",
+      "proof_text": "intro h\nlet sg : AutomatedTheoryConstruction.SemigroupLike01 Bool :=\n  { mul := fun a b => a && b\n    ax_left_idempotent := by\n      intro x\n      cases x <;> rfl\n    ax_right_absorb_duplicate := by\n      intro x y\n      cases x <;> cases y <;> rfl\n    ax_middle_swap := by\n      intro x y z\n      cases x <;> cases y <;> cases z <;> rfl }\nletI : AutomatedTheoryConstruction.SemigroupLike01 Bool := sg\nhave hfalse : false = true := by\n  simpa using (h (α := Bool) (meet := fun _ _ : Bool => false) true true)\ncases hfalse",
+      "counterexample_text": "Use `Bool` with multiplication `x * y := x && y` and `meet := fun _ _ => false`. Then the SemigroupLike01 axioms are satisfied, but the target instance at `x = true`, `y = true` becomes `true && false = true`, i.e. `false = true`.",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:21:25: error: Application type mismatch: The argument",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:21:25: error: Application type mismatch: The argument | Bool | has type",
       "new_problems": []
     },
     {
-      "result": "stuck",
+      "result": "counterexample",
       "verify_success": false,
-      "proof_sketch": "The target quantifies over an arbitrary function `meet : α → α → α`, so it would force `x * z = x` for every possible element `z` that can appear as `meet x y`. But the axioms do not imply that `*` is always the left projection. A standard model is any commutative idempotent semigroup (a semilattice), because then `x * x = x`, `x * (x * y) = x * y`, and `(x * y) * z = (x * z) * y` all hold by associativity, commutativity, and idempotence. In such a model, `x * z = x` can fail for some `z`, so the statement is not provable.",
-      "proof_text": "",
-      "counterexample_text": "Take `α = Bool` with `*` defined as logical AND. This satisfies the axioms: AND is associative, commutative, and idempotent, so the duplicate-absorption and middle-swap laws hold. Now choose `meet := fun _ _ => false`, `x := true`, and any `y`. Then `x * (meet x y) = true && false = false`, which is not equal to `true`.",
-      "lean_error_excerpt": "formalize worker timeout: Worker returned error: Command '['codex', 'exec', '-', '--sandbox', 'read-only', '--skip-git-repo-check', '--output-last-message', '/var/folders/2_/c2t72bmn00j3z7cnkfvqvyj80000gn/T/tmpoq4dc3d0']' timed out after 390 seconds",
-      "lean_error_fingerprint": "formalizer_timeout",
+      "proof_sketch": "The counterexample still works, but it must respect the ambient universe `u`. Use `ULift Bool` instead of `Bool`, define multiplication by lifted Boolean conjunction, and take `meet` to be the constant `false`. Then the axioms hold by case split, while the claimed conclusion at `x = true`, `y = true` yields `false = true`.",
+      "proof_text": "intro h\nlet sg : SemigroupLike01 (ULift Bool) :=\n  { mul := fun a b => ⟨a.down && b.down⟩\n    ax_left_idempotent := by\n      intro x\n      cases x with\n      | up b =>\n          cases b <;> rfl\n    ax_right_absorb_duplicate := by\n      intro x y\n      cases x with\n      | up a =>\n          cases y with\n          | up b =>\n              cases a <;> cases b <;> rfl\n    ax_middle_swap := by\n      intro x y z\n      cases x with\n      | up a =>\n          cases y with\n          | up b =>\n              cases z with\n              | up c =>\n                  cases a <;> cases b <;> cases c <;> rfl }\nletI : SemigroupLike01 (ULift Bool) := sg\nhave hfalse : (⟨false⟩ : ULift Bool) = ⟨true⟩ := by\n  simpa using (h (α := ULift Bool) (meet := fun _ _ : ULift Bool => ⟨false⟩) ⟨true⟩ ⟨true⟩)\ncases hfalse",
+      "counterexample_text": "Take `α := ULift Bool` so the model lives in the required universe `Type u`. Define `x * y` by lifting `x.down && y.down`, and let `meet := fun _ _ => false`. The three `SemigroupLike01` axioms are verified by finite case split. For `x = true` and `y = true`, the target equation becomes `true && false = true`, hence `false = true`.",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:33:4: error: Type mismatch: After simplification, term",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:33:4: error: Type mismatch: After simplification, term | h (fun x x_1 => { down := false }) { down := true } { down := true } | has type",
+      "new_problems": []
+    },
+    {
+      "result": "counterexample",
+      "verify_success": true,
+      "proof_sketch": "Use the universe-polymorphic countermodel `α := ULift.{u} Bool` with multiplication given by lifted Boolean conjunction and choose `meet` to be the constant `false`. The class axioms hold by finite case split, but at `x = true`, `y = true` the conclusion becomes `true * false = true`, which definitionally reduces to `false = true`.",
+      "proof_text": "intro h\nlet α := ULift.{u} Bool\nlet sg : SemigroupLike01 α :=\n  { mul := fun a b => ⟨a.down && b.down⟩\n    ax_left_idempotent := by\n      intro x\n      cases x with\n      | up b =>\n          cases b <;> rfl\n    ax_right_absorb_duplicate := by\n      intro x y\n      cases x with\n      | up a =>\n          cases y with\n          | up b =>\n              cases a <;> cases b <;> rfl\n    ax_middle_swap := by\n      intro x y z\n      cases x with\n      | up a =>\n          cases y with\n          | up b =>\n              cases z with\n              | up c =>\n                  cases a <;> cases b <;> cases c <;> rfl }\nletI : SemigroupLike01 α := sg\nhave hbad : ((⟨true⟩ : α) * ⟨false⟩) = (⟨true⟩ : α) :=\n  h (α := α) (meet := fun _ _ : α => ⟨false⟩) ⟨true⟩ ⟨true⟩\nchange ((⟨false⟩ : α) = (⟨true⟩ : α)) at hbad\ncases hbad",
+      "counterexample_text": "Take `α := ULift.{u} Bool`, define `a * b := ULift.up (a.down && b.down)`, and let `meet` be the constant `ULift.up false`. The three `SemigroupLike01` axioms are verified by case analysis on booleans. Then the claimed universal law instantiated at `x = ULift.up true` and `y = ULift.up true` yields `ULift.up false = ULift.up true`, a contradiction.",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:33:4: error: Type mismatch: After simplification, term",
+      "lean_error_fingerprint": "no_diagnostics",
       "new_problems": []
     }
   ],
   "op_000009": [
     {
       "stage": "statement_formalization",
-      "source_statement": "Let α = {0,1,2} and define a binary operation * on α by the Cayley table rows 0:[0,0,0], 1:[0,1,0], 2:[0,2,2]. Then for all x y z : α, one has x * x = x, x * (x * y) = x * y, and (x * y) * z = (x * z) * y.",
-      "formalized_statement": "let mul : Fin 3 → Fin 3 → Fin 3 := fun x y => if x = 0 then 0 else if x = 1 then if y = 1 then 1 else 0 else if y = 0 then 0 else 2; (∀ x : Fin 3, mul x x = x) ∧ (∀ x y : Fin 3, mul x (mul x y) = mul x y) ∧ ∀ x y z : Fin 3, mul (mul x y) z = mul (mul x z) y",
-      "statement_formalization_notes": "Formalized {0,1,2} as Fin 3 and encoded the Cayley table by an explicit binary operation.",
+      "source_statement": "∀ {α : Type u} [SemigroupLike01 α], (∀ x y : α, x * y = y * x) → ∀ x y z : α, (x * y) * z = x * (y * z)",
+      "formalized_statement": "∀ {α : Type u} [SemigroupLike01 α], (∀ x y : α, x * y = y * x) → ∀ x y z : α, (x * y) * z = x * (y * z)",
+      "statement_formalization_notes": "Using the existing statement directly.",
       "result": "ok",
       "verify_success": true,
       "proof_sketch": "",
@@ -297,8 +255,8 @@
     {
       "result": "proof",
       "verify_success": true,
-      "proof_sketch": "The statement is a closed decidable proposition over `Fin 3` with an explicit operation, so exhaustive computation discharges it directly.",
-      "proof_text": "native_decide",
+      "proof_sketch": "Rewrite the left factor using commutativity, apply the middle-swap axiom in the form `(y * x) * z = (y * z) * x`, and then commute the final product once more.",
+      "proof_text": "intro α _ hcomm x y z\ncalc\n  (x * y) * z = (y * x) * z := by rw [hcomm x y]\n  _ = (y * z) * x := by simpa [op] using (SemigroupLike01.ax_middle_swap y x z)\n  _ = x * (y * z) := by rw [hcomm (y * z) x]",
       "counterexample_text": "",
       "lean_error_excerpt": "",
       "lean_error_fingerprint": "no_diagnostics",
@@ -308,9 +266,9 @@
   "op_000010": [
     {
       "stage": "statement_formalization",
-      "source_statement": "Let α = {0,1,2} with the binary operation given by the Cayley table rows 0:[0,0,0], 1:[0,1,0], 2:[0,2,2]. Then ((2 * 1) * 2) ≠ (2 * (1 * 2)).",
-      "formalized_statement": "letI : Mul (Fin 3) := ⟨fun x y => if x = 0 then 0 else if x = 1 then if y = 1 then 1 else 0 else if y = 0 then 0 else 2⟩; (((2 : Fin 3) * 1) * 2 : Fin 3) ≠ (2 : Fin 3) * ((1 : Fin 3) * 2)",
-      "statement_formalization_notes": "Formalized the 3-element Cayley table as a local multiplication on `Fin 3` and stated the required non-associativity instance.",
+      "source_statement": "∀ {α : Type u} [SemigroupLike01 α] [Fintype α], (∃ x y z : α, (x * y) * z ≠ x * (y * z)) → 3 ≤ Fintype.card α",
+      "formalized_statement": "∀ {α : Type u} [SemigroupLike01 α] [Fintype α], (∃ x y z : α, (x * y) * z ≠ x * (y * z)) → 3 ≤ Fintype.card α",
+      "statement_formalization_notes": "Using the existing statement directly.",
       "result": "ok",
       "verify_success": true,
       "proof_sketch": "",
@@ -322,71 +280,21 @@
     },
     {
       "result": "proof",
-      "verify_success": false,
-      "proof_sketch": "The statement is a closed decidable proposition on `Fin 3` with an explicit local multiplication, so direct computation closes it.",
-      "proof_text": "native_decide",
+      "verify_success": true,
+      "proof_sketch": "Assume a nonassociative triple exists but the finite type has cardinality at most 2. In any type with at most two elements, any three elements must contain a repeated pair. Case-splitting on which pair among x,y,z is equal, the three axioms force associativity in each case. This contradicts the chosen nonassociative witness, so the cardinality must be at least 3.",
+      "proof_text": "intro α _ _ hnonassoc\nclassical\nhave hxx : ∀ t : α, t * t = t := by\n  intro t\n  simpa [AutomatedTheoryConstruction.op] using\n    (SemigroupLike01.ax_left_idempotent (α := α) t)\nhave habs : ∀ a b : α, a * (a * b) = a * b := by\n  intro a b\n  simpa [AutomatedTheoryConstruction.op] using\n    (SemigroupLike01.ax_right_absorb_duplicate (α := α) a b)\nhave hswap : ∀ a b c : α, (a * b) * c = (a * c) * b := by\n  intro a b c\n  simpa [AutomatedTheoryConstruction.op] using\n    (SemigroupLike01.ax_middle_swap (α := α) a b c)\nby_contra hlt\nhave hcard : Fintype.card α ≤ 2 := by\n  omega\nhave hpair : ∀ a b c : α, a = b ∨ b = c ∨ a = c := by\n  intro a b c\n  by_contra h\n  push_neg at h\n  have h3 : 3 ≤ Fintype.card α := by\n    calc\n      3 = ({a, b, c} : Finset α).card := by\n        simp [h.1, h.2.1, h.2.2]\n      _ ≤ Fintype.card α := Finset.card_le_univ _\n  omega\nobtain ⟨x, y, z, hne⟩ := hnonassoc\nhave hassoc : (x * y) * z = x * (y * z) := by\n  rcases hpair x y z with hxy | hyz | hxz\n  · calc\n      (x * y) * z = (x * x) * z := by simpa [hxy]\n      _ = x * z := by rw [hxx x]\n      _ = x * (x * z) := by simpa using (habs x z).symm\n      _ = x * (y * z) := by simpa [hxy]\n  · calc\n      (x * y) * z = (x * y) * y := by simpa [hyz]\n      _ = x * y := by\n        have hmul : x * y = x ∨ x * y = y := by\n          rcases hpair (x * y) x y with h | h | h\n          · exact Or.inl h\n          · exact Or.inl <| by simpa [h] using hxx x\n          · exact Or.inr h\n        rcases hmul with h | h\n        · rw [h, h]\n        · rw [h, hxx y]\n      _ = x * (y * y) := by rw [hxx y]\n      _ = x * (y * z) := by simpa [hyz]\n  · calc\n      (x * y) * z = (x * y) * x := by simpa [hxz]\n      _ = (x * x) * y := by simpa using hswap x y x\n      _ = x * y := by rw [hxx x]\n      _ = x * (y * x) := by\n        have hyx : y * x = x ∨ y * x = y := by\n          rcases hpair (y * x) x y with h | h | h\n          · exact Or.inl h\n          · exact Or.inl <| by simpa [h] using hxx y\n          · exact Or.inr h\n        rcases hyx with h | h\n        · have hxy' : x * y = x := by\n            have hyxy : (y * x) * y = y * x := by\n              calc\n                (y * x) * y = (y * y) * x := by simpa using hswap y x y\n                _ = y * x := by rw [hxx y]\n            simpa [h] using hyxy\n          rw [h, hxy', hxx x]\n        · rw [h]\n      _ = x * (y * z) := by simpa [hxz]\nexact hne hassoc",
       "counterexample_text": "",
-      "lean_error_excerpt": "formalization failed before Lean check",
-      "lean_error_fingerprint": "formalization_failed_before_lean",
-      "new_problems": []
-    },
-    {
-      "result": "proof",
-      "verify_success": false,
-      "proof_sketch": "The statement is a closed decidable proposition on `Fin 3` with an explicit local multiplication. The two sides reduce to different elements, so `decide` closes the goal directly.",
-      "proof_text": "decide",
-      "counterexample_text": "",
-      "lean_error_excerpt": "formalization failed before Lean check",
-      "lean_error_fingerprint": "formalization_failed_before_lean",
-      "new_problems": []
-    },
-    {
-      "result": "proof",
-      "verify_success": false,
-      "proof_sketch": "The statement is a closed decidable proposition on `Fin 3` with an explicit local multiplication, and direct computation shows the two sides are different. `decide` proves it.",
-      "proof_text": "decide",
-      "counterexample_text": "",
-      "lean_error_excerpt": "formalization failed before Lean check",
-      "lean_error_fingerprint": "formalization_failed_before_lean",
-      "new_problems": []
-    },
-    {
-      "result": "proof",
-      "verify_success": false,
-      "proof_sketch": "The proposition is a closed decidable statement on `Fin 3` with an explicit local multiplication. Lean can evaluate both sides directly, and they are unequal, so `decide` proves it.",
-      "proof_text": "decide",
-      "counterexample_text": "",
-      "lean_error_excerpt": "formalization failed before Lean check",
-      "lean_error_fingerprint": "formalization_failed_before_lean",
-      "new_problems": []
-    },
-    {
-      "result": "stuck",
-      "verify_success": false,
-      "proof_sketch": "The statement is a closed decidable inequality and the intended computation is fine, but this pipeline rejects the fixed stmt before Lean because it contains no ∀ or ∃ quantifier. Since stmt cannot be rewritten here, no proof_text can be meaningfully checked in the current repair step.",
-      "proof_text": "",
-      "counterexample_text": "In the given Fin 3 multiplication, (2 * 1) = 2, so ((2 * 1) * 2) = 2, while (1 * 2) = 0, so 2 * (1 * 2) = 0. The mathematical direction is correct; the blocker is the upstream formalizability gate, not the countermodel.",
-      "lean_error_excerpt": "formalization failed before Lean check",
-      "lean_error_fingerprint": "formalization_failed_before_lean",
-      "new_problems": []
-    },
-    {
-      "result": "proof",
-      "verify_success": false,
-      "proof_sketch": "The statement is a closed decidable proposition on `Fin 3` with an explicit local multiplication. Lean evaluates the two sides to different values, so direct computation closes the goal.",
-      "proof_text": "decide",
-      "counterexample_text": "",
-      "lean_error_excerpt": "formalization failed before Lean check",
-      "lean_error_fingerprint": "formalization_failed_before_lean",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:38:40: warning: try 'simp' instead of 'simpa' | Note: This linter can be disabled with `set_option linter.unnecessarySimpa false` | AutomatedTheoryConstruction/Scratch.lean:41:30: warning: try 'simp' instead of 'simpa'",
       "new_problems": []
     }
   ],
   "op_000011": [
     {
       "stage": "statement_formalization",
-      "source_statement": "For every type `α`, there exists a `SemigroupLike01 α` structure whose multiplication satisfies `x * y = x` for all `x y : α`.",
-      "formalized_statement": "∀ α : Type u, ∃ s : AutomatedTheoryConstruction.SemigroupLike01 α, letI := s.toMul; ∀ x y : α, x * y = x",
-      "statement_formalization_notes": "Formalized as existence of a SemigroupLike01 instance on each type, with the induced multiplication explicitly required to be left projection.",
+      "source_statement": "For every type α, there exists a SemigroupLike01 structure on α such that ∀ x y : α, x * y = x.",
+      "formalized_statement": "For every type α, there exists a SemigroupLike01 structure on α such that ∀ x y : α, x * y = x.",
+      "statement_formalization_notes": "Using the existing statement directly.",
       "result": "ok",
       "verify_success": true,
       "proof_sketch": "",
@@ -398,21 +306,91 @@
     },
     {
       "result": "proof",
-      "verify_success": true,
-      "proof_sketch": "Construct a SemigroupLike01 structure on any type by taking multiplication to be left projection, `mul x y = x`. Then all three axioms and the target identity `x * y = x` are definitional equalities.",
-      "proof_text": "intro α\nrefine ⟨{\n  mul := fun x _ => x\n  ax_left_idempotent := ?_\n  ax_right_absorb_duplicate := ?_\n  ax_middle_swap := ?_\n}, ?_⟩\n· intro x\n  rfl\n· intro x y\n  rfl\n· intro x y z\n  rfl\n· intro x y\n  rfl",
+      "verify_success": false,
+      "proof_sketch": "Construct the SemigroupLike01 structure on any type by taking multiplication to be the left projection, `fun x y => x`. Then all three axioms and the target identity `x * y = x` are definitional equalities, so each goal closes by `rfl`.",
+      "proof_text": "intro α\nrefine ⟨{ mul := fun x _ => x\n  ax_left_idempotent := by\n    intro x\n    rfl\n  ax_right_absorb_duplicate := by\n    intro x y\n    rfl\n  ax_middle_swap := by\n    intro x y z\n    rfl }, ?_⟩\nintro x y\nrfl",
       "counterexample_text": "",
-      "lean_error_excerpt": "",
-      "lean_error_fingerprint": "no_diagnostics",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:6:40: error: unexpected token ','; expected ':=', 'where' or '|'",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:6:40: error: unexpected token ','; expected ':=', 'where' or '|' | AutomatedTheoryConstruction/Scratch.lean:6:24: error: Function expected at | For",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": false,
+      "proof_sketch": "Use the left-projection multiplication on an arbitrary type: define `x * y := x`. Then the three `SemigroupLike01` axioms and the target identity `x * y = x` are all definitional equalities.",
+      "proof_text": "intro α\nlet s : SemigroupLike01 α :=\n  { mul := fun x _ => x\n    ax_left_idempotent := by\n      intro x\n      rfl\n    ax_right_absorb_duplicate := by\n      intro x y\n      rfl\n    ax_middle_swap := by\n      intro x y z\n      rfl }\nrefine ⟨s, ?_⟩\nintro x y\nrfl",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:7:40: error: unexpected token ','; expected ':=', 'where' or '|'",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:7:40: error: unexpected token ','; expected ':=', 'where' or '|' | AutomatedTheoryConstruction/Scratch.lean:7:24: error: Function expected at | For",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": false,
+      "proof_sketch": "For an arbitrary type α, choose multiplication to be the left projection `fun x _ => x`. Then the three `SemigroupLike01` axioms and the required identity `x * y = x` are all definitional equalities, so each goal is closed by `rfl`.",
+      "proof_text": "intro α\nrefine ⟨{ mul := fun x _ => x\n        ax_left_idempotent := ?_\n        ax_right_absorb_duplicate := ?_\n        ax_middle_swap := ?_ }, ?_⟩\n· intro x\n  rfl\n· intro x y\n  rfl\n· intro x y z\n  rfl\n· intro x y\n  rfl",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:7:40: error: unexpected token ','; expected ':=', 'where' or '|'",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:7:40: error: unexpected token ','; expected ':=', 'where' or '|' | AutomatedTheoryConstruction/Scratch.lean:7:24: error: Function expected at | For",
+      "new_problems": []
+    },
+    {
+      "result": "stuck",
+      "verify_success": false,
+      "proof_sketch": "The intended argument is to equip any type with left-projection multiplication `fun x _ => x`, which would make all axioms and the target equation definitional. However, the current theorem statement is still natural language (`For every type α, ...`) rather than a Lean proposition, so the file fails to parse before any tactic proof can run. This cannot be repaired by changing only the `by`-block body.",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:7:58: error: unexpected token 'exists'; expected ')'",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:7:58: error: unexpected token 'exists'; expected ')' | AutomatedTheoryConstruction/Scratch.lean:7:104: error(lean.inferBinderTypeFailed): Failed to infer type of binder `that` | AutomatedTheoryConstruction/Scratch.lean:7:99: error(lean.inferBinderTypeFailed): Failed to infer type of binder `such`",
+      "new_problems": []
+    },
+    {
+      "result": "stuck",
+      "verify_success": false,
+      "proof_sketch": "The target in `stmt` is still raw natural language rather than a Lean proposition, so Lean fails to parse before any tactic proof can begin. Mathematically, once formalized, the statement is true by taking `mul := fun x _ => x`, so the current negated direction in `current_scratch_code` is not defensible; however, under the fixed `stmt` policy, this cannot be repaired from the `by` block alone.",
+      "proof_text": "",
+      "counterexample_text": "No genuine counterexample is expected after proper formalization: for any type `α`, the left-projection multiplication gives a `SemigroupLike01` structure with `∀ x y, x * y = x` by `rfl`.",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:7:58: error: unexpected token 'exists'; expected ')'",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:7:58: error: unexpected token 'exists'; expected ')' | AutomatedTheoryConstruction/Scratch.lean:7:104: error(lean.inferBinderTypeFailed): Failed to infer type of binder `that` | AutomatedTheoryConstruction/Scratch.lean:7:99: error(lean.inferBinderTypeFailed): Failed to infer type of binder `such`",
+      "new_problems": []
+    },
+    {
+      "result": "stuck",
+      "verify_success": false,
+      "proof_sketch": "The fixed `stmt` is still raw English rather than a Lean proposition, and the diagnostics show a parser failure at the statement itself (`unexpected token 'exists'`, then binder-inference errors for `such` and `that`). Because `stmt` may not be rewritten here, no tactic code can repair this from the `by` block alone. If the statement were formalized, the intended direction would be a proof by giving multiplication `fun x _ => x`.",
+      "proof_text": "",
+      "counterexample_text": "No genuine counterexample is expected after proper formalization. For any type `α`, define `x * y := x`; then `ax_left_idempotent`, `ax_right_absorb_duplicate`, `ax_middle_swap`, and `∀ x y, x * y = x` all hold by definitional equality.",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:7:58: error: unexpected token 'exists'; expected ')'",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:7:58: error: unexpected token 'exists'; expected ')' | AutomatedTheoryConstruction/Scratch.lean:7:104: error(lean.inferBinderTypeFailed): Failed to infer type of binder `that` | AutomatedTheoryConstruction/Scratch.lean:7:99: error(lean.inferBinderTypeFailed): Failed to infer type of binder `such`",
+      "new_problems": []
+    },
+    {
+      "result": "stuck",
+      "verify_success": false,
+      "proof_sketch": "The fixed `stmt` is still natural-language text, not a Lean proposition. The reported errors occur while parsing the theorem statement itself (`exists`, `such`, `that`, `∀`), before Lean reaches the `by` block, so no tactic body can repair this. If the statement were formalized, the intended mathematical direction would be a proof by giving multiplication `fun x _ => x`.",
+      "proof_text": "",
+      "counterexample_text": "No genuine counterexample is expected after proper formalization. For any type `α`, defining `x * y := x` yields a `SemigroupLike01` structure, and the axioms together with `∀ x y, x * y = x` hold by definitional equality.",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:7:58: error: unexpected token 'exists'; expected ')'",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:7:58: error: unexpected token 'exists'; expected ')' | AutomatedTheoryConstruction/Scratch.lean:7:104: error(lean.inferBinderTypeFailed): Failed to infer type of binder `that` | AutomatedTheoryConstruction/Scratch.lean:7:99: error(lean.inferBinderTypeFailed): Failed to infer type of binder `such`",
+      "new_problems": []
+    },
+    {
+      "result": "stuck",
+      "verify_success": false,
+      "proof_sketch": "The fixed `stmt` is still natural-language text rather than a Lean proposition. Lean fails while parsing the statement itself (`exists`, `such`, `that`, `∀`) before any `by`-block tactic code can run, so this repair cannot be completed from `proof_text` alone. If the statement were formalized, the intended direction would be a proof by taking `mul := fun x _ => x`.",
+      "proof_text": "",
+      "counterexample_text": "No genuine counterexample is expected after proper formalization. For any type `α`, defining `x * y := x` gives a `SemigroupLike01` structure, and the axioms together with `∀ x y, x * y = x` hold by definitional equality.",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:7:58: error: unexpected token 'exists'; expected ')'",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:7:58: error: unexpected token 'exists'; expected ')' | AutomatedTheoryConstruction/Scratch.lean:7:104: error(lean.inferBinderTypeFailed): Failed to infer type of binder `that` | AutomatedTheoryConstruction/Scratch.lean:7:99: error(lean.inferBinderTypeFailed): Failed to infer type of binder `such`",
       "new_problems": []
     }
   ],
   "op_000012": [
     {
       "stage": "statement_formalization",
-      "source_statement": "For every type `α`, if there exist distinct elements `a b : α`, then there exists a `SemigroupLike01 α` structure on `α` and elements `x y : α` such that `x * y ≠ y * x`.",
-      "formalized_statement": "∀ α : Type u, (∃ a b : α, a ≠ b) → ∃ s : AutomatedTheoryConstruction.SemigroupLike01 α, letI := s.toMul; ∃ x y : α, x * y ≠ y * x",
-      "statement_formalization_notes": "Formalized distinct elements as ∃ a b, a ≠ b and introduced the Mul instance via letI from the existential SemigroupLike01 structure.",
+      "source_statement": "For every type α with two distinct elements, there exists a SemigroupLike01 structure on α such that (∀ a b c : α, (a * b) * c = a * (b * c)) and (∃ x y : α, x * y ≠ y * x).",
+      "formalized_statement": "For every type α with two distinct elements, there exists a SemigroupLike01 structure on α such that (∀ a b c : α, (a * b) * c = a * (b * c)) and (∃ x y : α, x * y ≠ y * x).",
+      "statement_formalization_notes": "Using the existing statement directly.",
       "result": "ok",
       "verify_success": true,
       "proof_sketch": "",
@@ -425,29 +403,69 @@
     {
       "result": "proof",
       "verify_success": false,
-      "proof_sketch": "Use `thm_op_000011` to obtain a `SemigroupLike01` structure on `α` with left-projection multiplication. For distinct `a b`, after installing `s.toMul` we have `a * b = a` and `b * a = b`, so `a ≠ b` gives `a * b ≠ b * a`.",
-      "proof_text": "intro α hne\nrcases hne with ⟨a, b, hab⟩\nrcases thm_op_000011 α with ⟨s, hs⟩\nrefine ⟨s, ?_⟩\nletI := s.toMul\nrefine ⟨a, b, ?_⟩\nsimpa [hs a b, hs b a] using hab",
+      "proof_sketch": "Use the left-projection operation `x * y := x`. This satisfies the `SemigroupLike01` axioms by reflexivity, associativity is also by reflexivity, and if `x ≠ y` then `x * y = x` while `y * x = y`, so the operation is noncommutative.",
+      "proof_text": "intro α hα\nlet mul : α → α → α := fun x _ => x\nlet inst : SemigroupLike01 α :=\n  { mul := mul\n    ax_left_idempotent := by\n      intro x\n      rfl\n    ax_right_absorb_duplicate := by\n      intro x y\n      rfl\n    ax_middle_swap := by\n      intro x y z\n      rfl }\nrefine ⟨inst, ?_⟩\nletI : SemigroupLike01 α := inst\nconstructor\n· intro a b c\n  rfl\n· rcases hα with ⟨x, y, hxy⟩\n  refine ⟨x, y, ?_⟩\n  simpa [inst, mul] using hxy",
       "counterexample_text": "",
-      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:9:9: error(lean.unknownIdentifier): Unknown identifier `thm_op_000011`",
-      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:9:9: error(lean.unknownIdentifier): Unknown identifier `thm_op_000011` | AutomatedTheoryConstruction/Scratch.lean:9:30: error: Tactic `rcases` failed: `x✝ : ?m.38` is not an inductive datatype",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:6:40: error: unexpected token 'with'; expected ':=', 'where' or '|'",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:6:40: error: unexpected token 'with'; expected ':=', 'where' or '|' | AutomatedTheoryConstruction/Scratch.lean:6:24: error: Function expected at | For",
       "new_problems": []
     },
     {
-      "result": "proof",
-      "verify_success": true,
-      "proof_sketch": "Construct a SemigroupLike01 structure on α with left-projection multiplication x * y := x. Its axioms are immediate by reflexivity. From distinct a and b in the hypothesis, choose x = a and y = b; then a * b = a and b * a = b, so a * b ≠ b * a follows from a ≠ b.",
-      "proof_text": "intro α hne\nrcases hne with ⟨a, b, hab⟩\nlet s : SemigroupLike01 α :=\n  { mul := fun x _ => x\n    ax_left_idempotent := by\n      intro x\n      rfl\n    ax_right_absorb_duplicate := by\n      intro x y\n      rfl\n    ax_middle_swap := by\n      intro x y z\n      rfl }\nrefine ⟨s, ?_⟩\nletI : Mul α := s.toMul\nrefine ⟨a, b, ?_⟩\nchange a ≠ b\nexact hab",
-      "counterexample_text": "",
-      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:9:9: error(lean.unknownIdentifier): Unknown identifier `thm_op_000011`",
-      "lean_error_fingerprint": "no_diagnostics",
+      "result": "stuck",
+      "verify_success": false,
+      "proof_sketch": "The intended proof idea is sound: use the left-projection operation `x * y := x`, which satisfies the `SemigroupLike01` axioms, is associative, and is noncommutative when `x ≠ y`. However, the current `stmt` is still English text rather than a Lean proposition, and the diagnostics show parsing fails in the theorem statement before the tactic body is checked.",
+      "proof_text": "",
+      "counterexample_text": "If the statement is later formalized in Lean, the proof direction should remain `proof`, with the left-projection structure as the witness.",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:7:51: error: unexpected token 'with'; expected ')', ',' or ':'",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:7:51: error: unexpected token 'with'; expected ')', ',' or ':' | AutomatedTheoryConstruction/Scratch.lean:7:137: error: unexpected token '∀'; expected '_' or identifier",
+      "new_problems": []
+    },
+    {
+      "result": "stuck",
+      "verify_success": false,
+      "proof_sketch": "The natural-language argument supports the proof direction: on any type with distinct x and y, define x * y := x. This operation is associative, satisfies the three SemigroupLike01 axioms by reflexivity, and is noncommutative because x * y = x and y * x = y. However, the current stmt is still English text, not a Lean proposition, so the theorem declaration does not parse and no tactic proof body can be checked.",
+      "proof_text": "",
+      "counterexample_text": "No counterexample is indicated. Once the statement is formalized in Lean, the intended result should remain proof, using the left-projection SemigroupLike01 structure as the witness.",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:7:51: error: unexpected token 'with'; expected ')', ',' or ':'",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:7:51: error: unexpected token 'with'; expected ')', ',' or ':' | AutomatedTheoryConstruction/Scratch.lean:7:137: error: unexpected token '∀'; expected '_' or identifier",
+      "new_problems": []
+    },
+    {
+      "result": "stuck",
+      "verify_success": false,
+      "proof_sketch": "The intended mathematical direction is still the proof direction: on any type with distinct elements, the left-projection operation `x * y := x` gives a `SemigroupLike01` structure, is associative, and is noncommutative. However, the fixed `stmt` is still English text rather than a Lean proposition, and Lean fails while parsing the theorem statement itself (`unexpected token 'with'`, then `unexpected token '∀'`). Because `stmt` cannot be rewritten here, there is no valid tactic body to supply.",
+      "proof_text": "",
+      "counterexample_text": "No semantic counterexample is indicated. The blocker is syntactic: the current statement is not formalized in Lean, so neither a proof nor a proof of its negation can be checked.",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:7:51: error: unexpected token 'with'; expected ')', ',' or ':'",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:7:51: error: unexpected token 'with'; expected ')', ',' or ':' | AutomatedTheoryConstruction/Scratch.lean:7:137: error: unexpected token '∀'; expected '_' or identifier",
+      "new_problems": []
+    },
+    {
+      "result": "stuck",
+      "verify_success": false,
+      "proof_sketch": "The mathematical direction remains the proof direction: if the statement were formalized in Lean, the witness would be the left-projection operation `x * y := x`, which satisfies the three `SemigroupLike01` axioms by reflexivity, is associative by reflexivity, and is noncommutative whenever `x ≠ y`. However, the fixed `stmt` is still natural-language English rather than a Lean proposition, and the reported diagnostics show parsing fails in the theorem statement itself before any tactic code is checked.",
+      "proof_text": "",
+      "counterexample_text": "No semantic counterexample is indicated. The blocker is syntactic: the current statement is not a Lean term, so neither a proof of `stmt` nor a proof of `¬ stmt` can be formalized until the statement itself is translated into Lean syntax.",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:7:51: error: unexpected token 'with'; expected ')', ',' or ':'",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:7:51: error: unexpected token 'with'; expected ')', ',' or ':' | AutomatedTheoryConstruction/Scratch.lean:7:137: error: unexpected token '∀'; expected '_' or identifier",
+      "new_problems": []
+    },
+    {
+      "result": "stuck",
+      "verify_success": false,
+      "proof_sketch": "The mathematical content supports the proof direction: on any type with distinct x and y, the left-projection operation x * y := x gives a SemigroupLike01 structure, is associative, and is noncommutative because x * y = x while y * x = y. However, the fixed stmt is still English text rather than a Lean proposition, and the current Scratch theorem fails during parsing before any tactic body is elaborated. Under the contract that stmt may not be rewritten, no valid Lean tactic code can be supplied.",
+      "proof_text": "",
+      "counterexample_text": "No semantic counterexample is indicated. The blocker is syntactic: the theorem statement is not a Lean term, so neither a proof of stmt nor a proof of its negation can be formalized until the statement itself is translated into Lean syntax.",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:7:51: error: unexpected token 'with'; expected ')', ',' or ':'",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:7:51: error: unexpected token 'with'; expected ')', ',' or ':' | AutomatedTheoryConstruction/Scratch.lean:7:137: error: unexpected token '∀'; expected '_' or identifier",
       "new_problems": []
     }
   ],
   "op_000013": [
     {
       "stage": "statement_formalization",
-      "source_statement": "∃ (α : Type) (_ : SemigroupLike01 α), ¬ ∃ e : α, ∀ x : α, e * x = x ∧ x * e = x",
-      "formalized_statement": "∃ (α : Type) (_ : SemigroupLike01 α), ¬ ∃ e : α, ∀ x : α, e * x = x ∧ x * e = x",
+      "source_statement": "For every type α with two distinct elements, there exists a SemigroupLike01 structure on α such that no element e : α satisfies ∀ x : α, e * x = x ∧ x * e = x.",
+      "formalized_statement": "For every type α with two distinct elements, there exists a SemigroupLike01 structure on α such that no element e : α satisfies ∀ x : α, e * x = x ∧ x * e = x.",
       "statement_formalization_notes": "Using the existing statement directly.",
       "result": "ok",
       "verify_success": true,
@@ -460,20 +478,20 @@
     },
     {
       "result": "proof",
-      "verify_success": true,
-      "proof_sketch": "Construct a SemigroupLike01 structure on ULift Bool with multiplication x * y := x. In this model, a two-sided identity would have to equal both true and false, which is impossible.",
-      "proof_text": "let T : Type := ULift Bool\nlet s : SemigroupLike01 T :=\n  { mul := fun x _ => x\n    ax_left_idempotent := by\n      intro x\n      rfl\n    ax_right_absorb_duplicate := by\n      intro x y\n      rfl\n    ax_middle_swap := by\n      intro x y z\n      rfl }\nrefine ⟨T, s, ?_⟩\nletI : SemigroupLike01 T := s\nintro h\nrcases h with ⟨e, he⟩\nhave htrue : e = ULift.up true := by\n  have h := (he (ULift.up true)).1\n  change e = ULift.up true at h\n  exact h\nhave hfalse : e = ULift.up false := by\n  have h := (he (ULift.up false)).1\n  change e = ULift.up false at h\n  exact h\nhave htf : true = false := congrArg ULift.down (htrue.symm.trans hfalse)\ncases htf",
+      "verify_success": false,
+      "proof_sketch": "Assuming the formalized statement uses two witnesses `a b : α` with `a ≠ b`, define `x * y := x`. This gives a `SemigroupLike01` structure by reflexivity. If some `e` were a two-sided identity, then from `e * a = a` and `e * b = b` we get `e = a` and `e = b`, contradicting `a ≠ b`.",
+      "proof_text": "intro α hdist\nrcases hdist with ⟨a, b, hab⟩\nlet mulα : α → α → α := fun x _ => x\nlet sg : SemigroupLike01 α :=\n  { mul := mulα\n    ax_left_idempotent := by\n      intro x\n      rfl\n    ax_right_absorb_duplicate := by\n      intro x y\n      rfl\n    ax_middle_swap := by\n      intro x y z\n      rfl }\nletI : SemigroupLike01 α := sg\nrefine ⟨sg, ?_⟩\nintro hid\nrcases hid with ⟨e, he⟩\nhave ha : e = a := by\n  simpa [mulα] using (he a).1\nhave hb : e = b := by\n  simpa [mulα] using (he b).1\nexact hab (ha.symm.trans hb)",
       "counterexample_text": "",
-      "lean_error_excerpt": "",
-      "lean_error_fingerprint": "no_diagnostics",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:6:40: error: unexpected token 'with'; expected ':=', 'where' or '|'",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:6:40: error: unexpected token 'with'; expected ':=', 'where' or '|' | AutomatedTheoryConstruction/Scratch.lean:6:24: error: Function expected at | For",
       "new_problems": []
     }
   ],
   "op_000014": [
     {
       "stage": "statement_formalization",
-      "source_statement": "∀ {α : Type u} [SemigroupLike01 α], (∃ e : α, ∀ x : α, e * x = x) → Subsingleton α",
-      "formalized_statement": "∀ {α : Type u} [SemigroupLike01 α], (∃ e : α, ∀ x : α, e * x = x) → Subsingleton α",
+      "source_statement": "∀ {α : Type u} [SemigroupLike01 α], (∃ e : α, ∀ x : α, e * x = x) → ∀ x y : α, x * y = y * x",
+      "formalized_statement": "∀ {α : Type u} [SemigroupLike01 α], (∃ e : α, ∀ x : α, e * x = x) → ∀ x y : α, x * y = y * x",
       "statement_formalization_notes": "Using the existing statement directly.",
       "result": "ok",
       "verify_success": true,
@@ -485,95 +503,31 @@
       "new_problems": []
     },
     {
-      "stage": "statement_formalization",
-      "source_statement": "∀ {α : Type u} [SemigroupLike01 α], (∃ e : α, ∀ x : α, e * x = x) → Subsingleton α",
-      "formalized_statement": "∀ {α : Type u} [SemigroupLike01 α], (∃ e : α, ∀ x : α, e * x = x) → Subsingleton α",
-      "statement_formalization_notes": "Using the existing statement directly.",
-      "result": "ok",
-      "verify_success": true,
-      "proof_sketch": "",
-      "proof_text": "",
-      "counterexample_text": "",
-      "lean_error_excerpt": "",
-      "lean_error_fingerprint": "statement_formalization",
-      "new_problems": []
-    },
-    {
-      "stage": "statement_formalization",
-      "source_statement": "∀ {α : Type u} [SemigroupLike01 α], (∃ e : α, ∀ x : α, e * x = x) → Subsingleton α",
-      "formalized_statement": "∀ {α : Type u} [SemigroupLike01 α], (∃ e : α, ∀ x : α, e * x = x) → Subsingleton α",
-      "statement_formalization_notes": "Using the existing statement directly.",
-      "result": "ok",
-      "verify_success": true,
-      "proof_sketch": "",
-      "proof_text": "",
-      "counterexample_text": "",
-      "lean_error_excerpt": "",
-      "lean_error_fingerprint": "statement_formalization",
-      "new_problems": []
-    },
-    {
-      "result": "counterexample",
+      "result": "proof",
       "verify_success": false,
-      "proof_sketch": "Refute the universal claim with `T = ULift Bool` and multiplication `x * y := ULift.up (x.down && y.down)`. This gives a `SemigroupLike01` structure, `ULift.up true` is a left identity, and the assumed statement would force `Subsingleton T`, contradicting the distinct elements `ULift.up true` and `ULift.up false`.",
-      "proof_text": "intro h\nlet T : Type u := ULift.{u, 0} Bool\nlet mulT : T → T → T := fun x y => ULift.up (x.down && y.down)\nletI : Mul T := ⟨mulT⟩\nhave h_left : ∀ x : T, x * x = x := by\n  intro x\n  cases x <;> rfl\nhave h_absorb : ∀ x y : T, x * (x * y) = x * y := by\n  intro x y\n  cases x <;> cases y <;> rfl\nhave h_swap : ∀ x y z : T, (x * y) * z = (x * z) * y := by\n  intro x y z\n  cases x <;> cases y <;> cases z <;> rfl\nlet s : SemigroupLike01 T :=\n  { mul := mulT\n    ax_left_idempotent := h_left\n    ax_right_absorb_duplicate := h_absorb\n    ax_middle_swap := h_swap }\nletI : SemigroupLike01 T := s\nhave hId : ∃ e : T, ∀ x : T, e * x = x := by\n  refine ⟨ULift.up true, ?_⟩\n  intro x\n  cases x <;> rfl\nhave hSub : Subsingleton T := h (α := T) hId\nhave hEq : (ULift.up true : T) = ULift.up false := hSub.elim (ULift.up true) (ULift.up false)\nhave : true = false := congrArg ULift.down hEq\ncases this",
-      "counterexample_text": "Use `T = ULift Bool` so the countermodel lives in `Type u`. Define multiplication by `x * y = ULift.up (x.down && y.down)`. Then `T` satisfies the three `SemigroupLike01` axioms, `ULift.up true` is a left identity, and `T` is not subsingleton because `ULift.up true` and `ULift.up false` are distinct.",
-      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:13:16: error: Tactic `rfl` failed: The left-hand side",
-      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:13:16: error: Tactic `rfl` failed: The left-hand side | { down := down✝ } * { down := down✝ } | is not definitionally equal to the right-hand side",
+      "proof_sketch": "Specialize `ax_middle_swap` at the assumed left identity `e`. The identity hypothesis rewrites `(e * x) * y = (e * y) * x` to `x * y = y * x`.",
+      "proof_text": "rintro ⟨e, he⟩ x y\nsimpa [AutomatedTheoryConstruction.op, he x, he y] using\n  (AutomatedTheoryConstruction.SemigroupLike01.ax_middle_swap (x := e) (y := x) (z := y))",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:7:9: error: Tactic `rcases` failed: `α✝ : Type u` is not an inductive datatype",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:7:9: error: Tactic `rcases` failed: `α✝ : Type u` is not an inductive datatype",
       "new_problems": []
     },
     {
-      "result": "counterexample",
-      "verify_success": false,
-      "proof_sketch": "Keep the counterexample direction. Take `T = ULift Bool` in universe `u` and define `x * y := ULift.up (x.down && y.down)`. Then `T` satisfies the three `SemigroupLike01` axioms by finite case split on booleans, `ULift.up true` is a left identity, but `T` is not subsingleton since `ULift.up true ≠ ULift.up false`.",
-      "proof_text": "intro h\nlet T : Type u := ULift.{u, 0} Bool\nlet mulT : T → T → T := fun x y => ULift.up (x.down && y.down)\nletI : Mul T := ⟨mulT⟩\nhave h_left : ∀ x : T, x * x = x := by\n  intro x\n  cases x with\n  | up b =>\n      cases b <;> rfl\nhave h_absorb : ∀ x y : T, x * (x * y) = x * y := by\n  intro x y\n  cases x with\n  | up bx =>\n      cases y with\n      | up by =>\n          cases bx <;> cases by <;> rfl\nhave h_swap : ∀ x y z : T, (x * y) * z = (x * z) * y := by\n  intro x y z\n  cases x with\n  | up bx =>\n      cases y with\n      | up by =>\n          cases z with\n          | up bz =>\n              cases bx <;> cases by <;> cases bz <;> rfl\nlet s : SemigroupLike01 T :=\n  { mul := mulT\n    ax_left_idempotent := h_left\n    ax_right_absorb_duplicate := h_absorb\n    ax_middle_swap := h_swap }\nletI : SemigroupLike01 T := s\nhave hId : ∃ e : T, ∀ x : T, e * x = x := by\n  refine ⟨ULift.up true, ?_⟩\n  intro x\n  cases x with\n  | up b =>\n      cases b <;> rfl\nhave hSub : Subsingleton T := h (α := T) hId\nhave hEq : (ULift.up true : T) = ULift.up false := hSub.elim (ULift.up true) (ULift.up false)\nhave : true = false := congrArg ULift.down hEq\ncases this",
-      "counterexample_text": "Countermodel: `T = ULift Bool` with multiplication `x * y = ULift.up (x.down && y.down)`. The axioms hold by exhaustive boolean cases, `ULift.up true` is a left identity, and `ULift.up true` and `ULift.up false` are distinct, so `T` is not subsingleton.",
-      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:19:12: error: unsolved goals",
-      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:19:12: error: unsolved goals | case up.up | h : ∀ {α : Type u} [inst : SemigroupLike01 α], (∃ e, ∀ (x : α), e * x = x) → Subsingleton α",
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "First introduce the implicit type and instance parameters, then unpack the assumed left identity. Specializing `ax_middle_swap` at `e` gives `(e * x) * y = (e * y) * x`, which simplifies via `e * x = x` and `e * y = y` to `x * y = y * x`.",
+      "proof_text": "intro α _ h x y\nrcases h with ⟨e, he⟩\nsimpa [AutomatedTheoryConstruction.op, he x, he y] using\n  (AutomatedTheoryConstruction.SemigroupLike01.ax_middle_swap (x := e) (y := x) (z := y))",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:7:9: error: Tactic `rcases` failed: `α✝ : Type u` is not an inductive datatype",
+      "lean_error_fingerprint": "no_diagnostics",
       "new_problems": []
     }
   ],
   "op_000015": [
     {
       "stage": "statement_formalization",
-      "source_statement": "There exists a type α with a SemigroupLike01 structure and two distinct elements a, b : α such that for all x, y : α, x * y = x.",
-      "formalized_statement": "∃ α : Type u, ∃ _ : AutomatedTheoryConstruction.SemigroupLike01 α, ∃ a b : α, a ≠ b ∧ ∀ x y : α, x * y = x",
-      "statement_formalization_notes": "Formalized the existence of a nontrivial type with a SemigroupLike01 structure whose multiplication is the left projection.",
-      "result": "ok",
-      "verify_success": true,
-      "proof_sketch": "",
-      "proof_text": "",
-      "counterexample_text": "",
-      "lean_error_excerpt": "",
-      "lean_error_fingerprint": "statement_formalization",
-      "new_problems": []
-    },
-    {
-      "result": "proof",
-      "verify_success": false,
-      "proof_sketch": "Take α := ULift Bool with multiplication x * y := x. The three SemigroupLike01 axioms are all by reflexivity after unfolding the operation, and ULift.up true and ULift.up false are distinct. The required universal law x * y = x is again reflexive.",
-      "proof_text": "let α : Type u := ULift.{u} Bool\nlet a : α := ULift.up true\nlet b : α := ULift.up false\nlet s : AutomatedTheoryConstruction.SemigroupLike01 α := {\n  mul := fun x _ => x\n  ax_left_idempotent := by\n    intro x\n    rfl\n  ax_right_absorb_duplicate := by\n    intro x y\n    rfl\n  ax_middle_swap := by\n    intro x y z\n    rfl\n}\nletI : AutomatedTheoryConstruction.SemigroupLike01 α := s\nrefine ⟨α, s, a, b, ?_⟩\nconstructor\n· change (ULift.up true : ULift.{u} Bool) ≠ ULift.up false\n  decide\n· change ∀ x y : ULift.{u} Bool, x * y = x\n  intro x y\n  rfl",
-      "counterexample_text": "",
-      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:27:4: error: 'change' tactic failed, pattern",
-      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:27:4: error: 'change' tactic failed, pattern | ∀ (x y : ULift.{u, 0} Bool), | @HMul.hMul (ULift.{u, 0} Bool) (ULift.{u, 0} Bool) (ULift.{u, 0} Bool) (@instHMul (ULift.{u, 0} Bool) ULift.mul) x",
-      "new_problems": []
-    },
-    {
-      "result": "proof",
-      "verify_success": true,
-      "proof_sketch": "Use the two-element type `ULift Bool` in universe `u` with multiplication defined as left projection. The SemigroupLike01 axioms are all reflexive, `ULift.up true` and `ULift.up false` are distinct, and the target law `x * y = x` is immediate by reflexivity.",
-      "proof_text": "let α : Type u := ULift.{u} Bool\nlet a : α := ULift.up true\nlet b : α := ULift.up false\nlet s : AutomatedTheoryConstruction.SemigroupLike01 α := {\n  mul := fun x _ => x\n  ax_left_idempotent := by\n    intro x\n    rfl\n  ax_right_absorb_duplicate := by\n    intro x y\n    rfl\n  ax_middle_swap := by\n    intro x y z\n    rfl\n}\nletI : AutomatedTheoryConstruction.SemigroupLike01 α := s\nrefine ⟨α, s, a, b, ?_⟩\nconstructor\n· show (ULift.up true : α) ≠ ULift.up false\n  decide\n· intro x y\n  rfl",
-      "counterexample_text": "",
-      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:27:4: error: 'change' tactic failed, pattern",
-      "lean_error_fingerprint": "no_diagnostics",
-      "new_problems": []
-    }
-  ],
-  "op_000016": [
-    {
-      "stage": "statement_formalization",
-      "source_statement": "∀ {α : Type u} [SemigroupLike01 α], ∀ x y : α, (x * y) * x = x * y",
-      "formalized_statement": "∀ {α : Type u} [SemigroupLike01 α], ∀ x y : α, (x * y) * x = x * y",
+      "source_statement": "For every finite type α, every SemigroupLike01 structure on α satisfies ∃ e : α, ∀ x : α, ∃ y : α, x * y = e ∧ y * x = e.",
+      "formalized_statement": "For every finite type α, every SemigroupLike01 structure on α satisfies ∃ e : α, ∀ x : α, ∃ y : α, x * y = e ∧ y * x = e.",
       "statement_formalization_notes": "Using the existing statement directly.",
       "result": "ok",
       "verify_success": true,
@@ -585,39 +539,13 @@
       "new_problems": []
     },
     {
-      "result": "proof",
-      "verify_success": true,
-      "proof_sketch": "Apply `ax_middle_swap` with `z := x` to get `(x * y) * x = (x * x) * y`, then rewrite `x * x = x` using `ax_left_idempotent`.",
-      "proof_text": "intro α _ x y\ncalc\n  (x * y) * x = (x * x) * y := by\n    simpa [AutomatedTheoryConstruction.op] using (SemigroupLike01.ax_middle_swap (α := α) x y x)\n  _ = x * y := by\n    rw [show x * x = x by\n      simpa [AutomatedTheoryConstruction.op] using (SemigroupLike01.ax_left_idempotent (α := α) x)]",
-      "counterexample_text": "",
-      "lean_error_excerpt": "",
-      "lean_error_fingerprint": "no_diagnostics",
-      "new_problems": []
-    }
-  ],
-  "op_000017": [
-    {
-      "stage": "statement_formalization",
-      "source_statement": "For every type α and every binary operation join : α → α → α, if multiplication on α is defined by x * y = x for all x y, then the identity x * (join y z) = join (x * y) (x * z) holds for all x y z if and only if join x x = x for all x.",
-      "formalized_statement": "∀ {α : Type u} [Mul α] (join : α → α → α), (∀ x y : α, x * y = x) → ((∀ x y z : α, x * (join y z) = join (x * y) (x * z)) ↔ ∀ x : α, join x x = x)",
-      "statement_formalization_notes": "Formalized over an arbitrary type with an arbitrary Mul instance, using the hypothesis that multiplication is the left projection.",
-      "result": "ok",
-      "verify_success": true,
-      "proof_sketch": "",
-      "proof_text": "",
-      "counterexample_text": "",
-      "lean_error_excerpt": "",
-      "lean_error_fingerprint": "statement_formalization",
-      "new_problems": []
-    },
-    {
-      "result": "proof",
-      "verify_success": true,
-      "proof_sketch": "Use the hypothesis hmul : ∀ x y, x * y = x to rewrite both sides. For the forward direction, specialize the distributivity law at y = x and z = x, then rewrite to get x = join x x and flip the equality. For the reverse direction, rewrite x * (join y z), x * y, and x * z using hmul; the goal becomes x = join x x, which follows from the assumed idempotence of join.",
-      "proof_text": "intro α _ join hmul\nconstructor\n· intro h x\n  specialize h x x x\n  rw [hmul x (join x x), hmul x x] at h\n  exact h.symm\n· intro h x y z\n  rw [hmul x (join y z), hmul x y, hmul x z, h x]",
-      "counterexample_text": "",
-      "lean_error_excerpt": "",
-      "lean_error_fingerprint": "no_diagnostics",
+      "result": "counterexample",
+      "verify_success": false,
+      "proof_sketch": "Specialize the universal claim to the finite type `ULift Bool` with left-projection multiplication `x * y = x`. Then applying the assumed property to the two distinct elements `true` and `false` forces both to equal the same witness `e`, which is impossible.",
+      "proof_text": "intro h\nlet T : Type u := ULift.{u} Bool\nlet t : T := ULift.up true\nlet f : T := ULift.up false\nlet sg : SemigroupLike01 T :=\n  { mul := fun x y => x\n    ax_left_idempotent := by\n      intro x\n      rfl\n    ax_right_absorb_duplicate := by\n      intro x y\n      rfl\n    ax_middle_swap := by\n      intro x y z\n      rfl }\nletI : SemigroupLike01 T := sg\nletI : Fintype T := inferInstance\nobtain ⟨e, he⟩ := h (α := T)\nobtain ⟨yt, ht, _⟩ := he t\nobtain ⟨yf, hf, _⟩ := he f\nhave hte : t = e := by\n  simpa [t, sg] using ht\nhave hfe : f = e := by\n  simpa [f, sg] using hf\nhave htf : t = f := hte.trans hfe.symm\nhave hne : t ≠ f := by\n  native_decide\nexact hne htf",
+      "counterexample_text": "Take `α = ULift Bool` and define `x * y = x`. This is a finite `SemigroupLike01`. If `∃ e, ∀ x, ∃ y, x * y = e ∧ y * x = e`, then applying it to `x = true` and `x = false` yields `true = e` and `false = e`, contradiction.",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:6:81: error: unexpected token 'structure'; expected ')'",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:6:81: error: unexpected token 'structure'; expected ')' | AutomatedTheoryConstruction/Scratch.lean:6:97: error(lean.inferBinderTypeFailed): Failed to infer type of binder `satisfies` | AutomatedTheoryConstruction/Scratch.lean:6:95: error(lean.inferBinderTypeFailed): Failed to infer type of binder `α`",
       "new_problems": []
     }
   ]

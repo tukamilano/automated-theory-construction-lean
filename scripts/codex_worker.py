@@ -10,6 +10,15 @@ from pathlib import Path
 from typing import Any
 
 
+def _single_line_excerpt(text: str, limit: int = 400) -> str:
+    normalized = " ".join(text.strip().split())
+    if not normalized:
+        return ""
+    if len(normalized) <= limit:
+        return normalized
+    return normalized[: limit - 3] + "..."
+
+
 def _task_env_key(task_type: str, suffix: str) -> str:
     return f"ATC_{task_type.upper()}_{suffix}"
 
@@ -194,6 +203,11 @@ def _run_codex(task_type: str, prompt: str, timeout_sec: int) -> tuple[str, str]
 
 def main() -> None:
     response: dict[str, Any]
+    task_type = ""
+    resolved_model = ""
+    contract_retry_used = False
+    initial_model_output = ""
+    model_output = ""
     try:
         raw = sys.stdin.read()
         request = json.loads(raw)
@@ -215,11 +229,11 @@ def main() -> None:
         timeout_sec = int(codex_timeout_text) if codex_timeout_text else max(30, outer_timeout - 10)
         prompt = _build_prompt(task_type=task_type, system_prompt=system_prompt, payload=payload)
         model_output, resolved_model = _run_codex(task_type=task_type, prompt=prompt, timeout_sec=timeout_sec)
-        contract_retry_used = False
         try:
             result_payload, parse_attempts, used_fallback = _extract_json_object(model_output)
         except ValueError:
             contract_retry_used = True
+            initial_model_output = model_output
             repair_prompt = _build_contract_repair_prompt(
                 task_type=task_type,
                 system_prompt=system_prompt,
@@ -231,7 +245,21 @@ def main() -> None:
                 prompt=repair_prompt,
                 timeout_sec=max(30, timeout_sec // 2),
             )
-            result_payload, parse_attempts, used_fallback = _extract_json_object(model_output)
+            try:
+                result_payload, parse_attempts, used_fallback = _extract_json_object(model_output)
+            except ValueError as second_exc:
+                excerpts: list[str] = []
+                initial_excerpt = _single_line_excerpt(initial_model_output)
+                retry_excerpt = _single_line_excerpt(model_output)
+                if initial_excerpt:
+                    excerpts.append(f"initial_output_excerpt={initial_excerpt}")
+                if retry_excerpt:
+                    excerpts.append(f"retry_output_excerpt={retry_excerpt}")
+                detail = f"; {'; '.join(excerpts)}" if excerpts else ""
+                raise ValueError(
+                    "model output did not contain a parseable JSON object after contract retry"
+                    f"{detail}"
+                ) from second_exc
 
         response = {
             "result_payload": result_payload,
@@ -248,9 +276,22 @@ def main() -> None:
             "error": None,
         }
     except Exception as exc:
+        worker_meta: dict[str, Any] = {"worker": "codex_worker"}
+        if task_type:
+            worker_meta["task_type"] = task_type
+        if resolved_model:
+            worker_meta["model"] = resolved_model
+        if contract_retry_used:
+            worker_meta["contract_retry_used"] = True
+        initial_excerpt = _single_line_excerpt(initial_model_output)
+        retry_excerpt = _single_line_excerpt(model_output)
+        if initial_excerpt:
+            worker_meta["initial_raw_model_output_excerpt"] = initial_excerpt
+        if retry_excerpt:
+            worker_meta["raw_model_output_excerpt"] = retry_excerpt
         response = {
             "result_payload": {},
-            "worker_meta": {"worker": "codex_worker"},
+            "worker_meta": worker_meta,
             "error": str(exc),
         }
 

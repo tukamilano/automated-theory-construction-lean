@@ -448,7 +448,6 @@ def extract_derived_theorem_entries(
         if str(entry.get("theorem_name", "")).strip() and str(entry.get("statement", "")).strip()
     ]
 
-
 def classify_statement_shape(stmt: str) -> dict[str, bool]:
     normalized = normalize_stmt_text(stmt)
     return {
@@ -956,6 +955,7 @@ def request_expand_candidates(
     result: str,
     verify_success: bool,
     theory_context: str,
+    open_rows: list[dict[str, Any]],
     existing_new_problems: list[str],
     verify_error_excerpt: str,
     current_iteration_full_logs: list[dict[str, Any]],
@@ -968,6 +968,7 @@ def request_expand_candidates(
         "result": result,
         "verify_success": verify_success,
         "theory_context": theory_context,
+        "open_problems": open_rows,
         "existing_new_problems": list(existing_new_problems),
         "verify_error_excerpt": verify_error_excerpt,
         "current_iteration_full_logs": list(current_iteration_full_logs),
@@ -1705,6 +1706,7 @@ def main() -> None:
                     result=result,
                     verify_success=verify_success,
                     theory_context=theory_context,
+                    open_rows=open_rows,
                     existing_new_problems=solver_new_problem_suggestions,
                     verify_error_excerpt=verify_error_excerpt,
                     current_iteration_full_logs=current_iteration_full_logs,

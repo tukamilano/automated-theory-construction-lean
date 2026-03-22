@@ -3,14 +3,34 @@ import AutomatedTheoryConstruction.Derived
 
 namespace AutomatedTheoryConstruction
 
-theorem thm_op_000017 : ∀ {α : Type u} [Mul α] (join : α → α → α), (∀ x y : α, x * y = x) → ((∀ x y z : α, x * (join y z) = join (x * y) (x * z)) ↔ ∀ x : α, join x x = x) := by
-  intro α _ join hmul
-  constructor
-  · intro h x
-    specialize h x x x
-    rw [hmul x (join x x), hmul x x] at h
-    exact h.symm
-  · intro h x y z
-    rw [hmul x (join y z), hmul x y, hmul x z, h x]
+theorem thm_op_000015_is_false : ¬(For every finite type α, every SemigroupLike01 structure on α satisfies ∃ e : α, ∀ x : α, ∃ y : α, x * y = e ∧ y * x = e.) := by
+  intro h
+  let T : Type u := ULift.{u} Bool
+  let t : T := ULift.up true
+  let f : T := ULift.up false
+  let semigroupLikeT : SemigroupLike01 T :=
+    { mul := fun x _ => x
+      ax_left_idempotent := by
+        intro x
+        rfl
+      ax_right_absorb_duplicate := by
+        intro x y
+        rfl
+      ax_middle_swap := by
+        intro x y z
+        rfl }
+  letI : SemigroupLike01 T := semigroupLikeT
+  letI : Fintype T := inferInstance
+  obtain ⟨e, he⟩ := h (α := T)
+  obtain ⟨yt, ht, _⟩ := he t
+  obtain ⟨yf, hf, _⟩ := he f
+  have hte : t = e := by
+    simpa [t] using ht
+  have hfe : f = e := by
+    simpa [f] using hf
+  have htf : t = f := hte.trans hfe.symm
+  have hbool : true = false := by
+    simpa [t, f] using congrArg ULift.down htf
+  cases hbool
 
 end AutomatedTheoryConstruction

@@ -1,7 +1,4 @@
 {"id":"op_000007","stmt":"∀ {α : Type u} [SemigroupLike01 α], ∀ x : α, x * x = x","thm":"thm_op_000007"}
-{"id":"op_000009","stmt":"Let α = {0,1,2} and define a binary operation * on α by the Cayley table rows 0:[0,0,0], 1:[0,1,0], 2:[0,2,2]. Then for all x y z : α, one has x * x = x, x * (x * y) = x * y, and (x * y) * z = (x * z) * y.","thm":"thm_op_000009"}
-{"id":"op_000011","stmt":"For every type `α`, there exists a `SemigroupLike01 α` structure whose multiplication satisfies `x * y = x` for all `x y : α`.","thm":"thm_op_000011"}
-{"id":"op_000012","stmt":"For every type `α`, if there exist distinct elements `a b : α`, then there exists a `SemigroupLike01 α` structure on `α` and elements `x y : α` such that `x * y ≠ y * x`.","thm":"thm_op_000012"}
-{"id":"op_000013","stmt":"∃ (α : Type) (_ : SemigroupLike01 α), ¬ ∃ e : α, ∀ x : α, e * x = x ∧ x * e = x","thm":"thm_op_000013"}
-{"id":"op_000015","stmt":"There exists a type α with a SemigroupLike01 structure and two distinct elements a, b : α such that for all x, y : α, x * y = x.","thm":"thm_op_000015"}
-{"id":"op_000016","stmt":"∀ {α : Type u} [SemigroupLike01 α], ∀ x y : α, (x * y) * x = x * y","thm":"thm_op_000016"}
+{"id":"op_000009","stmt":"∀ {α : Type u} [SemigroupLike01 α], (∀ x y : α, x * y = y * x) → ∀ x y z : α, (x * y) * z = x * (y * z)","thm":"thm_op_000009"}
+{"id":"op_000010","stmt":"∀ {α : Type u} [SemigroupLike01 α] [Fintype α], (∃ x y z : α, (x * y) * z ≠ x * (y * z)) → 3 ≤ Fintype.card α","thm":"thm_op_000010"}
+{"id":"op_000014","stmt":"∀ {α : Type u} [SemigroupLike01 α], (∃ e : α, ∀ x : α, e * x = x) → ∀ x y : α, x * y = y * x","thm":"thm_op_000014"}
