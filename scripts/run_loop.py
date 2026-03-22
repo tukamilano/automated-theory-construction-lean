@@ -198,27 +198,6 @@ def load_optional_text(file_path: str) -> str:
     return path.read_text(encoding="utf-8")
 
 
-def looks_formalizable(stmt: str) -> bool:
-    """Check if stmt has basic structure to attempt formalization.
-    
-    Flexible approach: requires quantifier + some logical structure, not specific symbols.
-    """
-    simple_stmt = " ".join(stmt.split())
-    
-    # Must have quantifier
-    has_quantifier = "∀" in simple_stmt or "∃" in simple_stmt
-    if not has_quantifier:
-        return False
-    
-    # Must have reasonable length
-    if len(simple_stmt) < 10 or len(simple_stmt) > 2000:
-        return False
-    
-    # Must have some predicate/relation (broad check: =, <, >, ≠, *, op, :, →, ∧, ∨)
-    has_structure = any(sym in simple_stmt for sym in ["=", "<", ">", "≠", "*", "op", ":", "→", "∧", "∨", "¬"])
-    return has_structure
-
-
 def formalize_to_scratch(
     problem_id: str,
     stmt: str,
@@ -226,10 +205,7 @@ def formalize_to_scratch(
     proof_text: str,
     counterexample_text: str,
     include_mathlib_import: bool,
-) -> tuple[str | None, str | None]:
-    if not looks_formalizable(stmt):
-        return None, None
-
+) -> tuple[str, str]:
     theorem_name = f"thm_{problem_id}"
     if mode == "proof":
         raw_body = proof_text.strip() if proof_text.strip() else "sorry"
@@ -945,6 +921,74 @@ def request_prover_statement_formalization(
     return result, lean_statement, notes, worker_meta
 
 
+def resolve_solver_statement(
+    *,
+    prover_statement_worker_settings: Any,
+    prover_statement_prompt_file: str,
+    phase_logs: bool,
+    iteration: int,
+    problem_id: str,
+    original_stmt: str,
+    open_rows: list[dict[str, Any]],
+    theory_context: str,
+    current_iteration_full_logs: list[dict[str, Any]],
+) -> tuple[str, str, str, dict[str, Any]]:
+    prover_statement_worker_meta: dict[str, Any] = {}
+    if prover_statement_worker_settings is None:
+        if original_stmt:
+            return (
+                original_stmt,
+                "ok",
+                "No prover_statement worker configured; using the existing statement directly.",
+                prover_statement_worker_meta,
+            )
+        return "", "stuck", "Original statement is empty.", prover_statement_worker_meta
+
+    emit_phase_log(
+        phase_logs,
+        "prover_statement",
+        iteration=iteration,
+        problem_id=problem_id,
+        mode="worker",
+    )
+    prover_statement_prompt = load_prompt_text(prover_statement_prompt_file)
+    try:
+        result, formalized_stmt, notes, prover_statement_worker_meta = request_prover_statement_formalization(
+            worker_settings=prover_statement_worker_settings,
+            prover_statement_prompt=prover_statement_prompt,
+            problem_id=problem_id,
+            stmt=original_stmt,
+            open_rows=open_rows,
+            theory_context=theory_context,
+            current_iteration_full_logs=current_iteration_full_logs,
+        )
+    except RuntimeError as exc:
+        if not is_worker_timeout_error(exc):
+            raise
+        result = "stuck"
+        formalized_stmt = ""
+        notes = f"prover_statement worker timeout: {exc}"
+    else:
+        emit_parse_phase_log(
+            phase_logs,
+            "prover_statement_parse",
+            iteration=iteration,
+            problem_id=problem_id,
+            worker_meta=prover_statement_worker_meta,
+        )
+
+    solver_stmt = formalized_stmt if result == "ok" else ""
+    emit_phase_log(
+        phase_logs,
+        "prover_statement_result",
+        iteration=iteration,
+        problem_id=problem_id,
+        formalized=result == "ok",
+        notes=notes,
+    )
+    return solver_stmt, result, notes, prover_statement_worker_meta
+
+
 def request_expand_candidates(
     *,
     worker_settings: Any,
@@ -1137,63 +1181,55 @@ def attempt_formalization_until_timeout(
         )
 
         lean_diagnostics = ""
-        if scratch_code is None:
-            verify_error_excerpt = "formalization failed before Lean check"
+        scratch_file.write_text(scratch_code, encoding="utf-8")
+        if skip_verify:
+            verify_success = True
             verify_error_analysis = {
-                "fingerprint": "formalization_failed_before_lean",
-                "categories": ["formalization_failed"],
-                "top_lines": [verify_error_excerpt],
+                "fingerprint": "verify_skipped",
+                "categories": ["verify_skipped"],
+                "top_lines": [],
             }
         else:
-            scratch_file.write_text(scratch_code, encoding="utf-8")
-            if skip_verify:
-                verify_success = True
-                verify_error_analysis = {
-                    "fingerprint": "verify_skipped",
-                    "categories": ["verify_skipped"],
-                    "top_lines": [],
-                }
-            else:
-                verify_result = verify_scratch(problem_id, result, scratch_file, timeout_sec=verify_timeout_sec)
-                verify_success = bool(verify_result.get("success", False))
-                lean_diagnostics = (
-                    str(verify_result.get("stderr", "")) + "\n" + str(verify_result.get("stdout", ""))
-                ).strip()
-                if not verify_success:
-                    verify_stderr = str(verify_result.get("stderr", "")).strip()
-                    verify_stdout = str(verify_result.get("stdout", "")).strip()
-                    verify_error_excerpt = (verify_stderr or verify_stdout).splitlines()[0] if (verify_stderr or verify_stdout) else "Lean verification failed"
-                verify_error_analysis = analyze_lean_failure(
-                    str(verify_result.get("stderr", "")),
-                    str(verify_result.get("stdout", "")),
-                )
+            verify_result = verify_scratch(problem_id, result, scratch_file, timeout_sec=verify_timeout_sec)
+            verify_success = bool(verify_result.get("success", False))
+            lean_diagnostics = (
+                str(verify_result.get("stderr", "")) + "\n" + str(verify_result.get("stdout", ""))
+            ).strip()
+            if not verify_success:
+                verify_stderr = str(verify_result.get("stderr", "")).strip()
+                verify_stdout = str(verify_result.get("stdout", "")).strip()
+                verify_error_excerpt = (verify_stderr or verify_stdout).splitlines()[0] if (verify_stderr or verify_stdout) else "Lean verification failed"
+            verify_error_analysis = analyze_lean_failure(
+                str(verify_result.get("stderr", "")),
+                str(verify_result.get("stdout", "")),
+            )
 
-            if verify_success:
-                success_fingerprint = str(verify_error_analysis.get("fingerprint", "verified"))
-                repair_history.append(
-                    {
-                        "result": result,
-                        "verify_success": True,
-                        "proof_sketch": proof_sketch,
-                        "proof_text": proof_text,
-                        "counterexample_text": counterexample_text,
-                        "lean_error_excerpt": verify_error_excerpt,
-                        "lean_error_fingerprint": success_fingerprint,
-                        "new_problems": list(retained_new_problems)[:2],
-                    }
-                )
-                if len(repair_history) > 20:
-                    repair_history = repair_history[-20:]
-                save_formalization_memory(memory_path, problem_id, repair_history)
-                return (
-                    verify_success,
-                    theorem_name,
-                    result,
-                    proof_text,
-                    counterexample_text,
-                    retained_new_problems,
-                    verify_error_excerpt,
-                )
+        if verify_success:
+            success_fingerprint = str(verify_error_analysis.get("fingerprint", "verified"))
+            repair_history.append(
+                {
+                    "result": result,
+                    "verify_success": True,
+                    "proof_sketch": proof_sketch,
+                    "proof_text": proof_text,
+                    "counterexample_text": counterexample_text,
+                    "lean_error_excerpt": verify_error_excerpt,
+                    "lean_error_fingerprint": success_fingerprint,
+                    "new_problems": list(retained_new_problems)[:2],
+                }
+            )
+            if len(repair_history) > 20:
+                repair_history = repair_history[-20:]
+            save_formalization_memory(memory_path, problem_id, repair_history)
+            return (
+                verify_success,
+                theorem_name,
+                result,
+                proof_text,
+                counterexample_text,
+                retained_new_problems,
+                verify_error_excerpt,
+            )
 
         if repair_worker_settings is None or time.monotonic() >= deadline:
             save_formalization_memory(memory_path, problem_id, repair_history)
@@ -1491,72 +1527,23 @@ def main() -> None:
         emit_phase_log(args.phase_logs, "problem_selected", iteration=completed_iterations + 1, problem_id=problem_id)
 
         current_iteration_full_logs: list[dict[str, Any]] = []
-        solver_stmt = original_stmt if looks_formalizable(original_stmt) else ""
-        statement_formalization_result = "ok" if solver_stmt else "stuck"
-        statement_formalization_notes = (
-            "Using the existing statement directly."
-            if solver_stmt
-            else "Original statement is not obviously Lean-formalizable."
+        (
+            solver_stmt,
+            statement_formalization_result,
+            statement_formalization_notes,
+            prover_statement_worker_meta,
+        ) = resolve_solver_statement(
+            prover_statement_worker_settings=prover_statement_worker_settings,
+            prover_statement_prompt_file=args.prover_statement_prompt_file,
+            phase_logs=args.phase_logs,
+            iteration=completed_iterations + 1,
+            problem_id=problem_id,
+            original_stmt=original_stmt,
+            open_rows=open_rows,
+            theory_context=initial_theory_context,
+            current_iteration_full_logs=current_iteration_full_logs,
         )
-        prover_statement_worker_meta: dict[str, Any] = {}
-        same_problem_history_tail = load_formalization_memory(memory_path, problem_id)[-8:]
-
-        if prover_statement_worker_settings is not None and not solver_stmt:
-            emit_phase_log(
-                args.phase_logs,
-                "prover_statement",
-                iteration=completed_iterations + 1,
-                problem_id=problem_id,
-                mode="worker",
-            )
-            prover_statement_prompt = load_prompt_text(args.prover_statement_prompt_file)
-            try:
-                (
-                    statement_formalization_result,
-                    formalized_stmt,
-                    statement_formalization_notes,
-                    prover_statement_worker_meta,
-                ) = request_prover_statement_formalization(
-                    worker_settings=prover_statement_worker_settings,
-                    prover_statement_prompt=prover_statement_prompt,
-                    problem_id=problem_id,
-                    stmt=original_stmt,
-                    open_rows=open_rows,
-                    theory_context=initial_theory_context,
-                    current_iteration_full_logs=current_iteration_full_logs,
-                )
-            except RuntimeError as exc:
-                if is_worker_timeout_error(exc):
-                    statement_formalization_result = "stuck"
-                    formalized_stmt = ""
-                    statement_formalization_notes = f"prover_statement worker timeout: {exc}"
-                else:
-                    raise
-            else:
-                emit_parse_phase_log(
-                    args.phase_logs,
-                    "prover_statement_parse",
-                    iteration=completed_iterations + 1,
-                    problem_id=problem_id,
-                    worker_meta=prover_statement_worker_meta,
-                )
-            if statement_formalization_result == "ok":
-                solver_stmt = formalized_stmt
-            elif solver_stmt:
-                statement_formalization_result = "ok"
-                statement_formalization_notes = (
-                    f"{statement_formalization_notes} Falling back to the existing statement because it already looks Lean-formalizable."
-                ).strip()
-            else:
-                solver_stmt = ""
-            emit_phase_log(
-                args.phase_logs,
-                "prover_statement_result",
-                iteration=completed_iterations + 1,
-                problem_id=problem_id,
-                formalized=statement_formalization_result == "ok",
-                notes=statement_formalization_notes,
-            )
+        target_stmt = solver_stmt or original_stmt
 
         append_formalization_memory_entry(
             memory_path,
@@ -1567,7 +1554,7 @@ def main() -> None:
                 "formalized_statement": solver_stmt,
                 "statement_formalization_notes": statement_formalization_notes,
                 "result": statement_formalization_result,
-                "verify_success": statement_formalization_result == "ok" and bool(solver_stmt),
+                "verify_success": bool(solver_stmt),
                 "proof_sketch": "",
                 "proof_text": "",
                 "counterexample_text": "",
@@ -1581,7 +1568,7 @@ def main() -> None:
         theory_context = build_problem_theory_context(
             base_theory_context,
             derived_path,
-            solver_stmt if solver_stmt else original_stmt,
+            target_stmt,
         )
 
         prover_payload = load_json_payload_from_args(args.prover_output_json, args.prover_output_file)
@@ -1591,7 +1578,7 @@ def main() -> None:
         counterexample_text = ""
         prover_worker_meta: dict[str, Any] = {}
         new_problems: list[str] = []
-        if statement_formalization_result != "ok" or not solver_stmt:
+        if not solver_stmt:
             result = "stuck"
             proof_sketch = statement_formalization_notes or "Statement formalization failed before proof search."
             counterexample_text = ""
@@ -1642,7 +1629,7 @@ def main() -> None:
             verify_error_excerpt,
         ) = attempt_formalization_until_timeout(
             problem_id=problem_id,
-            stmt=solver_stmt if solver_stmt else original_stmt,
+            stmt=target_stmt,
             result=result,
             proof_sketch=proof_sketch,
             counterexample_text=counterexample_text,
@@ -1677,12 +1664,12 @@ def main() -> None:
                     theorem_body_match.group(1),
                     None,
                 )
-                theory_context = build_problem_theory_context(base_theory_context, derived_path, solver_stmt)
+                theory_context = build_problem_theory_context(base_theory_context, derived_path, target_stmt)
 
         solver_new_problem_suggestions = list(new_problems)
         expander_new_problem_suggestions: list[str] = []
         expander_worker_meta: dict[str, Any] = {}
-        expand_target_stmt = solver_stmt if solver_stmt else original_stmt
+        expand_target_stmt = target_stmt
 
         new_problems = list(solver_new_problem_suggestions)
 

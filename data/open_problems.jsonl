@@ -1,10 +1,3 @@
-{"id":"op_000015","stmt":"For every finite type α, every SemigroupLike01 structure on α satisfies ∃ e : α, ∀ x : α, ∃ y : α, x * y = e ∧ y * x = e.","src":"generated"}
-{"id":"op_000016","stmt":"For every linearly ordered type α, if the multiplication is defined by x * y = min x y, then (∃ e : α, ∀ x : α, ∃ y : α, x * y = e ∧ y * x = e) holds if and only if α has a least element.","src":"generated"}
-{"id":"op_000017","stmt":"∀ {α : Type u} [SemigroupLike01 α], (∀ join : α → α → α, ∀ x y z : α, x * (join y z) = join (x * y) (x * z)) → ∀ a b : α, a = b","src":"generated"}
-{"id":"op_000018","stmt":"For every type α and every binary operation join : α → α → α, if multiplication is defined by x * y = x, then the statement ∀ x y z : α, x * (join y z) = join (x * y) (x * z) holds if and only if ∀ x : α, join x x = x.","src":"generated"}
-{"id":"op_000019","stmt":"∀ {α : Type u} [SemigroupLike01 α], (∃ x : α, ∀ y z : α, x * y = x * z → y = z) → ∀ a b : α, a = b","src":"generated"}
-{"id":"op_000020","stmt":"For every linearly ordered type α, if multiplication is defined by x * y = min x y, then the property ∀ x y z : α, x * y = x * z → y = z holds if and only if ∀ a b : α, a = b.","src":"generated"}
-{"id":"op_000021","stmt":"∀ {α : Type u} [SemigroupLike01 α], ∀ x y z : α, (x * y) * (x * z) = (x * y) * z","src":"generated"}
 {"id":"op_000022","stmt":"For every type α, if multiplication is defined by x * y = y for all x y : α, then this multiplication satisfies the SemigroupLike01 axioms if and only if ∀ a b : α, a = b.","src":"generated"}
 {"id":"op_000023","stmt":"∀ {α : Type u} [SemigroupLike01 α], (∀ meet : α → α → α, ∀ x y : α, x * (meet x y) = x) ↔ ∀ x z : α, x * z = x","src":"generated"}
 {"id":"op_000024","stmt":"For every universe level u, there exists a type α : Type u with a SemigroupLike01 structure such that α has two distinct elements, multiplication is commutative and associative, and there exist x z : α with x * z ≠ x.","src":"generated"}
@@ -22,3 +15,18 @@
 {"id":"op_000034","stmt":"For every type α, if multiplication is defined by x * y = x for all x y : α, then there exists a two-sided identity element if and only if every two elements of α are equal.","src":"generated"}
 {"id":"op_000013","stmt":"For every type α with two distinct elements, there exists a SemigroupLike01 structure on α such that no element e : α satisfies ∀ x : α, e * x = x ∧ x * e = x.","src":"generated"}
 {"id":"op_000035","stmt":"∀ {α : Type u} [SemigroupLike01 α], (∃ e : α, ∀ x : α, e * x = x) → ∀ x : α, x * x = x ∧ ∀ y : α, x * y = x ↔ x = y * x","src":"generated"}
+{"id":"op_000036","stmt":"For every type α with a binary operation satisfying ∀ x y : α, x * y = x, the statement (∃ e : α, ∀ x : α, ∃ y : α, x * y = e ∧ y * x = e) holds if and only if ∀ a b : α, a = b.","src":"generated"}
+{"id":"op_000037","stmt":"For every type α with a commutative SemigroupLike01 structure, define a relation ≤ on α by x ≤ y if and only if x * y = x. Then `(∃ e : α, ∀ x : α, ∃ y : α, x * y = e ∧ y * x = e)` holds if and only if there exists e : α such that ∀ x : α, e ≤ x.","src":"generated"}
+{"id":"op_000038","stmt":"There exists a finite type α with a commutative and associative SemigroupLike01 structure, with two distinct elements, such that `∃ e : α, ∀ x : α, ∃ y : α, x * y = e ∧ y * x = e`.","src":"generated"}
+{"id":"op_000039","stmt":"∀ {α : Type u} [LinearOrder α] [Mul α], (∀ x y : α, x * y = min x y) → ((∃ e : α, ∀ x : α, x * e = e ∧ e * x = e) ↔ ∃ e : α, ∀ x : α, e ≤ x)","src":"generated"}
+{"id":"op_000040","stmt":"∀ {α : Type u} [LinearOrder α] [Mul α], (∀ x y : α, x * y = min x y) → ((∃ e : α, ∀ x : α, e * x = x ∧ x * e = x) ↔ ∃ e : α, ∀ x : α, x ≤ e)","src":"generated"}
+{"id":"op_000041","stmt":"For every nonempty type α, there exists a SemigroupLike01 structure on α such that for every binary operation join : α → α → α and all x y z : α, x * (join y z) = join (x * y) (x * z) if and only if there exists e : α such that for all x : α, x = e.","src":"generated"}
+{"id":"op_000042","stmt":"∀ {α : Type u} [AutomatedTheoryConstruction.SemigroupLike01 α], (∃ a b : α, a ≠ b) → ∃ x c : α, x * c ≠ c","src":"generated"}
+{"id":"op_000043","stmt":"∀ {α : Type _} [Mul α], ∀ join : α → α → α, (∀ x y : α, x * y = x) → ∀ x y z : α, (join x y) * z = join (x * z) (y * z)","src":"generated"}
+{"id":"op_000044","stmt":"For every type α with two distinct elements, there exists a binary operation join : α → α → α such that, if multiplication is defined by x * y = x for all x y : α, then ∀ x y z : α, (join x y) * z = join (x * z) (y * z) holds, but ∀ x y z : α, x * (join y z) = join (x * y) (x * z) does not hold.","src":"generated"}
+{"id":"op_000045","stmt":"There exists a finite type α with a SemigroupLike01 structure and elements x a b : α such that (∀ y z : α, x * y = x * z → y = z) and a ≠ b.","src":"generated"}
+{"id":"op_000046","stmt":"For every type α with a semilattice-inf operation ⊓ and an element t : α satisfying ∀ y : α, t ⊓ y = y, if multiplication is defined by x * y = x ⊓ y for all x y : α, then ∀ y z : α, t * y = t * z → y = z; consequently, if α also has two distinct elements, the implication `(∃ x : α, ∀ y z : α, x * y = x * z → y = z) → ∀ a b : α, a = b` is false for this multiplication.","src":"generated"}
+{"id":"op_000047","stmt":"∀ {α : Type u} [SemilatticeInf α] [Mul α], (∀ x y : α, x * y = x ⊓ y) → ((∀ x y z : α, x * y = x * z → y = z) ↔ ∀ a b : α, a = b)","src":"generated"}
+{"id":"op_000048","stmt":"∀ {α : Type u} [LinearOrder α] [Mul α], (∀ x y : α, x * y = min x y) → ∀ t : α, ((∀ y z : α, t * y = t * z → y = z) ↔ ∀ y : α, y ≤ t)","src":"generated"}
+{"id":"op_000049","stmt":"∀ {α : Type u} [AutomatedTheoryConstruction.SemigroupLike01 α], ∀ x y : α, (x * y) * y = x * y","src":"generated"}
+{"id":"op_000050","stmt":"∀ {α : Type u} [AutomatedTheoryConstruction.SemigroupLike01 α], ∀ x y z : α, (x * y) * (x * z) = (x * z) * (x * y)","src":"generated"}

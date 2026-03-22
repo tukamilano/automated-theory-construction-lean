@@ -2,3 +2,8 @@
 {"id":"op_000009","stmt":"∀ {α : Type u} [SemigroupLike01 α], (∀ x y : α, x * y = y * x) → ∀ x y z : α, (x * y) * z = x * (y * z)","thm":"thm_op_000009"}
 {"id":"op_000010","stmt":"∀ {α : Type u} [SemigroupLike01 α] [Fintype α], (∃ x y z : α, (x * y) * z ≠ x * (y * z)) → 3 ≤ Fintype.card α","thm":"thm_op_000010"}
 {"id":"op_000014","stmt":"∀ {α : Type u} [SemigroupLike01 α], (∃ e : α, ∀ x : α, e * x = x) → ∀ x y : α, x * y = y * x","thm":"thm_op_000014"}
+{"id":"op_000016","stmt":"For every linearly ordered type α, if the multiplication is defined by x * y = min x y, then (∃ e : α, ∀ x : α, ∃ y : α, x * y = e ∧ y * x = e) holds if and only if α has a least element.","thm":"thm_op_000016"}
+{"id":"op_000017","stmt":"∀ {α : Type u} [SemigroupLike01 α], (∀ join : α → α → α, ∀ x y z : α, x * (join y z) = join (x * y) (x * z)) → ∀ a b : α, a = b","thm":"thm_op_000017"}
+{"id":"op_000018","stmt":"For every type α and every binary operation join : α → α → α, if multiplication is defined by x * y = x, then the statement ∀ x y z : α, x * (join y z) = join (x * y) (x * z) holds if and only if ∀ x : α, join x x = x.","thm":"thm_op_000018"}
+{"id":"op_000020","stmt":"For every linearly ordered type α, if multiplication is defined by x * y = min x y, then the property ∀ x y z : α, x * y = x * z → y = z holds if and only if ∀ a b : α, a = b.","thm":"thm_op_000020"}
+{"id":"op_000021","stmt":"∀ {α : Type u} [SemigroupLike01 α], ∀ x y z : α, (x * y) * (x * z) = (x * y) * z","thm":"thm_op_000021"}
