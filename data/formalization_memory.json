@@ -1,20 +1,6 @@
 {
   "op_000001": [
     {
-      "stage": "statement_formalization",
-      "source_statement": "∀ {α : Type u} [SemigroupLike01 α], ∀ x y z : α, (x * y) * z = x * (y * z)",
-      "formalized_statement": "∀ {α : Type u} [SemigroupLike01 α], ∀ x y z : α, (x * y) * z = x * (y * z)",
-      "statement_formalization_notes": "Using the existing statement directly.",
-      "result": "ok",
-      "verify_success": true,
-      "proof_sketch": "",
-      "proof_text": "",
-      "counterexample_text": "",
-      "lean_error_excerpt": "",
-      "lean_error_fingerprint": "statement_formalization",
-      "new_problems": []
-    },
-    {
       "result": "counterexample",
       "verify_success": true,
       "proof_sketch": "Instantiate the universal claim with `ULift (Fin 3)` carrying the specified 3-element multiplication. The three axioms hold by finite computation, while the instance of associativity at `2,1,2` reduces to `2 = 0`, a contradiction.",
@@ -27,20 +13,6 @@
   ],
   "op_000002": [
     {
-      "stage": "statement_formalization",
-      "source_statement": "∀ {α : Type u} [SemigroupLike01 α], ∀ x y : α, x * y = y * x",
-      "formalized_statement": "∀ {α : Type u} [SemigroupLike01 α], ∀ x y : α, x * y = y * x",
-      "statement_formalization_notes": "Using the existing statement directly.",
-      "result": "ok",
-      "verify_success": true,
-      "proof_sketch": "",
-      "proof_text": "",
-      "counterexample_text": "",
-      "lean_error_excerpt": "",
-      "lean_error_fingerprint": "statement_formalization",
-      "new_problems": []
-    },
-    {
       "result": "counterexample",
       "verify_success": true,
       "proof_sketch": "Instantiate the axioms on `ULift (Fin 2)` with left-projection multiplication `x * y := x`. The axioms are immediate by reflexivity, but commutativity would force `0 = 1` after specializing at the two distinct elements.",
@@ -52,20 +24,6 @@
     }
   ],
   "op_000003": [
-    {
-      "stage": "statement_formalization",
-      "source_statement": "∀ {α : Type u} [SemigroupLike01 α], ∃ e : α, ∀ x : α, e * x = x ∧ x * e = x",
-      "formalized_statement": "∀ {α : Type u} [SemigroupLike01 α], ∃ e : α, ∀ x : α, e * x = x ∧ x * e = x",
-      "statement_formalization_notes": "Using the existing statement directly.",
-      "result": "ok",
-      "verify_success": true,
-      "proof_sketch": "",
-      "proof_text": "",
-      "counterexample_text": "",
-      "lean_error_excerpt": "",
-      "lean_error_fingerprint": "statement_formalization",
-      "new_problems": []
-    },
     {
       "result": "counterexample",
       "verify_success": false,
@@ -89,20 +47,6 @@
   ],
   "op_000004": [
     {
-      "stage": "statement_formalization",
-      "source_statement": "∀ {α : Type u} [SemigroupLike01 α], ∃ e : α, ∀ x : α, ∃ y : α, x * y = e ∧ y * x = e",
-      "formalized_statement": "∀ {α : Type u} [SemigroupLike01 α], ∃ e : α, ∀ x : α, ∃ y : α, x * y = e ∧ y * x = e",
-      "statement_formalization_notes": "Using the existing statement directly.",
-      "result": "ok",
-      "verify_success": true,
-      "proof_sketch": "",
-      "proof_text": "",
-      "counterexample_text": "",
-      "lean_error_excerpt": "",
-      "lean_error_fingerprint": "statement_formalization",
-      "new_problems": []
-    },
-    {
       "result": "counterexample",
       "verify_success": true,
       "proof_sketch": "Use `T := ULift Int` with multiplication induced by `min`. This satisfies the three `SemigroupLike01` axioms. If the target statement held, we would get some `e : T` such that for every `x : T` there is `y` with `x * y = e`. Unfolding the operation gives `min x.down y.down = e.down`, hence `e.down ≤ x.down` for every `x`. Taking `x = ULift.up (e.down - 1)` yields `e.down ≤ e.down - 1`, a contradiction by arithmetic.",
@@ -114,20 +58,6 @@
     }
   ],
   "op_000005": [
-    {
-      "stage": "statement_formalization",
-      "source_statement": "∀ {α : Type u} [SemigroupLike01 α], ∀ join : α → α → α, ∀ x y z : α, x * (join y z) = join (x * y) (x * z)",
-      "formalized_statement": "∀ {α : Type u} [SemigroupLike01 α], ∀ join : α → α → α, ∀ x y z : α, x * (join y z) = join (x * y) (x * z)",
-      "statement_formalization_notes": "Using the existing statement directly.",
-      "result": "ok",
-      "verify_success": true,
-      "proof_sketch": "",
-      "proof_text": "",
-      "counterexample_text": "",
-      "lean_error_excerpt": "",
-      "lean_error_fingerprint": "statement_formalization",
-      "new_problems": []
-    },
     {
       "result": "counterexample",
       "verify_success": true,
@@ -141,20 +71,6 @@
   ],
   "op_000006": [
     {
-      "stage": "statement_formalization",
-      "source_statement": "∀ {α : Type u} [SemigroupLike01 α], ∀ x y z : α, x * y = x * z → y = z",
-      "formalized_statement": "∀ {α : Type u} [SemigroupLike01 α], ∀ x y z : α, x * y = x * z → y = z",
-      "statement_formalization_notes": "Using the existing statement directly.",
-      "result": "ok",
-      "verify_success": true,
-      "proof_sketch": "",
-      "proof_text": "",
-      "counterexample_text": "",
-      "lean_error_excerpt": "",
-      "lean_error_fingerprint": "statement_formalization",
-      "new_problems": []
-    },
-    {
       "result": "counterexample",
       "verify_success": true,
       "proof_sketch": "Use the two-element left-projection model on ULift (Fin 2): define x * y = x. All SemigroupLike01 axioms hold by reflexivity. Then with x = a0, y = a0, z = a1, the premise x * y = x * z is true by rfl, so the statement would force a0 = a1, contradiction.",
@@ -167,20 +83,6 @@
   ],
   "op_000007": [
     {
-      "stage": "statement_formalization",
-      "source_statement": "∀ {α : Type u} [SemigroupLike01 α], ∀ x : α, x * x = x",
-      "formalized_statement": "∀ {α : Type u} [SemigroupLike01 α], ∀ x : α, x * x = x",
-      "statement_formalization_notes": "Using the existing statement directly.",
-      "result": "ok",
-      "verify_success": true,
-      "proof_sketch": "",
-      "proof_text": "",
-      "counterexample_text": "",
-      "lean_error_excerpt": "",
-      "lean_error_fingerprint": "statement_formalization",
-      "new_problems": []
-    },
-    {
       "result": "proof",
       "verify_success": true,
       "proof_sketch": "Apply the class axiom `SemigroupLike01.ax_left_idempotent` to `x` and simplify the definition of `op`.",
@@ -192,20 +94,6 @@
     }
   ],
   "op_000008": [
-    {
-      "stage": "statement_formalization",
-      "source_statement": "∀ {α : Type u} [SemigroupLike01 α], ∀ meet : α → α → α, ∀ x y : α, x * (meet x y) = x",
-      "formalized_statement": "∀ {α : Type u} [SemigroupLike01 α], ∀ meet : α → α → α, ∀ x y : α, x * (meet x y) = x",
-      "statement_formalization_notes": "Using the existing statement directly.",
-      "result": "ok",
-      "verify_success": true,
-      "proof_sketch": "",
-      "proof_text": "",
-      "counterexample_text": "",
-      "lean_error_excerpt": "",
-      "lean_error_fingerprint": "statement_formalization",
-      "new_problems": []
-    },
     {
       "result": "counterexample",
       "verify_success": false,
@@ -239,20 +127,6 @@
   ],
   "op_000009": [
     {
-      "stage": "statement_formalization",
-      "source_statement": "∀ {α : Type u} [SemigroupLike01 α], (∀ x y : α, x * y = y * x) → ∀ x y z : α, (x * y) * z = x * (y * z)",
-      "formalized_statement": "∀ {α : Type u} [SemigroupLike01 α], (∀ x y : α, x * y = y * x) → ∀ x y z : α, (x * y) * z = x * (y * z)",
-      "statement_formalization_notes": "Using the existing statement directly.",
-      "result": "ok",
-      "verify_success": true,
-      "proof_sketch": "",
-      "proof_text": "",
-      "counterexample_text": "",
-      "lean_error_excerpt": "",
-      "lean_error_fingerprint": "statement_formalization",
-      "new_problems": []
-    },
-    {
       "result": "proof",
       "verify_success": true,
       "proof_sketch": "Rewrite the left factor using commutativity, apply the middle-swap axiom in the form `(y * x) * z = (y * z) * x`, and then commute the final product once more.",
@@ -265,20 +139,6 @@
   ],
   "op_000010": [
     {
-      "stage": "statement_formalization",
-      "source_statement": "∀ {α : Type u} [SemigroupLike01 α] [Fintype α], (∃ x y z : α, (x * y) * z ≠ x * (y * z)) → 3 ≤ Fintype.card α",
-      "formalized_statement": "∀ {α : Type u} [SemigroupLike01 α] [Fintype α], (∃ x y z : α, (x * y) * z ≠ x * (y * z)) → 3 ≤ Fintype.card α",
-      "statement_formalization_notes": "Using the existing statement directly.",
-      "result": "ok",
-      "verify_success": true,
-      "proof_sketch": "",
-      "proof_text": "",
-      "counterexample_text": "",
-      "lean_error_excerpt": "",
-      "lean_error_fingerprint": "statement_formalization",
-      "new_problems": []
-    },
-    {
       "result": "proof",
       "verify_success": true,
       "proof_sketch": "Assume a nonassociative triple exists but the finite type has cardinality at most 2. In any type with at most two elements, any three elements must contain a repeated pair. Case-splitting on which pair among x,y,z is equal, the three axioms force associativity in each case. This contradicts the chosen nonassociative witness, so the cardinality must be at least 3.",
@@ -290,20 +150,6 @@
     }
   ],
   "op_000011": [
-    {
-      "stage": "statement_formalization",
-      "source_statement": "For every type α, there exists a SemigroupLike01 structure on α such that ∀ x y : α, x * y = x.",
-      "formalized_statement": "For every type α, there exists a SemigroupLike01 structure on α such that ∀ x y : α, x * y = x.",
-      "statement_formalization_notes": "Using the existing statement directly.",
-      "result": "ok",
-      "verify_success": true,
-      "proof_sketch": "",
-      "proof_text": "",
-      "counterexample_text": "",
-      "lean_error_excerpt": "",
-      "lean_error_fingerprint": "statement_formalization",
-      "new_problems": []
-    },
     {
       "result": "proof",
       "verify_success": false,
@@ -387,20 +233,6 @@
   ],
   "op_000012": [
     {
-      "stage": "statement_formalization",
-      "source_statement": "For every type α with two distinct elements, there exists a SemigroupLike01 structure on α such that (∀ a b c : α, (a * b) * c = a * (b * c)) and (∃ x y : α, x * y ≠ y * x).",
-      "formalized_statement": "For every type α with two distinct elements, there exists a SemigroupLike01 structure on α such that (∀ a b c : α, (a * b) * c = a * (b * c)) and (∃ x y : α, x * y ≠ y * x).",
-      "statement_formalization_notes": "Using the existing statement directly.",
-      "result": "ok",
-      "verify_success": true,
-      "proof_sketch": "",
-      "proof_text": "",
-      "counterexample_text": "",
-      "lean_error_excerpt": "",
-      "lean_error_fingerprint": "statement_formalization",
-      "new_problems": []
-    },
-    {
       "result": "proof",
       "verify_success": false,
       "proof_sketch": "Use the left-projection operation `x * y := x`. This satisfies the `SemigroupLike01` axioms by reflexivity, associativity is also by reflexivity, and if `x ≠ y` then `x * y = x` while `y * x = y`, so the operation is noncommutative.",
@@ -463,20 +295,6 @@
   ],
   "op_000013": [
     {
-      "stage": "statement_formalization",
-      "source_statement": "For every type α with two distinct elements, there exists a SemigroupLike01 structure on α such that no element e : α satisfies ∀ x : α, e * x = x ∧ x * e = x.",
-      "formalized_statement": "For every type α with two distinct elements, there exists a SemigroupLike01 structure on α such that no element e : α satisfies ∀ x : α, e * x = x ∧ x * e = x.",
-      "statement_formalization_notes": "Using the existing statement directly.",
-      "result": "ok",
-      "verify_success": true,
-      "proof_sketch": "",
-      "proof_text": "",
-      "counterexample_text": "",
-      "lean_error_excerpt": "",
-      "lean_error_fingerprint": "statement_formalization",
-      "new_problems": []
-    },
-    {
       "result": "proof",
       "verify_success": false,
       "proof_sketch": "Assuming the formalized statement uses two witnesses `a b : α` with `a ≠ b`, define `x * y := x`. This gives a `SemigroupLike01` structure by reflexivity. If some `e` were a two-sided identity, then from `e * a = a` and `e * b = b` we get `e = a` and `e = b`, contradicting `a ≠ b`.",
@@ -488,20 +306,6 @@
     }
   ],
   "op_000014": [
-    {
-      "stage": "statement_formalization",
-      "source_statement": "∀ {α : Type u} [SemigroupLike01 α], (∃ e : α, ∀ x : α, e * x = x) → ∀ x y : α, x * y = y * x",
-      "formalized_statement": "∀ {α : Type u} [SemigroupLike01 α], (∃ e : α, ∀ x : α, e * x = x) → ∀ x y : α, x * y = y * x",
-      "statement_formalization_notes": "Using the existing statement directly.",
-      "result": "ok",
-      "verify_success": true,
-      "proof_sketch": "",
-      "proof_text": "",
-      "counterexample_text": "",
-      "lean_error_excerpt": "",
-      "lean_error_fingerprint": "statement_formalization",
-      "new_problems": []
-    },
     {
       "result": "proof",
       "verify_success": false,
@@ -527,8 +331,122 @@
     {
       "stage": "statement_formalization",
       "source_statement": "For every finite type α, every SemigroupLike01 structure on α satisfies ∃ e : α, ∀ x : α, ∃ y : α, x * y = e ∧ y * x = e.",
-      "formalized_statement": "For every finite type α, every SemigroupLike01 structure on α satisfies ∃ e : α, ∀ x : α, ∃ y : α, x * y = e ∧ y * x = e.",
-      "statement_formalization_notes": "Using the existing statement directly.",
+      "formalized_statement": "∀ {α : Type u} [SemigroupLike01 α] [Fintype α], ∃ e : α, ∀ x : α, ∃ y : α, x * y = e ∧ y * x = e",
+      "statement_formalization_notes": "Direct formalization using the repository's SemigroupLike01 class and Fintype.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "counterexample",
+      "verify_success": true,
+      "proof_sketch": "Use the finite model `T = ULift (Fin 2)` with left-projection multiplication `x * y = x`. This satisfies the `SemigroupLike01` axioms by reflexivity. If the target statement held on `T`, then for any `e` and any `x`, the witness equation `x * y = e` would simplify to `x = e`. Applying this to the two distinct elements of `T` forces them to be equal, a contradiction.",
+      "proof_text": "intro h\nlet T : Type u := ULift (Fin 2)\nlet a0 : T := ULift.up (0 : Fin 2)\nlet a1 : T := ULift.up (1 : Fin 2)\nlet mulT : T -> T -> T := fun a _ => a\nletI : Fintype T := inferInstance\nlet sg : SemigroupLike01 T :=\n  { mul := mulT\n    ax_left_idempotent := by\n      intro x\n      rfl\n    ax_right_absorb_duplicate := by\n      intro x y\n      rfl\n    ax_middle_swap := by\n      intro x y z\n      rfl }\nletI : SemigroupLike01 T := sg\nobtain ⟨e, he⟩ := h (α := T)\nhave h0 : a0 = e := by\n  obtain ⟨y, hxy, _⟩ := he a0\n  simpa [mulT] using hxy\nhave h1 : a1 = e := by\n  obtain ⟨y, hxy, _⟩ := he a1\n  simpa [mulT] using hxy\nhave h01 : a0 = a1 := h0.trans h1.symm\nhave hne : a0 ≠ a1 := by\n  native_decide\nexact hne h01",
+      "counterexample_text": "Take `T = ULift (Fin 2)` with multiplication `x * y = x`. Then `T` is finite and satisfies all three axioms. But if `∃ e, ∀ x, ∃ y, x * y = e ∧ y * x = e` held, then from `x * y = e` we would get `x = e` for every `x`, impossible since `T` has two distinct elements.",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "no_diagnostics",
+      "new_problems": []
+    }
+  ],
+  "op_000016": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "For every linearly ordered type α, if the multiplication is defined by x * y = min x y, then (∃ e : α, ∀ x : α, ∃ y : α, x * y = e ∧ y * x = e) holds if and only if α has a least element.",
+      "formalized_statement": "∀ {α : Type u} [LinearOrder α] [Mul α], (∀ x y : α, x * y = min x y) → ((∃ e : α, ∀ x : α, ∃ y : α, x * y = e ∧ y * x = e) ↔ ∃ e : α, ∀ x : α, e ≤ x)",
+      "statement_formalization_notes": "Formalized 'α has a least element' as `∃ e : α, ∀ x : α, e ≤ x`.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "Use the characterization of multiplication as `min`. For the forward implication, take the provided element `e`; for any `x`, a witness `y` with `x * y = e` yields `min x y = e`, hence `e ≤ x` by `min_le_left`. For the reverse implication, if `e` is a least element, then choosing `y = e` gives `x * e = e` and `e * x = e` by the standard `min_eq_right` and `min_eq_left` lemmas.",
+      "proof_text": "intro α _ _\nintro hmul\nconstructor\n· rintro ⟨e, he⟩\n  refine ⟨e, ?_⟩\n  intro x\n  rcases he x with ⟨y, hxy, _⟩\n  rw [hmul x y] at hxy\n  simpa [hxy] using (min_le_left x y)\n· rintro ⟨e, he⟩\n  refine ⟨e, ?_⟩\n  intro x\n  refine ⟨e, ?_, ?_⟩\n  · rw [hmul x e]\n    exact min_eq_right (he x)\n  · rw [hmul e x]\n    exact min_eq_left (he x)",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:7:2: warning: Try this: intro α _ _ hmul",
+      "new_problems": []
+    }
+  ],
+  "op_000017": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∀ {α : Type u} [SemigroupLike01 α], (∀ join : α → α → α, ∀ x y z : α, x * (join y z) = join (x * y) (x * z)) → ∀ a b : α, a = b",
+      "formalized_statement": "∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α], (∀ join : α → α → α, ∀ x y z : α, x * (join y z) = join (x * y) (x * z)) → ∀ a b : α, a = b",
+      "statement_formalization_notes": "Used the repository's qualified class name to keep the proposition self-contained.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "Instantiate the hypothesis with a constant binary function to obtain `x * y = y` for all `x, y`. Then specialize `ax_middle_swap` at `(a, b, a)` and simplify; both sides reduce to `a` and `b`, yielding `a = b`.",
+      "proof_text": "intro α _ hjoin a b\nhave hright : ∀ x y : α, x * y = y := by\n  intro x y\n  simpa using hjoin (fun _ _ => y) x a b\nsimpa [AutomatedTheoryConstruction.op, hright] using\n  (AutomatedTheoryConstruction.SemigroupLike01.ax_middle_swap (x := a) (y := b) (z := a))",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "no_diagnostics",
+      "new_problems": []
+    }
+  ],
+  "op_000018": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "For every type α and every binary operation join : α → α → α, if multiplication is defined by x * y = x, then the statement ∀ x y z : α, x * (join y z) = join (x * y) (x * z) holds if and only if ∀ x : α, join x x = x.",
+      "formalized_statement": "∀ {α : Type _} [Mul α], ∀ join : α → α → α, (∀ x y : α, x * y = x) → ((∀ x y z : α, x * (join y z) = join (x * y) (x * z)) ↔ ∀ x : α, join x x = x)",
+      "statement_formalization_notes": "Formalized over an arbitrary `Mul α`, with the left-projection law `∀ x y, x * y = x` as a hypothesis and `join` fixed but arbitrary.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": false,
+      "proof_sketch": "Rewrite every multiplication using `h : ∀ x y, x * y = x`. Then the distributivity statement becomes `x = join x x`. For the forward direction, specialize at `x x x`; for the reverse direction, use symmetry of `hidem x` after rewriting.",
+      "proof_text": "intro α _ join h\nconstructor\n· intro hdist x\n  have hx := hdist x x x\n  rw [h x (join x x), h x x, h x x] at hx\n  exact hx.symm\n· intro hidem x y z\n  rw [h x (join y z), h x y, h x z]\n  symm\n  exact hidem x",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:11:31: error: Tactic `rewrite` failed: Did not find an occurrence of the pattern",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:11:31: error: Tactic `rewrite` failed: Did not find an occurrence of the pattern | x * x | in the target expression",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "Use the hypothesis `h : ∀ x y, x * y = x` to collapse every multiplication to its left input. Then the distributivity statement becomes `x = join x x`, which is equivalent to `join x x = x` by symmetry.",
+      "proof_text": "intro α _ join h\nconstructor\n· intro hdist x\n  have hx : x = join x x := by\n    simpa [h x (join x x), h x x] using hdist x x x\n  exact hx.symm\n· intro hidem x y z\n  simpa [h x (join y z), h x y, h x z] using (hidem x).symm",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:11:31: error: Tactic `rewrite` failed: Did not find an occurrence of the pattern",
+      "lean_error_fingerprint": "no_diagnostics",
+      "new_problems": []
+    }
+  ],
+  "op_000019": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∀ {α : Type u} [SemigroupLike01 α], (∃ x : α, ∀ y z : α, x * y = x * z → y = z) → ∀ a b : α, a = b",
+      "formalized_statement": "∀ {α : Type u} [SemigroupLike01 α], (∃ x : α, ∀ y z : α, x * y = x * z → y = z) → ∀ a b : α, a = b",
+      "statement_formalization_notes": "Direct formalization of the given proposition in the repository's namespace style.",
       "result": "ok",
       "verify_success": true,
       "proof_sketch": "",
@@ -541,11 +459,129 @@
     {
       "result": "counterexample",
       "verify_success": false,
-      "proof_sketch": "Specialize the universal claim to the finite type `ULift Bool` with left-projection multiplication `x * y = x`. Then applying the assumed property to the two distinct elements `true` and `false` forces both to equal the same witness `e`, which is impossible.",
-      "proof_text": "intro h\nlet T : Type u := ULift.{u} Bool\nlet t : T := ULift.up true\nlet f : T := ULift.up false\nlet sg : SemigroupLike01 T :=\n  { mul := fun x y => x\n    ax_left_idempotent := by\n      intro x\n      rfl\n    ax_right_absorb_duplicate := by\n      intro x y\n      rfl\n    ax_middle_swap := by\n      intro x y z\n      rfl }\nletI : SemigroupLike01 T := sg\nletI : Fintype T := inferInstance\nobtain ⟨e, he⟩ := h (α := T)\nobtain ⟨yt, ht, _⟩ := he t\nobtain ⟨yf, hf, _⟩ := he f\nhave hte : t = e := by\n  simpa [t, sg] using ht\nhave hfe : f = e := by\n  simpa [f, sg] using hf\nhave htf : t = f := hte.trans hfe.symm\nhave hne : t ≠ f := by\n  native_decide\nexact hne htf",
-      "counterexample_text": "Take `α = ULift Bool` and define `x * y = x`. This is a finite `SemigroupLike01`. If `∃ e, ∀ x, ∃ y, x * y = e ∧ y * x = e`, then applying it to `x = true` and `x = false` yields `true = e` and `false = e`, contradiction.",
-      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:6:81: error: unexpected token 'structure'; expected ')'",
-      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:6:81: error: unexpected token 'structure'; expected ')' | AutomatedTheoryConstruction/Scratch.lean:6:97: error(lean.inferBinderTypeFailed): Failed to infer type of binder `satisfies` | AutomatedTheoryConstruction/Scratch.lean:6:95: error(lean.inferBinderTypeFailed): Failed to infer type of binder `α`",
+      "proof_sketch": "Instantiate the universal statement at β := ULift Bool with multiplication induced by boolean conjunction. This gives a SemigroupLike01 structure on β. The witness x = up true makes left multiplication injective because true && y = y. Applying the assumed theorem then forces all elements of β to be equal, contradicting up false ≠ up true.",
+      "proof_text": "intro h\nlet β : Type u := ULift Bool\nlet x0 : β := ULift.up true\nlet a0 : β := ULift.up false\nlet b0 : β := ULift.up true\nlet mulβ : β → β → β := fun a b => ULift.up (a.down && b.down)\nlet s : SemigroupLike01 β :=\n  { mul := mulβ\n    ax_left_idempotent := by\n      intro x\n      cases x with\n      | up x =>\n          cases x <;> rfl\n    ax_right_absorb_duplicate := by\n      intro x y\n      cases x with\n      | up x =>\n          cases y with\n          | up y =>\n              cases x <;> cases y <;> rfl\n    ax_middle_swap := by\n      intro x y z\n      cases x with\n      | up x =>\n          cases y with\n          | up y =>\n              cases z with\n              | up z =>\n                  cases x <;> cases y <;> cases z <;> rfl }\nletI : SemigroupLike01 β := s\nhave hinj : ∃ x : β, ∀ y z : β, x * y = x * z → y = z := by\n  refine ⟨x0, ?_⟩\n  intro y z hyz\n  cases y with\n  | up y =>\n      cases z with\n      | up z =>\n          have hyz' : y = z := by\n            simpa [x0, mulβ] using congrArg ULift.down hyz\n          cases hyz'\n          rfl\nhave hall : ∀ a b : β, a = b := h (α := β) hinj\nhave hne : a0 ≠ b0 := by\n  intro hab\n  have : (false : Bool) = true := by\n    simpa [a0, b0] using congrArg ULift.down hab\n  simp at this\nexact hne (hall a0 b0)",
+      "counterexample_text": "Use β := ULift Bool with multiplication up x * up y := up (x && y). The axioms hold by case split on booleans. The element up true gives injective left multiplication, but up false and up true are distinct.",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:45:14: error: Type mismatch: After simplification, term",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:45:14: error: Type mismatch: After simplification, term | congrArg ULift.down hyz | has type",
+      "new_problems": []
+    },
+    {
+      "result": "counterexample",
+      "verify_success": false,
+      "proof_sketch": "Instantiate the universal claim at β := ULift Bool with multiplication induced by conjunction. This structure satisfies the three axioms by case split. The element ULift.up true makes left multiplication injective, since true && b = b. Applying the assumed theorem yields that all elements of β are equal, contradicting ULift.up false ≠ ULift.up true.",
+      "proof_text": "intro h\nlet β : Type u := ULift Bool\nlet x0 : β := ULift.up true\nlet a0 : β := ULift.up false\nlet b0 : β := ULift.up true\nlet mulβ : β → β → β := fun a b => ULift.up (a.down && b.down)\nlet s : SemigroupLike01 β :=\n  { mul := mulβ\n    ax_left_idempotent := by\n      intro x\n      cases x with\n      | up x =>\n          cases x <;> rfl\n    ax_right_absorb_duplicate := by\n      intro x y\n      cases x with\n      | up x =>\n          cases y with\n          | up y =>\n              cases x <;> cases y <;> rfl\n    ax_middle_swap := by\n      intro x y z\n      cases x with\n      | up x =>\n          cases y with\n          | up y =>\n              cases z with\n              | up z =>\n                  cases x <;> cases y <;> cases z <;> rfl }\nletI : SemigroupLike01 β := s\nhave hinj : ∃ x : β, ∀ y z : β, x * y = x * z → y = z := by\n  refine ⟨x0, ?_⟩\n  intro y z hyz\n  cases y with\n  | up y =>\n      cases z with\n      | up z =>\n          change ULift.up y = ULift.up z\n          simpa [x0, mulβ] using hyz\nhave hall : ∀ a b : β, a = b := h (α := β) hinj\nhave hne : a0 ≠ b0 := by\n  intro hab\n  have : (false : Bool) = true := by\n    simpa [a0, b0] using congrArg ULift.down hab\n  simp at this\nexact hne (hall a0 b0)",
+      "counterexample_text": "Take β := ULift Bool with multiplication ULift.up p * ULift.up q := ULift.up (p && q). The axioms hold by a finite case split. Left multiplication by ULift.up true is injective, but ULift.up false and ULift.up true are distinct.",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:45:12: error: Type mismatch: After simplification, term",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:45:12: error: Type mismatch: After simplification, term | hyz | has type",
+      "new_problems": []
+    },
+    {
+      "result": "counterexample",
+      "verify_success": false,
+      "proof_sketch": "Instantiate the statement at β := ULift Bool with multiplication given by boolean conjunction. This structure satisfies the three SemigroupLike01 axioms by finite case split. The element ULift.up true has injective left multiplication, again by case split, but the conclusion would force ULift.up false = ULift.up true, contradicting decidable inequality.",
+      "proof_text": "intro h\nlet β : Type u := ULift Bool\nlet x0 : β := ULift.up true\nlet a0 : β := ULift.up false\nlet b0 : β := ULift.up true\nlet mulβ : β → β → β := fun a b => ULift.up (a.down && b.down)\nlet s : SemigroupLike01 β :=\n  { mul := mulβ\n    ax_left_idempotent := by\n      intro x\n      cases x with\n      | up x =>\n          cases x <;> rfl\n    ax_right_absorb_duplicate := by\n      intro x y\n      cases x with\n      | up x =>\n          cases y with\n          | up y =>\n              cases x <;> cases y <;> rfl\n    ax_middle_swap := by\n      intro x y z\n      cases x with\n      | up x =>\n          cases y with\n          | up y =>\n              cases z with\n              | up z =>\n                  cases x <;> cases y <;> cases z <;> rfl }\nletI : SemigroupLike01 β := s\nhave hinj : ∃ x : β, ∀ y z : β, x * y = x * z → y = z := by\n  refine ⟨x0, ?_⟩\n  intro y z hyz\n  cases y with\n  | up y =>\n      cases z with\n      | up z =>\n          cases y <;> cases z <;> simp [x0, mulβ] at hyz ⊢\nhave hall : ∀ a b : β, a = b := h (α := β) hinj\nhave hne : a0 ≠ b0 := by\n  native_decide\nexact hne (hall a0 b0)",
+      "counterexample_text": "Take β := ULift Bool with multiplication defined by ULift.up p * ULift.up q = ULift.up (p && q). The axioms hold by checking the four boolean cases. Left multiplication by ULift.up true is injective, but ULift.up false and ULift.up true are distinct, so the universal conclusion is false.",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:43:15: error: unsolved goals",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:43:15: error: unsolved goals | case up.up.false.true | h : ∀ {α : Type u} [inst : SemigroupLike01 α], (∃ x, ∀ (y z : α), x * y = x * z → y = z) → ∀ (a b : α), a = b",
+      "new_problems": []
+    },
+    {
+      "result": "counterexample",
+      "verify_success": true,
+      "proof_sketch": "Use the same countermodel as before: take β := ULift Bool with multiplication induced by boolean conjunction. This satisfies the SemigroupLike01 axioms by finite case split. The element ULift.up true makes left multiplication injective, which can be discharged directly by finite decision. Applying the assumed universal statement to this β then forces ULift.up false = ULift.up true, contradicting decidable inequality.",
+      "proof_text": "intro h\nlet β : Type u := ULift Bool\nlet x0 : β := ULift.up true\nlet a0 : β := ULift.up false\nlet b0 : β := ULift.up true\nlet mulβ : β → β → β := fun a b => ULift.up (a.down && b.down)\nlet s : SemigroupLike01 β :=\n  { mul := mulβ\n    ax_left_idempotent := by\n      intro x\n      cases x with\n      | up x =>\n          cases x <;> rfl\n    ax_right_absorb_duplicate := by\n      intro x y\n      cases x with\n      | up x =>\n          cases y with\n          | up y =>\n              cases x <;> cases y <;> rfl\n    ax_middle_swap := by\n      intro x y z\n      cases x with\n      | up x =>\n          cases y with\n          | up y =>\n              cases z with\n              | up z =>\n                  cases x <;> cases y <;> cases z <;> rfl }\nletI : SemigroupLike01 β := s\nhave hinj : ∃ x : β, ∀ y z : β, x * y = x * z → y = z := by\n  refine ⟨x0, ?_⟩\n  native_decide\nhave hall : ∀ a b : β, a = b := h (α := β) hinj\nhave hne : a0 ≠ b0 := by\n  native_decide\nexact hne (hall a0 b0)",
+      "counterexample_text": "Take β := ULift Bool and define multiplication by ULift.up p * ULift.up q = ULift.up (p && q). The three SemigroupLike01 axioms hold. Left multiplication by ULift.up true is injective, since true && b = b. But β has two distinct elements, ULift.up false and ULift.up true, so the conclusion that all elements are equal is false.",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:43:15: error: unsolved goals",
+      "lean_error_fingerprint": "no_diagnostics",
+      "new_problems": []
+    }
+  ],
+  "op_000020": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "For every linearly ordered type α, if multiplication is defined by x * y = min x y, then the property ∀ x y z : α, x * y = x * z → y = z holds if and only if ∀ a b : α, a = b.",
+      "formalized_statement": "∀ {α : Type u} [LinearOrder α] [Mul α], (∀ x y : α, x * y = min x y) → ((∀ x y z : α, x * y = x * z → y = z) ↔ ∀ a b : α, a = b)",
+      "statement_formalization_notes": "Formalized directly using a linear order and a multiplication operation constrained to be `min`.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": false,
+      "proof_sketch": "Assume `hmin`. For the forward implication, given left-cancellation and any `a b`, use totality of the linear order. If `a ≤ b`, then `a * a = min a a = a` and `a * b = min a b = a`, so `a * a = a * b`; cancellation with left factor `a` yields `a = b`. If `b ≤ a`, similarly `b * a = b * b`, so cancellation with left factor `b` yields `a = b`. For the reverse implication, if all elements are equal, then any `y` and `z` are equal, so cancellation is trivial.",
+      "proof_text": "intro hmin\nconstructor\n· intro hcancel a b\n  rcases le_total a b with hab | hba\n  · exact hcancel a a b (by rw [hmin, hmin, min_eq_left le_rfl, min_eq_left hab])\n  · exact hcancel b a b (by rw [hmin, hmin, min_eq_left hba, min_eq_left le_rfl])\n· intro h x y z hxy\n  exact h y z",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:8:2: error: Tactic `constructor` failed: target is not an inductive datatype",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:8:2: error: Tactic `constructor` failed: target is not an inductive datatype | hmin : Type u | ⊢ ∀ [inst : LinearOrder hmin] [inst_1 : Mul hmin],",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "Introduce the implicit type and typeclass arguments before the hypothesis `hmin`. For the forward direction, use totality of the linear order on `a` and `b`: if `a ≤ b`, then `a * a = a * b` because both sides are `a = min a a = min a b`, so left-cancellation gives `a = b`; the case `b ≤ a` is symmetric. For the reverse direction, if all elements are equal, cancellation is immediate.",
+      "proof_text": "intro α _ _ hmin\nconstructor\n· intro hcancel a b\n  rcases le_total a b with hab | hba\n  · exact hcancel a a b (by rw [hmin, hmin, min_eq_left le_rfl, min_eq_left hab])\n  · exact hcancel b a b (by rw [hmin, hmin, min_eq_left hba, min_eq_left le_rfl])\n· intro h x y z hxy\n  exact h y z",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:8:2: error: Tactic `constructor` failed: target is not an inductive datatype",
+      "lean_error_fingerprint": "no_diagnostics",
+      "new_problems": []
+    }
+  ],
+  "op_000021": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∀ {α : Type u} [SemigroupLike01 α], ∀ x y z : α, (x * y) * (x * z) = (x * y) * z",
+      "formalized_statement": "∀ {α : Type u} [SemigroupLike01 α], ∀ x y z : α, (x * y) * (x * z) = (x * y) * z",
+      "statement_formalization_notes": "Direct restatement of the target, matching the statement style already used in Derived.lean inside namespace AutomatedTheoryConstruction.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": false,
+      "proof_sketch": "Use `ax_middle_swap` to swap the middle and right factors, then apply `ax_right_absorb_duplicate` to collapse `x * (x * z)` to `x * z`, and finally use `ax_middle_swap` again in reverse.",
+      "proof_text": "intro α _ x y z\ncalc\n  (x * y) * (x * z) = (x * (x * z)) * y := by\n    simpa [AutomatedTheoryConstruction.op] using\n      (AutomatedTheoryConstruction.SemigroupLike01.ax_middle_swap (α := α) x y (x * z))\n  _ = (x * z) * y := by\n    simpa [AutomatedTheoryConstruction.op] using\n      congrArg (fun t => t * y)\n        (AutomatedTheoryConstruction.SemigroupLike01.ax_right_absorb_duplicate (α := α) x z)\n  _ = (x * y) * z := by\n    simpa [AutomatedTheoryConstruction.op] using\n      (AutomatedTheoryConstruction.SemigroupLike01.ax_middle_swap (α := α) x z y).symm",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:17:6: error: Type mismatch: After simplification, term",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:17:6: error: Type mismatch: After simplification, term | Eq.symm (SemigroupLike01.ax_middle_swap x z y) | has type",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "Use `ax_middle_swap` to rewrite `(x * y) * (x * z)` as `(x * (x * z)) * y`, then apply `ax_right_absorb_duplicate` to reduce `x * (x * z)` to `x * z`, and finally use `ax_middle_swap` with arguments `x z y` to get `(x * z) * y = (x * y) * z`.",
+      "proof_text": "intro α _ x y z\ncalc\n  (x * y) * (x * z) = (x * (x * z)) * y := by\n    simpa [AutomatedTheoryConstruction.op] using\n      (AutomatedTheoryConstruction.SemigroupLike01.ax_middle_swap (α := α) x y (x * z))\n  _ = (x * z) * y := by\n    simpa [AutomatedTheoryConstruction.op] using\n      congrArg (fun t => t * y)\n        (AutomatedTheoryConstruction.SemigroupLike01.ax_right_absorb_duplicate (α := α) x z)\n  _ = (x * y) * z := by\n    simpa [AutomatedTheoryConstruction.op] using\n      (AutomatedTheoryConstruction.SemigroupLike01.ax_middle_swap (α := α) x z y)",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:17:6: error: Type mismatch: After simplification, term",
+      "lean_error_fingerprint": "no_diagnostics",
+      "new_problems": []
+    }
+  ],
+  "op_000022": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "For every type α, if multiplication is defined by x * y = y for all x y : α, then this multiplication satisfies the SemigroupLike01 axioms if and only if ∀ a b : α, a = b.",
+      "formalized_statement": "∀ {α : Type _} [Mul α], (∀ x y : α, x * y = y) → (((∀ x : α, x * x = x) ∧ (∀ x y : α, x * (x * y) = x * y) ∧ (∀ x y z : α, (x * y) * z = (x * z) * y)) ↔ ∀ a b : α, a = b)",
+      "statement_formalization_notes": "Formalized 'satisfies the SemigroupLike01 axioms' as the conjunction of the three axioms for the given multiplication.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
       "new_problems": []
     }
   ]

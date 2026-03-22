@@ -307,4 +307,142 @@ theorem thm_op_000014 : ∀ {α : Type u} [SemigroupLike01 α], (∃ e : α, ∀
   simpa [AutomatedTheoryConstruction.op, he x, he y] using
     (AutomatedTheoryConstruction.SemigroupLike01.ax_middle_swap (x := e) (y := x) (z := y))
 
+
+theorem thm_op_000015_is_false : ¬(∀ {α : Type u} [SemigroupLike01 α] [Fintype α], ∃ e : α, ∀ x : α, ∃ y : α, x * y = e ∧ y * x = e) := by
+  intro h
+  let T : Type u := ULift (Fin 2)
+  let a0 : T := ULift.up (0 : Fin 2)
+  let a1 : T := ULift.up (1 : Fin 2)
+  let mulT : T -> T -> T := fun a _ => a
+  letI : Fintype T := inferInstance
+  let sg : SemigroupLike01 T :=
+    { mul := mulT
+      ax_left_idempotent := by
+        intro x
+        rfl
+      ax_right_absorb_duplicate := by
+        intro x y
+        rfl
+      ax_middle_swap := by
+        intro x y z
+        rfl }
+  letI : SemigroupLike01 T := sg
+  obtain ⟨e, he⟩ := h (α := T)
+  have h0 : a0 = e := by
+    obtain ⟨y, hxy, _⟩ := he a0
+    simpa [mulT] using hxy
+  have h1 : a1 = e := by
+    obtain ⟨y, hxy, _⟩ := he a1
+    simpa [mulT] using hxy
+  have h01 : a0 = a1 := h0.trans h1.symm
+  have hne : a0 ≠ a1 := by
+    native_decide
+  exact hne h01
+
+
+theorem thm_op_000016 : ∀ {α : Type u} [LinearOrder α] [Mul α], (∀ x y : α, x * y = min x y) → ((∃ e : α, ∀ x : α, ∃ y : α, x * y = e ∧ y * x = e) ↔ ∃ e : α, ∀ x : α, e ≤ x) := by
+  intro α _ _
+  intro hmul
+  constructor
+  · rintro ⟨e, he⟩
+    refine ⟨e, ?_⟩
+    intro x
+    rcases he x with ⟨y, hxy, _⟩
+    rw [hmul x y] at hxy
+    simpa [hxy] using (min_le_left x y)
+  · rintro ⟨e, he⟩
+    refine ⟨e, ?_⟩
+    intro x
+    refine ⟨e, ?_, ?_⟩
+    · rw [hmul x e]
+      exact min_eq_right (he x)
+    · rw [hmul e x]
+      exact min_eq_left (he x)
+
+
+theorem thm_op_000017 : ∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α], (∀ join : α → α → α, ∀ x y z : α, x * (join y z) = join (x * y) (x * z)) → ∀ a b : α, a = b := by
+  intro α _ hjoin a b
+  have hright : ∀ x y : α, x * y = y := by
+    intro x y
+    simpa using hjoin (fun _ _ => y) x a b
+  simpa [AutomatedTheoryConstruction.op, hright] using
+    (AutomatedTheoryConstruction.SemigroupLike01.ax_middle_swap (x := a) (y := b) (z := a))
+
+
+theorem thm_op_000018 : ∀ {α : Type _} [Mul α], ∀ join : α → α → α, (∀ x y : α, x * y = x) → ((∀ x y z : α, x * (join y z) = join (x * y) (x * z)) ↔ ∀ x : α, join x x = x) := by
+  intro α _ join h
+  constructor
+  · intro hdist x
+    have hx : x = join x x := by
+      simpa [h x (join x x), h x x] using hdist x x x
+    exact hx.symm
+  · intro hidem x y z
+    simpa [h x (join y z), h x y, h x z] using (hidem x).symm
+
+
+theorem thm_op_000019_is_false : ¬(∀ {α : Type u} [SemigroupLike01 α], (∃ x : α, ∀ y z : α, x * y = x * z → y = z) → ∀ a b : α, a = b) := by
+  intro h
+  let β : Type u := ULift Bool
+  let x0 : β := ULift.up true
+  let a0 : β := ULift.up false
+  let b0 : β := ULift.up true
+  let mulβ : β → β → β := fun a b => ULift.up (a.down && b.down)
+  let s : SemigroupLike01 β :=
+    { mul := mulβ
+      ax_left_idempotent := by
+        intro x
+        cases x with
+        | up x =>
+            cases x <;> rfl
+      ax_right_absorb_duplicate := by
+        intro x y
+        cases x with
+        | up x =>
+            cases y with
+            | up y =>
+                cases x <;> cases y <;> rfl
+      ax_middle_swap := by
+        intro x y z
+        cases x with
+        | up x =>
+            cases y with
+            | up y =>
+                cases z with
+                | up z =>
+                    cases x <;> cases y <;> cases z <;> rfl }
+  letI : SemigroupLike01 β := s
+  have hinj : ∃ x : β, ∀ y z : β, x * y = x * z → y = z := by
+    refine ⟨x0, ?_⟩
+    native_decide
+  have hall : ∀ a b : β, a = b := h (α := β) hinj
+  have hne : a0 ≠ b0 := by
+    native_decide
+  exact hne (hall a0 b0)
+
+
+theorem thm_op_000020 : ∀ {α : Type u} [LinearOrder α] [Mul α], (∀ x y : α, x * y = min x y) → ((∀ x y z : α, x * y = x * z → y = z) ↔ ∀ a b : α, a = b) := by
+  intro α _ _ hmin
+  constructor
+  · intro hcancel a b
+    rcases le_total a b with hab | hba
+    · exact hcancel a a b (by rw [hmin, hmin, min_eq_left le_rfl, min_eq_left hab])
+    · exact hcancel b a b (by rw [hmin, hmin, min_eq_left hba, min_eq_left le_rfl])
+  · intro h x y z hxy
+    exact h y z
+
+
+theorem thm_op_000021 : ∀ {α : Type u} [SemigroupLike01 α], ∀ x y z : α, (x * y) * (x * z) = (x * y) * z := by
+  intro α _ x y z
+  calc
+    (x * y) * (x * z) = (x * (x * z)) * y := by
+      simpa [AutomatedTheoryConstruction.op] using
+        (AutomatedTheoryConstruction.SemigroupLike01.ax_middle_swap (α := α) x y (x * z))
+    _ = (x * z) * y := by
+      simpa [AutomatedTheoryConstruction.op] using
+        congrArg (fun t => t * y)
+          (AutomatedTheoryConstruction.SemigroupLike01.ax_right_absorb_duplicate (α := α) x z)
+    _ = (x * y) * z := by
+      simpa [AutomatedTheoryConstruction.op] using
+        (AutomatedTheoryConstruction.SemigroupLike01.ax_middle_swap (α := α) x z y)
+
 end AutomatedTheoryConstruction
