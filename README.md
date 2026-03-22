@@ -1,6 +1,35 @@
 # Automated Theory Construction
 
-This repository implements an automated theory-construction loop on top of Lean 4 + Mathlib.
+This repository aims to start from a small set of axioms and automatically build up a growing collection of derived theorems.
+
+The longer-term goal is more ambitious than simply producing many theorems: the system should push toward statements in the most general form it can discover, move beyond the current internal language when needed, and remain usable even for niche axiom systems that are not already well-tooled or neatly standardized.
+
+In other words, this repository is aimed at exploratory theorem generation in underdeveloped formal settings, not only automation inside familiar, well-prepared theories.
+
+It implements an automated theory-construction loop on top of Lean 4 + Mathlib. Given a base theory, the system proposes candidate statements, attempts to formalize and prove them in Lean, verifies successful results, and accumulates the verified theorems into the derived theory.
+
+## Quick Mental Model
+
+```text
+[Theory.lean]
+  base symbols + axioms
+        ↓
+[scripts/run_loop.py]
+  generate / formalize / prove / repair
+        ↓
+[Scratch.lean]
+  temporary Lean verification
+        ↓
+[Derived.lean]
+  accumulated verified theorems
+```
+
+For a first-time reader, the core idea is:
+
+- `AutomatedTheoryConstruction/Theory.lean` defines the starting symbols and axioms
+- `AutomatedTheoryConstruction/Scratch.lean` is the temporary file used for Lean verification
+- `AutomatedTheoryConstruction/Derived.lean` stores the verified theorems discovered so far
+- `scripts/run_loop.py` orchestrates the full loop
 
 The current design is a single runtime pipeline with:
 
@@ -24,14 +53,13 @@ So the current implementation is not yet a generic multi-theory runner. To chang
 Each iteration runs the following stages:
 
 1. Pick the next open problem deterministically.
-2. Try `prover_statement` to turn the problem into a Lean-ready statement when needed.
-3. Run `prover` to choose `proof`, `counterexample`, or `stuck`, plus up to two follow-up problems.
-4. Save the natural-language attempt to `data/proof_notes/`.
-5. Run `formalize`, then `lake env lean AutomatedTheoryConstruction/Scratch.lean`.
-6. If verification fails, run `repair` until the retry budget is exhausted.
-7. If verification succeeds, append the theorem body from `Scratch.lean` into `Derived.lean`.
-8. Run `expand` to suggest additional problems.
-9. Apply deterministic state updates to `open`, `solved`, and `counterexamples`.
+2. If the problem is not already Lean-formal, try `prover_statement` to turn it into a Lean-ready statement.
+3. Run `prover` to choose `proof`, `counterexample`, or `stuck`.
+4. Run `formalize`, then `lake env lean AutomatedTheoryConstruction/Scratch.lean`.
+5. If verification fails, run `repair` until the retry budget is exhausted.
+6. If verification succeeds, append the theorem body from `Scratch.lean` into `Derived.lean`.
+7. Run `expand` to suggest additional problems.
+8. Apply deterministic state updates to `open`, `solved`, and `counterexamples`.
 
 Open problems may be either Lean-formal statements or semi-formal research prompts. If a problem cannot be formalized, it stays open.
 
@@ -112,7 +140,6 @@ By default, `scripts/run_loop.py` starts with `--initialize-on-start`, which mea
 - overwrite `data/open_problems.jsonl` from `theories/semigroup_like_01/seeds.jsonl`
 - reset `data/solved_problems.jsonl`
 - reset `data/counterexamples.jsonl`
-- clear and recreate `data/proof_notes/`
 - reset `data/formalization_memory.json`
 - reset `AutomatedTheoryConstruction/Scratch.lean`
 - reset `AutomatedTheoryConstruction/Derived.lean`
@@ -138,6 +165,8 @@ Shared worker settings:
 
 Task-specific overrides:
 
+- `ATC_PROVER_WORKER_COMMAND`
+- `ATC_PROVER_WORKER_TIMEOUT`
 - `ATC_PROVER_STATEMENT_WORKER_COMMAND`
 - `ATC_PROVER_STATEMENT_WORKER_TIMEOUT`
 - `ATC_FORMALIZE_WORKER_COMMAND`
@@ -149,11 +178,17 @@ Useful Codex worker settings:
 
 - `ATC_CODEX_TIMEOUT`: inner timeout used by `scripts/codex_worker.py`
 - `ATC_CODEX_MODEL`: optional model override for `codex exec`
+- `ATC_PROVER_CODEX_MODEL`: optional prover-only model override
+- `ATC_PROVER_CODEX_TIMEOUT`: optional prover-only inner timeout override
+- `ATC_PROVER_STATEMENT_CODEX_MODEL`: optional prover-statement-only model override
+- `ATC_PROVER_STATEMENT_CODEX_TIMEOUT`: optional prover-statement-only inner timeout override
 
 You can also override the same settings through CLI flags such as:
 
 - `--worker-command`
 - `--worker-timeout`
+- `--prover-worker-command`
+- `--prover-worker-timeout`
 - `--prover-statement-worker-command`
 - `--prover-statement-worker-timeout`
 - `--formalize-worker-command`
@@ -168,10 +203,7 @@ The loop stores its state in `data/`:
 - `data/open_problems.jsonl`
 - `data/solved_problems.jsonl`
 - `data/counterexamples.jsonl`
-- `data/proof_notes/<problem_id>.md`
 - `data/formalization_memory.json`
-
-`data/proof_notes/` stores the natural-language prover output that later formalization and repair steps can reuse.
 
 `data/formalization_memory.json` stores same-problem history across statement formalization, formalization, and repair attempts.
 
@@ -191,7 +223,7 @@ lake env lean AutomatedTheoryConstruction/Scratch.lean
 
 - `scripts/run_loop.py` currently assumes the semigroup-like seed file path and fixed module layout.
 - `example/CCG`, `example/Equational_theory`, and `example/provability` are examples only; they are not selected by a runtime flag today.
-- `expand` suggestions are merged with solver-generated follow-up problems and deduplicated before state update.
+- `expand` suggestions are deduplicated before state update.
 - `formalize` and `repair` are separate task types, even if they use the same prompt file by default.
 
 ## License
@@ -201,6 +233,7 @@ This repository is licensed under the MIT License. See `LICENSE`.
 ## Reference
 
 - Xin et al. (2025). *BFS-Prover-V2*.
+- Lev Beklemishev and Daniyar Shamkanov. *Some abstract versions of Gödel's second incompleteness theorem based on non-classical logics*. arXiv:1602.05728.
 
 ## Acknowledgements
 
@@ -208,3 +241,4 @@ The prompting strategy for solving Lean problems was partially inspired by a pri
 
 This repository also includes one file that was copied and then adapted from SnO2WMaN's `provability-toy` repository:
 <https://github.com/SnO2WMaN/provability-toy>
+
