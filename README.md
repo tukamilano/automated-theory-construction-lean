@@ -4,9 +4,27 @@ This repository aims to start from a small set of axioms and automatically build
 
 The longer-term goal is more ambitious than simply producing many theorems: the system should push toward statements in the most general form it can discover, move beyond the current internal language when needed, and remain usable even for niche axiom systems that are not already well-tooled or neatly standardized.
 
+Here, "moving beyond the internal language" means not stopping at equations built only from the primitive operation and variables, but also searching for statements about existence, nonexistence, uniqueness, finite-model behavior, cardinality bounds, and other global constraints on the models of the axioms.
+
 In other words, this repository is aimed at exploratory theorem generation in underdeveloped formal settings, not only automation inside familiar, well-prepared theories.
 
 It implements an automated theory-construction loop on top of Lean 4 + Mathlib. Given a base theory, the system proposes candidate statements, attempts to formalize and prove them in Lean, verifies successful results, and accumulates the verified theorems into the derived theory.
+
+## Most Important Principle
+
+The most important part of this repository is the solved-and-verified follow-up policy in `prompts/new_problem_expander.md`.
+
+If you read only one design rule, read this one: when the current problem is solved and verified (`verify_success = true` and `result = proof|counterexample`), the system should prefer outward-looking follow-up problems that extend the theory rather than merely staying near the last proof script.
+
+More concretely, follow-up generation should favor, roughly in this order:
+
+1. natural generalizations or reusable abstractions
+2. converses, strict separations, or failure-of-converse statements
+3. existence, uniqueness, impossibility, or rigidity phenomena
+4. finite-model behavior, extremal behavior, boundary cases, or classification fragments
+5. adjacent structural consequences that clarify the global shape of the theory
+
+At least one candidate should ideally broaden, reinterpret, or reuse the verified result beyond the immediate local target. Prefer candidates that teach something non-obvious about the theory or its models. If a more informative model-level, structural, or boundary-case follow-up is available, prefer it over a nearby local rewrite.
 
 ## Quick Mental Model
 

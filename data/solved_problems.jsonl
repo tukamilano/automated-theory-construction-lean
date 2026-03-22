@@ -1,28 +1,4 @@
 {"id":"op_000007","stmt":"∀ {α : Type u} [SemigroupLike01 α], ∀ x : α, x * x = x","thm":"thm_op_000007"}
-{"id":"op_000009","stmt":"∃ (α : Type) (_ : SemigroupLike01 α), ∃ x y z : α, (x * y) * z ≠ x * (y * z)","thm":"thm_op_000009"}
-{"id":"op_000010","stmt":"∀ {α : Type u} [SemigroupLike01 α], ∀ x y : α, (x * y) * x = x * y","thm":"thm_op_000010"}
-{"id":"op_000011","stmt":"∀ {α : Type u} [SemigroupLike01 α], ∀ x y : α, (x * y) * y = x * y","thm":"thm_op_000011"}
-{"id":"op_000013","stmt":"∃ (α : Type) (_ : SemigroupLike01 α), ¬ ∃ e : α, ∀ x : α, e * x = x","thm":"thm_op_000013"}
-{"id":"op_000021","stmt":"∀ {α : Type u} [SemigroupLike01 α], ∀ x y : α, x * (x * y) = x * y","thm":"thm_op_000021"}
-{"id":"op_000026","stmt":"∀ {α : Type u} [SemigroupLike01 α], ∀ x y z : α, ((x * y) * z) * y = (x * y) * z","thm":"thm_op_000026"}
-{"id":"op_000036","stmt":"∀ {α : Type u} [SemigroupLike01 α], ∀ e f : α, (∀ x : α, x * e = e ∧ e * x = e) → (∀ x : α, x * f = f ∧ f * x = f) → e = f","thm":"thm_op_000036"}
-{"id":"op_000037","stmt":"∀ {α : Type u} [SemigroupLike01 α], ∀ x y z : α, ((x * y) * z) * x = (x * y) * z","thm":"thm_op_000037"}
-{"id":"op_000038","stmt":"∀ {α : Type u} [SemigroupLike01 α], ∀ x y z t : α, (((x * y) * z) * t) = (((x * y) * t) * z)","thm":"thm_op_000038"}
-{"id":"op_000039","stmt":"∀ {α : Type u} [SemigroupLike01 α], ∀ x y z : α, (((x * y) * z) * (x * y)) = (x * y) * z","thm":"thm_op_000039"}
-{"id":"op_000040","stmt":"∀ {α : Type u} [Mul α], ∀ e f : α, (∀ x : α, x * e = e) → (∀ x : α, f * x = f) → e = f","thm":"thm_op_000040"}
-{"id":"op_000041","stmt":"∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α], ∀ e : α, (∀ x : α, x * e = e) → ∀ x : α, e * x = e","thm":"thm_op_000041"}
-{"id":"op_000042","stmt":"∀ {α : Type u} [SemigroupLike01 α], ∀ x y z : α, (x * y) * (x * z) = (x * y) * z","thm":"thm_op_000042"}
-{"id":"op_000043","stmt":"∀ {α : Type u} [SemigroupLike01 α], ∀ x y z : α, (((x * y) * z) * x) = (x * y) * z","thm":"thm_op_000043"}
-{"id":"op_000045","stmt":"∀ {α : Type u} [SemigroupLike01 α], ∀ x y z : α, (((x * y) * z) * z) = (x * y) * z","thm":"thm_op_000045"}
-{"id":"op_000046","stmt":"∀ {α : Type u} [SemigroupLike01 α], ∀ x y z : α, (x * y) * ((x * y) * z) = (x * y) * z","thm":"thm_op_000046"}
-{"id":"op_000056","stmt":"For every type with the same axioms and all elements x, y, z, one has ((x * y) * z) * (x * y) = (x * y) * z.","thm":"thm_op_000056"}
-{"id":"op_000057","stmt":"∀ {α : Type u} [AutomatedTheoryConstruction.SemigroupLike01 α], ∀ x y z : α, ((x * y) * z) * (x * y) = (x * y) * z","thm":"thm_op_000057"}
-{"id":"op_000058","stmt":"∃ (α : Type) (_ : AutomatedTheoryConstruction.SemigroupLike01 α) (e x : α), (∀ y : α, e * y = e) ∧ x * e ≠ e","thm":"thm_op_000058"}
-{"id":"op_000060","stmt":"∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α] (a b c : α), ((a * b) * c) * a = (a * b) * c","thm":"thm_op_000060"}
-{"id":"op_000062","stmt":"∀ {α : Type u} [AutomatedTheoryConstruction.SemigroupLike01 α], ∀ a b c t : α, t = a * b → ((a * b) * c) * t = (a * b) * c","thm":"thm_op_000062"}
-{"id":"op_000065","stmt":"∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α] (a b c d : α), (((a * b) * c) * d) * a = ((a * b) * c) * d","thm":"thm_op_000065"}
-{"id":"op_000066","stmt":"∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α], ∀ x y z : α, ((x * y) * z) * (x * y) = (x * y) * z","thm":"thm_op_000066"}
-{"id":"op_000067","stmt":"∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α], ∀ a b c d : α, (((a * b) * c) * d) * (a * b) = ((a * b) * c) * d","thm":"thm_op_000067"}
-{"id":"op_000068","stmt":"Show formally that the left-projection operation `x * y := x` defines an instance of `AutomatedTheoryConstruction.SemigroupLike01` on any type.","thm":"thm_op_000068"}
-{"id":"op_000070","stmt":"∀ {α : Type _} [Fintype α] [AutomatedTheoryConstruction.SemigroupLike01 α] (e : α), (∀ y : α, e * y = e) → (¬ ∀ x : α, x * e = e) → Nontrivial α","thm":"thm_op_000070"}
-{"id":"op_000071","stmt":"∀ (α : Type _) [Nontrivial α], ∃ (_ : AutomatedTheoryConstruction.SemigroupLike01 α), ∃ e : α, (∀ y : α, e * y = e) ∧ ¬ ∀ x : α, x * e = e","thm":"thm_op_000071"}
+{"id":"op_000009","stmt":"∀ {α : Type u} [SemigroupLike01 α], (∀ x y : α, x * y = y * x) → ∀ x y z : α, (x * y) * z = x * (y * z)","thm":"thm_op_000009"}
+{"id":"op_000010","stmt":"∀ {α : Type u} [SemigroupLike01 α] [Fintype α], (∃ x y z : α, (x * y) * z ≠ x * (y * z)) → 3 ≤ Fintype.card α","thm":"thm_op_000010"}
+{"id":"op_000014","stmt":"∀ {α : Type u} [SemigroupLike01 α], (∃ e : α, ∀ x : α, e * x = x) → ∀ x y : α, x * y = y * x","thm":"thm_op_000014"}

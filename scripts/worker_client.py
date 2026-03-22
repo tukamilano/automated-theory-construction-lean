@@ -15,6 +15,15 @@ class WorkerSettings:
     timeout_sec: int
 
 
+def _single_line_excerpt(text: str, limit: int = 240) -> str:
+    normalized = " ".join(text.strip().split())
+    if not normalized:
+        return ""
+    if len(normalized) <= limit:
+        return normalized
+    return normalized[: limit - 3] + "..."
+
+
 def _resolve_timeout_seconds(timeout_text: str | None, default: int) -> int:
     raw = (timeout_text or "").strip()
     return int(raw) if raw else default
@@ -175,7 +184,29 @@ def invoke_worker_json(
 
     response, parse_attempts, parse_fallback_used = _extract_json_object(completed.stdout)
     if "error" in response and response["error"]:
-        raise RuntimeError(f"Worker returned error: {response['error']}")
+        error_details: list[str] = []
+        raw_worker_meta = response.get("worker_meta")
+        if isinstance(raw_worker_meta, dict):
+            task_name = raw_worker_meta.get("task_type")
+            if isinstance(task_name, str) and task_name.strip():
+                error_details.append(f"task_type={task_name}")
+            if raw_worker_meta.get("contract_retry_used"):
+                error_details.append("contract_retry_used=true")
+
+            initial_excerpt = raw_worker_meta.get("initial_raw_model_output_excerpt")
+            if isinstance(initial_excerpt, str) and initial_excerpt.strip():
+                error_details.append(
+                    f"initial_output_excerpt={_single_line_excerpt(initial_excerpt)}"
+                )
+
+            retry_excerpt = raw_worker_meta.get("raw_model_output_excerpt")
+            if isinstance(retry_excerpt, str) and retry_excerpt.strip():
+                error_details.append(
+                    f"retry_output_excerpt={_single_line_excerpt(retry_excerpt)}"
+                )
+
+        detail_suffix = f" ({'; '.join(error_details)})" if error_details else ""
+        raise RuntimeError(f"Worker returned error: {response['error']}{detail_suffix}")
 
     result_payload = response.get("result_payload")
     if not isinstance(result_payload, dict):

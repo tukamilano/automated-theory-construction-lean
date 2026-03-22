@@ -1,16 +1,24 @@
-{"id":"op_000072","stmt":"∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α], ∀ x y z : α, ((x * y) * z) * x = (x * y) * z","src":"generated"}
-{"id":"op_000073","stmt":"∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α], ∀ x y z w : α, (((x * y) * z) * w) * (x * y) = ((x * y) * z) * w","src":"generated"}
-{"id":"op_000074","stmt":"∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α], ∀ a b c d e : α, (((((a * b) * c) * d) * e) * (a * b)) = ((((a * b) * c) * d) * e)","src":"generated"}
-{"id":"op_000075","stmt":"Characterize which right factors p can be absorbed by a term built from the same left prefix in `SemigroupLike01`; for example, explain when a term of the form `t = (((a * b) * c) * d)` must satisfy `t * p = t`.","src":"generated"}
-{"id":"op_000076","stmt":"∀ (α : Type u) [Nontrivial α], ∃ s : AutomatedTheoryConstruction.SemigroupLike01 α, ¬ ∀ x y : α, s.mul x y = s.mul y x","src":"generated"}
-{"id":"op_000077","stmt":"∀ (α : Type u), ∃ s : AutomatedTheoryConstruction.SemigroupLike01 α, ∀ x y z : α, s.mul (s.mul x y) z = x","src":"generated"}
-{"id":"op_000078","stmt":"∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α] (e : α), (∀ y : α, e * y = e) → (∀ x : α, x * e = e) → Subsingleton α","src":"generated"}
-{"id":"op_000079","stmt":"Classify `SemigroupLike01` structures admitting a left-absorbing element `e`; in particular, determine whether the left-projection model `x * y := x` is the canonical source of examples where `∀ y, e * y = e` holds but `∀ x, x * e = e` fails.","src":"generated"}
-{"id":"op_000069","stmt":"Prove the negation of the universal claim by exhibiting a concrete finite countermodel: there exists a nontrivial `SemigroupLike01` with some `e` such that `(∀ y, e * y = e)` and `¬ (∀ x, x * e = e)`.","src":"generated"}
-{"id":"op_000080","stmt":"∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α], (∀ x y : α, x * y = y * x) → ∀ e : α, (∀ y : α, e * y = e) → ∀ x : α, x * e = e","src":"generated"}
-{"id":"op_000081","stmt":"Identify natural extra axioms on `SemigroupLike01` weaker than full commutativity that force every left-absorbing element to be right-absorbing as well.","src":"generated"}
-{"id":"op_000082","stmt":"∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α] (e : α), (∀ y : α, e * y = e) → (¬ ∀ x : α, x * e = e) → Nontrivial α","src":"generated"}
-{"id":"op_000083","stmt":"∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α] (e : α), (∀ y : α, e * y = e) → Subsingleton α → ∀ x : α, x * e = e","src":"generated"}
-{"id":"op_000084","stmt":"∀ (α : Type u), ∃ s : AutomatedTheoryConstruction.SemigroupLike01 α, ∀ x y : α, s.mul x y = x","src":"generated"}
-{"id":"op_000085","stmt":"For fixed `{α : Type u} [AutomatedTheoryConstruction.SemigroupLike01 α]` and `e : α` with `∀ y : α, e * y = e`, characterize additional hypotheses under which one can force `∀ x : α, x * e = e`.","src":"generated"}
-{"id":"op_000086","stmt":"∀ (α : Type u) [Nontrivial α], ∃ (_ : AutomatedTheoryConstruction.SemigroupLike01 α), ∃ e : α, (∀ y : α, e * y = e) ∧ ¬ ∀ x : α, x * e = e","src":"generated"}
+{"id":"op_000015","stmt":"For every finite type α, every SemigroupLike01 structure on α satisfies ∃ e : α, ∀ x : α, ∃ y : α, x * y = e ∧ y * x = e.","src":"generated"}
+{"id":"op_000016","stmt":"For every linearly ordered type α, if the multiplication is defined by x * y = min x y, then (∃ e : α, ∀ x : α, ∃ y : α, x * y = e ∧ y * x = e) holds if and only if α has a least element.","src":"generated"}
+{"id":"op_000017","stmt":"∀ {α : Type u} [SemigroupLike01 α], (∀ join : α → α → α, ∀ x y z : α, x * (join y z) = join (x * y) (x * z)) → ∀ a b : α, a = b","src":"generated"}
+{"id":"op_000018","stmt":"For every type α and every binary operation join : α → α → α, if multiplication is defined by x * y = x, then the statement ∀ x y z : α, x * (join y z) = join (x * y) (x * z) holds if and only if ∀ x : α, join x x = x.","src":"generated"}
+{"id":"op_000019","stmt":"∀ {α : Type u} [SemigroupLike01 α], (∃ x : α, ∀ y z : α, x * y = x * z → y = z) → ∀ a b : α, a = b","src":"generated"}
+{"id":"op_000020","stmt":"For every linearly ordered type α, if multiplication is defined by x * y = min x y, then the property ∀ x y z : α, x * y = x * z → y = z holds if and only if ∀ a b : α, a = b.","src":"generated"}
+{"id":"op_000021","stmt":"∀ {α : Type u} [SemigroupLike01 α], ∀ x y z : α, (x * y) * (x * z) = (x * y) * z","src":"generated"}
+{"id":"op_000022","stmt":"For every type α, if multiplication is defined by x * y = y for all x y : α, then this multiplication satisfies the SemigroupLike01 axioms if and only if ∀ a b : α, a = b.","src":"generated"}
+{"id":"op_000023","stmt":"∀ {α : Type u} [SemigroupLike01 α], (∀ meet : α → α → α, ∀ x y : α, x * (meet x y) = x) ↔ ∀ x z : α, x * z = x","src":"generated"}
+{"id":"op_000024","stmt":"For every universe level u, there exists a type α : Type u with a SemigroupLike01 structure such that α has two distinct elements, multiplication is commutative and associative, and there exist x z : α with x * z ≠ x.","src":"generated"}
+{"id":"op_000025","stmt":"For every type α with a SemigroupLike01 structure such that ∀ x y : α, x * y = y * x, define a relation ≤ on α by x ≤ y if and only if x * y = x. Then ≤ is a partial order on α, and for all x y : α the element x * y is the greatest lower bound of x and y with respect to this order.","src":"generated"}
+{"id":"op_000026","stmt":"For every type α equipped with a semilattice-inf operation ⊓, if multiplication is defined by x * y = x ⊓ y for all x y : α, then this multiplication satisfies the SemigroupLike01 axioms.","src":"generated"}
+{"id":"op_000027","stmt":"There exists a finite type α with a SemigroupLike01 structure such that Fintype.card α = 3 and there exist x y z : α with (x * y) * z ≠ x * (y * z).","src":"generated"}
+{"id":"op_000028","stmt":"∀ {α : Type u} [SemigroupLike01 α] {x y z : α}, (x * y) * z ≠ x * (y * z) → x ≠ y ∧ y ≠ z ∧ x ≠ z","src":"generated"}
+{"id":"op_000029","stmt":"For every type α, there exists a binary operation ⋆ : α → α → α such that ∀ x y : α, ⋆ x y = x.","src":"generated"}
+{"id":"op_000030","stmt":"For every type α and every binary operation ⋆ : α → α → α, if ∀ x y : α, ⋆ x y = x, then (∀ x : α, ⋆ x x = x) ∧ (∀ x y : α, ⋆ x (⋆ x y) = ⋆ x y) ∧ (∀ x y z : α, ⋆ (⋆ x y) z = ⋆ (⋆ x z) y).","src":"generated"}
+{"id":"op_000011","stmt":"For every type α, there exists a SemigroupLike01 structure on α such that ∀ x y : α, x * y = x.","src":"generated"}
+{"id":"op_000031","stmt":"For every type α and every binary operation μ : α → α → α, if ∀ x y : α, μ x y = x, then ∀ a b c : α, μ (μ a b) c = μ a (μ b c).","src":"generated"}
+{"id":"op_000032","stmt":"For every type α and every binary operation μ : α → α → α, if ∀ x y : α, μ x y = x and there exist p q : α with p ≠ q, then there exist u v : α with μ u v ≠ μ v u.","src":"generated"}
+{"id":"op_000012","stmt":"For every type α with two distinct elements, there exists a SemigroupLike01 structure on α such that (∀ a b c : α, (a * b) * c = a * (b * c)) and (∃ x y : α, x * y ≠ y * x).","src":"generated"}
+{"id":"op_000033","stmt":"∀ {α : Type u} [Mul α], (∀ x y : α, x * y = x) → (∃ a b : α, a ≠ b) → ¬ ∃ e : α, ∀ x : α, e * x = x ∧ x * e = x","src":"generated"}
+{"id":"op_000034","stmt":"For every type α, if multiplication is defined by x * y = x for all x y : α, then there exists a two-sided identity element if and only if every two elements of α are equal.","src":"generated"}
+{"id":"op_000013","stmt":"For every type α with two distinct elements, there exists a SemigroupLike01 structure on α such that no element e : α satisfies ∀ x : α, e * x = x ∧ x * e = x.","src":"generated"}
+{"id":"op_000035","stmt":"∀ {α : Type u} [SemigroupLike01 α], (∃ e : α, ∀ x : α, e * x = x) → ∀ x : α, x * x = x ∧ ∀ y : α, x * y = x ↔ x = y * x","src":"generated"}

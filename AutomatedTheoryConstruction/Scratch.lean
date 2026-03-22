@@ -3,12 +3,34 @@ import AutomatedTheoryConstruction.Derived
 
 namespace AutomatedTheoryConstruction
 
-theorem thm_op_000064_is_false : ¬((∃ (_ : AutomatedTheoryConstruction.SemigroupLike01 Bool), (∀ x y : Bool, x * y = x) ∧ ∃ e : Bool, (∀ y : Bool, e * y = e) ∧ ¬ ∀ x : Bool, x * e = e) ∧ ∀ (α : Type _) (_ : Fintype α) (_ : AutomatedTheoryConstruction.SemigroupLike01 α), (∃ e : α, (∀ y : α, e * y = e) ∧ ¬ ∀ x : α, x * e = e) → 2 ≤ Fintype.card α) := by
+theorem thm_op_000015_is_false : ¬(For every finite type α, every SemigroupLike01 structure on α satisfies ∃ e : α, ∀ x : α, ∃ y : α, x * y = e ∧ y * x = e.) := by
   intro h
-  rcases h with ⟨hBool, _⟩
-  rcases hBool with ⟨_, hproj, _⟩
-  have htf : true * false = true := hproj true false
-  change false = true at htf
-  cases htf
+  let T : Type u := ULift.{u} Bool
+  let t : T := ULift.up true
+  let f : T := ULift.up false
+  let semigroupLikeT : SemigroupLike01 T :=
+    { mul := fun x _ => x
+      ax_left_idempotent := by
+        intro x
+        rfl
+      ax_right_absorb_duplicate := by
+        intro x y
+        rfl
+      ax_middle_swap := by
+        intro x y z
+        rfl }
+  letI : SemigroupLike01 T := semigroupLikeT
+  letI : Fintype T := inferInstance
+  obtain ⟨e, he⟩ := h (α := T)
+  obtain ⟨yt, ht, _⟩ := he t
+  obtain ⟨yf, hf, _⟩ := he f
+  have hte : t = e := by
+    simpa [t] using ht
+  have hfe : f = e := by
+    simpa [f] using hf
+  have htf : t = f := hte.trans hfe.symm
+  have hbool : true = false := by
+    simpa [t, f] using congrArg ULift.down htf
+  cases hbool
 
 end AutomatedTheoryConstruction

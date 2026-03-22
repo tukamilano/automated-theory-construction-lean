@@ -22,6 +22,11 @@ Formalization policy:
 - If a short proof can be obtained by combining a relevant theorem from `Derived.lean` with a standard Mathlib fact, prefer that route.
 - Reuse theorems already listed in `Derived.lean` when applicable.
 - In `Scratch.lean`, prefer proving goals by reusing relevant results from `Derived.lean`; only re-derive from axioms when no listed theorem fits.
+- When constructing a local `SemigroupLike01` instance inside tactic code, prefer a staged layout: first define the local type and any witness elements, then define the structure value, and only then install it with `letI`. Avoid writing the whole local model in one dense step.
+- Do not use `where`-style syntax for local instances inside proofs.
+- For this repository, the structure field names are `mul`, `ax_left_idempotent`, `ax_right_absorb_duplicate`, and `ax_middle_swap`.
+- When specializing a universal statement of the form `∀ {α} [SemigroupLike01 α], ...`, first install the instance with `letI`, then apply the theorem with `h (α := T) ...`; rely on instance inference rather than trying to pass the typeclass argument manually.
+- Respect universe polymorphism. If the target quantifies over `α : Type u`, choose or build a countermodel whose type lives in that same ambient universe, rather than specializing directly to a small concrete type at a different universe level.
 - For `proof`, `proof_text` should prove `stmt`.
 - For `counterexample`, `proof_text` should prove `¬(stmt)`.
 - If the incoming direction is not defensible after reading the context, you may revise `result`.

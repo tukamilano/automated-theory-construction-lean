@@ -8,383 +8,47 @@ namespace AutomatedTheoryConstruction
 
 theorem thm_op_000001_is_false : ¬(∀ {α : Type u} [SemigroupLike01 α], ∀ x y z : α, (x * y) * z = x * (y * z)) := by
   intro h
-  let α := ULift (Bool ⊕ Unit)
-  let zero : α := ⟨Sum.inl false⟩
-  let one : α := ⟨Sum.inl true⟩
-  let two : α := ⟨Sum.inr ()⟩
-  let mulBase : Bool ⊕ Unit → Bool ⊕ Unit → Bool ⊕ Unit
-    | Sum.inl false, _ => Sum.inl false
-    | Sum.inl true, Sum.inl false => Sum.inl false
-    | Sum.inl true, Sum.inl true => Sum.inl true
-    | Sum.inl true, Sum.inr () => Sum.inl false
-    | Sum.inr (), Sum.inl false => Sum.inl false
-    | Sum.inr (), Sum.inl true => Sum.inr ()
-    | Sum.inr (), Sum.inr () => Sum.inr ()
-  let mul : α → α → α := fun a b => ⟨mulBase a.down b.down⟩
-  letI : Mul α := ⟨mul⟩
-  letI : SemigroupLike01 α := by
+  let T : Type u := ULift (Fin 3)
+  let a0 : T := ULift.up (0 : Fin 3)
+  let a1 : T := ULift.up (1 : Fin 3)
+  let a2 : T := ULift.up (2 : Fin 3)
+  let mulFin : Fin 3 → Fin 3 → Fin 3 := fun a b =>
+    if a = 0 then 0
+    else if a = 1 then
+      if b = 1 then 1 else 0
+    else
+      if b = 0 then 0 else 2
+  let mulT : T → T → T := fun a b => ULift.up (mulFin a.down b.down)
+  let mulInst : Mul T := ⟨mulT⟩
+  let sg : SemigroupLike01 T := by
+    letI : Mul T := mulInst
     refine
-      { ax_left_idempotent := ?_
+      { mul := mulT
+        ax_left_idempotent := ?_
         ax_right_absorb_duplicate := ?_
         ax_middle_swap := ?_ }
-    · intro x
-      cases x with
-      | up x =>
-          cases x with
-          | inl b => cases b <;> rfl
-          | inr u => cases u; rfl
-    · intro x y
-      cases x with
-      | up x =>
-          cases y with
-          | up y =>
-              cases x with
-              | inl b =>
-                  cases b <;> cases y with
-                  | inl b => cases b <;> rfl
-                  | inr u => cases u; rfl
-              | inr u =>
-                  cases u
-                  cases y with
-                  | inl b => cases b <;> rfl
-                  | inr u => cases u; rfl
-    · intro x y z
-      cases x with
-      | up x =>
-          cases y with
-          | up y =>
-              cases z with
-              | up z =>
-                  cases x with
-                  | inl b =>
-                      cases b <;> cases y with
-                      | inl b =>
-                          cases b <;> cases z with
-                          | inl b => cases b <;> rfl
-                          | inr u => cases u; rfl
-                      | inr u =>
-                          cases u
-                          cases z with
-                          | inl b => cases b <;> rfl
-                          | inr u => cases u; rfl
-                  | inr u =>
-                      cases u
-                      cases y with
-                      | inl b =>
-                          cases b <;> cases z with
-                          | inl b => cases b <;> rfl
-                          | inr u => cases u; rfl
-                      | inr u =>
-                          cases u
-                          cases z with
-                          | inl b => cases b <;> rfl
-                          | inr u => cases u; rfl
-  have h' := h (α := α) (x := two) (y := one) (z := two)
-  change two = zero at h'
-  injection h' with hbase
-  cases hbase
+    · native_decide
+    · native_decide
+    · native_decide
+  letI : SemigroupLike01 T := sg
+  have h' := h (α := T) a2 a1 a2
+  change a2 = a0 at h'
+  have hne : a2 ≠ a0 := by
+    native_decide
+  exact hne h'
+
 
 theorem thm_op_000002_is_false : ¬(∀ {α : Type u} [SemigroupLike01 α], ∀ x y : α, x * y = y * x) := by
   intro h
-  let α := ULift Bool
-  let mul : α → α → α := fun x _ => ⟨x.down⟩
-  letI : Mul α := ⟨mul⟩
-  letI : SemigroupLike01 α := by
+  let T : Type u := ULift (Fin 2)
+  let a0 : T := ULift.up (0 : Fin 2)
+  let a1 : T := ULift.up (1 : Fin 2)
+  let mulT : T → T → T := fun a _ => a
+  let mulInst : Mul T := ⟨mulT⟩
+  let sg : SemigroupLike01 T := by
+    letI : Mul T := mulInst
     refine
-      { ax_left_idempotent := ?_
-        ax_right_absorb_duplicate := ?_
-        ax_middle_swap := ?_ }
-    · intro x
-      cases x with
-      | up x =>
-          cases x <;> rfl
-    · intro x y
-      cases x with
-      | up x =>
-          cases x <;> rfl
-    · intro x y z
-      cases x with
-      | up x =>
-          cases x <;> rfl
-  let zero : α := ⟨false⟩
-  let one : α := ⟨true⟩
-  have h' := h (α := α) (x := zero) (y := one)
-  change zero = one at h'
-  injection h' with hbase
-  cases hbase
-
-theorem thm_op_000003_is_false : ¬(∀ {α : Type u} [SemigroupLike01 α], ∃ e : α, ∀ x : α, e * x = x ∧ x * e = x) := by
-  intro h
-  let α := ULift Bool
-  let mul : α → α → α := fun x _ => ⟨x.down⟩
-  letI : Mul α := ⟨mul⟩
-  letI : SemigroupLike01 α := by
-    refine
-      { ax_left_idempotent := ?_
-        ax_right_absorb_duplicate := ?_
-        ax_middle_swap := ?_ }
-    · intro x
-      cases x with
-      | up x =>
-          cases x <;> rfl
-    · intro x y
-      cases x with
-      | up x =>
-          cases x <;> rfl
-    · intro x y z
-      cases x with
-      | up x =>
-          cases x <;> rfl
-  obtain ⟨e, he⟩ := h (α := α)
-  let zero : α := ⟨false⟩
-  let one : α := ⟨true⟩
-  have hzero := (he zero).1
-  have hone := (he one).1
-  change e = zero at hzero
-  change e = one at hone
-  have h01 : zero = one := by
-    exact hzero.symm.trans hone
-  injection h01 with hbase
-  cases hbase
-
-theorem thm_op_000004_is_false : ¬(∀ {α : Type u} [SemigroupLike01 α], ∃ e : α, ∀ x : α, ∃ y : α, x * y = e ∧ y * x = e) := by
-  intro h
-  let α := ULift Bool
-  let mul : α → α → α := fun x _ => ⟨x.down⟩
-  letI : Mul α := ⟨mul⟩
-  letI : SemigroupLike01 α := by
-    refine
-      { ax_left_idempotent := ?_
-        ax_right_absorb_duplicate := ?_
-        ax_middle_swap := ?_ }
-    · intro x
-      cases x with
-      | up x =>
-          cases x <;> rfl
-    · intro x y
-      cases x with
-      | up x =>
-          cases x <;> rfl
-    · intro x y z
-      cases x with
-      | up x =>
-          cases x <;> rfl
-  obtain ⟨e, he⟩ := h (α := α)
-  let zero : α := ⟨false⟩
-  let one : α := ⟨true⟩
-  have hzero : zero = e := by
-    obtain ⟨y, hxy, hyx⟩ := he zero
-    change zero = e at hxy
-    exact hxy
-  have hone : one = e := by
-    obtain ⟨y, hxy, hyx⟩ := he one
-    change one = e at hxy
-    exact hxy
-  have h01 : zero = one := by
-    exact hzero.trans hone.symm
-  injection h01 with hbase
-  cases hbase
-
-theorem thm_op_000005_is_false : ¬(∀ {α : Type u} [SemigroupLike01 α], ∀ join : α → α → α, ∀ x y z : α, x * (join y z) = join (x * y) (x * z)) := by
-  intro h
-  let α := ULift Bool
-  let mul : α → α → α := fun x _ => ⟨x.down⟩
-  letI : Mul α := ⟨mul⟩
-  letI : SemigroupLike01 α := by
-    refine
-      { ax_left_idempotent := ?_
-        ax_right_absorb_duplicate := ?_
-        ax_middle_swap := ?_ }
-    · intro x
-      cases x with
-      | up x =>
-          cases x <;> rfl
-    · intro x y
-      cases x with
-      | up x =>
-          cases x <;> rfl
-    · intro x y z
-      cases x with
-      | up x =>
-          cases x <;> rfl
-  let zero : α := ⟨false⟩
-  let one : α := ⟨true⟩
-  have h' := h (α := α) (join := fun _ _ => zero) (x := one) (y := zero) (z := zero)
-  change one = zero at h'
-  injection h' with hbase
-  cases hbase
-
-theorem thm_op_000006_is_false : ¬(∀ {α : Type u} [SemigroupLike01 α], ∀ x y z : α, x * y = x * z → y = z) := by
-  intro h
-  let α := ULift Bool
-  let mul : α → α → α := fun x _ => ⟨x.down⟩
-  letI : Mul α := ⟨mul⟩
-  letI : SemigroupLike01 α := by
-    refine
-      { ax_left_idempotent := ?_
-        ax_right_absorb_duplicate := ?_
-        ax_middle_swap := ?_ }
-    · intro x
-      cases x with
-      | up x =>
-          cases x <;> rfl
-    · intro x y
-      cases x with
-      | up x =>
-          cases x <;> rfl
-    · intro x y z
-      cases x with
-      | up x =>
-          cases x <;> rfl
-  let zero : α := ⟨false⟩
-  let one : α := ⟨true⟩
-  have hEq : zero * zero = zero * one := by
-    rfl
-  have h' := h (α := α) (x := zero) (y := zero) (z := one) hEq
-  change zero = one at h'
-  injection h' with hbase
-  cases hbase
-
-theorem thm_op_000007 : ∀ {α : Type u} [SemigroupLike01 α], ∀ x : α, x * x = x := by
-  intro α _ x
-  simpa [op] using (SemigroupLike01.ax_left_idempotent (α := α) x)
-
-theorem thm_op_000008_is_false : ¬(∀ {α : Type u} [SemigroupLike01 α], ∀ meet : α → α → α, ∀ x y : α, x * (meet x y) = x) := by
-  intro h
-  let α := ULift Bool
-  let mul : α → α → α := fun x y => ⟨x.down && y.down⟩
-  letI : Mul α := ⟨mul⟩
-  letI : SemigroupLike01 α := by
-    refine
-      { ax_left_idempotent := ?_
-        ax_right_absorb_duplicate := ?_
-        ax_middle_swap := ?_ }
-    · intro x
-      cases x with
-      | up x =>
-          cases x <;> rfl
-    · intro x y
-      cases x with
-      | up x =>
-          cases y with
-          | up y =>
-              cases x <;> cases y <;> rfl
-    · intro x y z
-      cases x with
-      | up x =>
-          cases y with
-          | up y =>
-              cases z with
-              | up z =>
-                  cases x <;> cases y <;> cases z <;> rfl
-  let zero : α := ⟨false⟩
-  let one : α := ⟨true⟩
-  have h' := h (α := α) (meet := fun _ _ => zero) (x := one) (y := zero)
-  change zero = one at h'
-  have hbase : false = true := by
-    simpa [zero, one] using congrArg ULift.down h'
-  cases hbase
-
-theorem thm_op_000009 : ∃ (α : Type) (_ : SemigroupLike01 α), ∃ x y z : α, (x * y) * z ≠ x * (y * z) := by
-  let α := ULift (Bool ⊕ Unit)
-  let zero : α := ⟨Sum.inl false⟩
-  let one : α := ⟨Sum.inl true⟩
-  let two : α := ⟨Sum.inr ()⟩
-  let mulBase : Bool ⊕ Unit → Bool ⊕ Unit → Bool ⊕ Unit
-    | Sum.inl false, _ => Sum.inl false
-    | Sum.inl true, Sum.inl false => Sum.inl false
-    | Sum.inl true, Sum.inl true => Sum.inl true
-    | Sum.inl true, Sum.inr () => Sum.inl false
-    | Sum.inr (), Sum.inl false => Sum.inl false
-    | Sum.inr (), Sum.inl true => Sum.inr ()
-    | Sum.inr (), Sum.inr () => Sum.inr ()
-  let mul : α → α → α := fun a b => ⟨mulBase a.down b.down⟩
-  letI : Mul α := ⟨mul⟩
-  letI : SemigroupLike01 α := by
-    refine
-      { ax_left_idempotent := ?_
-        ax_right_absorb_duplicate := ?_
-        ax_middle_swap := ?_ }
-    · intro x
-      cases x with
-      | up x =>
-          cases x with
-          | inl b => cases b <;> rfl
-          | inr u => cases u; rfl
-    · intro x y
-      cases x with
-      | up x =>
-          cases y with
-          | up y =>
-              cases x with
-              | inl b =>
-                  cases b <;> cases y with
-                  | inl b => cases b <;> rfl
-                  | inr u => cases u; rfl
-              | inr u =>
-                  cases u
-                  cases y with
-                  | inl b => cases b <;> rfl
-                  | inr u => cases u; rfl
-    · intro x y z
-      cases x with
-      | up x =>
-          cases y with
-          | up y =>
-              cases z with
-              | up z =>
-                  cases x with
-                  | inl b =>
-                      cases b <;> cases y with
-                      | inl b =>
-                          cases b <;> cases z with
-                          | inl b => cases b <;> rfl
-                          | inr u => cases u; rfl
-                      | inr u =>
-                          cases u
-                          cases z with
-                          | inl b => cases b <;> rfl
-                          | inr u => cases u; rfl
-                  | inr u =>
-                      cases u
-                      cases y with
-                      | inl b =>
-                          cases b <;> cases z with
-                          | inl b => cases b <;> rfl
-                          | inr u => cases u; rfl
-                      | inr u =>
-                          cases u
-                          cases z with
-                          | inl b => cases b <;> rfl
-                          | inr u => cases u; rfl
-  refine ⟨α, (show SemigroupLike01 α from inferInstance), two, one, two, ?_⟩
-  intro h
-  change two = zero at h
-  injection h with hbase
-  cases hbase
-
-theorem thm_op_000010 : ∀ {α : Type u} [SemigroupLike01 α], ∀ x y : α, (x * y) * x = x * y := by
-  intro α _ x y
-  have hxyx : (x * y) * x = (x * x) * y := by
-    simpa [op] using (SemigroupLike01.ax_middle_swap (α := α) x x y).symm
-  have hxx : (x * x) * y = x * y := by
-    simpa [op] using congrArg (fun t => t * y) (SemigroupLike01.ax_left_idempotent (α := α) x)
-  exact hxyx.trans hxx
-
-theorem thm_op_000011 : ∀ {α : Type u} [SemigroupLike01 α], ∀ x y : α, (x * y) * y = x * y := by
-  intro α _ x y
-  have hswap : ((x * y) * (x * y)) = ((x * (x * y)) * y) := by
-    simpa [op] using (SemigroupLike01.ax_middle_swap (α := α) x y (x * y))
-  have hdup : ((x * (x * y)) * y) = ((x * y) * y) := by
-    simpa [op] using congrArg (fun t => t * y) (SemigroupLike01.ax_right_absorb_duplicate (α := α) x y)
-  have hidem : ((x * y) * (x * y)) = x * y := by
-    simpa [op] using (SemigroupLike01.ax_left_idempotent (α := α) (x * y))
-  exact (hswap.trans hdup).symm.trans hidem
-
-theorem thm_op_000013 : ∃ (α : Type) (_ : SemigroupLike01 α), ¬ ∃ e : α, ∀ x : α, e * x = x := by
-  refine ⟨Bool, ?_, ?_⟩
-  · refine
-      { mul := fun x y => x
+      { mul := mulT
         ax_left_idempotent := ?_
         ax_right_absorb_duplicate := ?_
         ax_middle_swap := ?_ }
@@ -394,222 +58,111 @@ theorem thm_op_000013 : ∃ (α : Type) (_ : SemigroupLike01 α), ¬ ∃ e : α,
       rfl
     · intro x y z
       rfl
-  · intro h
-    rcases h with ⟨e, he⟩
-    have hfalse : e = false := by
-      simpa using he false
-    have htrue : e = true := by
-      simpa using he true
-    have : false = true := by
-      calc
-        false = e := hfalse.symm
-        _ = true := htrue
-    exact Bool.false_ne_true this
+  letI : SemigroupLike01 T := sg
+  have h' := h (α := T) a0 a1
+  change a0 = a1 at h'
+  have hne : a0 ≠ a1 := by
+    native_decide
+  exact hne h'
 
-theorem thm_op_000021 : ∀ {α : Type u} [SemigroupLike01 α], ∀ x y : α, x * (x * y) = x * y := by
-  intro α _ x y
-  simpa [AutomatedTheoryConstruction.op] using
-    (AutomatedTheoryConstruction.SemigroupLike01.ax_right_absorb_duplicate (α := α) x y)
 
-theorem thm_op_000026 : ∀ {α : Type u} [SemigroupLike01 α], ∀ x y z : α, ((x * y) * z) * y = (x * y) * z := by
-  intro α _ x y z
-  have hswap : ((x * y) * z) * y = ((x * y) * y) * z := by
-    simpa [op] using
-      (SemigroupLike01.ax_middle_swap (α := α) (x := x * y) (y := z) (z := y))
-  rw [hswap, thm_op_000011]
-
-theorem thm_op_000036 : ∀ {α : Type u} [SemigroupLike01 α], ∀ e f : α, (∀ x : α, x * e = e ∧ e * x = e) → (∀ x : α, x * f = f ∧ f * x = f) → e = f := by
-  intro α _ e f he hf
-  have hfe : f * e = e := (he f).1
-  have hff : f * e = f := (hf e).2
-  exact hfe.symm.trans hff
-
-theorem thm_op_000037 : ∀ {α : Type u} [SemigroupLike01 α], ∀ x y z : α, ((x * y) * z) * x = (x * y) * z := by
-  intro α _ x y z
-  have hswap : ((x * y) * z) * x = ((x * y) * x) * z := by
-    simpa [op] using
-      (SemigroupLike01.ax_middle_swap (α := α) (x := x * y) (y := z) (z := x))
-  rw [hswap, thm_op_000010]
-
-theorem thm_op_000038 : ∀ {α : Type u} [SemigroupLike01 α], ∀ x y z t : α, (((x * y) * z) * t) = (((x * y) * t) * z) := by
-  intro α _ x y z t
-  simpa [AutomatedTheoryConstruction.op] using (AutomatedTheoryConstruction.SemigroupLike01.ax_middle_swap (x := x * y) (y := z) (z := t))
-
-theorem thm_op_000039 : ∀ {α : Type u} [SemigroupLike01 α], ∀ x y z : α, (((x * y) * z) * (x * y)) = (x * y) * z := by
-  intro α _ x y z
-  simpa using (thm_op_000010 (x := x * y) (y := z))
-
-theorem thm_op_000040 : ∀ {α : Type u} [Mul α], ∀ e f : α, (∀ x : α, x * e = e) → (∀ x : α, f * x = f) → e = f := by
-  intro α _ e f he hf
-  have h1 : f * e = e := he f
-  have h2 : f * e = f := hf e
-  exact h1.symm.trans h2
-
-theorem thm_op_000041 : ∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α], ∀ e : α, (∀ x : α, x * e = e) → ∀ x : α, e * x = e := by
-  intro α _ e h x
-  have hee : e * e = e := by
-    simpa [AutomatedTheoryConstruction.op] using
-      (AutomatedTheoryConstruction.SemigroupLike01.ax_left_idempotent e)
-  have hswap : (e * e) * x = (e * x) * e := by
-    simpa [AutomatedTheoryConstruction.op] using
-      (AutomatedTheoryConstruction.SemigroupLike01.ax_middle_swap e e x)
-  rw [hee] at hswap
-  exact hswap.trans (h (e * x))
-
-theorem thm_op_000042 : ∀ {α : Type u} [SemigroupLike01 α], ∀ x y z : α, (x * y) * (x * z) = (x * y) * z := by
-  intro α _ x y z
-  have hswap : (x * y) * (x * z) = (x * (x * z)) * y := by
-    simpa [AutomatedTheoryConstruction.op] using
-      (AutomatedTheoryConstruction.SemigroupLike01.ax_middle_swap (α := α) (x := x) (y := y) (z := x * z))
-  have habsorb : x * (x * z) = x * z := by
-    simpa [AutomatedTheoryConstruction.op] using
-      (AutomatedTheoryConstruction.SemigroupLike01.ax_right_absorb_duplicate (α := α) x z)
-  rw [hswap, habsorb]
-  simpa [AutomatedTheoryConstruction.op] using
-    (AutomatedTheoryConstruction.SemigroupLike01.ax_middle_swap (α := α) (x := x) (y := z) (z := y))
-
-theorem thm_op_000043 : ∀ {α : Type u} [SemigroupLike01 α], ∀ x y z : α, (((x * y) * z) * x) = (x * y) * z := by
-  intro α _ x y z
-  have hswap : ((x * y) * z) * x = ((x * y) * x) * z := by
-    simpa [AutomatedTheoryConstruction.op] using
-      (AutomatedTheoryConstruction.SemigroupLike01.ax_middle_swap (α := α) (x := x * y) (y := z) (z := x))
-  calc
-    (((x * y) * z) * x) = (((x * y) * x) * z) := hswap
-    _ = (x * y) * z := by
-      rw [AutomatedTheoryConstruction.thm_op_000010 (x := x) (y := y)]
-
-theorem thm_op_000044_is_false : ¬(∀ {α : Type u} [AutomatedTheoryConstruction.SemigroupLike01 α], ∀ x y z : α, ((x * y) * (z * x)) = (x * y) * z) := by
+theorem thm_op_000003_is_false : ¬(∀ {α : Type u} [SemigroupLike01 α], ∃ e : α, ∀ x : α, e * x = x ∧ x * e = x) := by
   intro h
-  let α := ULift (Bool ⊕ Unit)
-  let zero : α := ⟨Sum.inl false⟩
-  let one : α := ⟨Sum.inl true⟩
-  let two : α := ⟨Sum.inr ()⟩
-  let mulBase : Bool ⊕ Unit → Bool ⊕ Unit → Bool ⊕ Unit
-    | Sum.inl false, _ => Sum.inl false
-    | Sum.inl true, Sum.inl false => Sum.inl false
-    | Sum.inl true, Sum.inl true => Sum.inl true
-    | Sum.inl true, Sum.inr () => Sum.inl false
-    | Sum.inr (), Sum.inl false => Sum.inl false
-    | Sum.inr (), Sum.inl true => Sum.inr ()
-    | Sum.inr (), Sum.inr () => Sum.inr ()
-  let mul : α → α → α := fun a b => ⟨mulBase a.down b.down⟩
-  letI : Mul α := ⟨mul⟩
-  letI : AutomatedTheoryConstruction.SemigroupLike01 α := by
+  let T : Type u := ULift Bool
+  let t : T := ULift.up true
+  let f : T := ULift.up false
+  let semigroupLikeT : SemigroupLike01 T :=
+    { mul := fun x y => x
+      ax_left_idempotent := by
+        intro x
+        rfl
+      ax_right_absorb_duplicate := by
+        intro x y
+        rfl
+      ax_middle_swap := by
+        intro x y z
+        rfl }
+  letI : SemigroupLike01 T := semigroupLikeT
+  obtain ⟨e, he⟩ := h (α := T)
+  have ht : e = t := by
+    simpa [t] using (he t).1
+  have hf : e = f := by
+    simpa [f] using (he f).1
+  have htf : t = f := ht.symm.trans hf
+  have hbool : true = false := by
+    simpa [t, f] using congrArg ULift.down htf
+  cases hbool
+
+
+theorem thm_op_000004_is_false : ¬(∀ {α : Type u} [SemigroupLike01 α], ∃ e : α, ∀ x : α, ∃ y : α, x * y = e ∧ y * x = e) := by
+  intro h
+  let T : Type u := ULift Int
+  let mulT : T → T → T := fun a b => ULift.up (min a.down b.down)
+  let mulInst : Mul T := ⟨mulT⟩
+  let sg : SemigroupLike01 T := by
+    letI : Mul T := mulInst
     refine
-      { ax_left_idempotent := ?_
+      { mul := mulT
+        ax_left_idempotent := ?_
         ax_right_absorb_duplicate := ?_
         ax_middle_swap := ?_ }
     · intro x
-      cases x with
-      | up x =>
-          cases x with
-          | inl b => cases b <;> rfl
-          | inr u => cases u; rfl
+      change ULift.up (min x.down x.down) = x
+      cases x
+      simp [mulT]
     · intro x y
-      cases x with
-      | up x =>
-          cases y with
-          | up y =>
-              cases x with
-              | inl b =>
-                  cases b <;> cases y with
-                  | inl b => cases b <;> rfl
-                  | inr u => cases u; rfl
-              | inr u =>
-                  cases u
-                  cases y with
-                  | inl b => cases b <;> rfl
-                  | inr u => cases u; rfl
+      change ULift.up (min x.down (min x.down y.down)) = ULift.up (min x.down y.down)
+      simp [← min_assoc]
     · intro x y z
-      cases x with
-      | up x =>
-          cases y with
-          | up y =>
-              cases z with
-              | up z =>
-                  cases x with
-                  | inl b =>
-                      cases b <;> cases y with
-                      | inl b =>
-                          cases b <;> cases z with
-                          | inl b => cases b <;> rfl
-                          | inr u => cases u; rfl
-                      | inr u =>
-                          cases u
-                          cases z with
-                          | inl b => cases b <;> rfl
-                          | inr u => cases u; rfl
-                  | inr u =>
-                      cases u
-                      cases y with
-                      | inl b =>
-                          cases b <;> cases z with
-                          | inl b => cases b <;> rfl
-                          | inr u => cases u; rfl
-                      | inr u =>
-                          cases u
-                          cases z with
-                          | inl b => cases b <;> rfl
-                          | inr u => cases u; rfl
-  have h' := h (α := α) (x := two) (y := one) (z := one)
-  change zero = two at h'
-  injection h' with hbase
-  cases hbase
-
-theorem thm_op_000045 : ∀ {α : Type u} [AutomatedTheoryConstruction.SemigroupLike01 α], ∀ x y z : α, (((x * y) * z) * z) = (x * y) * z := by
-  intro α _ x y z
-  simpa using (thm_op_000011 (x * y) z)
-
-theorem thm_op_000046 : ∀ {α : Type u} [AutomatedTheoryConstruction.SemigroupLike01 α], ∀ x y z : α, (x * y) * ((x * y) * z) = (x * y) * z := by
-  intro α _ x y z
-  simpa [AutomatedTheoryConstruction.op] using
-    (AutomatedTheoryConstruction.SemigroupLike01.ax_right_absorb_duplicate (x := x * y) (y := z))
-
-theorem thm_op_000047_is_false : ¬(∀ {α : Type u} [AutomatedTheoryConstruction.SemigroupLike01 α], ∀ e : α, (∀ x : α, e * x = e) → ∀ x : α, x * e = e) := by
-  intro h
-  let α := ULift Bool
-  let mul : α → α → α := fun x _ => ⟨x.down⟩
-  letI : Mul α := ⟨mul⟩
-  letI : AutomatedTheoryConstruction.SemigroupLike01 α := by
-    refine
-      { ax_left_idempotent := ?_
-        ax_right_absorb_duplicate := ?_
-        ax_middle_swap := ?_ }
-    · intro x
-      cases x with
-      | up x =>
-          cases x <;> rfl
-    · intro x y
-      cases x with
-      | up x =>
-          cases x <;> rfl
-    · intro x y z
-      cases x with
-      | up x =>
-          cases x <;> rfl
-  let zero : α := ⟨false⟩
-  let one : α := ⟨true⟩
-  have h' := h (α := α) (e := zero)
-  have hzero : ∀ x : α, zero * x = zero := by
+      change ULift.up (min (min x.down y.down) z.down) = ULift.up (min (min x.down z.down) y.down)
+      exact congrArg ULift.up (min_right_comm x.down y.down z.down)
+  letI : SemigroupLike01 T := sg
+  obtain ⟨e, he⟩ := h (α := T)
+  have hbelow : ∀ x : T, e.down ≤ x.down := by
     intro x
-    cases x with
-    | up x =>
-        cases x <;> rfl
-  have hone := h' hzero one
-  change one = zero at hone
-  injection hone with hbase
-  cases hbase
+    obtain ⟨y, hxy, hyx⟩ := he x
+    change ULift.up (min x.down y.down) = e at hxy
+    have hxy' : min x.down y.down = e.down := by
+      simpa using congrArg ULift.down hxy
+    rw [← hxy']
+    exact min_le_left _ _
+  have hbad : e.down ≤ e.down - 1 := hbelow (ULift.up (e.down - 1))
+  omega
 
-theorem thm_op_000056 : ∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α] (x y z : α), ((x * y) * z) * (x * y) = (x * y) * z := by
-  intro α _ x y z
-  simpa using (thm_op_000010 (x * y) z)
 
-theorem thm_op_000057 : ∀ {α : Type u} [AutomatedTheoryConstruction.SemigroupLike01 α], ∀ x y z : α, ((x * y) * z) * (x * y) = (x * y) * z := by
-  intro α _ x y z
-  simpa using (thm_op_000010 (x := x * y) (y := z))
+theorem thm_op_000005_is_false : ¬(∀ {α : Type u} [SemigroupLike01 α], ∀ join : α → α → α, ∀ x y z : α, x * (join y z) = join (x * y) (x * z)) := by
+  intro h
+  let T : Type u := ULift.{u, 0} (Sum (Fin 1) (Fin 1))
+  let a : T := ULift.up (Sum.inl 0)
+  let b : T := ULift.up (Sum.inr 0)
+  let join : T → T → T := fun _ _ => a
+  let inst : SemigroupLike01 T :=
+    { mul := fun x y => x
+      ax_left_idempotent := by
+        intro x
+        rfl
+      ax_right_absorb_duplicate := by
+        intro x y
+        rfl
+      ax_middle_swap := by
+        intro x y z
+        rfl }
+  letI : SemigroupLike01 T := inst
+  have hEq : b * join a a = join (b * a) (b * a) :=
+    h (α := T) join b a a
+  have hba : b = a := by
+    simpa [a, b, join, inst] using hEq
+  have hs : (Sum.inr (0 : Fin 1) : Sum (Fin 1) (Fin 1)) = Sum.inl (0 : Fin 1) := by
+    simpa [a, b] using congrArg ULift.down hba
+  cases hs
 
-theorem thm_op_000058 : ∃ (α : Type _) (_ : AutomatedTheoryConstruction.SemigroupLike01 α) (e x : α), (∀ y : α, e * y = e) ∧ x * e ≠ e := by
-  letI : SemigroupLike01 (ULift Bool) :=
+
+theorem thm_op_000006_is_false : ¬(∀ {α : Type u} [SemigroupLike01 α], ∀ x y z : α, x * y = x * z → y = z) := by
+  intro h
+  let T : Type u := ULift.{u, 0} (Fin 2)
+  let a0 : T := ULift.up (0 : Fin 2)
+  let a1 : T := ULift.up (1 : Fin 2)
+  let semigroupLikeT : SemigroupLike01 T :=
     { mul := fun x _ => x
       ax_left_idempotent := by
         intro x
@@ -620,118 +173,138 @@ theorem thm_op_000058 : ∃ (α : Type _) (_ : AutomatedTheoryConstruction.Semig
       ax_middle_swap := by
         intro x y z
         rfl }
-  refine ⟨ULift Bool, inferInstance, ULift.up false, ULift.up true, ?_⟩
-  constructor
-  · intro y
+  letI : SemigroupLike01 T := semigroupLikeT
+  have h01 : a0 = a1 := by
+    apply h (α := T) a0 a0 a1
     rfl
-  · decide
-
-theorem thm_op_000060 : ∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α] (a b c : α), ((a * b) * c) * a = (a * b) * c := by
-  intro α _ a b c
-  have hswap : ((a * b) * c) * a = ((a * b) * a) * c := by
-    simpa [AutomatedTheoryConstruction.op] using
-      (AutomatedTheoryConstruction.SemigroupLike01.ax_middle_swap (α := α) (x := a * b) (y := c) (z := a))
-  calc
-    (((a * b) * c) * a) = (((a * b) * a) * c) := hswap
-    _ = (a * b) * c := by
-      rw [AutomatedTheoryConstruction.thm_op_000010 (x := a) (y := b)]
-
-theorem thm_op_000062 : ∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α], ∀ a b c t : α, t = a * b → ((a * b) * c) * t = (a * b) * c := by
-  intro α _ a b c t ht
-  rw [ht]
-  simpa using (thm_op_000010 (x := a * b) (y := c))
-
-theorem thm_op_000065 : ∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α] (a b c d : α), (((a * b) * c) * d) * a = ((a * b) * c) * d := by
-  intro α _ a b c d
-  have hswap : ((((a * b) * c) * d) * a) = ((((a * b) * c) * a) * d) := by
-    simpa [AutomatedTheoryConstruction.op] using
-      (AutomatedTheoryConstruction.SemigroupLike01.ax_middle_swap
-        (α := α) (x := (a * b) * c) (y := d) (z := a))
-  have hfix : (((a * b) * c) * a) = ((a * b) * c) := by
-    simpa using (AutomatedTheoryConstruction.thm_op_000060 (α := α) (a := a) (b := b) (c := c))
-  calc
-    ((((a * b) * c) * d) * a) = ((((a * b) * c) * a) * d) := hswap
-    _ = (((a * b) * c) * d) := by
-      rw [hfix]
-
-theorem thm_op_000066 : ∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α], ∀ x y z : α, ((x * y) * z) * (x * y) = (x * y) * z := by
-  intro α _ x y z
-  simpa using (thm_op_000010 (x := x * y) (y := z))
-
-theorem thm_op_000067 : ∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α], ∀ a b c d : α, ((((a * b) * c) * d) * (a * b)) = (((a * b) * c) * d) := by
-  intro α _ a b c d
-  have hswap : ((((a * b) * c) * d) * (a * b)) = ((((a * b) * c) * (a * b)) * d) := by
-    simpa [AutomatedTheoryConstruction.op] using
-      (AutomatedTheoryConstruction.SemigroupLike01.ax_middle_swap
-        (α := α) (x := (a * b) * c) (y := d) (z := a * b))
-  rw [hswap, AutomatedTheoryConstruction.thm_op_000010 (x := a * b) (y := c)]
-
-theorem thm_op_000068 : ∀ (α : Type u), ∃ s : AutomatedTheoryConstruction.SemigroupLike01 α, ∀ x y : α, s.mul x y = x := by
-  intro α
-  refine ⟨{
-    mul := fun x _ => x
-    ax_left_idempotent := by
-      intro x
-      rfl
-    ax_right_absorb_duplicate := by
-      intro x y
-      rfl
-    ax_middle_swap := by
-      intro x y z
-      rfl
-  }, ?_⟩
-  intro x y
-  rfl
+  have hne : a0 ≠ a1 := by
+    native_decide
+  exact hne h01
 
 
-theorem thm_op_000063_is_false : ¬(∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α] (e : α), (∀ y : α, e * y = e) → ∀ x : α, x * e = e) := by
+theorem thm_op_000007 : ∀ {α : Type u} [SemigroupLike01 α], ∀ x : α, x * x = x := by
+  intro α _ x
+  simpa [AutomatedTheoryConstruction.op] using
+    (AutomatedTheoryConstruction.SemigroupLike01.ax_left_idempotent (α := α) x)
+
+
+theorem thm_op_000008_is_false : ¬(∀ {α : Type u} [SemigroupLike01 α], ∀ meet : α → α → α, ∀ x y : α, x * (meet x y) = x) := by
   intro h
-  obtain ⟨α, inst, e, x, he, hne⟩ := AutomatedTheoryConstruction.thm_op_000058
-  exact hne (@h α inst e he x)
+  let α := ULift.{u} Bool
+  let sg : SemigroupLike01 α :=
+    { mul := fun a b => ⟨a.down && b.down⟩
+      ax_left_idempotent := by
+        intro x
+        cases x with
+        | up b =>
+            cases b <;> rfl
+      ax_right_absorb_duplicate := by
+        intro x y
+        cases x with
+        | up a =>
+            cases y with
+            | up b =>
+                cases a <;> cases b <;> rfl
+      ax_middle_swap := by
+        intro x y z
+        cases x with
+        | up a =>
+            cases y with
+            | up b =>
+                cases z with
+                | up c =>
+                    cases a <;> cases b <;> cases c <;> rfl }
+  letI : SemigroupLike01 α := sg
+  have hbad : ((⟨true⟩ : α) * ⟨false⟩) = (⟨true⟩ : α) :=
+    h (α := α) (meet := fun _ _ : α => ⟨false⟩) ⟨true⟩ ⟨true⟩
+  change ((⟨false⟩ : α) = (⟨true⟩ : α)) at hbad
+  cases hbad
 
 
-theorem thm_op_000070 : ∀ {α : Type _} [Fintype α] [AutomatedTheoryConstruction.SemigroupLike01 α] (e : α), (∀ y : α, e * y = e) → (¬ ∀ x : α, x * e = e) → Nontrivial α := by
-  intro α _ _ e he hne
-  rw [← not_subsingleton_iff_nontrivial]
-  intro hsub
-  apply hne
-  intro x
-  have hx : x = e := hsub.elim x e
-  rw [hx]
-  exact he e
+theorem thm_op_000009 : ∀ {α : Type u} [SemigroupLike01 α], (∀ x y : α, x * y = y * x) → ∀ x y z : α, (x * y) * z = x * (y * z) := by
+  intro α _ hcomm x y z
+  calc
+    (x * y) * z = (y * x) * z := by rw [hcomm x y]
+    _ = (y * z) * x := by simpa [op] using (SemigroupLike01.ax_middle_swap y x z)
+    _ = x * (y * z) := by rw [hcomm (y * z) x]
 
 
-theorem thm_op_000071 : ∀ (α : Type _) [Nontrivial α], ∃ s : AutomatedTheoryConstruction.SemigroupLike01 α, ∃ e : α, letI : Mul α := s.toMul; (∀ y : α, e * y = e) ∧ ¬ ∀ x : α, x * e = e := by
-  intro α _
+theorem thm_op_000010 : ∀ {α : Type u} [SemigroupLike01 α] [Fintype α], (∃ x y z : α, (x * y) * z ≠ x * (y * z)) → 3 ≤ Fintype.card α := by
+  intro α _ _ hnonassoc
   classical
-  let s : AutomatedTheoryConstruction.SemigroupLike01 α :=
-    { mul := fun x _ => x
-      ax_left_idempotent := by
-        intro x
-        rfl
-      ax_right_absorb_duplicate := by
-        intro x y
-        rfl
-      ax_middle_swap := by
-        intro x y z
-        rfl }
-  let e : α := Classical.choice (inferInstance : Nonempty α)
-  refine ⟨s, e, ?_⟩
-  change (∀ y : α, s.mul e y = e) ∧ ¬ ∀ x : α, s.mul x e = e
-  constructor
-  · intro y
-    rfl
-  · intro h
-    obtain ⟨x, hx⟩ := exists_ne e
-    exact hx (by simpa using h x)
+  have hxx : ∀ t : α, t * t = t := by
+    intro t
+    simpa [AutomatedTheoryConstruction.op] using
+      (SemigroupLike01.ax_left_idempotent (α := α) t)
+  have habs : ∀ a b : α, a * (a * b) = a * b := by
+    intro a b
+    simpa [AutomatedTheoryConstruction.op] using
+      (SemigroupLike01.ax_right_absorb_duplicate (α := α) a b)
+  have hswap : ∀ a b c : α, (a * b) * c = (a * c) * b := by
+    intro a b c
+    simpa [AutomatedTheoryConstruction.op] using
+      (SemigroupLike01.ax_middle_swap (α := α) a b c)
+  by_contra hlt
+  have hcard : Fintype.card α ≤ 2 := by
+    omega
+  have hpair : ∀ a b c : α, a = b ∨ b = c ∨ a = c := by
+    intro a b c
+    by_contra h
+    push_neg at h
+    have h3 : 3 ≤ Fintype.card α := by
+      calc
+        3 = ({a, b, c} : Finset α).card := by
+          simp [h.1, h.2.1, h.2.2]
+        _ ≤ Fintype.card α := Finset.card_le_univ _
+    omega
+  obtain ⟨x, y, z, hne⟩ := hnonassoc
+  have hassoc : (x * y) * z = x * (y * z) := by
+    rcases hpair x y z with hxy | hyz | hxz
+    · calc
+        (x * y) * z = (x * x) * z := by simpa [hxy]
+        _ = x * z := by rw [hxx x]
+        _ = x * (x * z) := by simpa using (habs x z).symm
+        _ = x * (y * z) := by simpa [hxy]
+    · calc
+        (x * y) * z = (x * y) * y := by simpa [hyz]
+        _ = x * y := by
+          have hmul : x * y = x ∨ x * y = y := by
+            rcases hpair (x * y) x y with h | h | h
+            · exact Or.inl h
+            · exact Or.inl <| by simpa [h] using hxx x
+            · exact Or.inr h
+          rcases hmul with h | h
+          · rw [h, h]
+          · rw [h, hxx y]
+        _ = x * (y * y) := by rw [hxx y]
+        _ = x * (y * z) := by simpa [hyz]
+    · calc
+        (x * y) * z = (x * y) * x := by simpa [hxz]
+        _ = (x * x) * y := by simpa using hswap x y x
+        _ = x * y := by rw [hxx x]
+        _ = x * (y * x) := by
+          have hyx : y * x = x ∨ y * x = y := by
+            rcases hpair (y * x) x y with h | h | h
+            · exact Or.inl h
+            · exact Or.inl <| by simpa [h] using hxx y
+            · exact Or.inr h
+          rcases hyx with h | h
+          · have hxy' : x * y = x := by
+              have hyxy : (y * x) * y = y * x := by
+                calc
+                  (y * x) * y = (y * y) * x := by simpa using hswap y x y
+                  _ = y * x := by rw [hxx y]
+              simpa [h] using hyxy
+            rw [h, hxy', hxx x]
+          · rw [h]
+        _ = x * (y * z) := by simpa [hxz]
+  exact hne hassoc
 
 
-theorem thm_op_000064_is_false : ¬((∃ (_ : AutomatedTheoryConstruction.SemigroupLike01 Bool), (∀ x y : Bool, x * y = x) ∧ ∃ e : Bool, (∀ y : Bool, e * y = e) ∧ ¬ ∀ x : Bool, x * e = e) ∧ ∀ (α : Type _) (_ : Fintype α) (_ : AutomatedTheoryConstruction.SemigroupLike01 α), (∃ e : α, (∀ y : α, e * y = e) ∧ ¬ ∀ x : α, x * e = e) → 2 ≤ Fintype.card α) := by
-  intro h
-  rcases h with ⟨hBool, _⟩
-  rcases hBool with ⟨_, hproj, _⟩
-  have htf : true * false = true := hproj true false
-  change false = true at htf
-  cases htf
+theorem thm_op_000014 : ∀ {α : Type u} [SemigroupLike01 α], (∃ e : α, ∀ x : α, e * x = x) → ∀ x y : α, x * y = y * x := by
+  intro α _ h x y
+  rcases h with ⟨e, he⟩
+  simpa [AutomatedTheoryConstruction.op, he x, he y] using
+    (AutomatedTheoryConstruction.SemigroupLike01.ax_middle_swap (x := e) (y := x) (z := y))
 
 end AutomatedTheoryConstruction
