@@ -24,6 +24,38 @@ It implements an automated theory-construction loop on top of Lean 4 + Mathlib. 
   accumulated verified theorems
 ```
 
+## Illustrative Results
+
+These are representative examples from the current repository state. They are intentionally cherry-picked to show the kind of output the loop can already produce, not to claim broad coverage or maturity yet.
+
+Starting from the three axioms of `SemigroupLike01`, the system has automatically derived nontrivial universal consequences such as:
+
+```lean
+∀ {α : Type u} [SemigroupLike01 α], ∀ x y : α, (x * y) * x = x * y
+```
+
+and
+
+```lean
+∀ {α : Type _} [SemigroupLike01 α], ∀ e : α,
+  (∀ x : α, x * e = e) → ∀ x : α, e * x = e
+```
+
+It has also produced stronger derived identities, for example:
+
+```lean
+∀ {α : Type u} [SemigroupLike01 α], ∀ x y z : α,
+  (x * y) * (x * z) = (x * y) * z
+```
+
+The system does not only accumulate positive laws. It can also reject tempting but false universal conjectures by constructing explicit finite countermodels. For example, it verified a 3-element model satisfying the three axioms while failing associativity, so:
+
+```lean
+¬(∀ {α : Type u} [SemigroupLike01 α], ∀ x y z : α, (x * y) * z = x * (y * z))
+```
+
+is accompanied by a certified concrete witness rather than only a failed proof search.
+
 For a first-time reader, the core idea is:
 
 - `AutomatedTheoryConstruction/Theory.lean` defines the starting symbols and axioms
