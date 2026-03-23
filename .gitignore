@@ -22,4 +22,7 @@ __pycache__/
 *.swo
 
 AutomatedTheoryConstruction/
+!AutomatedTheoryConstruction/
+AutomatedTheoryConstruction/*
+!AutomatedTheoryConstruction/seeds.jsonl
 data/

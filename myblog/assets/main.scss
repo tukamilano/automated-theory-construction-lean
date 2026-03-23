@@ -25,6 +25,14 @@
   -webkit-overflow-scrolling: touch;
 }
 
+.post-content pre code,
+.home pre code,
+.page-content pre code {
+  white-space: pre;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
 .post-content img,
 .page-content img,
 .post-content table,
