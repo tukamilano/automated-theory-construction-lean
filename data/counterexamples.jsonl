@@ -1,5 +1,0 @@
-{"id":"op_000006","stmt":"∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α], Nonempty (ACR.GödelFixpoint α) → Nonempty (ACR.HenkinFixpoint α)"}
-{"id":"op_000040","stmt":"∀ {α : Type*} [ACR α] [PartialOrder α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α], ∀ h : ACR.HenkinFixpoint α, h.1 = □h.1"}
-{"id":"op_000025","stmt":"∀ {α : Type*} [ACR α] [PartialOrder α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], ∀ g h : ACR.GödelFixpoint α, g = h"}
-{"id":"op_000063","stmt":"∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α], ∀ x : α, ⊠(⊥ : α) ≤ x → (ACR.Consistent α ↔ ¬ (x ≤ (⊥ : α)))"}
-{"id":"op_000074","stmt":"∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α], (∀ {x y : α}, x ≤ y → □y ≤ x → x ≡ □y) → (∀ h₁ h₂ : ACR.HenkinFixpoint α, h₁.1 ≡ h₂.1)"}
