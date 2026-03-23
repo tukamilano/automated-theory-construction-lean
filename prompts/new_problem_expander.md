@@ -41,6 +41,7 @@ When the current problem is solved and verified (`verify_success = true` and `re
 - It is good to return at least one candidate that meaningfully broadens, reinterprets, or reuses the verified result beyond the immediate local target.
 - Prefer candidates whose resolution would teach something non-obvious about the theory or its models, rather than merely restating the solved fact in slightly altered form.
 - If a more informative model-level, structural, or boundary-case follow-up is available, prefer it over a nearby local rewrite.
+- It is also good, when appropriate, to propose a follow-up that analyzes the theory's own internal language or expressive structure, especially when Mathlib or other standard library abstractions make that analysis precise, provided the statement remains anchored to the active theory rather than drifting into unrelated meta-theory.
 
 Quality checklist for every returned candidate:
 - It should add theory-level information, not only repackage the current statement.
@@ -67,6 +68,7 @@ Candidate format constraints:
   - its objects, quantifiers, assumptions, and conclusion are explicit in the statement
   - it does not contain undefined evaluative language or ask the reader to search for something
   - it does not leave the choice of an additional axiom or auxiliary predicate to the reader
+- If a candidate studies the theory's internal language or expressive power, state it as a concrete mathematical claim (for example about definability, closure, normal forms, or expressive limitations), not as an open-ended search task or vague meta-level prompt.
 - Reject hard-coded local trivia. Do not propose statements whose main content is a one-off computation in a specially crafted instance unless it is explicitly serving as a witness for a broader theory-level claim.
 - Reject low-value verification tasks about a hand-crafted example when they do not clarify a broader structural point.
 - Avoid trivial restatements, pure renamings, immediate corollaries with no new conceptual content, direct negation templates, duplicates of `existing_new_problems`, duplicates of `open_problems`, and candidates already represented among the verified theorems visible in `theory_context`.
