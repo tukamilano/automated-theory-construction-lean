@@ -1,13 +1,3 @@
-{"id":"op_000080","stmt":"∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], Nonempty (ACR.GödelFixpoint α) → □(⊠(⊤ : α)) ≤ ⊠(⊤ : α)","src":"generated"}
-{"id":"op_000038","stmt":"∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], Nonempty (ACR.GödelFixpoint α) → Nonempty (ACR.HenkinFixpoint α)","src":"generated"}
-{"id":"op_000081","stmt":"∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] {x y : α}, ACR.Equivalent x y → ACR.Equivalent (ACR.Prov.prov x) (ACR.Prov.prov y)","src":"generated"}
-{"id":"op_000082","stmt":"∀ {α : Type*} [ACR α] {x y : α}, ACR.Equivalent x y → (((⊤ : α) ≤ x ↔ (⊤ : α) ≤ y) ∧ (x ≤ (⊥ : α) ↔ y ≤ (⊥ : α)))","src":"generated"}
-{"id":"op_000083","stmt":"∀ {α : Type*} [ACR α] [ACR.Prov α], (∀ {x y : α}, x ≤ y → y ≤ x → x = y) → ∀ h : ACR.HenkinFixpoint α, h.1 = □h.1","src":"generated"}
-{"id":"op_000084","stmt":"For every type α with instances [ACR α] [PartialOrder α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α], if the order relation of the `PartialOrder α` instance coincides with the preorder carried by `ACR α`, then every Henkin fixpoint `h : ACR.HenkinFixpoint α` satisfies `h.1 = □h.1`.","src":"generated"}
-{"id":"op_000085","stmt":"∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], ∀ g : ACR.GödelFixpoint α, □g.1 ≤ ⊠g.1","src":"generated"}
-{"id":"op_000086","stmt":"∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], ∀ g : ACR.GödelFixpoint α, □(⊠(⊤ : α)) ≤ g.1","src":"generated"}
-{"id":"op_000041","stmt":"∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], ∀ g : ACR.GödelFixpoint α, ACR.Equivalent g.1 (□g.1)","src":"generated"}
-{"id":"op_000087","stmt":"∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], ∀ g : ACR.GödelFixpoint α, (g.1 ≤ (⊥ : α)) ↔ (□g.1 ≤ (⊥ : α))","src":"generated"}
 {"id":"op_000088","stmt":"∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α] [Nonempty (ACR.GödelFixpoint α)], ∀ x y : α, ⊠(⊤ : α) ≤ x → ⊠(⊤ : α) ≤ y → ((x ≤ (⊥ : α)) ↔ (y ≤ (⊥ : α)))","src":"generated"}
 {"id":"op_000089","stmt":"∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α] [Nonempty (ACR.GödelFixpoint α)], ∀ g : ACR.GödelFixpoint α, ∀ x : α, ⊠(⊤ : α) ≤ x → ((g.1 ≤ (⊥ : α)) ↔ (x ≤ (⊥ : α)))","src":"generated"}
 {"id":"op_000090","stmt":"∀ {α : Type*} [ACR α] (f : α → α), (∀ {x y : α}, x ≤ y → f y ≤ f x) → ∀ {x y : α}, ACR.Equivalent x y → (ACR.Equivalent x (f x) ↔ ACR.Equivalent y (f y))","src":"generated"}
@@ -88,3 +78,20 @@
 {"id":"op_000156","stmt":"∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], Nonempty (ACR.GödelFixpoint α) → ∃ g : ACR.GödelFixpoint α, □(□g.1) ≤ □g.1","src":"generated"}
 {"id":"op_000157","stmt":"∃ (α : Type*) (_ : ACR α) (_ : ACR.Prov α) (_ : ACR.Reft α) (_ : ACR.APS α), Nonempty (ACR.GödelFixpoint α) ∧ Nonempty (ACR.HenkinFixpoint α) ∧ ∀ g : ACR.GödelFixpoint α, ¬ (□(□g.1) ≤ □g.1)","src":"generated"}
 {"id":"op_000079","stmt":"∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], ∀ g : ACR.GödelFixpoint α, □g.1 ≤ g.1","src":"generated"}
+{"id":"op_000158","stmt":"∃ (α : Type*) (_ : Fintype α) (_ : ACR α) (_ : ACR.Prov α) (_ : ACR.Reft α) (_ : ACR.APS α) (_ : ACR.C5 α), Nonempty (ACR.GödelFixpoint α) ∧ ¬ (□(⊠(⊤ : α)) ≤ ⊠(⊤ : α))","src":"generated"}
+{"id":"op_000159","stmt":"∃ (α : Type*) (_ : Fintype α) (_ : ACR α) (_ : ACR.Prov α) (_ : ACR.Reft α) (_ : ACR.APS α) (_ : ACR.C5 α), ∃ g : ACR.GödelFixpoint α, ¬ (□g.1 ≤ g.1)","src":"generated"}
+{"id":"op_000080","stmt":"∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], Nonempty (ACR.GödelFixpoint α) → □(⊠(⊤ : α)) ≤ ⊠(⊤ : α)","src":"generated"}
+{"id":"op_000160","stmt":"∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], ACR.Equivalent (⊤ : α) (□(⊤ : α))","src":"generated"}
+{"id":"op_000161","stmt":"∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], ∀ h : ACR.HenkinFixpoint α, ACR.Equivalent h.1 (⊤ : α)","src":"generated"}
+{"id":"op_000162","stmt":"∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] {x y : α}, ACR.Equivalent x y → ((ACR.Equivalent x (ACR.Prov.prov x) ↔ ACR.Equivalent y (ACR.Prov.prov y)) ∧ (ACR.Equivalent x (ACR.Reft.reft x) ↔ ACR.Equivalent y (ACR.Reft.reft y)))","src":"generated"}
+{"id":"op_000163","stmt":"∃ (α : Type*) (_ : ACR α) (_ : ACR.Prov α) (_ : ACR.Reft α) (_ : ACR.APS α) (x y : α), ACR.Equivalent (ACR.Prov.prov x) (ACR.Prov.prov y) ∧ ¬ ACR.Equivalent x y","src":"generated"}
+{"id":"op_000164","stmt":"For every type α with instance [ACR α], the quotient of α by the relation ACR.Equivalent carries a partial order defined by [x] ≤ [y] if and only if x ≤ y.","src":"generated"}
+{"id":"op_000165","stmt":"∀ {α : Type*} [ACR α] (f : α → α), (∀ {x y : α}, x ≤ y → f x ≤ f y) → ∀ {x y : α}, ACR.Equivalent x y → ACR.Equivalent (f x) (f y)","src":"generated"}
+{"id":"op_000166","stmt":"∀ {α : Type*} [ACR α] [ACR.Prov α], (∀ {x y : α}, x ≤ y → y ≤ x → x = y) → (Nonempty (ACR.HenkinFixpoint α) ↔ ∃ x : α, x = □x)","src":"generated"}
+{"id":"op_000167","stmt":"∀ {α : Type*} [ACR α] [ACR.Prov α], (∀ {x y : α}, x ≤ y → y ≤ x → x = y) → ∀ {x : α}, ACR.Equivalent x (□x) ↔ x = □x","src":"generated"}
+{"id":"op_000168","stmt":"For every type α with instances [ACR α] [PartialOrder α] [ACR.Reft α], if the order relation of the `PartialOrder α` instance coincides with the preorder carried by `ACR α`, then for every `x : α`, `x ≡ ⊠x` if and only if `x = ⊠x`.","src":"generated"}
+{"id":"op_000169","stmt":"∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], ∀ g : ACR.GödelFixpoint α, □(⊠(⊤ : α)) ≤ ⊠(⊤ : α)","src":"generated"}
+{"id":"op_000170","stmt":"∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], ∀ g : ACR.GödelFixpoint α, ⊠g.1 ≡ ⊠(⊠(⊤ : α))","src":"generated"}
+{"id":"op_000085","stmt":"∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], ∀ g : ACR.GödelFixpoint α, □g.1 ≤ ⊠g.1","src":"generated"}
+{"id":"op_000086","stmt":"∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], ∀ g : ACR.GödelFixpoint α, □(⊠(⊤ : α)) ≤ g.1","src":"generated"}
+{"id":"op_000041","stmt":"∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], ∀ g : ACR.GödelFixpoint α, ACR.Equivalent g.1 (□g.1)","src":"generated"}

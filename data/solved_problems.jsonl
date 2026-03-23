@@ -60,3 +60,9 @@
 {"id":"op_000015","stmt":"∃ (α : Type*) (_ : ACR α) (_ : ACR.Prov α) (_ : ACR.Reft α) (_ : ACR.APS α), Nonempty (ACR.GödelFixpoint α) ∧ ¬ Nonempty (ACR.HenkinFixpoint α)","thm":"thm_op_000015"}
 {"id":"op_000077","stmt":"∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α], (∃ g : ACR.GödelFixpoint α, □(□g.1) ≤ □g.1) → ∃ h : ACR.HenkinFixpoint α, ∃ g : ACR.GödelFixpoint α, h.1 = □g.1","thm":"thm_op_000077"}
 {"id":"op_000078","stmt":"∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α], (∃ g : ACR.GödelFixpoint α, □(□g.1) ≤ □g.1) → ∃ x : α, x ≡ □x ∧ ∃ g : ACR.GödelFixpoint α, x = □g.1","thm":"thm_op_000078"}
+{"id":"op_000038","stmt":"∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], Nonempty (ACR.GödelFixpoint α) → Nonempty (ACR.HenkinFixpoint α)","thm":"thm_op_000038"}
+{"id":"op_000081","stmt":"∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] {x y : α}, ACR.Equivalent x y → ACR.Equivalent (ACR.Prov.prov x) (ACR.Prov.prov y)","thm":"thm_op_000081"}
+{"id":"op_000082","stmt":"∀ {α : Type*} [ACR α] {x y : α}, ACR.Equivalent x y → (((⊤ : α) ≤ x ↔ (⊤ : α) ≤ y) ∧ (x ≤ (⊥ : α) ↔ y ≤ (⊥ : α)))","thm":"thm_op_000082"}
+{"id":"op_000083","stmt":"∀ {α : Type*} [ACR α] [ACR.Prov α], (∀ {x y : α}, x ≤ y → y ≤ x → x = y) → ∀ h : ACR.HenkinFixpoint α, h.1 = □h.1","thm":"thm_op_000083"}
+{"id":"op_000084","stmt":"For every type α with instances [ACR α] [PartialOrder α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α], if the order relation of the `PartialOrder α` instance coincides with the preorder carried by `ACR α`, then every Henkin fixpoint `h : ACR.HenkinFixpoint α` satisfies `h.1 = □h.1`.","thm":"thm_op_000084"}
+{"id":"op_000087","stmt":"∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], ∀ g : ACR.GödelFixpoint α, (g.1 ≤ (⊥ : α)) ↔ (□g.1 ≤ (⊥ : α))","thm":"thm_op_000087"}

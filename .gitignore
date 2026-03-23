@@ -21,12 +21,5 @@ __pycache__/
 *.swp
 *.swo
 
-# Jekyll / GitHub Pages
-_site/
-.jekyll-cache/
-.sass-cache/
-.bundle/
-vendor/bundle/
-
 AutomatedTheoryConstruction/
 data/

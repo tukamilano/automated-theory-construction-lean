@@ -1254,5 +1254,305 @@
       "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:11:15: error(lean.synthInstanceFailed): failed to synthesize instance of type class | Top (Fin 3) | Hint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command.",
       "new_problems": []
     }
+  ],
+  "op_000038": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], Nonempty (ACR.GödelFixpoint α) → Nonempty (ACR.HenkinFixpoint α)",
+      "formalized_statement": "∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], Nonempty (ACR.GödelFixpoint α) → Nonempty (ACR.HenkinFixpoint α)",
+      "statement_formalization_notes": "The input statement is already a valid Lean proposition using the definitions from the provided theory context.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "A stronger statement holds: under `C5`, `⊤` is always a Henkin fixpoint, so the Gödel-fixpoint assumption is unnecessary. Indeed, `⊤ ≤ ⊠⊥` by `top_le_reft_bot`, then `⊠⊥ ≤ □⊠⊥` by `reft_le_prov_reft`, and since `⊠⊥ ≤ ⊤` by `le_top`, monotonicity gives `□⊠⊥ ≤ □⊤`. Also `□⊤ ≤ ⊤` by `le_top`. Hence `⊤ ≡ □⊤`, so `⟨⊤, ...⟩` is a Henkin fixpoint.",
+      "proof_text": "intro α _ _ _ _ _ _\nrefine ⟨⟨(⊤ : α), ?_⟩⟩\nconstructor\n· calc\n    (⊤ : α) ≤ ⊠(⊥ : α) := ACR.top_le_reft_bot\n    _ ≤ □(⊠(⊥ : α)) := ACR.reft_le_prov_reft\n    _ ≤ □(⊤ : α) := ACR.prov_mono (ACR.le_top (x := ⊠(⊥ : α)))\n· exact ACR.le_top",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "no_diagnostics",
+      "new_problems": []
+    }
+  ],
+  "op_000081": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] {x y : α}, ACR.Equivalent x y → ACR.Equivalent (ACR.Prov.prov x) (ACR.Prov.prov y)",
+      "formalized_statement": "∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] {x y : α}, ACR.Equivalent x y → ACR.Equivalent (ACR.Prov.prov x) (ACR.Prov.prov y)",
+      "statement_formalization_notes": "Direct formalization of the given statement; kept the same explicit class assumptions as in stmt.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": false,
+      "proof_sketch": "Equivalence is a pair of inequalities. Apply `ACR.prov_mono` to each direction.",
+      "proof_text": "intro h\nexact ⟨ACR.prov_mono h.1, ACR.prov_mono h.2⟩",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:8:8: error: Invalid `⟨...⟩` notation: The expected type `x✝ ≡ y✝ → □x✝ ≡ □y✝` is not an inductive type",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:8:8: error: Invalid `⟨...⟩` notation: The expected type `x✝ ≡ y✝ → □x✝ ≡ □y✝` is not an inductive type | Note: This notation can only be used when the expected type is an inductive type with a single constructor",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "Introduce the implicit parameters first. Then unfold `ACR.Equivalent` as a conjunction of two inequalities and apply `ACR.prov_mono` to each direction.",
+      "proof_text": "intro α _ _ _ _ x y h\nexact And.intro (ACR.prov_mono h.1) (ACR.prov_mono h.2)",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:8:8: error: Invalid `⟨...⟩` notation: The expected type `x✝ ≡ y✝ → □x✝ ≡ □y✝` is not an inductive type",
+      "lean_error_fingerprint": "no_diagnostics",
+      "new_problems": []
+    }
+  ],
+  "op_000082": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∀ {α : Type*} [ACR α] {x y : α}, ACR.Equivalent x y → (((⊤ : α) ≤ x ↔ (⊤ : α) ≤ y) ∧ (x ≤ (⊥ : α) ↔ y ≤ (⊥ : α)))",
+      "formalized_statement": "∀ {α : Type*} [ACR α] {x y : α}, ACR.Equivalent x y → (((⊤ : α) ≤ x ↔ (⊤ : α) ≤ y) ∧ (x ≤ (⊥ : α) ↔ y ≤ (⊥ : α)))",
+      "statement_formalization_notes": "The input statement is already a valid Lean proposition over the ACR preorder structure.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "Equivalent elements are mutually below each other, so any bound from top or to bottom transfers across by transitivity of the preorder.",
+      "proof_text": "intro α _ x y h\nrcases h with ⟨hxy, hyx⟩\nconstructor\n· constructor\n  · intro hx\n    exact le_trans hx hxy\n  · intro hy\n    exact le_trans hy hyx\n· constructor\n  · intro hxbot\n    exact le_trans hyx hxbot\n  · intro hybot\n    exact le_trans hxy hybot",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "no_diagnostics",
+      "new_problems": []
+    }
+  ],
+  "op_000083": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∀ {α : Type*} [ACR α] [ACR.Prov α], (∀ {x y : α}, x ≤ y → y ≤ x → x = y) → ∀ h : ACR.HenkinFixpoint α, h.1 = □h.1",
+      "formalized_statement": "∀ {α : Type*} [ACR α] [ACR.Prov α], (∀ {x y : α}, x ≤ y → y ≤ x → x = y) → ∀ h : ACR.HenkinFixpoint α, h.1 = □h.1",
+      "statement_formalization_notes": "The input statement is already a valid Lean proposition using the repository's ACR and HenkinFixpoint notation.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": false,
+      "proof_sketch": "Apply the given antisymmetry hypothesis to the two inequalities packaged in the Henkin fixpoint witness `h.2 : h.1 ≡ □h.1`.",
+      "proof_text": "intro hanti h\nexact hanti h.2.1 h.2.2",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:8:8: error: Function expected at",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:8:8: error: Function expected at | hanti | but this term has type",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "The previous script introduced the implicit type parameter as `hanti` by mistake. After introducing the implicit type and instances first, apply the given antisymmetry hypothesis to the two inequalities stored in the Henkin fixpoint witness `h.2`.",
+      "proof_text": "intro α _ _ hanti h\nexact hanti h.2.1 h.2.2",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:8:8: error: Function expected at",
+      "lean_error_fingerprint": "no_diagnostics",
+      "new_problems": []
+    }
+  ],
+  "op_000084": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "For every type α with instances [ACR α] [PartialOrder α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α], if the order relation of the `PartialOrder α` instance coincides with the preorder carried by `ACR α`, then every Henkin fixpoint `h : ACR.HenkinFixpoint α` satisfies `h.1 = □h.1`.",
+      "formalized_statement": "∀ {α : Type*} (hA : ACR α) (hPO : PartialOrder α) (hP : @ACR.Prov α hA) (hR : @ACR.Reft α hA) (hAPS : @ACR.APS α hA hP hR), (∀ x y : α, @LE.le α hPO.toLE x y ↔ @LE.le α hA.toLE x y) → ∀ h : @ACR.HenkinFixpoint α hA hP, h.1 = @ACR.Prov.prov α hA hP h.1",
+      "statement_formalization_notes": "Formalized the coincidence of the two order relations extensionally using explicit `LE` projections to avoid instance ambiguity.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": false,
+      "proof_sketch": "A Henkin fixpoint gives both ACR-order inequalities h.1 ≤ □h.1 and □h.1 ≤ h.1. The extensional order-coincidence hypothesis transports both inequalities to the PartialOrder relation, and then antisymmetry yields the desired equality.",
+      "proof_text": "intro hord h\nexact hPO.antisymm ((hord _ _).mpr h.2.1) ((hord _ _).mpr h.2.2)",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:8:8: error(lean.unknownIdentifier): Unknown identifier `hPO.antisymm`",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:8:8: error(lean.unknownIdentifier): Unknown identifier `hPO.antisymm`",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": false,
+      "proof_sketch": "Introduce all quantified parameters first. Then use the order-coincidence hypothesis to transport the two inequalities from the Henkin fixpoint equivalence into the `PartialOrder` relation, and conclude by `hPO.antisymm`.",
+      "proof_text": "intro α hA hPO hP hR hAPS hord h\nexact hPO.antisymm ((hord _ _).mpr h.2.1) ((hord _ _).mpr h.2.2)",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:8:12: error(lean.invalidField): Invalid field `antisymm`: The environment does not contain `PartialOrder.antisymm`, so it is not possible to project the field `antisymm` from an expression",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:8:12: error(lean.invalidField): Invalid field `antisymm`: The environment does not contain `PartialOrder.antisymm`, so it is not possible to project the field `antisymm` from an expression | hPO | of type `PartialOrder α`",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "Install the explicit `PartialOrder α` argument as a local instance, transport both inequalities from the Henkin fixpoint equivalence through the order-coincidence hypothesis, and conclude by `le_antisymm`.",
+      "proof_text": "intro α hA hPO hP hR hAPS hord h\nletI : PartialOrder α := hPO\nexact le_antisymm ((hord _ _).mpr h.2.1) ((hord _ _).mpr h.2.2)",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:8:12: error(lean.invalidField): Invalid field `antisymm`: The environment does not contain `PartialOrder.antisymm`, so it is not possible to project the field `antisymm` from an expression",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:6:119: warning: unused variable `hAPS` | Note: This linter can be disabled with `set_option linter.unusedVariables false`",
+      "new_problems": []
+    }
+  ],
+  "op_000085": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], ∀ g : ACR.GödelFixpoint α, □g.1 ≤ ⊠g.1",
+      "formalized_statement": "∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], ∀ g : ACR.GödelFixpoint α, □g.1 ≤ ⊠g.1",
+      "statement_formalization_notes": "Direct formalization of the given statement using the repository's existing notation and classes.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "stuck",
+      "verify_success": false,
+      "proof_sketch": "The proposed reuse path does not formalize: in Derived.lean, `thm_op_000007` is `ACR.Equivalent (□g.1) (□(⊠(⊤ : α)))`, not `ACR.Equivalent (□g.1) (⊠g.1)` or `ACR.Equivalent (□g.1) g.1`. Since every Gödel fixpoint satisfies `⊠g.1 ≤ g.1`, the target `□g.1 ≤ ⊠g.1` would imply the stronger open direction `□g.1 ≤ g.1` (op_000079). I could not derive that stronger inequality from the available axioms and verified derived lemmas without introducing an unverified step.",
+      "proof_text": "",
+      "counterexample_text": "No explicit countermodel was constructed here. The natural-language proof sketch appears based on a misread of `thm_op_000007`, so the current direction is not yet defensible as a formal Lean proof.",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "formalizer_returned_stuck",
+      "new_problems": []
+    }
+  ],
+  "op_000086": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], ∀ g : ACR.GödelFixpoint α, □(⊠(⊤ : α)) ≤ g.1",
+      "formalized_statement": "∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], ∀ g : ACR.GödelFixpoint α, □(⊠(⊤ : α)) ≤ g.1",
+      "statement_formalization_notes": "Direct formalization of the given statement using the repository's existing notation and structures.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "counterexample",
+      "verify_success": false,
+      "proof_sketch": "Instantiate the universal statement with α = Fin 3 ordered by the usual chain 0 < 1 < 2, with ⊤ = 2, ⊥ = 0, provability given by □0 = 0 and □1 = □2 = 2, and refutability given by ⊠0 = 2 and ⊠1 = ⊠2 = 1. The APS and C5 axioms are then finite case checks. Taking g = 1 gives a Gödel fixpoint, but □(⊠⊤) = 2, so the claimed inequality becomes 2 ≤ 1, contradiction.",
+      "proof_text": "intro h\nlet α := Fin 3\nletI : Top α := ⟨2⟩\nletI : Bot α := ⟨0⟩\nlet acrInst : ACR α :=\n  { toTop := inferInstance\n    toBot := inferInstance\n    toLE := inferInstance\n    toLT := ⟨fun a b => a ≤ b ∧ ¬ b ≤ a⟩\n    le_refl := by\n      intro x\n      exact le_rfl\n    le_trans := by\n      intro a b c hab hbc\n      exact le_trans hab hbc\n    lt_iff_le_not_ge := by\n      intro a b\n      rfl }\nletI : ACR α := acrInst\nlet prov : α → α := fun x => if x = 0 then 0 else 2\nlet reft : α → α := fun x => if x = 0 then 2 else 1\nletI : ACR.Prov α := ⟨prov⟩\nletI : ACR.Reft α := ⟨reft⟩\nlet apsInst : ACR.APS α :=\n  { prov_mono := by\n      intro x y\n      fin_cases x <;> fin_cases y <;> decide\n    reft_anti_mono := by\n      intro x y\n      fin_cases x <;> fin_cases y <;> decide\n    top_le_reft_bot := by\n      decide\n    le_reft_top_of_le_prov_of_le_reft := by\n      intro x y\n      fin_cases x <;> fin_cases y <;> decide\n    reft_le_prov_reft := by\n      intro x\n      fin_cases x <;> decide }\nletI : ACR.APS α := apsInst\nletI : ACR.C5 α :=\n  { le_top := by\n      intro x\n      fin_cases x <;> decide }\nlet g : ACR.GödelFixpoint α :=\n  ⟨1, by\n    constructor <;> decide⟩\nhave hbad : □(⊠(⊤ : α)) ≤ g.1 := h (α := α) g\nhave hnot : ¬ ((2 : α) ≤ 1) := by\n  decide\napply hnot\nsimpa [prov, reft] using hbad",
+      "counterexample_text": "Concrete countermodel used in Lean: α = Fin 3 with the usual order, ⊥ = 0, ⊤ = 2, prov x := if x = 0 then 0 else 2, reft x := if x = 0 then 2 else 1, and g := 1. Then g is a Gödel fixpoint, while □(⊠⊤) = 2 and 2 ≤ 1 is false.",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:33:9: error: unknown tactic",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:33:9: error: unknown tactic | AutomatedTheoryConstruction/Scratch.lean:18:14: error(lean.synthInstanceFailed): failed to synthesize instance of type class | Preorder ?m.66",
+      "new_problems": []
+    }
+  ],
+  "op_000041": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], ∀ g : ACR.GödelFixpoint α, ACR.Equivalent g.1 (□g.1)",
+      "formalized_statement": "∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], ∀ g : ACR.GödelFixpoint α, ACR.Equivalent g.1 (□g.1)",
+      "statement_formalization_notes": "The input statement is already a valid Lean proposition over the repository's ACR vocabulary.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "stuck",
+      "verify_success": false,
+      "proof_sketch": "Verified lemmas give `g.1 ≤ □g.1` from `thm_op_000001`, `g.1 ≡ ⊠⊤` from `ACR.gf_equiv_reft_top`, and `□g.1 ≡ □(⊠⊤)` from `thm_op_000007`. So the missing direction is essentially `□(⊠⊤) ≤ ⊠⊤`. In the available `Derived.lean`, `thm_op_000007` is only `ACR.Equivalent (□g.1) (□(⊠(⊤ : α)))`, and I did not find a verified theorem proving `□(⊠⊤) ≤ ⊠⊤` or `□g.1 ≤ g.1`. I therefore cannot produce valid Lean code for the full equivalence without relying on an unverified lemma.",
+      "proof_text": "",
+      "counterexample_text": "No counterexample is established from the provided context; the current blockage is the unproven converse inequality `□(⊠(⊤ : α)) ≤ ⊠(⊤ : α)`.",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "formalizer_returned_stuck",
+      "new_problems": []
+    }
+  ],
+  "op_000087": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], ∀ g : ACR.GödelFixpoint α, (g.1 ≤ (⊥ : α)) ↔ (□g.1 ≤ (⊥ : α))",
+      "formalized_statement": "∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], ∀ g : ACR.GödelFixpoint α, (g.1 ≤ (⊥ : α)) ↔ (□g.1 ≤ (⊥ : α))",
+      "statement_formalization_notes": "The statement is already a valid Lean proposition and matches the repository notation.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": false,
+      "proof_sketch": "Use the derived equivalence for Gödel fixpoints under C5 to get `□g.1 ≤ g.1`, and use `thm_op_000001` for `g.1 ≤ □g.1`. Then both directions are immediate by transitivity with `⊥`.",
+      "proof_text": "intro α _ _ _ _ _ g\nconstructor\n· intro hg\n  exact le_trans (thm_op_000007 g).1 hg\n· intro hbox\n  exact le_trans (thm_op_000001 g) hbox",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:10:39: error: Application type mismatch: The argument",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:10:39: error: Application type mismatch: The argument | hg | has type",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "Split on inconsistency. If ⊤ ≤ ⊥, then both g.1 ≤ ⊥ and □g.1 ≤ ⊥ follow immediately from C5.le_top. Otherwise the theory is consistent, and existing derived lemmas show both g.1 ≤ ⊥ and □g.1 ≤ ⊥ are impossible; each implication is then proved by contradiction.",
+      "proof_text": "intro α _ _ _ _ _ g\nby_cases hinc : ((⊤ : α) ≤ (⊥ : α))\n· constructor\n  · intro _\n    exact le_trans (ACR.le_top (x := □g.1)) hinc\n  · intro _\n    exact le_trans (ACR.le_top (x := g.1)) hinc\n· have hC : ACR.Consistent α := hinc\n  constructor\n  · intro hg\n    exact False.elim ((thm_op_000005 (g := g) hC) hg)\n  · intro hbox\n    exact False.elim (((thm_op_000042 (g := g)).1 hC) hbox)",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:10:39: error: Application type mismatch: The argument",
+      "lean_error_fingerprint": "no_diagnostics",
+      "new_problems": []
+    }
+  ],
+  "op_000088": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α] [Nonempty (ACR.GödelFixpoint α)], ∀ x y : α, ⊠(⊤ : α) ≤ x → ⊠(⊤ : α) ≤ y → ((x ≤ (⊥ : α)) ↔ (y ≤ (⊥ : α)))",
+      "formalized_statement": "∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α] [Nonempty (ACR.GödelFixpoint α)], ∀ x y : α, ⊠(⊤ : α) ≤ x → ⊠(⊤ : α) ≤ y → (x ≤ (⊥ : α) ↔ y ≤ (⊥ : α))",
+      "statement_formalization_notes": "Direct formalization of the given statement using the repository's existing notation.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    }
   ]
 }

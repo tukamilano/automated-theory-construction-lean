@@ -1055,4 +1055,63 @@ theorem thm_op_000078 : ∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [A
   · exact ACR.prov_mono (le_trans g.2.1 (ACR.reft_gf_le_box_gf (g := g)))
   · exact hbox
 
+
+theorem thm_op_000038 : ∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], Nonempty (ACR.GödelFixpoint α) → Nonempty (ACR.HenkinFixpoint α) := by
+  intro α _ _ _ _ _ _
+  refine ⟨⟨(⊤ : α), ?_⟩⟩
+  constructor
+  · calc
+      (⊤ : α) ≤ ⊠(⊥ : α) := ACR.top_le_reft_bot
+      _ ≤ □(⊠(⊥ : α)) := ACR.reft_le_prov_reft
+      _ ≤ □(⊤ : α) := ACR.prov_mono (ACR.le_top (x := ⊠(⊥ : α)))
+  · exact ACR.le_top
+
+
+theorem thm_op_000081 : ∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] {x y : α}, ACR.Equivalent x y → ACR.Equivalent (ACR.Prov.prov x) (ACR.Prov.prov y) := by
+  intro α _ _ _ _ x y h
+  exact And.intro (ACR.prov_mono h.1) (ACR.prov_mono h.2)
+
+
+theorem thm_op_000082 : ∀ {α : Type*} [ACR α] {x y : α}, ACR.Equivalent x y → (((⊤ : α) ≤ x ↔ (⊤ : α) ≤ y) ∧ (x ≤ (⊥ : α) ↔ y ≤ (⊥ : α))) := by
+  intro α _ x y h
+  rcases h with ⟨hxy, hyx⟩
+  constructor
+  · constructor
+    · intro hx
+      exact le_trans hx hxy
+    · intro hy
+      exact le_trans hy hyx
+  · constructor
+    · intro hxbot
+      exact le_trans hyx hxbot
+    · intro hybot
+      exact le_trans hxy hybot
+
+
+theorem thm_op_000083 : ∀ {α : Type*} [ACR α] [ACR.Prov α], (∀ {x y : α}, x ≤ y → y ≤ x → x = y) → ∀ h : ACR.HenkinFixpoint α, h.1 = □h.1 := by
+  intro α _ _ hanti h
+  exact hanti h.2.1 h.2.2
+
+
+theorem thm_op_000084 : ∀ {α : Type*} (hA : ACR α) (hPO : PartialOrder α) (hP : @ACR.Prov α hA) (hR : @ACR.Reft α hA) (hAPS : @ACR.APS α hA hP hR), (∀ x y : α, @LE.le α hPO.toLE x y ↔ @LE.le α hA.toLE x y) → ∀ h : @ACR.HenkinFixpoint α hA hP, h.1 = @ACR.Prov.prov α hA hP h.1 := by
+  intro α hA hPO hP hR hAPS hord h
+  letI : PartialOrder α := hPO
+  exact le_antisymm ((hord _ _).mpr h.2.1) ((hord _ _).mpr h.2.2)
+
+
+theorem thm_op_000087 : ∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], ∀ g : ACR.GödelFixpoint α, (g.1 ≤ (⊥ : α)) ↔ (□g.1 ≤ (⊥ : α)) := by
+  intro α _ _ _ _ _ g
+  by_cases hinc : ((⊤ : α) ≤ (⊥ : α))
+  · constructor
+    · intro _
+      exact le_trans (ACR.le_top (x := □g.1)) hinc
+    · intro _
+      exact le_trans (ACR.le_top (x := g.1)) hinc
+  · have hC : ACR.Consistent α := hinc
+    constructor
+    · intro hg
+      exact False.elim ((thm_op_000005 (g := g) hC) hg)
+    · intro hbox
+      exact False.elim (((thm_op_000042 (g := g)).1 hC) hbox)
+
 end AutomatedTheoryConstruction
