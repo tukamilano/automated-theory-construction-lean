@@ -4,15 +4,15 @@ title: About
 permalink: /about/
 ---
 
-This is the base Jekyll theme. You can find out more info about customizing your Jekyll theme, as well as basic Jekyll usage documentation at [jekyllrb.com](https://jekyllrb.com/)
+This site collects notes and progress reports for the Automated Theory Construction project.
 
-You can find the source code for Minima at GitHub:
-[jekyll][jekyll-organization] /
-[minima](https://github.com/jekyll/minima)
+The repository explores how LLM-based agents and Lean can be combined to:
 
-You can find the source code for Jekyll at GitHub:
-[jekyll][jekyll-organization] /
-[jekyll](https://github.com/jekyll/jekyll)
+1. formalize candidate statements,
+2. verify proofs or counterexamples in Lean,
+3. and propose useful next problems that expand a theory rather than only solving isolated goals.
 
+Current code lives in the main repository:
+[tukamilano/Automated_Theory_Construction](https://github.com/tukamilano/Automated_Theory_Construction)
 
-[jekyll-organization]: https://github.com/jekyll
+If you work on related topics in logic, theorem proving, or formalized mathematics, feedback is welcome.

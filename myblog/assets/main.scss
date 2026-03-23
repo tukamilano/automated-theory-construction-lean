@@ -1,0 +1,33 @@
+---
+---
+
+@import "minima";
+
+.page-content {
+  overflow-x: clip;
+}
+
+.post-content code,
+.home code,
+.page-content code {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.post-content pre,
+.post-content .highlight,
+.home pre,
+.home .highlight,
+.page-content pre,
+.page-content .highlight {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.post-content img,
+.page-content img,
+.post-content table,
+.page-content table {
+  max-width: 100%;
+}

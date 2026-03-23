@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Growing Theories with LLMs and Lean"
-date: 2026-03-23 16:10:00 +0900
+date: 2026-03-23 09:00:00 +0900
 categories: research lean llm
 ---
 
@@ -96,6 +96,8 @@ At the moment, I am experimenting with code adapted from [SnO2WMaN/provability-t
 These are formalized versions of statements from Sections 2 and 3 of [arXiv:1602.05728v1](https://arxiv.org/abs/1602.05728v1).
 
 The results obtained so far are available in [this gist](https://gist.github.com/tukamilano/d25609aeb416005e24be23308c4abd3d). I am currently receiving feedback on the generated code.
+
+I attach the[ChatGPT response](https://chatgpt.com/share/69c0ea0a-8d40-8008-bc0b-892de6a6b429) for reference.
 
 ## What I Still Do Not Fully Understand
 
