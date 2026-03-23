@@ -3,7 +3,7 @@
 It implements an automated theory-construction loop on top of Lean 4 + Mathlib. Given a base theory, the system proposes candidate statements, attempts to formalize and prove them in Lean, verifies successful results, and accumulates the verified theorems into the derived theory.
 
 For more details and generation examples, please see here.
-- [Blog post: Growing Theories with LLMs and Lean](https://tukamilano.github.io/Automated_Theory_Construction/research/lean/llm/2026/03/23/automated-theory-construction-with-llms.html)
+- [Blog post: Growing Theories with LLMs and Lean](https://tukamilano.github.io/automated-theory-construction-lean/research/lean/llm/2026/03/23/automated-theory-construction-with-llms.html)
 - [Application to provability logic](https://gist.github.com/tukamilano/d25609aeb416005e24be23308c4abd3d)
 
 ## Quick Mental Model
