@@ -2,6 +2,9 @@
 
 It implements an automated theory-construction loop on top of Lean 4 + Mathlib. Given a base theory, the system proposes candidate statements, attempts to formalize and prove them in Lean, verifies successful results, and accumulates the verified theorems into the derived theory.
 
+For more details and generation examples, please see here.
+[Application to provability logic](https://gist.github.com/tukamilano/d25609aeb416005e24be23308c4abd3d)
+
 ## Quick Mental Model
 
 ```text
