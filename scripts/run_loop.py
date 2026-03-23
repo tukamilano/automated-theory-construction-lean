@@ -1475,6 +1475,7 @@ def prebuild_lean_project() -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run the minimal prototype loop.")
     parser.add_argument("--initialize-on-start", action=argparse.BooleanOptionalAction, default=True)
+    parser.add_argument("--max-iterations", type=int)
     parser.add_argument("--enable-worker", action="store_true")
     parser.add_argument("--worker-command")
     parser.add_argument("--worker-timeout", type=int)
@@ -1492,6 +1493,8 @@ def main() -> None:
     parser.add_argument("--phase-logs", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--skip-verify", action="store_true")
     args = parser.parse_args()
+    if args.max_iterations is not None and args.max_iterations < 0:
+        raise ValueError("--max-iterations must be >= 0")
 
     # Fixed runtime paths and hidden compatibility defaults.
     args.data_dir = "data"
@@ -1585,6 +1588,10 @@ def main() -> None:
         open_rows = read_jsonl(open_path)
         if not open_rows:
             print({"status": "no_open_problems", "iterations_completed": completed_iterations})
+            return
+
+        if args.max_iterations is not None and completed_iterations >= args.max_iterations:
+            print({"status": "max_iterations_reached", "iterations_completed": completed_iterations})
             return
 
         iteration_num = completed_iterations + 1

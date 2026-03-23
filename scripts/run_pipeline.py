@@ -79,6 +79,7 @@ def build_loop_command(args: argparse.Namespace) -> list[str]:
     if args.skip_loop_verify:
         cmd.append("--skip-verify")
 
+    append_optional_flag(cmd, "--max-iterations", args.max_iterations)
     append_optional_flag(cmd, "--worker-command", args.worker_command)
     append_optional_flag(cmd, "--worker-timeout", args.worker_timeout)
     append_optional_flag(cmd, "--prover-worker-command", args.prover_worker_command)
@@ -160,6 +161,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--seed-model")
     parser.add_argument("--seed-sandbox", default="read-only")
     parser.add_argument("--initialize-on-start", action=argparse.BooleanOptionalAction, default=True)
+    parser.add_argument("--max-iterations", type=int)
     parser.add_argument("--phase-logs", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--skip-loop-verify", action="store_true")
     parser.add_argument("--worker-command")

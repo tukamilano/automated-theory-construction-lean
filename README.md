@@ -139,7 +139,8 @@ ATC_CODEX_TIMEOUT=390 \
 uv run python scripts/run_pipeline.py \
   --article-file docs/context.tex \
   --worker-command "uv run python scripts/codex_worker.py" \
-  --worker-timeout 420
+  --worker-timeout 420 \
+  --max-iteration 100
 ```
 
 - Repeat `--article-file` when you want multiple context files.
