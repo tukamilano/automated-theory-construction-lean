@@ -1,0 +1,29 @@
+---
+title: Blog
+permalink: /blog/
+---
+
+<section class="content-card">
+  <p class="eyebrow">Archive</p>
+  <h1 class="section-title">記事一覧</h1>
+  <p>新しい記事は <code>_posts/</code> に Markdown を追加してください。</p>
+</section>
+
+<section class="post-list">
+  {% if site.posts.size > 0 %}
+    {% for post in site.posts %}
+      <article class="post-list-item">
+        <p class="post-date">{{ post.date | date: "%Y-%m-%d" }}</p>
+        <h2><a href="{{ post.url | relative_url }}">{{ post.title }}</a></h2>
+        {% if post.excerpt %}
+          <p>{{ post.excerpt | strip_html | truncate: 180 }}</p>
+        {% endif %}
+      </article>
+    {% endfor %}
+  {% else %}
+    <article class="post-list-item">
+      <h2>まだ記事はありません</h2>
+      <p><code>_posts/YYYY-MM-DD-title.md</code> を追加すると、ここに一覧表示されます。</p>
+    </article>
+  {% endif %}
+</section>

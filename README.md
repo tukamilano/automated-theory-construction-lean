@@ -1,11 +1,5 @@
 # Automated Theory Construction
 
-This repository aims to start from a small set of axioms and automatically build up a growing collection of derived theorems.
-
-The longer-term goal is more ambitious than simply producing many theorems: the system should push toward statements in the most general form it can discover, move beyond the current internal language when needed, and remain usable even for niche axiom systems that are not already well-tooled or neatly standardized.
-
-Here, "moving beyond the internal language" means not stopping at equations built only from the primitive operation and variables, but also searching for statements about existence, nonexistence, uniqueness, finite-model behavior, cardinality bounds, and other global constraints on the models of the axioms.
-
 In other words, this repository is aimed at exploratory theorem generation in underdeveloped formal settings, not only automation inside familiar, well-prepared theories.
 
 It implements an automated theory-construction loop on top of Lean 4 + Mathlib. Given a base theory, the system proposes candidate statements, attempts to formalize and prove them in Lean, verifies successful results, and accumulates the verified theorems into the derived theory.
@@ -24,7 +18,7 @@ More concretely, follow-up generation should favor, roughly in this order:
 4. finite-model behavior, extremal behavior, boundary cases, or classification fragments
 5. adjacent structural consequences that clarify the global shape of the theory
 
-At least one candidate should ideally broaden, reinterpret, or reuse the verified result beyond the immediate local target. Prefer candidates that teach something non-obvious about the theory or its models. If a more informative model-level, structural, or boundary-case follow-up is available, prefer it over a nearby local rewrite.
+When a genuinely useful candidate is available, it should ideally broaden, reinterpret, or reuse the verified result beyond the immediate local target. Prefer candidates that teach something non-obvious about the theory or its models. If only weak local variants are available, returning no follow-up is acceptable. If a more informative model-level, structural, or boundary-case follow-up is available, prefer it over a nearby local rewrite.
 
 ## Quick Mental Model
 
@@ -95,7 +89,7 @@ The main loop is `scripts/run_loop.py`. Its runtime paths are currently fixed in
 - theory: `AutomatedTheoryConstruction/Theory.lean`
 - accumulated theorems: `AutomatedTheoryConstruction/Derived.lean`
 - temporary verification file: `AutomatedTheoryConstruction/Scratch.lean`
-- initial seeds: `theories/semigroup_like_01/seeds.jsonl`
+- initial seeds: `AutomatedTheoryConstruction/seeds.jsonl`
 - runtime state: `data/`
 
 So the current implementation is not yet a generic multi-theory runner. To change the active theory, edit those fixed files rather than expecting a theory selector CLI.
@@ -129,7 +123,7 @@ Open problems may be either Lean-formal statements or semi-formal research promp
 - `prompts/prover_simple.md`: prover prompt
 - `prompts/formalizer_simple.md`: formalize/repair prompt
 - `prompts/new_problem_expander.md`: expansion prompt
-- `theories/semigroup_like_01/seeds.jsonl`: currently active seed queue
+- `AutomatedTheoryConstruction/seeds.jsonl`: currently active seed queue
 - `example/*`: reference examples not wired into `run_loop.py`
 
 ## Requirements
@@ -161,7 +155,7 @@ lake env lean AutomatedTheoryConstruction/Scratch.lean
 Edit the active theory:
 
 - `AutomatedTheoryConstruction/Theory.lean`
-- `theories/semigroup_like_01/seeds.jsonl`
+- `AutomatedTheoryConstruction/seeds.jsonl`
 
 Then choose a worker mode.
 
@@ -187,7 +181,7 @@ uv run scripts/run_loop.py --enable-worker
 
 By default, `scripts/run_loop.py` starts with `--initialize-on-start`, which means it will:
 
-- overwrite `data/open_problems.jsonl` from `theories/semigroup_like_01/seeds.jsonl`
+- overwrite `data/open_problems.jsonl` from `AutomatedTheoryConstruction/seeds.jsonl`
 - reset `data/solved_problems.jsonl`
 - reset `data/counterexamples.jsonl`
 - reset `data/formalization_memory.json`
@@ -291,4 +285,3 @@ The prompting strategy for solving Lean problems was partially inspired by a pri
 
 This repository also includes one file that was copied and then adapted from SnO2WMaN's `provability-toy` repository:
 <https://github.com/SnO2WMaN/provability-toy>
-

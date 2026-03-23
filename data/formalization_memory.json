@@ -1,338 +1,1024 @@
 {
-  "op_000001": [
+  "op_000043": [
     {
-      "result": "counterexample",
+      "stage": "statement_formalization",
+      "source_statement": "∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α] [Nonempty (ACR.GödelFixpoint α)], ∀ x : α, ⊠(⊤ : α) ≤ x → (ACR.Consistent α ↔ ¬ (x ≤ (⊥ : α)))",
+      "formalized_statement": "∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α] [Nonempty (ACR.GödelFixpoint α)], ∀ x : α, ⊠(⊤ : α) ≤ x → (ACR.Consistent α ↔ ¬ (x ≤ (⊥ : α)))",
+      "statement_formalization_notes": "The statement is already a valid Lean proposition and matches the repository's ACR notation.",
+      "result": "ok",
       "verify_success": true,
-      "proof_sketch": "Instantiate the universal claim with `ULift (Fin 3)` carrying the specified 3-element multiplication. The three axioms hold by finite computation, while the instance of associativity at `2,1,2` reduces to `2 = 0`, a contradiction.",
-      "proof_text": "intro h\nlet T : Type u := ULift (Fin 3)\nlet a0 : T := ULift.up (0 : Fin 3)\nlet a1 : T := ULift.up (1 : Fin 3)\nlet a2 : T := ULift.up (2 : Fin 3)\nlet mulFin : Fin 3 → Fin 3 → Fin 3 := fun a b =>\n  if a = 0 then 0\n  else if a = 1 then\n    if b = 1 then 1 else 0\n  else\n    if b = 0 then 0 else 2\nlet mulT : T → T → T := fun a b => ULift.up (mulFin a.down b.down)\nlet mulInst : Mul T := ⟨mulT⟩\nlet sg : SemigroupLike01 T := by\n  letI : Mul T := mulInst\n  refine\n    { mul := mulT\n      ax_left_idempotent := ?_\n      ax_right_absorb_duplicate := ?_\n      ax_middle_swap := ?_ }\n  · native_decide\n  · native_decide\n  · native_decide\nletI : SemigroupLike01 T := sg\nhave h' := h (α := T) a2 a1 a2\nchange a2 = a0 at h'\nhave hne : a2 ≠ a0 := by\n  native_decide\nexact hne h'",
-      "counterexample_text": "Use the 3-element model with carrier `ULift (Fin 3)` and multiplication table `0:[0,0,0]`, `1:[0,1,0]`, `2:[0,2,2]`. It satisfies the three axioms, but at `x=2, y=1, z=2` we get `(x * y) * z = 2` and `x * (y * z) = 0`.",
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
       "lean_error_excerpt": "",
-      "lean_error_fingerprint": "no_diagnostics",
-      "new_problems": []
-    }
-  ],
-  "op_000002": [
-    {
-      "result": "counterexample",
-      "verify_success": true,
-      "proof_sketch": "Instantiate the axioms on `ULift (Fin 2)` with left-projection multiplication `x * y := x`. The axioms are immediate by reflexivity, but commutativity would force `0 = 1` after specializing at the two distinct elements.",
-      "proof_text": "intro h\nlet T : Type u := ULift (Fin 2)\nlet a0 : T := ULift.up (0 : Fin 2)\nlet a1 : T := ULift.up (1 : Fin 2)\nlet mulT : T → T → T := fun a _ => a\nlet mulInst : Mul T := ⟨mulT⟩\nlet sg : SemigroupLike01 T := by\n  letI : Mul T := mulInst\n  refine\n    { mul := mulT\n      ax_left_idempotent := ?_\n      ax_right_absorb_duplicate := ?_\n      ax_middle_swap := ?_ }\n  · intro x\n    rfl\n  · intro x y\n    rfl\n  · intro x y z\n    rfl\nletI : SemigroupLike01 T := sg\nhave h' := h (α := T) a0 a1\nchange a0 = a1 at h'\nhave hne : a0 ≠ a1 := by\n  native_decide\nexact hne h'",
-      "counterexample_text": "Use the nontrivial model `T := ULift (Fin 2)` with multiplication defined by left projection: `x * y = x`. Then all three axioms hold, but `ULift.up 0 * ULift.up 1 = ULift.up 0` and `ULift.up 1 * ULift.up 0 = ULift.up 1`, so commutativity fails.",
-      "lean_error_excerpt": "",
-      "lean_error_fingerprint": "no_diagnostics",
-      "new_problems": []
-    }
-  ],
-  "op_000003": [
-    {
-      "result": "counterexample",
-      "verify_success": false,
-      "proof_sketch": "Use the universe-polymorphic countermodel `T := ULift Bool` with multiplication `x * y := x`. The three axioms hold by `rfl`. If the universal statement were true, this model would have an element `e` with `e * x = x` for all `x`. But under left projection, `e * x = e`, so in particular `e = ULift.up true` and `e = ULift.up false`, a contradiction.",
-      "proof_text": "intro h\nlet T : Type u := ULift Bool\nlet t : T := ULift.up true\nlet f : T := ULift.up false\nlet semigroupLikeT : SemigroupLike01 T :=\n  { mul := fun x y => x\n    ax_left_idempotent := by\n      intro x\n      rfl\n    ax_right_absorb_duplicate := by\n      intro x y\n      rfl\n    ax_middle_swap := by\n      intro x y z\n      rfl }\nletI : SemigroupLike01 T := semigroupLikeT\nobtain ⟨e, he⟩ := h (α := T)\nhave ht : e = t := by\n  simpa [t] using (he t).1\nhave hf : e = f := by\n  simpa [f] using (he f).1\nhave htf : t = f := ht.symm.trans hf\nhave htf' : (ULift.up true : T) = ULift.up false := by\n  simpa [t, f] using htf\ncases htf'",
-      "counterexample_text": "Take `α = ULift Bool` and define `x * y := x`. Then all three axioms are immediate, but no two-sided identity exists: `e * x = e` for every `x`, so `e * x = x` for all `x` would force all elements to be equal.",
-      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:30:4: error: Type mismatch: After simplification, term",
-      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:30:4: error: Type mismatch: After simplification, term | htf | has type",
+      "lean_error_fingerprint": "statement_formalization",
       "new_problems": []
     },
     {
-      "result": "counterexample",
-      "verify_success": true,
-      "proof_sketch": "Use the universe-polymorphic model `T := ULift Bool` with multiplication `x * y := x`. The axioms hold by reflexivity. If a two-sided identity `e` existed, then from `e * t = t` and `e * f = f` we get `e = t` and `e = f`, hence `t = f`. Applying `ULift.down` yields `true = false`, contradiction.",
-      "proof_text": "intro h\nlet T : Type u := ULift Bool\nlet t : T := ULift.up true\nlet f : T := ULift.up false\nlet semigroupLikeT : SemigroupLike01 T :=\n  { mul := fun x y => x\n    ax_left_idempotent := by\n      intro x\n      rfl\n    ax_right_absorb_duplicate := by\n      intro x y\n      rfl\n    ax_middle_swap := by\n      intro x y z\n      rfl }\nletI : SemigroupLike01 T := semigroupLikeT\nobtain ⟨e, he⟩ := h (α := T)\nhave ht : e = t := by\n  simpa [t] using (he t).1\nhave hf : e = f := by\n  simpa [f] using (he f).1\nhave htf : t = f := ht.symm.trans hf\nhave hbool : true = false := by\n  simpa [t, f] using congrArg ULift.down htf\ncases hbool",
-      "counterexample_text": "Take `α = ULift Bool` with multiplication `x * y := x`. Then `x * x = x`, `x * (x * y) = x * y`, and `(x * y) * z = (x * z) * y` all hold definitionally. But any putative identity `e` would satisfy `e * x = e` for every `x`, so requiring `e * x = x` for all `x` forces all elements to be equal, impossible since `ULift.up true ≠ ULift.up false`.",
-      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:30:4: error: Type mismatch: After simplification, term",
-      "lean_error_fingerprint": "no_diagnostics",
+      "result": "proof",
+      "verify_success": false,
+      "proof_sketch": "Use a two-way implication. Forward: if `ACR.Consistent α` and `x ≤ ⊥`, then `⊠⊤ ≤ ⊥` by transitivity from the hypothesis `⊠⊤ ≤ x`, contradicting `ACR.irrefutable_reft_top`. Reverse: unfold consistency as `¬ ((⊤ : α) ≤ ⊥)`; if `⊤ ≤ ⊥`, then `x ≤ ⊤` by `ACR.le_top`, hence `x ≤ ⊥`, contradicting the assumed negation.",
+      "proof_text": "intro x hx\nconstructor\n· intro hcons hxbot\n  exact (ACR.irrefutable_reft_top (α := α) hcons) (le_trans hx hxbot)\n· intro hnot\n  intro htopbot\n  apply hnot\n  exact le_trans (ACR.le_top (x := x)) htopbot",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:8:2: error: Tactic `constructor` failed: target is not an inductive datatype",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:8:2: error: Tactic `constructor` failed: target is not an inductive datatype | x : Type u_1 | hx : ACR x",
       "new_problems": []
-    }
-  ],
-  "op_000004": [
-    {
-      "result": "counterexample",
-      "verify_success": true,
-      "proof_sketch": "Use `T := ULift Int` with multiplication induced by `min`. This satisfies the three `SemigroupLike01` axioms. If the target statement held, we would get some `e : T` such that for every `x : T` there is `y` with `x * y = e`. Unfolding the operation gives `min x.down y.down = e.down`, hence `e.down ≤ x.down` for every `x`. Taking `x = ULift.up (e.down - 1)` yields `e.down ≤ e.down - 1`, a contradiction by arithmetic.",
-      "proof_text": "intro h\nlet T : Type u := ULift Int\nlet mulT : T → T → T := fun a b => ULift.up (min a.down b.down)\nlet mulInst : Mul T := ⟨mulT⟩\nlet sg : SemigroupLike01 T := by\n  letI : Mul T := mulInst\n  refine\n    { mul := mulT\n      ax_left_idempotent := ?_\n      ax_right_absorb_duplicate := ?_\n      ax_middle_swap := ?_ }\n  · intro x\n    change ULift.up (min x.down x.down) = x\n    cases x\n    simp [mulT]\n  · intro x y\n    change ULift.up (min x.down (min x.down y.down)) = ULift.up (min x.down y.down)\n    simp [← min_assoc]\n  · intro x y z\n    change ULift.up (min (min x.down y.down) z.down) = ULift.up (min (min x.down z.down) y.down)\n    exact congrArg ULift.up (min_right_comm x.down y.down z.down)\nletI : SemigroupLike01 T := sg\nobtain ⟨e, he⟩ := h (α := T)\nhave hbelow : ∀ x : T, e.down ≤ x.down := by\n  intro x\n  obtain ⟨y, hxy, hyx⟩ := he x\n  change ULift.up (min x.down y.down) = e at hxy\n  have hxy' : min x.down y.down = e.down := by\n    simpa using congrArg ULift.down hxy\n  rw [← hxy']\n  exact min_le_left _ _\nhave hbad : e.down ≤ e.down - 1 := hbelow (ULift.up (e.down - 1))\nomega",
-      "counterexample_text": "Take `α = ULift Int` and define `x * y := ULift.up (min x.down y.down)`. This is a `SemigroupLike01` model, but any element `e` satisfying the target conclusion would force `e.down ≤ n` for every integer `n`, so `e.down` would be a least integer. Choosing `n = e.down - 1` shows this is impossible.",
-      "lean_error_excerpt": "",
-      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:21:12: warning: This simp argument is unused: | mulT | Hint: Omit it from the simp argument list.",
-      "new_problems": []
-    }
-  ],
-  "op_000005": [
-    {
-      "result": "counterexample",
-      "verify_success": true,
-      "proof_sketch": "Refute the universal statement by taking a universe-polymorphic two-point type `T := ULift (Sum (Fin 1) (Fin 1))`, equipping it with left-projection multiplication `x * y := x`, and choosing `join` to be constant at one point `a`. Then for the other point `b`, the claimed equality forces `b = a`, which collapses to the impossible equation `Sum.inr 0 = Sum.inl 0`.",
-      "proof_text": "intro h\nlet T : Type u := ULift.{u, 0} (Sum (Fin 1) (Fin 1))\nlet a : T := ULift.up (Sum.inl 0)\nlet b : T := ULift.up (Sum.inr 0)\nlet join : T → T → T := fun _ _ => a\nlet inst : SemigroupLike01 T :=\n  { mul := fun x y => x\n    ax_left_idempotent := by\n      intro x\n      rfl\n    ax_right_absorb_duplicate := by\n      intro x y\n      rfl\n    ax_middle_swap := by\n      intro x y z\n      rfl }\nletI : SemigroupLike01 T := inst\nhave hEq : b * join a a = join (b * a) (b * a) :=\n  h (α := T) join b a a\nhave hba : b = a := by\n  simpa [a, b, join, inst] using hEq\nhave hs : (Sum.inr (0 : Fin 1) : Sum (Fin 1) (Fin 1)) = Sum.inl (0 : Fin 1) := by\n  simpa [a, b] using congrArg ULift.down hba\ncases hs",
-      "counterexample_text": "Use `T := ULift (Sum (Fin 1) (Fin 1))` with multiplication `x * y := x`. This satisfies all `SemigroupLike01` axioms by reflexivity. Let `a := ULift.up (Sum.inl 0)`, `b := ULift.up (Sum.inr 0)`, and define `join _ _ := a`. Then the target equation at `x = b`, `y = a`, `z = a` becomes `b = a`, impossible.",
-      "lean_error_excerpt": "",
-      "lean_error_fingerprint": "no_diagnostics",
-      "new_problems": []
-    }
-  ],
-  "op_000006": [
-    {
-      "result": "counterexample",
-      "verify_success": true,
-      "proof_sketch": "Use the two-element left-projection model on ULift (Fin 2): define x * y = x. All SemigroupLike01 axioms hold by reflexivity. Then with x = a0, y = a0, z = a1, the premise x * y = x * z is true by rfl, so the statement would force a0 = a1, contradiction.",
-      "proof_text": "intro h\nlet T : Type u := ULift.{u, 0} (Fin 2)\nlet a0 : T := ULift.up (0 : Fin 2)\nlet a1 : T := ULift.up (1 : Fin 2)\nlet semigroupLikeT : SemigroupLike01 T :=\n  { mul := fun x _ => x\n    ax_left_idempotent := by\n      intro x\n      rfl\n    ax_right_absorb_duplicate := by\n      intro x y\n      rfl\n    ax_middle_swap := by\n      intro x y z\n      rfl }\nletI : SemigroupLike01 T := semigroupLikeT\nhave h01 : a0 = a1 := by\n  apply h (α := T) a0 a0 a1\n  rfl\nhave hne : a0 ≠ a1 := by\n  native_decide\nexact hne h01",
-      "counterexample_text": "Take T = ULift (Fin 2) with multiplication x * y = x. Then x * y ignores the right input, so left cancellation fails: for distinct a0 and a1, we have a0 * a0 = a0 * a1 but a0 ≠ a1.",
-      "lean_error_excerpt": "",
-      "lean_error_fingerprint": "no_diagnostics",
-      "new_problems": []
-    }
-  ],
-  "op_000007": [
+    },
     {
       "result": "proof",
       "verify_success": true,
-      "proof_sketch": "Apply the class axiom `SemigroupLike01.ax_left_idempotent` to `x` and simplify the definition of `op`.",
-      "proof_text": "intro α _ x\nsimpa [AutomatedTheoryConstruction.op] using\n  (AutomatedTheoryConstruction.SemigroupLike01.ax_left_idempotent (α := α) x)",
+      "proof_sketch": "The previous attempt failed because it tried to split the iff before introducing the outer type and instance binders. After introducing all binders, the forward implication follows from irrefutability of ⊠⊤ and transitivity through the hypothesis ⊠⊤ ≤ x. The reverse implication is by contradiction: if ⊤ ≤ ⊥, then x ≤ ⊤ ≤ ⊥ using C5.le_top, contradicting the assumed negation of x ≤ ⊥.",
+      "proof_text": "intro α _ _ _ _ _ _ x hx\nconstructor\n· intro hcons hxbot\n  exact (ACR.irrefutable_reft_top (α := α) hcons) (le_trans hx hxbot)\n· intro hnot\n  intro htopbot\n  apply hnot\n  exact le_trans (ACR.le_top (x := x)) htopbot",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:8:2: error: Tactic `constructor` failed: target is not an inductive datatype",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:11:4: warning: Try this: intro hnot htopbot",
+      "new_problems": []
+    }
+  ],
+  "op_000044": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] {x y : α}, ACR.Equivalent x y → (ACR.Equivalent x (⊠x) ↔ ACR.Equivalent y (⊠y))",
+      "formalized_statement": "∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] {x y : α}, ACR.Equivalent x y → (ACR.Equivalent x (ACR.Reft.reft x) ↔ ACR.Equivalent y (ACR.Reft.reft y))",
+      "statement_formalization_notes": "Direct formalization of the given statement, using the explicit projection for reft to avoid notation ambiguity.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "Unpack `ACR.Equivalent x y` into `x ≤ y` and `y ≤ x`. In each direction of the iff, transport the two inequalities of `x ≡ reft x` or `y ≡ reft y` across `x ≡ y` using transitivity and `ACR.reft_anti_mono`.",
+      "proof_text": "intro α _ _ _ _ x y hxy\nrcases hxy with ⟨hxy1, hxy2⟩\nconstructor\n· intro hx\n  rcases hx with ⟨hx1, hx2⟩\n  constructor\n  · exact le_trans hxy2 (le_trans hx1 (ACR.reft_anti_mono hxy2))\n  · exact le_trans (ACR.reft_anti_mono hxy1) (le_trans hx2 hxy1)\n· intro hy\n  rcases hy with ⟨hy1, hy2⟩\n  constructor\n  · exact le_trans hxy1 (le_trans hy1 (ACR.reft_anti_mono hxy1))\n  · exact le_trans (ACR.reft_anti_mono hxy2) (le_trans hy2 hxy2)",
       "counterexample_text": "",
       "lean_error_excerpt": "",
       "lean_error_fingerprint": "no_diagnostics",
       "new_problems": []
     }
   ],
-  "op_000008": [
+  "op_000045": [
     {
-      "result": "counterexample",
-      "verify_success": false,
-      "proof_sketch": "Instantiate the universal claim at `Bool` with multiplication `x * y := x && y` and `meet := fun _ _ => false`. The class axioms hold by case split, while the claimed conclusion at `x = true`, `y = true` simplifies to `false = true`.",
-      "proof_text": "intro h\nlet sg : AutomatedTheoryConstruction.SemigroupLike01 Bool :=\n  { mul := fun a b => a && b\n    ax_left_idempotent := by\n      intro x\n      cases x <;> rfl\n    ax_right_absorb_duplicate := by\n      intro x y\n      cases x <;> cases y <;> rfl\n    ax_middle_swap := by\n      intro x y z\n      cases x <;> cases y <;> cases z <;> rfl }\nletI : AutomatedTheoryConstruction.SemigroupLike01 Bool := sg\nhave hfalse : false = true := by\n  simpa using (h (α := Bool) (meet := fun _ _ : Bool => false) true true)\ncases hfalse",
-      "counterexample_text": "Use `Bool` with multiplication `x * y := x && y` and `meet := fun _ _ => false`. Then the SemigroupLike01 axioms are satisfied, but the target instance at `x = true`, `y = true` becomes `true && false = true`, i.e. `false = true`.",
-      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:21:25: error: Application type mismatch: The argument",
-      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:21:25: error: Application type mismatch: The argument | Bool | has type",
-      "new_problems": []
-    },
-    {
-      "result": "counterexample",
-      "verify_success": false,
-      "proof_sketch": "The counterexample still works, but it must respect the ambient universe `u`. Use `ULift Bool` instead of `Bool`, define multiplication by lifted Boolean conjunction, and take `meet` to be the constant `false`. Then the axioms hold by case split, while the claimed conclusion at `x = true`, `y = true` yields `false = true`.",
-      "proof_text": "intro h\nlet sg : SemigroupLike01 (ULift Bool) :=\n  { mul := fun a b => ⟨a.down && b.down⟩\n    ax_left_idempotent := by\n      intro x\n      cases x with\n      | up b =>\n          cases b <;> rfl\n    ax_right_absorb_duplicate := by\n      intro x y\n      cases x with\n      | up a =>\n          cases y with\n          | up b =>\n              cases a <;> cases b <;> rfl\n    ax_middle_swap := by\n      intro x y z\n      cases x with\n      | up a =>\n          cases y with\n          | up b =>\n              cases z with\n              | up c =>\n                  cases a <;> cases b <;> cases c <;> rfl }\nletI : SemigroupLike01 (ULift Bool) := sg\nhave hfalse : (⟨false⟩ : ULift Bool) = ⟨true⟩ := by\n  simpa using (h (α := ULift Bool) (meet := fun _ _ : ULift Bool => ⟨false⟩) ⟨true⟩ ⟨true⟩)\ncases hfalse",
-      "counterexample_text": "Take `α := ULift Bool` so the model lives in the required universe `Type u`. Define `x * y` by lifting `x.down && y.down`, and let `meet := fun _ _ => false`. The three `SemigroupLike01` axioms are verified by finite case split. For `x = true` and `y = true`, the target equation becomes `true && false = true`, hence `false = true`.",
-      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:33:4: error: Type mismatch: After simplification, term",
-      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:33:4: error: Type mismatch: After simplification, term | h (fun x x_1 => { down := false }) { down := true } { down := true } | has type",
-      "new_problems": []
-    },
-    {
-      "result": "counterexample",
+      "stage": "statement_formalization",
+      "source_statement": "∀ {α : Type*} [ACR α], (∀ x : α, x ≤ (⊤ : α)) → (¬ ACR.Consistent α ↔ ∀ x : α, x ≤ (⊥ : α))",
+      "formalized_statement": "∀ {α : Type*} [ACR α], (∀ x : α, x ≤ (⊤ : α)) → (¬ ACR.Consistent α ↔ ∀ x : α, x ≤ (⊥ : α))",
+      "statement_formalization_notes": "Direct formalization of the given statement using existing ACR.Consistent and order notation.",
+      "result": "ok",
       "verify_success": true,
-      "proof_sketch": "Use the universe-polymorphic countermodel `α := ULift.{u} Bool` with multiplication given by lifted Boolean conjunction and choose `meet` to be the constant `false`. The class axioms hold by finite case split, but at `x = true`, `y = true` the conclusion becomes `true * false = true`, which definitionally reduces to `false = true`.",
-      "proof_text": "intro h\nlet α := ULift.{u} Bool\nlet sg : SemigroupLike01 α :=\n  { mul := fun a b => ⟨a.down && b.down⟩\n    ax_left_idempotent := by\n      intro x\n      cases x with\n      | up b =>\n          cases b <;> rfl\n    ax_right_absorb_duplicate := by\n      intro x y\n      cases x with\n      | up a =>\n          cases y with\n          | up b =>\n              cases a <;> cases b <;> rfl\n    ax_middle_swap := by\n      intro x y z\n      cases x with\n      | up a =>\n          cases y with\n          | up b =>\n              cases z with\n              | up c =>\n                  cases a <;> cases b <;> cases c <;> rfl }\nletI : SemigroupLike01 α := sg\nhave hbad : ((⟨true⟩ : α) * ⟨false⟩) = (⟨true⟩ : α) :=\n  h (α := α) (meet := fun _ _ : α => ⟨false⟩) ⟨true⟩ ⟨true⟩\nchange ((⟨false⟩ : α) = (⟨true⟩ : α)) at hbad\ncases hbad",
-      "counterexample_text": "Take `α := ULift.{u} Bool`, define `a * b := ULift.up (a.down && b.down)`, and let `meet` be the constant `ULift.up false`. The three `SemigroupLike01` axioms are verified by case analysis on booleans. Then the claimed universal law instantiated at `x = ULift.up true` and `y = ULift.up true` yields `ULift.up false = ULift.up true`, a contradiction.",
-      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:33:4: error: Type mismatch: After simplification, term",
-      "lean_error_fingerprint": "no_diagnostics",
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "stuck",
+      "verify_success": false,
+      "proof_sketch": "The proposed counterexample does not currently formalize to a Lean proof of `¬(stmt)`. The natural model should be the implication preorder on `PLift Prop` (since `stmt` quantifies over `Type*`, not `Prop`), and it does explain the constructive gap: from `¬¬ ((⊤ : α) ≤ ⊥)` one only gets `¬¬ (x ≤ ⊥)`, not `x ≤ ⊥`. But that only shows the statement would imply a classical principle such as double-negation elimination/excluded middle in that model; it does not yield a contradiction in constructive Lean. So the given attempt is good semantic evidence against a direct constructive proof, but not enough to produce Lean tactic code for `¬(stmt)`.",
+      "proof_text": "",
+      "counterexample_text": "Use `PLift Prop` with `x ≤ y := x.down -> y.down`, `⊤ := PLift.up True`, and `⊥ := PLift.up False` to repair the universe mismatch in the informal `Prop` countermodel. This still only provides intuition that the left-to-right direction would require a classical step; it does not furnish a Lean theorem of `¬(stmt)`.",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "formalizer_returned_stuck",
       "new_problems": []
     }
   ],
-  "op_000009": [
+  "op_000046": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], ¬ ACR.Consistent α ↔ ∀ x : α, □x ≤ (⊥ : α)",
+      "formalized_statement": "∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], ¬ ACR.Consistent α ↔ ∀ x : α, □x ≤ (⊥ : α)",
+      "statement_formalization_notes": "Direct formalization of the given statement using the repository's ACR notation.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
     {
       "result": "proof",
       "verify_success": true,
-      "proof_sketch": "Rewrite the left factor using commutativity, apply the middle-swap axiom in the form `(y * x) * z = (y * z) * x`, and then commute the final product once more.",
-      "proof_text": "intro α _ hcomm x y z\ncalc\n  (x * y) * z = (y * x) * z := by rw [hcomm x y]\n  _ = (y * z) * x := by simpa [op] using (SemigroupLike01.ax_middle_swap y x z)\n  _ = x * (y * z) := by rw [hcomm (y * z) x]",
+      "proof_sketch": "Use classical double-negation elimination for the forward direction to get ⊤ ≤ ⊥, then combine □x ≤ ⊤ from C5 with transitivity. For the reverse direction, from h applied to ⊠⊥ we get □(⊠⊥) ≤ ⊥, and APS gives ⊤ ≤ ⊠⊥ ≤ □(⊠⊥), yielding ⊤ ≤ ⊥ and hence ¬ Consistent.",
+      "proof_text": "intro α _ _ _ _ _\nconstructor\n· intro h x\n  change ¬ ¬ ((⊤ : α) ≤ (⊥ : α)) at h\n  have htopbot : (⊤ : α) ≤ (⊥ : α) := by\n    classical\n    exact not_not.mp h\n  have hx : □x ≤ (⊤ : α) := ACR.le_top\n  exact le_trans hx htopbot\n· intro h\n  change ¬ ¬ ((⊤ : α) ≤ (⊥ : α))\n  intro hC\n  apply hC\n  calc\n    (⊤ : α) ≤ ⊠(⊥ : α) := ACR.top_le_reft_bot\n    _ ≤ □(⊠(⊥ : α)) := ACR.reft_le_prov_reft\n    _ ≤ (⊥ : α) := h (⊠(⊥ : α))",
       "counterexample_text": "",
       "lean_error_excerpt": "",
       "lean_error_fingerprint": "no_diagnostics",
       "new_problems": []
     }
   ],
-  "op_000010": [
+  "op_000047": [
     {
-      "result": "proof",
+      "stage": "statement_formalization",
+      "source_statement": "∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α], ((⊠(⊥ : α)) ≤ (⊤ : α)) → (ACR.Consistent α ↔ ¬ ((⊠(⊥ : α)) ≤ (⊥ : α)))",
+      "formalized_statement": "∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α], (ACR.Reft.reft (⊥ : α) ≤ (⊤ : α)) → (ACR.Consistent α ↔ ¬ (ACR.Reft.reft (⊥ : α) ≤ (⊥ : α)))",
+      "statement_formalization_notes": "The statement is directly formalizable; I used `ACR.Reft.reft` instead of `⊠` to avoid notation-scope ambiguity.",
+      "result": "ok",
       "verify_success": true,
-      "proof_sketch": "Assume a nonassociative triple exists but the finite type has cardinality at most 2. In any type with at most two elements, any three elements must contain a repeated pair. Case-splitting on which pair among x,y,z is equal, the three axioms force associativity in each case. This contradicts the chosen nonassociative witness, so the cardinality must be at least 3.",
-      "proof_text": "intro α _ _ hnonassoc\nclassical\nhave hxx : ∀ t : α, t * t = t := by\n  intro t\n  simpa [AutomatedTheoryConstruction.op] using\n    (SemigroupLike01.ax_left_idempotent (α := α) t)\nhave habs : ∀ a b : α, a * (a * b) = a * b := by\n  intro a b\n  simpa [AutomatedTheoryConstruction.op] using\n    (SemigroupLike01.ax_right_absorb_duplicate (α := α) a b)\nhave hswap : ∀ a b c : α, (a * b) * c = (a * c) * b := by\n  intro a b c\n  simpa [AutomatedTheoryConstruction.op] using\n    (SemigroupLike01.ax_middle_swap (α := α) a b c)\nby_contra hlt\nhave hcard : Fintype.card α ≤ 2 := by\n  omega\nhave hpair : ∀ a b c : α, a = b ∨ b = c ∨ a = c := by\n  intro a b c\n  by_contra h\n  push_neg at h\n  have h3 : 3 ≤ Fintype.card α := by\n    calc\n      3 = ({a, b, c} : Finset α).card := by\n        simp [h.1, h.2.1, h.2.2]\n      _ ≤ Fintype.card α := Finset.card_le_univ _\n  omega\nobtain ⟨x, y, z, hne⟩ := hnonassoc\nhave hassoc : (x * y) * z = x * (y * z) := by\n  rcases hpair x y z with hxy | hyz | hxz\n  · calc\n      (x * y) * z = (x * x) * z := by simpa [hxy]\n      _ = x * z := by rw [hxx x]\n      _ = x * (x * z) := by simpa using (habs x z).symm\n      _ = x * (y * z) := by simpa [hxy]\n  · calc\n      (x * y) * z = (x * y) * y := by simpa [hyz]\n      _ = x * y := by\n        have hmul : x * y = x ∨ x * y = y := by\n          rcases hpair (x * y) x y with h | h | h\n          · exact Or.inl h\n          · exact Or.inl <| by simpa [h] using hxx x\n          · exact Or.inr h\n        rcases hmul with h | h\n        · rw [h, h]\n        · rw [h, hxx y]\n      _ = x * (y * y) := by rw [hxx y]\n      _ = x * (y * z) := by simpa [hyz]\n  · calc\n      (x * y) * z = (x * y) * x := by simpa [hxz]\n      _ = (x * x) * y := by simpa using hswap x y x\n      _ = x * y := by rw [hxx x]\n      _ = x * (y * x) := by\n        have hyx : y * x = x ∨ y * x = y := by\n          rcases hpair (y * x) x y with h | h | h\n          · exact Or.inl h\n          · exact Or.inl <| by simpa [h] using hxx y\n          · exact Or.inr h\n        rcases hyx with h | h\n        · have hxy' : x * y = x := by\n            have hyxy : (y * x) * y = y * x := by\n              calc\n                (y * x) * y = (y * y) * x := by simpa using hswap y x y\n                _ = y * x := by rw [hxx y]\n            simpa [h] using hyxy\n          rw [h, hxy', hxx x]\n        · rw [h]\n      _ = x * (y * z) := by simpa [hxz]\nexact hne hassoc",
+      "proof_sketch": "",
+      "proof_text": "",
       "counterexample_text": "",
       "lean_error_excerpt": "",
-      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:38:40: warning: try 'simp' instead of 'simpa' | Note: This linter can be disabled with `set_option linter.unnecessarySimpa false` | AutomatedTheoryConstruction/Scratch.lean:41:30: warning: try 'simp' instead of 'simpa'",
-      "new_problems": []
-    }
-  ],
-  "op_000011": [
-    {
-      "result": "proof",
-      "verify_success": false,
-      "proof_sketch": "Construct the SemigroupLike01 structure on any type by taking multiplication to be the left projection, `fun x y => x`. Then all three axioms and the target identity `x * y = x` are definitional equalities, so each goal closes by `rfl`.",
-      "proof_text": "intro α\nrefine ⟨{ mul := fun x _ => x\n  ax_left_idempotent := by\n    intro x\n    rfl\n  ax_right_absorb_duplicate := by\n    intro x y\n    rfl\n  ax_middle_swap := by\n    intro x y z\n    rfl }, ?_⟩\nintro x y\nrfl",
-      "counterexample_text": "",
-      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:6:40: error: unexpected token ','; expected ':=', 'where' or '|'",
-      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:6:40: error: unexpected token ','; expected ':=', 'where' or '|' | AutomatedTheoryConstruction/Scratch.lean:6:24: error: Function expected at | For",
+      "lean_error_fingerprint": "statement_formalization",
       "new_problems": []
     },
     {
       "result": "proof",
       "verify_success": false,
-      "proof_sketch": "Use the left-projection multiplication on an arbitrary type: define `x * y := x`. Then the three `SemigroupLike01` axioms and the target identity `x * y = x` are all definitional equalities.",
-      "proof_text": "intro α\nlet s : SemigroupLike01 α :=\n  { mul := fun x _ => x\n    ax_left_idempotent := by\n      intro x\n      rfl\n    ax_right_absorb_duplicate := by\n      intro x y\n      rfl\n    ax_middle_swap := by\n      intro x y z\n      rfl }\nrefine ⟨s, ?_⟩\nintro x y\nrfl",
+      "proof_sketch": "Direct preorder argument. From consistency, any proof of ⊠⊥ ≤ ⊥ would compose with ⊤ ≤ ⊠⊥ to give ⊤ ≤ ⊥, contradiction. Conversely, if ¬(⊠⊥ ≤ ⊥) and also ⊤ ≤ ⊥, then the hypothesis ⊠⊥ ≤ ⊤ composes to ⊠⊥ ≤ ⊥, contradiction.",
+      "proof_text": "intro hbot\nconstructor\n· intro hcons hreftbot\n  have hcons' : ¬ ((⊤ : α) ≤ (⊥ : α)) := by\n    simpa [ACR.Consistent, ACR.Inconsistent] using hcons\n  exact hcons' (le_trans ACR.top_le_reft_bot hreftbot)\n· intro hnot\n  change ¬ ((⊤ : α) ≤ (⊥ : α))\n  intro hinc\n  exact hnot (le_trans hbot hinc)",
       "counterexample_text": "",
-      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:7:40: error: unexpected token ','; expected ':=', 'where' or '|'",
-      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:7:40: error: unexpected token ','; expected ':=', 'where' or '|' | AutomatedTheoryConstruction/Scratch.lean:7:24: error: Function expected at | For",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:8:2: error: Tactic `constructor` failed: target is not an inductive datatype",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:8:2: error: Tactic `constructor` failed: target is not an inductive datatype | hbot : Type u_1 | ⊢ ∀ [inst : ACR hbot] [inst_1 : ACR.Prov hbot] [inst_2 : ACR.Reft hbot] [ACR.APS hbot],",
       "new_problems": []
     },
     {
       "result": "proof",
       "verify_success": false,
-      "proof_sketch": "For an arbitrary type α, choose multiplication to be the left projection `fun x _ => x`. Then the three `SemigroupLike01` axioms and the required identity `x * y = x` are all definitional equalities, so each goal is closed by `rfl`.",
-      "proof_text": "intro α\nrefine ⟨{ mul := fun x _ => x\n        ax_left_idempotent := ?_\n        ax_right_absorb_duplicate := ?_\n        ax_middle_swap := ?_ }, ?_⟩\n· intro x\n  rfl\n· intro x y\n  rfl\n· intro x y z\n  rfl\n· intro x y\n  rfl",
+      "proof_sketch": "First introduce the universally quantified type and instances before the hypothesis. Then the equivalence is a direct preorder argument: consistency means `¬ (⊤ ≤ ⊥)`. If `⊠⊥ ≤ ⊥`, compose with `⊤ ≤ ⊠⊥` to contradict consistency. Conversely, if `⊠⊥ ≤ ⊤` and `⊤ ≤ ⊥`, then transitivity gives `⊠⊥ ≤ ⊥`, contradicting the assumed negation.",
+      "proof_text": "intro α _ _ _ _ hbot\nconstructor\n· intro hcons hreftbot\n  exact hcons (le_trans ACR.top_le_reft_bot hreftbot)\n· change ¬ ((⊤ : α) ≤ (⊥ : α))\n  intro hinc\n  exact hnot (le_trans hbot hinc)",
       "counterexample_text": "",
-      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:7:40: error: unexpected token ','; expected ':=', 'where' or '|'",
-      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:7:40: error: unexpected token ','; expected ':=', 'where' or '|' | AutomatedTheoryConstruction/Scratch.lean:7:24: error: Function expected at | For",
-      "new_problems": []
-    },
-    {
-      "result": "stuck",
-      "verify_success": false,
-      "proof_sketch": "The intended argument is to equip any type with left-projection multiplication `fun x _ => x`, which would make all axioms and the target equation definitional. However, the current theorem statement is still natural language (`For every type α, ...`) rather than a Lean proposition, so the file fails to parse before any tactic proof can run. This cannot be repaired by changing only the `by`-block body.",
-      "proof_text": "",
-      "counterexample_text": "",
-      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:7:58: error: unexpected token 'exists'; expected ')'",
-      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:7:58: error: unexpected token 'exists'; expected ')' | AutomatedTheoryConstruction/Scratch.lean:7:104: error(lean.inferBinderTypeFailed): Failed to infer type of binder `that` | AutomatedTheoryConstruction/Scratch.lean:7:99: error(lean.inferBinderTypeFailed): Failed to infer type of binder `such`",
-      "new_problems": []
-    },
-    {
-      "result": "stuck",
-      "verify_success": false,
-      "proof_sketch": "The target in `stmt` is still raw natural language rather than a Lean proposition, so Lean fails to parse before any tactic proof can begin. Mathematically, once formalized, the statement is true by taking `mul := fun x _ => x`, so the current negated direction in `current_scratch_code` is not defensible; however, under the fixed `stmt` policy, this cannot be repaired from the `by` block alone.",
-      "proof_text": "",
-      "counterexample_text": "No genuine counterexample is expected after proper formalization: for any type `α`, the left-projection multiplication gives a `SemigroupLike01` structure with `∀ x y, x * y = x` by `rfl`.",
-      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:7:58: error: unexpected token 'exists'; expected ')'",
-      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:7:58: error: unexpected token 'exists'; expected ')' | AutomatedTheoryConstruction/Scratch.lean:7:104: error(lean.inferBinderTypeFailed): Failed to infer type of binder `that` | AutomatedTheoryConstruction/Scratch.lean:7:99: error(lean.inferBinderTypeFailed): Failed to infer type of binder `such`",
-      "new_problems": []
-    },
-    {
-      "result": "stuck",
-      "verify_success": false,
-      "proof_sketch": "The fixed `stmt` is still raw English rather than a Lean proposition, and the diagnostics show a parser failure at the statement itself (`unexpected token 'exists'`, then binder-inference errors for `such` and `that`). Because `stmt` may not be rewritten here, no tactic code can repair this from the `by` block alone. If the statement were formalized, the intended direction would be a proof by giving multiplication `fun x _ => x`.",
-      "proof_text": "",
-      "counterexample_text": "No genuine counterexample is expected after proper formalization. For any type `α`, define `x * y := x`; then `ax_left_idempotent`, `ax_right_absorb_duplicate`, `ax_middle_swap`, and `∀ x y, x * y = x` all hold by definitional equality.",
-      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:7:58: error: unexpected token 'exists'; expected ')'",
-      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:7:58: error: unexpected token 'exists'; expected ')' | AutomatedTheoryConstruction/Scratch.lean:7:104: error(lean.inferBinderTypeFailed): Failed to infer type of binder `that` | AutomatedTheoryConstruction/Scratch.lean:7:99: error(lean.inferBinderTypeFailed): Failed to infer type of binder `such`",
-      "new_problems": []
-    },
-    {
-      "result": "stuck",
-      "verify_success": false,
-      "proof_sketch": "The fixed `stmt` is still natural-language text, not a Lean proposition. The reported errors occur while parsing the theorem statement itself (`exists`, `such`, `that`, `∀`), before Lean reaches the `by` block, so no tactic body can repair this. If the statement were formalized, the intended mathematical direction would be a proof by giving multiplication `fun x _ => x`.",
-      "proof_text": "",
-      "counterexample_text": "No genuine counterexample is expected after proper formalization. For any type `α`, defining `x * y := x` yields a `SemigroupLike01` structure, and the axioms together with `∀ x y, x * y = x` hold by definitional equality.",
-      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:7:58: error: unexpected token 'exists'; expected ')'",
-      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:7:58: error: unexpected token 'exists'; expected ')' | AutomatedTheoryConstruction/Scratch.lean:7:104: error(lean.inferBinderTypeFailed): Failed to infer type of binder `that` | AutomatedTheoryConstruction/Scratch.lean:7:99: error(lean.inferBinderTypeFailed): Failed to infer type of binder `such`",
-      "new_problems": []
-    },
-    {
-      "result": "stuck",
-      "verify_success": false,
-      "proof_sketch": "The fixed `stmt` is still natural-language text rather than a Lean proposition. Lean fails while parsing the statement itself (`exists`, `such`, `that`, `∀`) before any `by`-block tactic code can run, so this repair cannot be completed from `proof_text` alone. If the statement were formalized, the intended direction would be a proof by taking `mul := fun x _ => x`.",
-      "proof_text": "",
-      "counterexample_text": "No genuine counterexample is expected after proper formalization. For any type `α`, defining `x * y := x` gives a `SemigroupLike01` structure, and the axioms together with `∀ x y, x * y = x` hold by definitional equality.",
-      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:7:58: error: unexpected token 'exists'; expected ')'",
-      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:7:58: error: unexpected token 'exists'; expected ')' | AutomatedTheoryConstruction/Scratch.lean:7:104: error(lean.inferBinderTypeFailed): Failed to infer type of binder `that` | AutomatedTheoryConstruction/Scratch.lean:7:99: error(lean.inferBinderTypeFailed): Failed to infer type of binder `such`",
-      "new_problems": []
-    }
-  ],
-  "op_000012": [
-    {
-      "result": "proof",
-      "verify_success": false,
-      "proof_sketch": "Use the left-projection operation `x * y := x`. This satisfies the `SemigroupLike01` axioms by reflexivity, associativity is also by reflexivity, and if `x ≠ y` then `x * y = x` while `y * x = y`, so the operation is noncommutative.",
-      "proof_text": "intro α hα\nlet mul : α → α → α := fun x _ => x\nlet inst : SemigroupLike01 α :=\n  { mul := mul\n    ax_left_idempotent := by\n      intro x\n      rfl\n    ax_right_absorb_duplicate := by\n      intro x y\n      rfl\n    ax_middle_swap := by\n      intro x y z\n      rfl }\nrefine ⟨inst, ?_⟩\nletI : SemigroupLike01 α := inst\nconstructor\n· intro a b c\n  rfl\n· rcases hα with ⟨x, y, hxy⟩\n  refine ⟨x, y, ?_⟩\n  simpa [inst, mul] using hxy",
-      "counterexample_text": "",
-      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:6:40: error: unexpected token 'with'; expected ':=', 'where' or '|'",
-      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:6:40: error: unexpected token 'with'; expected ':=', 'where' or '|' | AutomatedTheoryConstruction/Scratch.lean:6:24: error: Function expected at | For",
-      "new_problems": []
-    },
-    {
-      "result": "stuck",
-      "verify_success": false,
-      "proof_sketch": "The intended proof idea is sound: use the left-projection operation `x * y := x`, which satisfies the `SemigroupLike01` axioms, is associative, and is noncommutative when `x ≠ y`. However, the current `stmt` is still English text rather than a Lean proposition, and the diagnostics show parsing fails in the theorem statement before the tactic body is checked.",
-      "proof_text": "",
-      "counterexample_text": "If the statement is later formalized in Lean, the proof direction should remain `proof`, with the left-projection structure as the witness.",
-      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:7:51: error: unexpected token 'with'; expected ')', ',' or ':'",
-      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:7:51: error: unexpected token 'with'; expected ')', ',' or ':' | AutomatedTheoryConstruction/Scratch.lean:7:137: error: unexpected token '∀'; expected '_' or identifier",
-      "new_problems": []
-    },
-    {
-      "result": "stuck",
-      "verify_success": false,
-      "proof_sketch": "The natural-language argument supports the proof direction: on any type with distinct x and y, define x * y := x. This operation is associative, satisfies the three SemigroupLike01 axioms by reflexivity, and is noncommutative because x * y = x and y * x = y. However, the current stmt is still English text, not a Lean proposition, so the theorem declaration does not parse and no tactic proof body can be checked.",
-      "proof_text": "",
-      "counterexample_text": "No counterexample is indicated. Once the statement is formalized in Lean, the intended result should remain proof, using the left-projection SemigroupLike01 structure as the witness.",
-      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:7:51: error: unexpected token 'with'; expected ')', ',' or ':'",
-      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:7:51: error: unexpected token 'with'; expected ')', ',' or ':' | AutomatedTheoryConstruction/Scratch.lean:7:137: error: unexpected token '∀'; expected '_' or identifier",
-      "new_problems": []
-    },
-    {
-      "result": "stuck",
-      "verify_success": false,
-      "proof_sketch": "The intended mathematical direction is still the proof direction: on any type with distinct elements, the left-projection operation `x * y := x` gives a `SemigroupLike01` structure, is associative, and is noncommutative. However, the fixed `stmt` is still English text rather than a Lean proposition, and Lean fails while parsing the theorem statement itself (`unexpected token 'with'`, then `unexpected token '∀'`). Because `stmt` cannot be rewritten here, there is no valid tactic body to supply.",
-      "proof_text": "",
-      "counterexample_text": "No semantic counterexample is indicated. The blocker is syntactic: the current statement is not formalized in Lean, so neither a proof nor a proof of its negation can be checked.",
-      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:7:51: error: unexpected token 'with'; expected ')', ',' or ':'",
-      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:7:51: error: unexpected token 'with'; expected ')', ',' or ':' | AutomatedTheoryConstruction/Scratch.lean:7:137: error: unexpected token '∀'; expected '_' or identifier",
-      "new_problems": []
-    },
-    {
-      "result": "stuck",
-      "verify_success": false,
-      "proof_sketch": "The mathematical direction remains the proof direction: if the statement were formalized in Lean, the witness would be the left-projection operation `x * y := x`, which satisfies the three `SemigroupLike01` axioms by reflexivity, is associative by reflexivity, and is noncommutative whenever `x ≠ y`. However, the fixed `stmt` is still natural-language English rather than a Lean proposition, and the reported diagnostics show parsing fails in the theorem statement itself before any tactic code is checked.",
-      "proof_text": "",
-      "counterexample_text": "No semantic counterexample is indicated. The blocker is syntactic: the current statement is not a Lean term, so neither a proof of `stmt` nor a proof of `¬ stmt` can be formalized until the statement itself is translated into Lean syntax.",
-      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:7:51: error: unexpected token 'with'; expected ')', ',' or ':'",
-      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:7:51: error: unexpected token 'with'; expected ')', ',' or ':' | AutomatedTheoryConstruction/Scratch.lean:7:137: error: unexpected token '∀'; expected '_' or identifier",
-      "new_problems": []
-    },
-    {
-      "result": "stuck",
-      "verify_success": false,
-      "proof_sketch": "The mathematical content supports the proof direction: on any type with distinct x and y, the left-projection operation x * y := x gives a SemigroupLike01 structure, is associative, and is noncommutative because x * y = x while y * x = y. However, the fixed stmt is still English text rather than a Lean proposition, and the current Scratch theorem fails during parsing before any tactic body is elaborated. Under the contract that stmt may not be rewritten, no valid Lean tactic code can be supplied.",
-      "proof_text": "",
-      "counterexample_text": "No semantic counterexample is indicated. The blocker is syntactic: the theorem statement is not a Lean term, so neither a proof of stmt nor a proof of its negation can be formalized until the statement itself is translated into Lean syntax.",
-      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:7:51: error: unexpected token 'with'; expected ')', ',' or ':'",
-      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:7:51: error: unexpected token 'with'; expected ')', ',' or ':' | AutomatedTheoryConstruction/Scratch.lean:7:137: error: unexpected token '∀'; expected '_' or identifier",
-      "new_problems": []
-    }
-  ],
-  "op_000013": [
-    {
-      "result": "proof",
-      "verify_success": false,
-      "proof_sketch": "Assuming the formalized statement uses two witnesses `a b : α` with `a ≠ b`, define `x * y := x`. This gives a `SemigroupLike01` structure by reflexivity. If some `e` were a two-sided identity, then from `e * a = a` and `e * b = b` we get `e = a` and `e = b`, contradicting `a ≠ b`.",
-      "proof_text": "intro α hdist\nrcases hdist with ⟨a, b, hab⟩\nlet mulα : α → α → α := fun x _ => x\nlet sg : SemigroupLike01 α :=\n  { mul := mulα\n    ax_left_idempotent := by\n      intro x\n      rfl\n    ax_right_absorb_duplicate := by\n      intro x y\n      rfl\n    ax_middle_swap := by\n      intro x y z\n      rfl }\nletI : SemigroupLike01 α := sg\nrefine ⟨sg, ?_⟩\nintro hid\nrcases hid with ⟨e, he⟩\nhave ha : e = a := by\n  simpa [mulα] using (he a).1\nhave hb : e = b := by\n  simpa [mulα] using (he b).1\nexact hab (ha.symm.trans hb)",
-      "counterexample_text": "",
-      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:6:40: error: unexpected token 'with'; expected ':=', 'where' or '|'",
-      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:6:40: error: unexpected token 'with'; expected ':=', 'where' or '|' | AutomatedTheoryConstruction/Scratch.lean:6:24: error: Function expected at | For",
-      "new_problems": []
-    }
-  ],
-  "op_000014": [
-    {
-      "result": "proof",
-      "verify_success": false,
-      "proof_sketch": "Specialize `ax_middle_swap` at the assumed left identity `e`. The identity hypothesis rewrites `(e * x) * y = (e * y) * x` to `x * y = y * x`.",
-      "proof_text": "rintro ⟨e, he⟩ x y\nsimpa [AutomatedTheoryConstruction.op, he x, he y] using\n  (AutomatedTheoryConstruction.SemigroupLike01.ax_middle_swap (x := e) (y := x) (z := y))",
-      "counterexample_text": "",
-      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:7:9: error: Tactic `rcases` failed: `α✝ : Type u` is not an inductive datatype",
-      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:7:9: error: Tactic `rcases` failed: `α✝ : Type u` is not an inductive datatype",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:11:4: error: 'change' tactic failed, pattern",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:11:4: error: 'change' tactic failed, pattern | ¬⊤ ≤ ⊥ | is not definitionally equal to target",
       "new_problems": []
     },
     {
       "result": "proof",
       "verify_success": true,
-      "proof_sketch": "First introduce the implicit type and instance parameters, then unpack the assumed left identity. Specializing `ax_middle_swap` at `e` gives `(e * x) * y = (e * y) * x`, which simplifies via `e * x = x` and `e * y = y` to `x * y = y * x`.",
-      "proof_text": "intro α _ h x y\nrcases h with ⟨e, he⟩\nsimpa [AutomatedTheoryConstruction.op, he x, he y] using\n  (AutomatedTheoryConstruction.SemigroupLike01.ax_middle_swap (x := e) (y := x) (z := y))",
+      "proof_sketch": "Introduce the type, instances, and the hypothesis `⊠⊥ ≤ ⊤`. For the forward direction, compose `⊤ ≤ ⊠⊥` with `⊠⊥ ≤ ⊥` to contradict consistency. For the reverse direction, prove `¬ (⊤ ≤ ⊥)` by showing any `⊤ ≤ ⊥` would compose with `⊠⊥ ≤ ⊤` to yield `⊠⊥ ≤ ⊥`, contradicting the assumption, then `simpa` unfolds `Consistent` and `Inconsistent`.",
+      "proof_text": "intro α _ _ _ _ hbot\nconstructor\n· intro hcons hreftbot\n  exact hcons (le_trans ACR.top_le_reft_bot hreftbot)\n· intro hnot\n  simpa [ACR.Consistent, ACR.Inconsistent] using\n    (show ¬ ((⊤ : α) ≤ (⊥ : α)) from fun hinc => hnot (le_trans hbot hinc))",
       "counterexample_text": "",
-      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:7:9: error: Tactic `rcases` failed: `α✝ : Type u` is not an inductive datatype",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:11:4: error: 'change' tactic failed, pattern",
       "lean_error_fingerprint": "no_diagnostics",
+      "new_problems": []
+    }
+  ],
+  "op_000048": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], ACR.Equivalent (⊠(⊥ : α)) (⊤ : α)",
+      "formalized_statement": "∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], ACR.Equivalent (⊠(⊥ : α)) (⊤ : α)",
+      "statement_formalization_notes": "The input statement is already a valid Lean proposition in the given context.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": false,
+      "proof_sketch": "Unfold `ACR.Equivalent` into the two inequalities. The first direction `⊠⊥ ≤ ⊤` is `le_top`, and the second direction `⊤ ≤ ⊠⊥` is exactly `top_le_reft_bot`.",
+      "proof_text": "constructor\n· exact le_top\n· exact top_le_reft_bot",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:7:2: error: Tactic `constructor` failed: target is not an inductive datatype",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:7:2: error: Tactic `constructor` failed: target is not an inductive datatype | ⊢ ∀ {α : Type u_1} [inst : ACR α] [inst_1 : ACR.Prov α] [inst_2 : ACR.Reft α] [inst_3 : ACR.APS α] [ACR.C5 α], ⊠⊥ ≡ ⊤",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "The previous attempt failed because the goal was still universally quantified. Introduce the type and instances first, unfold `ACR.Equivalent` to the conjunction of the two inequalities, then use `ACR.le_top` and `ACR.top_le_reft_bot`.",
+      "proof_text": "intro α _ _ _ _ _\nchange (⊠(⊥ : α) ≤ (⊤ : α)) ∧ ((⊤ : α) ≤ ⊠(⊥ : α))\nexact ⟨ACR.le_top (x := ⊠(⊥ : α)), ACR.top_le_reft_bot (α := α)⟩",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:7:2: error: Tactic `constructor` failed: target is not an inductive datatype",
+      "lean_error_fingerprint": "no_diagnostics",
+      "new_problems": []
+    }
+  ],
+  "op_000049": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], Nonempty (ACR.GödelFixpoint α) → ∀ x : α, ACR.Equivalent (□(⊠x)) (□(⊠(⊤ : α)))",
+      "formalized_statement": "∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], Nonempty (ACR.GödelFixpoint α) → ∀ x : α, ACR.Equivalent (□(⊠x)) (□(⊠(⊤ : α)))",
+      "statement_formalization_notes": "Direct formalization of the given statement using the existing ACR notation.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "stuck",
+      "verify_success": false,
+      "proof_sketch": "A concrete 3-element chain gives a refutation. Take α = {0 < 1 < 2} with ⊥ = 0 and ⊤ = 2, let `□` be the identity, and define `⊠0 = 2`, `⊠1 = 1`, `⊠2 = 1`. Then `prov_mono` is trivial, `reft_anti_mono` holds by inspection, `top_le_reft_bot` is `2 ≤ 2`, `reft_le_prov_reft` is equality, and `le_reft_top_of_le_prov_of_le_reft` holds because whenever `x ≤ y` and `x ≤ ⊠y`, one checks case-by-case that `x ≤ 1 = ⊠⊤`. A Gödel fixpoint exists: `g = 1`, since `⊠1 = 1`. But for `x = 0`, we get `□(⊠0) = 2` while `□(⊠⊤) = □(⊠2) = 1`, so they are not equivalent.",
+      "proof_text": "",
+      "counterexample_text": "Counterexample candidate: the preorder chain `0 < 1 < 2` with top `2`, bottom `0`, provability operator `□x := x`, and refutability operator given by `⊠0 := 2`, `⊠1 := 1`, `⊠2 := 1`. This satisfies the stated ACR/Prov/Reft/APS/C5 axioms, and `g = 1` is a Gödel fixpoint because `1 ≡ ⊠1`. The target fails at `x = 0`: `□(⊠0) = 2` but `□(⊠⊤) = □(⊠2) = 1`, and in the chain `2` is not `≤ 1`, so `ACR.Equivalent (□(⊠0)) (□(⊠⊤))` is false.",
+      "lean_error_excerpt": "formalize worker timeout: Worker returned error: Command '['codex', 'exec', '-', '--sandbox', 'read-only', '--skip-git-repo-check', '--output-last-message', '/var/folders/2_/c2t72bmn00j3z7cnkfvqvyj80000gn/T/tmp2p_8lkej']' timed out after 390 seconds (task_type=formalize)",
+      "lean_error_fingerprint": "formalizer_timeout",
+      "new_problems": []
+    }
+  ],
+  "op_000050": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], Nonempty (ACR.GödelFixpoint α) → ∀ x y : α, ACR.Equivalent (⊠(⊠x)) (⊠(⊠y))",
+      "formalized_statement": "∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], Nonempty (ACR.GödelFixpoint α) → ∀ x y : α, ACR.Equivalent (⊠(⊠x)) (⊠(⊠y))",
+      "statement_formalization_notes": "The statement is already a valid Lean proposition using the repository's ACR notation and assumptions.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": false,
+      "proof_sketch": "Install the given `Nonempty (ACR.GödelFixpoint α)` as a local instance. For each `x`, use `x ≤ ⊤` and antitonicity of `⊠` twice to get `⊠⊠x ≤ ⊠⊠⊤`, then apply `ACR.reft_reft_top_le_reft_top` to obtain `⊠⊠x ≤ ⊠⊤`. Also `⊠x ≤ ⊤`, so antitonicity gives `⊠⊤ ≤ ⊠⊠x`. Thus both `⊠⊠x` and `⊠⊠y` are equivalent to `⊠⊤`, hence equivalent to each other.",
+      "proof_text": "intro hG x y\nlet _ : Nonempty (ACR.GödelFixpoint α) := hG\nhave hx_top : x ≤ (⊤ : α) := ACR.le_top\nhave hy_top : y ≤ (⊤ : α) := ACR.le_top\nhave htop_reftx : ⊠(⊤ : α) ≤ ⊠x := ACR.reft_anti_mono hx_top\nhave htop_refty : ⊠(⊤ : α) ≤ ⊠y := ACR.reft_anti_mono hy_top\nhave hxx : ⊠(⊠x) ≤ ⊠(⊠(⊤ : α)) := ACR.reft_anti_mono htop_reftx\nhave hyy : ⊠(⊠y) ≤ ⊠(⊠(⊤ : α)) := ACR.reft_anti_mono htop_refty\nhave hreftx_top : ⊠x ≤ (⊤ : α) := ACR.le_top\nhave hrefty_top : ⊠y ≤ (⊤ : α) := ACR.le_top\nhave htop_xx : ⊠(⊤ : α) ≤ ⊠(⊠x) := ACR.reft_anti_mono hreftx_top\nhave htop_yy : ⊠(⊤ : α) ≤ ⊠(⊠y) := ACR.reft_anti_mono hrefty_top\nhave hxx_top : ⊠(⊠x) ≤ ⊠(⊤ : α) := by\n  exact le_trans hxx (ACR.reft_reft_top_le_reft_top (α := α))\nhave hyy_top : ⊠(⊠y) ≤ ⊠(⊤ : α) := by\n  exact le_trans hyy (ACR.reft_reft_top_le_reft_top (α := α))\nconstructor\n· exact le_trans hxx_top htop_yy\n· exact le_trans hyy_top htop_xx",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:8:38: error(lean.unknownIdentifier): Unknown identifier `α`",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:8:38: error(lean.unknownIdentifier): Unknown identifier `α` | AutomatedTheoryConstruction/Scratch.lean:9:25: error(lean.unknownIdentifier): Unknown identifier `α` | AutomatedTheoryConstruction/Scratch.lean:9:31: error(lean.synthInstanceFailed): failed to synthesize instance of type class",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "Introduce the ambient type and instances explicitly, then install the given `Nonempty (ACR.GödelFixpoint α)` as a local instance. For each of `x` and `y`, antitonicity of `⊠` gives `⊠⊠x ≤ ⊠⊠⊤` and `⊠⊠y ≤ ⊠⊠⊤`, and `ACR.reft_reft_top_le_reft_top` reduces these to `⊠⊠x ≤ ⊠⊤` and `⊠⊠y ≤ ⊠⊤`. The reverse inequalities `⊠⊤ ≤ ⊠⊠x` and `⊠⊤ ≤ ⊠⊠y` follow from antitonicity applied to `⊠x ≤ ⊤` and `⊠y ≤ ⊤`. Chaining through `⊠⊤` yields the desired equivalence.",
+      "proof_text": "intro α _ _ _ _ _ hG x y\nletI : Nonempty (ACR.GödelFixpoint α) := hG\nhave hxx_top : ⊠(⊠x) ≤ ⊠(⊤ : α) := by\n  have hx_top : x ≤ (⊤ : α) := ACR.le_top\n  have htop_reftx : ⊠(⊤ : α) ≤ ⊠x := ACR.reft_anti_mono hx_top\n  have hxx : ⊠(⊠x) ≤ ⊠(⊠(⊤ : α)) := ACR.reft_anti_mono htop_reftx\n  exact le_trans hxx (ACR.reft_reft_top_le_reft_top (α := α))\nhave hyy_top : ⊠(⊠y) ≤ ⊠(⊤ : α) := by\n  have hy_top : y ≤ (⊤ : α) := ACR.le_top\n  have htop_refty : ⊠(⊤ : α) ≤ ⊠y := ACR.reft_anti_mono hy_top\n  have hyy : ⊠(⊠y) ≤ ⊠(⊠(⊤ : α)) := ACR.reft_anti_mono htop_refty\n  exact le_trans hyy (ACR.reft_reft_top_le_reft_top (α := α))\nhave htop_xx : ⊠(⊤ : α) ≤ ⊠(⊠x) := by\n  exact ACR.reft_anti_mono (ACR.le_top : ⊠x ≤ (⊤ : α))\nhave htop_yy : ⊠(⊤ : α) ≤ ⊠(⊠y) := by\n  exact ACR.reft_anti_mono (ACR.le_top : ⊠y ≤ (⊤ : α))\nconstructor\n· exact le_trans hxx_top htop_yy\n· exact le_trans hyy_top htop_xx",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:8:38: error(lean.unknownIdentifier): Unknown identifier `α`",
+      "lean_error_fingerprint": "no_diagnostics",
+      "new_problems": []
+    }
+  ],
+  "op_000051": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], Nonempty (ACR.GödelFixpoint α) → ∀ x : α, ⊠(⊤ : α) ≤ x → ∀ g : ACR.GödelFixpoint α, ACR.Equivalent (⊠x) g.1",
+      "formalized_statement": "∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], Nonempty (ACR.GödelFixpoint α) → ∀ x : α, ⊠(⊤ : α) ≤ x → ∀ g : ACR.GödelFixpoint α, ACR.Equivalent (⊠x) g.1",
+      "statement_formalization_notes": "Direct formalization of the given statement using the repository's existing notation.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "Install the `Nonempty` Gödel-fixpoint instance from the hypothesis. Then `⊠x ≤ ⊠⊤` follows from antitonicity applied to `⊠⊤ ≤ x` and `reft_reft_top_le_reft_top`, while `⊠⊤ ≤ ⊠x` follows from `x ≤ ⊤` by antitonicity. Combine these with `gf_equiv_reft_top` for `g`.",
+      "proof_text": "intro α _ _ _ _ _ hg x hx g\nletI : Nonempty (ACR.GödelFixpoint α) := hg\nconstructor\n· calc\n    ⊠x ≤ ⊠(⊠(⊤ : α)) := ACR.reft_anti_mono hx\n    _ ≤ ⊠(⊤ : α) := ACR.reft_reft_top_le_reft_top (α := α)\n    _ ≤ g.1 := (ACR.gf_equiv_reft_top (g := g)).2\n· calc\n    g.1 ≤ ⊠(⊤ : α) := (ACR.gf_equiv_reft_top (g := g)).1\n    _ ≤ ⊠x := by\n      apply ACR.reft_anti_mono\n      exact ACR.le_top",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "no_diagnostics",
+      "new_problems": []
+    }
+  ],
+  "op_000052": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], Nonempty (ACR.GödelFixpoint α) → ∀ x : α, ACR.Equivalent (⊠x) (⊠⊠x)",
+      "formalized_statement": "∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], Nonempty (ACR.GödelFixpoint α) → ∀ x : α, ACR.Equivalent (⊠x) (⊠(⊠x))",
+      "statement_formalization_notes": "Formalized directly from stmt, using explicit ACR.Equivalent and parenthesized nested reft.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "stuck",
+      "verify_success": false,
+      "proof_sketch": "A counterexample direction looks stronger than a proof direction. From the given axioms plus `Nonempty (ACR.GödelFixpoint α)` and `ACR.C5 α`, one can plausibly derive only the one-sided collapse `⊠(⊠x) ≤ ⊠x` by comparing everything to `⊠⊤`; there is no visible mechanism forcing the reverse inequality `⊠x ≤ ⊠(⊠x)` for arbitrary `x`. A small preorder model can make `⊠` anti-monotone, admit a Gödel fixpoint up to `Equivalent`, and still have a strict drop after the second application of `⊠`. So the universal equivalence in the target is unlikely to be provable and is plausibly false.",
+      "proof_text": "",
+      "counterexample_text": "Use a finite preorder with elements `b, l0, l1, a, t`, where `b ≤ l0`, `b ≤ l1`, `l0 ≤ a`, `l1 ≤ a`, `a ≤ t`, and also `l0 ≤ l1`, `l1 ≤ l0`, `t ≤ a` (so `l0 ≡ l1` and `a ≡ t`, but `a` is not equivalent to `l0`). Let `⊤ = t`, `⊥ = b`. Define `⊠` by `⊠b = a`, `⊠l0 = l1`, `⊠l1 = l0`, `⊠a = l0`, `⊠t = l0`; this is anti-monotone. Define `□` by `□b = b`, `□l0 = a`, `□l1 = a`, `□a = a`, `□t = a`; this is monotone, satisfies `⊠x ≤ □(⊠x)`, and makes the axiom `x ≤ □y -> x ≤ ⊠y -> x ≤ ⊠⊤` hold because anything below both `□y` and `⊠y` is already below `l0 = ⊠⊤`. Then `g = l0` is a Gödel fixpoint since `l0 ≡ ⊠l0 = l1`, but for `x = b` we get `⊠x = a` and `⊠(⊠x) = ⊠a = l0`, and `a` is not equivalent to `l0`.",
+      "lean_error_excerpt": "formalize worker timeout: Worker returned error: Command '['codex', 'exec', '-', '--sandbox', 'read-only', '--skip-git-repo-check', '--output-last-message', '/var/folders/2_/c2t72bmn00j3z7cnkfvqvyj80000gn/T/tmpyr2k2j35']' timed out after 390 seconds (task_type=formalize)",
+      "lean_error_fingerprint": "formalizer_timeout",
+      "new_problems": []
+    }
+  ],
+  "op_000053": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], (∀ {x y : α}, x ≤ y → y ≤ x → x = y) → ∀ g h : ACR.GödelFixpoint α, g = h",
+      "formalized_statement": "∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], (∀ {x y : α}, x ≤ y → y ≤ x → x = y) → ∀ g h : ACR.GödelFixpoint α, g = h",
+      "statement_formalization_notes": "The statement is already a valid Lean proposition; I kept the explicit antisymmetry hypothesis from stmt rather than replacing it with a PartialOrder instance.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "Use `ACR.gf_equiv_reft_top` for both Gödel fixpoints to get `g.1 ≤ ⊠⊤ ≤ h.1` and `h.1 ≤ ⊠⊤ ≤ g.1`. Apply the given antisymmetry hypothesis to conclude `g.1 = h.1`, then lift to subtype equality via `Subtype.ext`.",
+      "proof_text": "intro α _ _ _ _ _ hantisym g h\napply Subtype.ext\nexact hantisym\n  (le_trans (ACR.gf_equiv_reft_top (g := g)).1 (ACR.gf_equiv_reft_top (g := h)).2)\n  (le_trans (ACR.gf_equiv_reft_top (g := h)).1 (ACR.gf_equiv_reft_top (g := g)).2)",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "no_diagnostics",
+      "new_problems": []
+    }
+  ],
+  "op_000054": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∃ (α : Type*) (_ : ACR α) (_ : PartialOrder α) (_ : ACR.Prov α) (_ : ACR.Reft α) (_ : ACR.APS α) (_ : ACR.C5 α), ∃ g h : ACR.GödelFixpoint α, g ≠ h",
+      "formalized_statement": "∃ (α : Type*) (hA : ACR α) (hPO : PartialOrder α) (hP : @ACR.Prov α hA) (hR : @ACR.Reft α hA) (hAPS : @ACR.APS α hA hP hR) (hC5 : @ACR.C5 α hA hP hR hAPS), ∃ g h : @ACR.GödelFixpoint α hA hR, g ≠ h",
+      "statement_formalization_notes": "Formalized the existential statement with explicit instance parameters via `@...` so the class dependencies are unambiguous and well-typed.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "stuck",
+      "verify_success": false,
+      "proof_sketch": "A promising proof direction is to build a concrete finite model with at least two distinct fixed points of `x ↦ ⊠x`. Take `α := Bool` (or another 2-point type), equip it with some `PartialOrder α` just to satisfy the extra existential field, and define an `ACR` structure separately. Then choose `⊠` to be the identity map, so every element is a Gödel fixpoint, and pick `g := ⟨false, by constructor <;> rfl⟩` and `h := ⟨true, by constructor <;> rfl⟩`, which are distinct. The remaining work is to define `□` and the preorder/top/bot so that the `APS` axioms and `C5` hold; a degenerate preorder with `x ≤ y := True`, `⊤ := true`, `⊥ := false`, `□ := id`, and `⊠ := id` looks especially promising because all monotonicity and bridge axioms become trivial. This does depend on checking that the chosen `ACR` data typechecks cleanly with the separately supplied `PartialOrder α`, but the existential target itself only needs some `PartialOrder α`, not compatibility with the `ACR` relation.",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "formalize worker timeout: Worker returned error: Command '['codex', 'exec', '-', '--sandbox', 'read-only', '--skip-git-repo-check', '--output-last-message', '/var/folders/2_/c2t72bmn00j3z7cnkfvqvyj80000gn/T/tmpu3yc2akm']' timed out after 390 seconds (task_type=formalize)",
+      "lean_error_fingerprint": "formalizer_timeout",
+      "new_problems": []
+    }
+  ],
+  "op_000025": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∀ {α : Type*} [ACR α] [PartialOrder α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], ∀ g h : ACR.GödelFixpoint α, g = h",
+      "formalized_statement": "∀ {α : Type*} [ACR α] [PartialOrder α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], ∀ g h : ACR.GödelFixpoint α, g = h",
+      "statement_formalization_notes": "The statement is already a valid Lean proposition using the repository's existing ACR.GödelFixpoint notation.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "counterexample",
+      "verify_success": true,
+      "proof_sketch": "The proof direction is not defensible: `PartialOrder α` need not use the same `≤` relation as `ACR α`. A countermodel is `α = ULift Bool` with the ACR preorder given by the trivial relation `True`, while the `PartialOrder` instance uses equality. Let `□` and `⊠` both be the identity. Then the ACR, APS, and C5 axioms all hold, and both `false` and `true` are Gödel fixpoints for the ACR relation, but they are distinct. Hence the universal uniqueness statement is false.",
+      "proof_text": "intro hstmt\nletI : Top (ULift Bool) := ⟨⟨true⟩⟩\nletI : Bot (ULift Bool) := ⟨⟨false⟩⟩\nletI : LE (ULift Bool) := ⟨fun _ _ => True⟩\nletI : LT (ULift Bool) := ⟨fun x y => x ≤ y ∧ ¬ y ≤ x⟩\nlet acrInst : ACR (ULift Bool) :=\n  { toTop := inferInstance\n    toBot := inferInstance\n    toLE := inferInstance\n    toLT := inferInstance\n    le_refl := by\n      intro _\n      trivial\n    le_trans := by\n      intro _ _ _ _ _\n      trivial\n    lt_iff_le_not_ge := by\n      intro _ _\n      rfl }\nletI : ACR (ULift Bool) := acrInst\nletI : ACR.Prov (ULift Bool) := ⟨fun x => x⟩\nletI : ACR.Reft (ULift Bool) := ⟨fun x => x⟩\nletI : ACR.APS (ULift Bool) :=\n  { prov_mono := by\n      intro _ _ _\n      trivial\n    reft_anti_mono := by\n      intro _ _ _\n      trivial\n    top_le_reft_bot := by\n      trivial\n    le_reft_top_of_le_prov_of_le_reft := by\n      intro _ _ _ _\n      trivial\n    reft_le_prov_reft := by\n      intro _\n      trivial }\nletI : ACR.C5 (ULift Bool) :=\n  { le_top := by\n      intro _\n      trivial }\nlet g : ACR.GödelFixpoint (ULift Bool) := ⟨⟨false⟩, by\n  constructor <;> trivial⟩\nlet h : ACR.GödelFixpoint (ULift Bool) := ⟨⟨true⟩, by\n  constructor <;> trivial⟩\nlet poInst : PartialOrder (ULift Bool) :=\n  { toLE := ⟨fun x y => x = y⟩\n    toLT := ⟨fun _ _ => False⟩\n    le_refl := by\n      intro x\n      rfl\n    le_trans := by\n      intro a b c hab hbc\n      simpa [hab] using hbc\n    le_antisymm := by\n      intro a b hab _\n      exact hab\n    lt_iff_le_not_ge := by\n      intro a b\n      constructor\n      · intro hlt\n        cases hlt\n      · intro hne\n        exact False.elim (hne.2 hne.1.symm) }\nletI : PartialOrder (ULift Bool) := poInst\nhave hVal : g.1 = h.1 := congrArg Subtype.val (hstmt (α := ULift Bool) g h)\nchange (⟨false⟩ : ULift Bool) = ⟨true⟩ at hVal\ncases hVal",
+      "counterexample_text": "Take `α = ULift Bool`. Use the ACR preorder `x ≤ y :↔ True`, let `□x = x` and `⊠x = x`, and equip `α` with a separate `PartialOrder` instance whose order is equality. Then APS and C5 are immediate, and both `⟨false⟩` and `⟨true⟩` are Gödel fixpoints for the ACR structure, but they are unequal. So the statement is false.",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "no_diagnostics",
+      "new_problems": []
+    }
+  ],
+  "op_000055": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], Nonempty (ACR.GödelFixpoint α) ↔ ACR.Equivalent (⊠(⊤ : α)) (⊠(⊠(⊤ : α)))",
+      "formalized_statement": "∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], Nonempty (ACR.GödelFixpoint α) ↔ ACR.Equivalent (⊠(⊤ : α)) (⊠(⊠(⊤ : α)))",
+      "statement_formalization_notes": "The input statement is already a valid Lean proposition over the repository's ACR vocabulary.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "Reuse the already verified derived theorem `thm_op_000026`, which is exactly this equivalence up to the notation change from `⊠⊠(⊤)` to `⊠(⊠(⊤))`.",
+      "proof_text": "intro α _ _ _ _ _\nsimpa using (AutomatedTheoryConstruction.thm_op_000026 (α := α))",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "no_diagnostics",
+      "new_problems": []
+    }
+  ],
+  "op_000056": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], Nonempty (ACR.GödelFixpoint α) → ∀ x : α, ACR.Equivalent x (⊠(⊤ : α)) → ACR.Equivalent x (⊠x)",
+      "formalized_statement": "∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], Nonempty (ACR.GödelFixpoint α) → ∀ x : α, ACR.Equivalent x (⊠(⊤ : α)) → ACR.Equivalent x (⊠x)",
+      "statement_formalization_notes": "Direct formalization of the given statement, keeping the Gödel-fixpoint assumption as an explicit hypothesis.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "Introduce the Gödel-fixpoint hypothesis as a local instance. For `x ≤ ⊠x`, combine `hx.1 : x ≤ ⊠⊤` with anti-monotonicity applied to `x ≤ ⊤`, giving `⊠⊤ ≤ ⊠x`. For `⊠x ≤ x`, anti-monotonicity on `hx.2 : ⊠⊤ ≤ x` gives `⊠x ≤ ⊠⊠⊤`, then use `ACR.reft_reft_top_le_reft_top` and compose back with `hx.2`.",
+      "proof_text": "intro α _ _ _ _ _ hg x hx\nletI : Nonempty (ACR.GödelFixpoint α) := hg\nconstructor\n· calc\n    x ≤ ⊠(⊤ : α) := hx.1\n    _ ≤ ⊠x := ACR.reft_anti_mono (ACR.le_top (x := x))\n· calc\n    ⊠x ≤ ⊠⊠(⊤ : α) := ACR.reft_anti_mono hx.2\n    _ ≤ ⊠(⊤ : α) := ACR.reft_reft_top_le_reft_top (α := α)\n    _ ≤ x := hx.2",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "no_diagnostics",
+      "new_problems": []
+    }
+  ],
+  "op_000057": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] {x y : α}, ACR.Equivalent x y → ACR.Equivalent (⊠x) (⊠y)",
+      "formalized_statement": "∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] {x y : α}, ACR.Equivalent x y → ACR.Equivalent (ACR.Reft.reft x) (ACR.Reft.reft y)",
+      "statement_formalization_notes": "Direct formalization of the given statement, using fully qualified names for robustness.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": false,
+      "proof_sketch": "Unfold equivalence into the two preorder inequalities and use antitonicity of `reft` in each direction. From `y ≤ x` get `reft x ≤ reft y`, and from `x ≤ y` get `reft y ≤ reft x`.",
+      "proof_text": "intro h\nexact ⟨ACR.reft_anti_mono h.2, ACR.reft_anti_mono h.1⟩",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:8:8: error: Invalid `⟨...⟩` notation: The expected type `x✝ ≡ y✝ → ⊠x✝ ≡ ⊠y✝` is not an inductive type",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:8:8: error: Invalid `⟨...⟩` notation: The expected type `x✝ ≡ y✝ → ⊠x✝ ≡ ⊠y✝` is not an inductive type | Note: This notation can only be used when the expected type is an inductive type with a single constructor",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "The previous attempt failed because `intro h` introduced the first implicit binder instead of the equivalence hypothesis. After introducing the type, instances, terms, and hypothesis explicitly, the goal is an `And`, and antitonicity of `reft` on each component of the equivalence gives the result.",
+      "proof_text": "intro α _ _ _ _ x y h\nexact ⟨ACR.reft_anti_mono h.2, ACR.reft_anti_mono h.1⟩",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:8:8: error: Invalid `⟨...⟩` notation: The expected type `x✝ ≡ y✝ → ⊠x✝ ≡ ⊠y✝` is not an inductive type",
+      "lean_error_fingerprint": "no_diagnostics",
+      "new_problems": []
+    }
+  ],
+  "op_000058": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α] [Nonempty (ACR.GödelFixpoint α)], ∀ x : α, (∃ g : ACR.GödelFixpoint α, ACR.Equivalent x g.1) ↔ ACR.Equivalent x (⊠(⊤ : α))",
+      "formalized_statement": "∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α] [Nonempty (ACR.GödelFixpoint α)], ∀ x : α, (∃ g : ACR.GödelFixpoint α, ACR.Equivalent x g.1) ↔ ACR.Equivalent x (ACR.Reft.reft (⊤ : α))",
+      "statement_formalization_notes": "Direct formalization of the given statement, using fully qualified names to avoid notation-scope ambiguity.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "Use `ACR.gf_equiv_reft_top` to show every Gödel fixpoint carrier is equivalent to `ACR.Reft.reft ⊤`. Then the forward direction is equivalence transitivity on inequalities, and the backward direction uses `Nonempty (ACR.GödelFixpoint α)` to pick one witness and compose with the same theorem in the opposite direction.",
+      "proof_text": "intro α _ _ _ _ _ _ x\nconstructor\n· rintro ⟨g, hxg⟩\n  have hg : ACR.Equivalent g.1 (ACR.Reft.reft (⊤ : α)) := ACR.gf_equiv_reft_top (g := g)\n  exact ⟨le_trans hxg.1 hg.1, le_trans hg.2 hxg.2⟩\n· intro hxt\n  obtain ⟨g⟩ := (‹Nonempty (ACR.GödelFixpoint α)› : Nonempty (ACR.GödelFixpoint α))\n  have hg : ACR.Equivalent g.1 (ACR.Reft.reft (⊤ : α)) := ACR.gf_equiv_reft_top (g := g)\n  refine ⟨g, ?_⟩\n  exact ⟨le_trans hxt.1 hg.2, le_trans hg.1 hxt.2⟩",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "no_diagnostics",
+      "new_problems": []
+    }
+  ],
+  "op_000059": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], (∀ {x y : α}, ACR.Equivalent x y → x = y) → ∀ g : ACR.GödelFixpoint α, g.1 = ⊠(⊤ : α)",
+      "formalized_statement": "∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], (∀ {x y : α}, ACR.Equivalent x y → x = y) → ∀ g : ACR.GödelFixpoint α, g.1 = ⊠(⊤ : α)",
+      "statement_formalization_notes": "Direct formalization of the given statement, keeping the repository's existing ACR names and fixpoint notation.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": false,
+      "proof_sketch": "Apply `ACR.gf_equiv_reft_top` to get `g.1 ≡ ⊠⊤`, then use the hypothesis that equivalent elements are equal.",
+      "proof_text": "intro hEq g\nexact hEq (ACR.gf_equiv_reft_top (g := g))",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:8:8: error: Function expected at",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:8:8: error: Function expected at | hEq | but this term has type",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "Introduce the implicit type and typeclass arguments before the hypothesis. Then apply `ACR.gf_equiv_reft_top` and use the extensionality hypothesis that equivalent elements are equal.",
+      "proof_text": "intro α _ _ _ _ _ hEq g\nexact hEq (x := g.1) (y := ⊠(⊤ : α)) (ACR.gf_equiv_reft_top (g := g))",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:8:8: error: Function expected at",
+      "lean_error_fingerprint": "no_diagnostics",
+      "new_problems": []
+    }
+  ],
+  "op_000060": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∃ (α : Type*) (_ : ACR α) (_ : PartialOrder α) (_ : ACR.Prov α) (_ : ACR.Reft α) (_ : ACR.APS α) (_ : ACR.C5 α), ∃ g : ACR.GödelFixpoint α, ACR.Equivalent g.1 (⊠(⊤ : α)) ∧ g.1 ≠ ⊠(⊤ : α)",
+      "formalized_statement": "∃ (α : Type*) (_ : ACR α) (_ : PartialOrder α) (_ : ACR.Prov α) (_ : ACR.Reft α) (_ : ACR.APS α) (_ : ACR.C5 α), ∃ g : ACR.GödelFixpoint α, ACR.Equivalent g.1 (⊠(⊤ : α)) ∧ g.1 ≠ ⊠(⊤ : α)",
+      "statement_formalization_notes": "The input statement is already a valid Lean proposition; I kept the explicit existential packaging of the structure instances.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "The counterexample direction is not defensible because `ACR.Equivalent` uses the preorder coming from `ACR`, while the extra `[PartialOrder α]` can be unrelated. A direct witness is `α := ULift Bool`: give it the indiscrete ACR preorder (`x ≤ y := True`), identity `Prov` and `Reft`, trivial `APS` and `C5`, and separately equip it with the equality partial order. Then `g := ⟨false⟩` is a Gödel fixpoint, `ACR.Equivalent g.1 (⊠⊤)` holds since the ACR preorder is universal, and `g.1 ≠ ⊠⊤` reduces to `false ≠ true`.",
+      "proof_text": "let hPO : PartialOrder (ULift Bool) :=\n  { le := Eq\n    lt := fun a b => a = b ∧ ¬ b = a\n    le_refl := by intro a; rfl\n    le_trans := by intro a b c hab hbc; exact hab.trans hbc\n    lt_iff_le_not_ge := by intro a b; rfl\n    le_antisymm := by intro a b hab _; exact hab }\nlet hA : ACR (ULift Bool) :=\n  { toTop := ⟨⟨true⟩⟩\n    toBot := ⟨⟨false⟩⟩\n    toPreorder :=\n      { le := fun _ _ => True\n        lt := fun _ _ => True ∧ ¬ True\n        le_refl := by intro _; trivial\n        le_trans := by intro _ _ _ _ _; trivial\n        lt_iff_le_not_ge := by intro _ _; rfl } }\nletI : ACR (ULift Bool) := hA\nlet hP : ACR.Prov (ULift Bool) := { prov := fun x => x }\nletI : ACR.Prov (ULift Bool) := hP\nlet hR : ACR.Reft (ULift Bool) := { reft := fun x => x }\nletI : ACR.Reft (ULift Bool) := hR\nlet hAPS : ACR.APS (ULift Bool) :=\n  { prov_mono := by intro _ _ _; trivial\n    reft_anti_mono := by intro _ _ _; trivial\n    top_le_reft_bot := by trivial\n    le_reft_top_of_le_prov_of_le_reft := by intro _ _ _ _; trivial\n    reft_le_prov_reft := by intro _; trivial }\nletI : ACR.APS (ULift Bool) := hAPS\nlet hC5 : ACR.C5 (ULift Bool) := { le_top := by intro _; trivial }\nlet g : ACR.GödelFixpoint (ULift Bool) := ⟨⟨false⟩, by constructor <;> trivial⟩\nexact ⟨ULift Bool, hA, hPO, hP, hR, hAPS, hC5, g, by\n  constructor\n  · constructor <;> trivial\n  · change (⟨false⟩ : ULift Bool) ≠ ⟨true⟩\n    decide⟩",
+      "counterexample_text": "The original refutation plan fails because antisymmetry from `[PartialOrder α]` does not apply to `ACR.Equivalent` unless the two order structures are identified. In fact the statement is true in the `ULift Bool` model above.",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "no_diagnostics",
+      "new_problems": []
+    }
+  ],
+  "op_000028": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∀ {α : Type*} [ACR α] [PartialOrder α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], ∀ g : ACR.GödelFixpoint α, g.1 = ⊠(⊤ : α)",
+      "formalized_statement": "∀ {α : Type*} [ACR α] [PartialOrder α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], ∀ g : ACR.GödelFixpoint α, g.1 = ⊠(⊤ : α)",
+      "statement_formalization_notes": "Direct formalization of the target statement, using the repository's existing notation and structures.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "stuck",
+      "verify_success": false,
+      "proof_sketch": "`ACR.gf_equiv_reft_top` only gives `g.1 ≡ ⊠⊤`, where `ACR.Equivalent` is defined using the preorder carried by `ACR`. The extra assumption `[PartialOrder α]` does not by itself identify that order with the `ACR` order, so `le_antisymm` for the `PartialOrder` instance cannot be applied directly. A valid Lean proof would need an additional compatibility hypothesis such as `(∀ {x y : α}, x ≤ y → y ≤ x → x = y)` for the `ACR` relation, or an explicit statement that the `PartialOrder` relation coincides with the `ACR` preorder.",
+      "proof_text": "",
+      "counterexample_text": "No counterexample attempt here; the issue is that the proposed proof sketch lacks the order-compatibility needed to turn `ACR.Equivalent` into equality in Lean.",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "formalizer_returned_stuck",
+      "new_problems": []
+    }
+  ],
+  "op_000061": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∀ {α : Type*} [ACR α], ACR.Consistent α → Nontrivial α",
+      "formalized_statement": "∀ {α : Type*} [ACR α], ACR.Consistent α → Nontrivial α",
+      "statement_formalization_notes": "The statement is already a valid Lean proposition using the repository's existing `ACR.Consistent` definition and standard `Nontrivial`.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": false,
+      "proof_sketch": "Consistency is `¬ ((⊤ : α) ≤ ⊥)`. If `⊤ = ⊥`, then `le_rfl : (⊤ : α) ≤ ⊤` rewrites to a proof of `(⊤ : α) ≤ ⊥`, contradicting consistency. Hence `⊤ ≠ ⊥`, so `α` is nontrivial with witnesses `⊤` and `⊥`.",
+      "proof_text": "intro α _ h\nrefine ⟨⟨⊤, ⊥, ?_⟩⟩\nintro hEq\napply h\nsimpa [ACR.Inconsistent, hEq] using (le_rfl : (⊤ : α) ≤ ⊤)",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:6:66: error: Function expected at",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:6:66: error: Function expected at | Nontrivial | but this term has type",
+      "new_problems": []
+    },
+    {
+      "result": "stuck",
+      "verify_success": true,
+      "proof_sketch": "The intended argument is straightforward: if ⊤ = ⊥, then `le_rfl : (⊤ : α) ≤ ⊤` rewrites to a proof of `ACR.Inconsistent α`, contradicting `ACR.Consistent α`; hence `⊤ ≠ ⊥`, so `α` is nontrivial. But the current Lean failure happens before the proof body: `Nontrivial` is not in scope in `Scratch.lean`, so the theorem statement itself does not elaborate. A tactic-body-only repair cannot fix a missing import or unknown constant in the statement.",
+      "proof_text": "",
+      "counterexample_text": "No counterexample is indicated. The blocker is environmental: `Nontrivial` is unknown in the current scratch file, so the statement needs the appropriate Mathlib import before any proof body can be checked.",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:6:66: error: Function expected at",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:7:8: warning: declaration uses `sorry`",
+      "new_problems": []
+    }
+  ],
+  "op_000062": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∃ (α : Type*) (_ : ACR α), ACR.Consistent α ∧ ∃ x : α, ¬ ((⊤ : α) ≤ x) ∧ ¬ (x ≤ (⊥ : α))",
+      "formalized_statement": "∃ (α : Type*) (_ : ACR α), ACR.Consistent α ∧ ∃ x : α, ¬ ((⊤ : α) ≤ x) ∧ ¬ (x ≤ (⊥ : α))",
+      "statement_formalization_notes": "Direct formalization of the given existential statement using the repository's ACR predicates and order notation.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": false,
+      "proof_sketch": "Take α = Option Bool with preorder x ≤ y iff x = y, top = none, bottom = some false, and witness x = some true. Then consistency and the two desired failures reduce to impossible equalities between distinct constructors.",
+      "proof_text": "let acr : ACR (Option Bool) :=\n  { top := none\n    bot := some false\n    le := fun a b => a = b\n    lt := fun _ _ => False\n    le_refl := by\n      intro a\n      rfl\n    le_trans := by\n      intro a b c hab hbc\n      exact hab.trans hbc\n    lt_iff_le_not_ge := by\n      intro a b\n      constructor\n      · intro h\n        cases h\n      · intro h\n        rcases h with ⟨hab, hba⟩\n        exact (hba hab.symm).elim }\nrefine ⟨Option Bool, acr, ?_⟩\nletI : ACR (Option Bool) := acr\nrefine ⟨?_, ⟨some true, ?_, ?_⟩⟩\n· intro h\n  change none = some false at h\n  cases h\n· intro h\n  change none = some true at h\n  cases h\n· intro h\n  change some true = some false at h\n  cases h",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:26:17: error: Application type mismatch: The argument",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:26:17: error: Application type mismatch: The argument | Bool | has type",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "Use the universe-polymorphic witness type `ULift (Sum Unit Bool)`. Give it the equality preorder, set `top = up (Sum.inl ())`, `bot = up (Sum.inr false)`, and choose `x = up (Sum.inr true)`. Consistency and both negated order relations reduce to impossible equalities between distinct constructors.",
+      "proof_text": "let acr : ACR (ULift (Sum Unit Bool)) :=\n  { toTop := ⟨⟨Sum.inl ()⟩⟩\n    toBot := ⟨⟨Sum.inr false⟩⟩\n    toPreorder :=\n      { le := Eq\n        lt := fun a b => a = b ∧ ¬ b = a\n        le_refl := by\n          intro a\n          rfl\n        le_trans := by\n          intro a b c hab hbc\n          exact hab.trans hbc\n        lt_iff_le_not_ge := by\n          intro a b\n          rfl } }\nrefine ⟨ULift (Sum Unit Bool), acr, ?_⟩\nletI : ACR (ULift (Sum Unit Bool)) := acr\nrefine ⟨?_, ⟨⟨Sum.inr true⟩, ?_, ?_⟩⟩\n· intro h\n  change (⟨Sum.inl ()⟩ : ULift (Sum Unit Bool)) = ⟨Sum.inr false⟩ at h\n  cases h\n· intro h\n  change (⟨Sum.inl ()⟩ : ULift (Sum Unit Bool)) = ⟨Sum.inr true⟩ at h\n  cases h\n· intro h\n  change (⟨Sum.inr true⟩ : ULift (Sum Unit Bool)) = ⟨Sum.inr false⟩ at h\n  cases h",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:26:17: error: Application type mismatch: The argument",
+      "lean_error_fingerprint": "no_diagnostics",
+      "new_problems": []
+    }
+  ],
+  "op_000063": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α], ∀ x : α, ⊠(⊥ : α) ≤ x → (ACR.Consistent α ↔ ¬ (x ≤ (⊥ : α)))",
+      "formalized_statement": "∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α], ∀ x : α, ACR.Reft.reft (⊥ : α) ≤ x → (ACR.Consistent α ↔ ¬ (x ≤ (⊥ : α)))",
+      "statement_formalization_notes": "Used the given statement directly, with explicit `ACR.Reft.reft` for robustness.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "counterexample",
+      "verify_success": true,
+      "proof_sketch": "The converse implication is false without a C5-style axiom. Use the same `ULift Int` model as in `thm_op_000006_is_false`: preorder is the usual integer order, `⊤ = 0`, `⊥ = 0`, `□x = x + 1`, and `⊠x = 0`. Take `x = 1`. Then `⊠⊥ = 0 ≤ 1`, and `¬ (1 ≤ 0)` holds, so the right side is true; but `ACR.Consistent` is false because `⊤ ≤ ⊥` is `0 ≤ 0`. Hence the claimed equivalence fails in this model.",
+      "proof_text": "intro h\nletI : LE (ULift Int) := ⟨fun x y => x.down ≤ y.down⟩\nletI : LT (ULift Int) := ⟨fun x y => x ≤ y ∧ ¬ y ≤ x⟩\nletI : Top (ULift Int) := ⟨⟨0⟩⟩\nletI : Bot (ULift Int) := ⟨⟨0⟩⟩\nlet acrInst : ACR (ULift Int) :=\n  { toTop := inferInstance\n    toBot := inferInstance\n    toLE := inferInstance\n    toLT := inferInstance\n    le_refl := by\n      intro a\n      change a.down ≤ a.down\n      omega\n    le_trans := by\n      intro a b c hab hbc\n      change a.down ≤ b.down at hab\n      change b.down ≤ c.down at hbc\n      change a.down ≤ c.down\n      omega\n    lt_iff_le_not_ge := by\n      intro a b\n      rfl }\nletI : ACR (ULift Int) := acrInst\nlet provInst : ACR.Prov (ULift Int) :=\n  { prov := fun x => ⟨x.down + 1⟩ }\nletI : ACR.Prov (ULift Int) := provInst\nlet reftInst : ACR.Reft (ULift Int) :=\n  { reft := fun _ => ⟨0⟩ }\nletI : ACR.Reft (ULift Int) := reftInst\nlet apsInst : ACR.APS (ULift Int) :=\n  { prov_mono := by\n      intro x y hxy\n      change x.down ≤ y.down at hxy\n      change x.down + 1 ≤ y.down + 1\n      omega\n    reft_anti_mono := by\n      intro x y hxy\n      change (0 : Int) ≤ 0\n      omega\n    top_le_reft_bot := by\n      change (0 : Int) ≤ 0\n      omega\n    le_reft_top_of_le_prov_of_le_reft := by\n      intro x y hxy hxr\n      change x.down ≤ 0 at hxr\n      change x.down ≤ 0\n      exact hxr\n    reft_le_prov_reft := by\n      intro x\n      change (0 : Int) ≤ 1\n      omega }\nletI : ACR.APS (ULift Int) := apsInst\nhave hiff := h (α := ULift Int) ⟨1⟩ (by\n  change (0 : Int) ≤ 1\n  omega)\nhave hnot : ¬ ((⟨1⟩ : ULift Int) ≤ (⊥ : ULift Int)) := by\n  change ¬ ((1 : Int) ≤ 0)\n  omega\nhave hC : ACR.Consistent (ULift Int) := hiff.mpr hnot\nexact hC (by\n  change (0 : Int) ≤ 0\n  omega)",
+      "counterexample_text": "Countermodel: `α = ULift Int` with the usual order, `⊤ = 0`, `⊥ = 0`, `□x = x + 1`, and `⊠x = 0`. This satisfies `ACR`, `Prov`, `Reft`, and `APS`. For `x = 1`, the premise `⊠⊥ ≤ x` becomes `0 ≤ 1`, which is true. But `ACR.Consistent α` is false since `0 ≤ 0`, while `¬ (x ≤ ⊥)` is true since `¬ (1 ≤ 0)`. So the equivalence fails.",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "no_diagnostics",
+      "new_problems": []
+    }
+  ],
+  "op_000064": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α], (⊠(⊥ : α) ≤ (⊤ : α)) ↔ ∀ x : α, (⊠(⊥ : α) ≤ x ↔ (⊤ : α) ≤ x)",
+      "formalized_statement": "∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α], (ACR.Reft.reft (⊥ : α) ≤ (⊤ : α)) ↔ ∀ x : α, (ACR.Reft.reft (⊥ : α) ≤ x ↔ (⊤ : α) ≤ x)",
+      "statement_formalization_notes": "Formalized using fully qualified `ACR.Reft.reft` for robustness.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "Use `top_le_reft_bot` and transitivity for the forward implication. For the reverse implication, specialize the universal equivalence at `x = ⊤` and use reflexivity of `≤`.",
+      "proof_text": "intro α _ _ _ _\nconstructor\n· intro h x\n  constructor\n  · intro hx\n    exact le_trans ACR.top_le_reft_bot hx\n  · intro hx\n    exact le_trans h hx\n· intro h\n  exact (h (⊤ : α)).2 le_rfl",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "no_diagnostics",
+      "new_problems": []
+    }
+  ],
+  "op_000065": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α], ∀ g : ACR.GödelFixpoint α, ACR.HenkinFixpoint α",
+      "formalized_statement": "∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α], ∀ g : ACR.GödelFixpoint α, Nonempty (ACR.HenkinFixpoint α)",
+      "statement_formalization_notes": "Interpreted the target as existence of a Henkin fixpoint for each given Godel fixpoint, since `ACR.HenkinFixpoint α` is a type rather than a proposition.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "stuck",
+      "verify_success": false,
+      "proof_sketch": "The counterexample direction remains plausible, but I cannot produce reliable Lean tactic code from the given context alone. A valid refutation would require constructing a full concrete `ACR`/`Prov`/`Reft`/`APS` instance (for example on `Nat` or `Int`), then exhibiting a Gödel fixpoint and proving `¬ Nonempty (ACR.HenkinFixpoint α)`. No verified theorem providing this refutation is available in the supplied context, and I should not speculate about the exact instance fields or supporting lemmas.",
+      "proof_text": "",
+      "counterexample_text": "Intended model: use the usual order, set `⊤ = 0`, `⊥ = 0`, `⊠x = 0`, and `□x = x + 1`; then `0` is a Gödel fixpoint, while `h ≡ □h` would force `h + 1 ≤ h`, impossible. However, the full Lean formalization of the required class instances and APS obligations is not justified by the current verified context.",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "formalizer_returned_stuck",
+      "new_problems": []
+    }
+  ],
+  "op_000066": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α], ∀ x : α, x ≤ ACR.Prov.prov x → ACR.Prov.prov (ACR.Prov.prov x) ≤ ACR.Prov.prov x → ACR.Equivalent (ACR.Prov.prov x) (ACR.Prov.prov (ACR.Prov.prov x))",
+      "formalized_statement": "∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α], ∀ x : α, x ≤ ACR.Prov.prov x → ACR.Prov.prov (ACR.Prov.prov x) ≤ ACR.Prov.prov x → ACR.Equivalent (ACR.Prov.prov x) (ACR.Prov.prov (ACR.Prov.prov x))",
+      "statement_formalization_notes": "Direct formalization of the given statement using fully qualified ACR names.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "Apply `ACR.prov_mono` to `x ≤ □x` to get `□x ≤ □□x`; the reverse inequality is the second hypothesis, so `ACR.Equivalent` follows by conjunction.",
+      "proof_text": "intro α _ _ _ _ x hx hxx\nconstructor\n· simpa using (ACR.prov_mono (x := x) (y := ACR.Prov.prov x) hx)\n· exact hxx",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "no_diagnostics",
+      "new_problems": []
+    }
+  ],
+  "op_000067": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], (∀ x : α, ACR.Prov.prov (ACR.Prov.prov x) ≤ ACR.Prov.prov x) → Nonempty (ACR.GödelFixpoint α) → ACR.Equivalent (ACR.Prov.prov (ACR.Reft.reft (⊤ : α))) (ACR.Prov.prov (ACR.Prov.prov (ACR.Reft.reft (⊤ : α))))",
+      "formalized_statement": "∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], (∀ x : α, ACR.Prov.prov (ACR.Prov.prov x) ≤ ACR.Prov.prov x) → Nonempty (ACR.GödelFixpoint α) → ACR.Equivalent (ACR.Prov.prov (ACR.Reft.reft (⊤ : α))) (ACR.Prov.prov (ACR.Prov.prov (ACR.Reft.reft (⊤ : α))))",
+      "statement_formalization_notes": "The input statement is already a valid Lean proposition; I kept the fully qualified form for robustness.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "Build `Equivalent` by `constructor`. Monotonicity of `prov` applied to `reft_le_prov_reft` at `⊤` gives the forward inequality, and the hypothesis `∀ x, □□x ≤ □x` instantiated at `⊠⊤` gives the backward inequality. The `Nonempty (ACR.GödelFixpoint α)` assumption is unused.",
+      "proof_text": "intro α hA hP hR hAPS hC5 hpp hgf\nconstructor\n· have h1 : ACR.Reft.reft (⊤ : α) ≤ ACR.Prov.prov (ACR.Reft.reft (⊤ : α)) :=\n    ACR.reft_le_prov_reft (x := (⊤ : α))\n  exact ACR.prov_mono h1\n· simpa using hpp (ACR.Reft.reft (⊤ : α))",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "no_diagnostics",
+      "new_problems": []
+    }
+  ],
+  "op_000068": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "For any instances `hA : ACR Int`, `hP : @ACR.Prov Int hA`, `hR : @ACR.Reft Int hA`, and `hAPS : @ACR.APS Int hA hP hR`, if `(∀ x y : Int, @LE.le Int hA.toLE x y ↔ x ≤ y)`, `@Top.top Int hA.toTop = 0`, `@Bot.bot Int hA.toBot = 0`, `(∀ x : Int, @ACR.Prov.prov Int hA hP x = x + 1)`, and `(∀ x : Int, @ACR.Reft.reft Int hA hR x = 0)`, then `¬ ACR.Consistent Int`.",
+      "formalized_statement": "∀ (hA : ACR Int) (hP : @ACR.Prov Int hA) (hR : @ACR.Reft Int hA) (hAPS : @ACR.APS Int hA hP hR), (∀ x y : Int, @LE.le Int hA.toLE x y ↔ x ≤ y) → @Top.top Int hA.toTop = 0 → @Bot.bot Int hA.toBot = 0 → (∀ x : Int, @ACR.Prov.prov Int hA hP x = x + 1) → (∀ x : Int, @ACR.Reft.reft Int hA hR x = 0) → ¬ @ACR.Consistent Int hA",
+      "statement_formalization_notes": "Formalized with explicit instance arguments so the usual Int order on the right side of ↔ remains unambiguous.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "Introduce the consistency hypothesis and derive contradiction by proving inconsistency directly. Unfolding `ACR.Inconsistent`, the assumptions `⊤ = 0`, `⊥ = 0`, and the order-coincidence hypothesis reduce the goal to the usual fact `0 ≤ 0` on `Int`.",
+      "proof_text": "intro hA hP hR hAPS hle htop hbot hprov hreft\nintro hCons\napply hCons\nsimpa [ACR.Inconsistent, htop, hbot] using (hle 0 0).2 le_rfl",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:10:2: warning: try 'simp' instead of 'simpa' | Note: This linter can be disabled with `set_option linter.unnecessarySimpa false` | AutomatedTheoryConstruction/Scratch.lean:6:90: warning: unused variable `hAPS`",
+      "new_problems": []
+    }
+  ],
+  "op_000069": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "For any instances `hA : ACR Int`, `hP : @ACR.Prov Int hA`, `hR : @ACR.Reft Int hA`, and `hAPS : @ACR.APS Int hA hP hR`, if `(∀ x y : Int, @LE.le Int hA.toLE x y ↔ x ≤ y)`, `@Top.top Int hA.toTop = 0`, `@Bot.bot Int hA.toBot = 0`, `(∀ x : Int, @ACR.Prov.prov Int hA hP x = x + 1)`, and `(∀ x : Int, @ACR.Reft.reft Int hA hR x = 0)`, then every `g : ACR.GödelFixpoint Int` satisfies `g.1 = 0`.",
+      "formalized_statement": "∀ (hA : ACR Int) (hP : @ACR.Prov Int hA) (hR : @ACR.Reft Int hA) (hAPS : @ACR.APS Int hA hP hR), (∀ x y : Int, @LE.le Int hA.toLE x y ↔ x ≤ y) → @Top.top Int hA.toTop = 0 → @Bot.bot Int hA.toBot = 0 → (∀ x : Int, @ACR.Prov.prov Int hA hP x = x + 1) → (∀ x : Int, @ACR.Reft.reft Int hA hR x = 0) → ∀ g : @ACR.GödelFixpoint Int hA hR, g.1 = 0",
+      "statement_formalization_notes": "Formalized with explicit instance arguments so the right-hand side `x ≤ y` denotes the standard Int order.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": false,
+      "proof_sketch": "Convert the two components of the Gödel-fixpoint equivalence `g.1 ≡ reft g.1` into the standard `Int` order using `hle`, rewrite `reft g.1 = 0` via `hreft`, and conclude by `le_antisymm`.",
+      "proof_text": "intro hA hP hR hAPS hle _ _ _ hreft g\nhave hg0 : g.1 ≤ 0 := by\n  apply (hle g.1 0).mp\n  simpa [hreft g.1] using g.2.1\nhave h0g : 0 ≤ g.1 := by\n  apply (hle 0 g.1).mp\n  simpa [hreft g.1] using g.2.2\nexact le_antisymm hg0 h0g",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:14:8: error(lean.synthInstanceFailed): failed to synthesize instance of type class",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:14:8: error(lean.synthInstanceFailed): failed to synthesize instance of type class | PartialOrder Int | Hint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command.",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "Use `hle` to transport both sides of the Gödel-fixpoint equivalence from the ACR order to the standard `Int` order, rewrite `⊠ g.1` to `0` via `hreft`, and conclude with `Int.le_antisymm` to avoid the ambient ACR-order `le_antisymm`.",
+      "proof_text": "intro hA hP hR hAPS hle _ _ _ hreft g\nhave hg0 : g.1 ≤ 0 := by\n  apply (hle g.1 0).mp\n  simpa [hreft g.1] using g.2.1\nhave h0g : 0 ≤ g.1 := by\n  apply (hle 0 g.1).mp\n  simpa [hreft g.1] using g.2.2\nexact Int.le_antisymm hg0 h0g",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:14:8: error(lean.synthInstanceFailed): failed to synthesize instance of type class",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:6:90: warning: unused variable `hAPS` | Note: This linter can be disabled with `set_option linter.unusedVariables false`",
+      "new_problems": []
+    }
+  ],
+  "op_000070": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∀ {α : Type*} [ACR α] [ACR.Prov α], (∀ x : α, ¬ (□x ≤ x)) → ¬ Nonempty (ACR.HenkinFixpoint α)",
+      "formalized_statement": "∀ {α : Type*} [ACR α] [ACR.Prov α], (∀ x : α, ¬ (□x ≤ x)) → ¬ Nonempty (ACR.HenkinFixpoint α)",
+      "statement_formalization_notes": "Direct formalization of the given statement using the existing ACR.HenkinFixpoint definition.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": false,
+      "proof_sketch": "Unpack a purported Henkin fixpoint from `Nonempty`. Its defining equivalence `h.1 ≡ □h.1` contains the conjunct `□h.1 ≤ h.1`, contradicting the assumption that no `x` satisfies `□x ≤ x`.",
+      "proof_text": "intro hno hne\nrcases hne with ⟨h⟩\nexact hno h.1 h.2.2",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:9:8: error: Function expected at",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:9:8: error: Function expected at | hno | but this term has type",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "Introduce the type and instances explicitly, then unpack a supposed Henkin fixpoint. Its defining equivalence gives the backward inequality `□h ≤ h`, which contradicts the assumption `∀ x, ¬ (□x ≤ x)` at `x = h`.",
+      "proof_text": "intro α _ _ hno hne\nrcases hne with ⟨h⟩\nexact hno h.1 h.2.2",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:9:8: error: Function expected at",
+      "lean_error_fingerprint": "no_diagnostics",
+      "new_problems": []
+    }
+  ],
+  "op_000071": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "For any instances `hA : ACR Int`, `hP : @ACR.Prov Int hA`, `hR : @ACR.Reft Int hA`, and `hAPS : @ACR.APS Int hA hP hR`, if the preorder on `Int` is the usual integer order, `⊤ = 0`, `⊥ = 0`, `□x = x + 1` for every `x : Int`, and `⊠x = 0` for every `x : Int`, then there does not exist any instance `hC5 : @ACR.C5 Int hA hP hR hAPS`.",
+      "formalized_statement": "∀ (hA : ACR Int) (hP : @ACR.Prov Int hA) (hR : @ACR.Reft Int hA) (hAPS : @ACR.APS Int hA hP hR), (∀ x y : Int, @LE.le Int hA.toLE x y ↔ x ≤ y) → @Top.top Int hA.toTop = 0 → @Bot.bot Int hA.toBot = 0 → (∀ x : Int, @ACR.Prov.prov Int hA hP x = x + 1) → (∀ x : Int, @ACR.Reft.reft Int hA hR x = 0) → ¬ Nonempty (@ACR.C5 Int hA hP hR hAPS)",
+      "statement_formalization_notes": "Formalized the claim with explicit structure fields and expressed nonexistence of a C5 instance as ¬ Nonempty.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "Install the explicit ACR/Prov/Reft/APS data and a supposed C5 witness as local instances. Then `ACR.le_top` gives `1 ≤ ⊤` in the ACR preorder; the hypothesis identifying that preorder with the usual order on `Int`, together with `⊤ = 0`, yields `1 ≤ 0`, contradiction by decidability.",
+      "proof_text": "intro hA hP hR hAPS hle htop hbot hprov hreft hne\nletI : ACR Int := hA\nletI : ACR.Prov Int := hP\nletI : ACR.Reft Int := hR\nletI : ACR.APS Int := hAPS\nletI : ACR.C5 Int := hne.some\nhave h1 : @LE.le Int hA.toLE 1 (@Top.top Int hA.toTop) := by\n  exact ACR.le_top (x := (1 : Int))\nhave h1std : (1 : Int) ≤ @Top.top Int hA.toTop := (hle 1 (@Top.top Int hA.toTop)).1 h1\nhave h2 : (1 : Int) ≤ 0 := by\n  rwa [htop] at h1std\nhave hfalse : ¬ ((1 : Int) ≤ 0) := by\n  decide\nexact hfalse h2",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "no_diagnostics",
+      "new_problems": []
+    }
+  ],
+  "op_000072": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "For any `hA : ACR Int`, `hP : @ACR.Prov Int hA`, and `hR : @ACR.Reft Int hA`, if the preorder on `Int` induced by `hA` is the usual integer order, `@Top.top Int hA.toTop = 0`, `@Bot.bot Int hA.toBot = 0`, `@ACR.Prov.prov Int hA hP x = x + 1` for every `x : Int`, and `@ACR.Reft.reft Int hA hR x = 0` for every `x : Int`, then there exists `hAPS : @ACR.APS Int hA hP hR`.",
+      "formalized_statement": "∀ (hA : ACR Int) (hP : @ACR.Prov Int hA) (hR : @ACR.Reft Int hA), (∀ x y : Int, @LE.le Int hA.toLE x y ↔ x ≤ y) → @Top.top Int hA.toTop = 0 → @Bot.bot Int hA.toBot = 0 → (∀ x : Int, @ACR.Prov.prov Int hA hP x = x + 1) → (∀ x : Int, @ACR.Reft.reft Int hA hR x = 0) → Nonempty (@ACR.APS Int hA hP hR)",
+      "statement_formalization_notes": "Formalized the existential conclusion as `Nonempty (@ACR.APS Int hA hP hR)` and encoded the induced preorder assumption by explicit comparison with the usual `Int` order.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": false,
+      "proof_sketch": "The original contradiction sketch is not valid: `Top` and `Bot` here are only designated elements, not order bounds. But the assumptions are strong enough to build an `APS` structure directly. Monotonicity of `prov` follows from `□x = x + 1` and the order-coincidence hypothesis, `reft` is constantly `0`, `⊤ = 0`, `⊥ = 0`, and the remaining axioms reduce to trivial inequalities on `Int`.",
+      "proof_text": "intro hA hP hR hle htop hbot hprov hreft\nrefine ⟨{\n  prov_mono := ?_,\n  reft_anti_mono := ?_,\n  top_le_reft_bot := ?_,\n  le_reft_top_of_le_prov_of_le_reft := ?_,\n  reft_le_prov_reft := ?_ }⟩\n· intro x y hxy\n  rw [hprov x, hprov y]\n  exact (hle (x + 1) (y + 1)).2 (by simpa using add_le_add_right ((hle x y).1 hxy) 1)\n· intro x y _\n  rw [hreft y, hreft x]\n  exact (hle 0 0).2 le_rfl\n· rw [htop, hbot, hreft 0]\n  exact (hle 0 0).2 le_rfl\n· intro x y _ hxr\n  rw [htop, hreft 0]\n  rw [hreft y] at hxr\n  exact hxr\n· intro x\n  rw [hreft x, hprov 0]\n  exact (hle 0 (0 + 1)).2 (by norm_num)",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:28:33: error: unknown tactic",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:28:33: error: unknown tactic | AutomatedTheoryConstruction/Scratch.lean:16:50: error(lean.unknownIdentifier): Unknown identifier `add_le_add_right` | AutomatedTheoryConstruction/Scratch.lean:28:29: error: unsolved goals",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "Construct an `APS` instance directly. Using the order-coincidence hypothesis, `prov_mono` reduces to monotonicity of `x ↦ x + 1` on `Int`, witnessed by `Int.add_le_add_right`. Since `reft` is constantly `0`, `reft_anti_mono`, `top_le_reft_bot`, and `le_reft_top_of_le_prov_of_le_reft` become immediate after rewriting with `htop`, `hbot`, and `hreft`. The last axiom reduces to `0 ≤ 1`, given by `Int.one_nonneg` and transported back through `hle`.",
+      "proof_text": "intro hA hP hR hle htop hbot hprov hreft\nrefine ⟨{\n  prov_mono := ?_,\n  reft_anti_mono := ?_,\n  top_le_reft_bot := ?_,\n  le_reft_top_of_le_prov_of_le_reft := ?_,\n  reft_le_prov_reft := ?_ }⟩\n· intro x y hxy\n  rw [hprov x, hprov y]\n  exact (hle (x + 1) (y + 1)).2 (Int.add_le_add_right ((hle x y).1 hxy) 1)\n· intro x y _\n  rw [hreft y, hreft x]\n· rw [htop, hbot, hreft 0]\n· intro x y _ hxr\n  rw [htop, hreft 0]\n  rw [hreft y] at hxr\n  exact hxr\n· intro x\n  rw [hreft x, hprov 0]\n  exact (hle 0 (0 + 1)).2 (show (0 : Int) ≤ 1 from Int.one_nonneg)",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:28:33: error: unknown tactic",
+      "lean_error_fingerprint": "no_diagnostics",
+      "new_problems": []
+    }
+  ],
+  "op_000073": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "For any `hA : ACR Int`, `hP : @ACR.Prov Int hA`, `hR : @ACR.Reft Int hA`, and `hAPS : @ACR.APS Int hA hP hR`, if the preorder on `Int` induced by `hA` is the usual integer order, `@Top.top Int hA.toTop = 0`, `@Bot.bot Int hA.toBot = 0`, `@ACR.Prov.prov Int hA hP x = x + 1` for every `x : Int`, and `@ACR.Reft.reft Int hA hR x = 0` for every `x : Int`, then `¬ Nonempty (@ACR.HenkinFixpoint Int hA hP)`.",
+      "formalized_statement": "∀ (hA : ACR Int) (hP : @ACR.Prov Int hA) (hR : @ACR.Reft Int hA) (hAPS : @ACR.APS Int hA hP hR), (∀ x y : Int, @LE.le Int hA.toLE x y ↔ x ≤ y) → @Top.top Int hA.toTop = 0 → @Bot.bot Int hA.toBot = 0 → (∀ x : Int, @ACR.Prov.prov Int hA hP x = x + 1) → (∀ x : Int, @ACR.Reft.reft Int hA hR x = 0) → ¬ Nonempty (@ACR.HenkinFixpoint Int hA hP)",
+      "statement_formalization_notes": "This matches the existing verified statement shape already present as thm_op_000034 in Derived.lean.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "Assume a Henkin fixpoint h. Its defining equivalence gives □h <= h in the ACR preorder. Using the hypothesis that this preorder is the usual order on Int, and rewriting □h as h + 1, we obtain h + 1 <= h, which is impossible by integer arithmetic.",
+      "proof_text": "intro hA hP hR hAPS hle htop hbot hprov hreft hne\nrcases hne with ⟨h⟩\nhave hstep : h.1 + 1 ≤ h.1 := by\n  have hle' : @ACR.Prov.prov Int hA hP h.1 ≤ h.1 := by\n    exact (hle (@ACR.Prov.prov Int hA hP h.1) h.1).1 h.2.2\n  simpa [hprov h.1] using hle'\nomega",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:6:90: warning: unused variable `hAPS` | Note: This linter can be disabled with `set_option linter.unusedVariables false`",
       "new_problems": []
     }
   ],
   "op_000015": [
     {
       "stage": "statement_formalization",
-      "source_statement": "For every finite type α, every SemigroupLike01 structure on α satisfies ∃ e : α, ∀ x : α, ∃ y : α, x * y = e ∧ y * x = e.",
-      "formalized_statement": "∀ {α : Type u} [SemigroupLike01 α] [Fintype α], ∃ e : α, ∀ x : α, ∃ y : α, x * y = e ∧ y * x = e",
-      "statement_formalization_notes": "Direct formalization using the repository's SemigroupLike01 class and Fintype.",
+      "source_statement": "∃ (α : Type*) (_ : ACR α) (_ : ACR.Prov α) (_ : ACR.Reft α) (_ : ACR.APS α), Nonempty (ACR.GödelFixpoint α) ∧ ¬ Nonempty (ACR.HenkinFixpoint α)",
+      "formalized_statement": "∃ (α : Type*) (_ : ACR α) (_ : ACR.Prov α) (_ : ACR.Reft α) (_ : ACR.APS α), Nonempty (ACR.GödelFixpoint α) ∧ ¬ Nonempty (ACR.HenkinFixpoint α)",
+      "statement_formalization_notes": "The statement is already a valid Lean proposition using the structures and abbreviations from the given theory context.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": false,
+      "proof_sketch": "Instantiate the existential statement with the Int-valued ACR/Prov/Reft/APS structure provided by thm_op_000033. In that model, 0 is a Gödel fixed point because hreft shows ⊠0 = 0, so both preorder directions reduce to 0 ≤ 0. The absence of Henkin fixed points is exactly thm_op_000073 for the same witnesses.",
+      "proof_text": "rcases thm_op_000033 with ⟨hA, hP, hR, hAPS, hle, htop, hbot, hprov, hreft⟩\nrefine ⟨Int, hA, hP, hR, hAPS, ?_⟩\nconstructor\n· refine ⟨⟨0, ?_⟩⟩\n  constructor <;> simpa [hreft 0] using (hle 0 0).2 (show (0 : Int) ≤ 0 by exact le_rfl)\n· exact thm_op_000073 hA hP hR hAPS hle htop hbot hprov hreft",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:8:10: error: Application type mismatch: The argument",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:8:10: error: Application type mismatch: The argument | Int | has type",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "Use the already derived theorem `thm_op_000006_is_false`, which states that it is false that every ACR model with a Gödel fixpoint also has a Henkin fixpoint. If the target existential were false, then any model with a Gödel fixpoint would necessarily have a Henkin fixpoint, contradicting `thm_op_000006_is_false`.",
+      "proof_text": "classical\nexact Classical.byContradiction (fun h => thm_op_000006_is_false (by\n  intro α _ _ _ _ hG\n  exact Classical.byContradiction (fun hH =>\n    h ⟨α, ‹ACR α›, ‹ACR.Prov α›, ‹ACR.Reft α›, ‹ACR.APS α›, ⟨hG, hH⟩⟩)))",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:8:10: error: Application type mismatch: The argument",
+      "lean_error_fingerprint": "no_diagnostics",
+      "new_problems": []
+    }
+  ],
+  "op_000074": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α], (∀ {x y : α}, x ≤ y → □y ≤ x → x ≡ □y) → (∀ h₁ h₂ : ACR.HenkinFixpoint α, h₁.1 ≡ h₂.1)",
+      "formalized_statement": "∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α], (∀ {x y : α}, x ≤ y → □y ≤ x → x ≡ □y) → ∀ h₁ h₂ : ACR.HenkinFixpoint α, h₁.1 ≡ h₂.1",
+      "statement_formalization_notes": "Direct formalization of the given statement as a Lean proposition.",
       "result": "ok",
       "verify_success": true,
       "proof_sketch": "",
@@ -345,20 +1031,20 @@
     {
       "result": "counterexample",
       "verify_success": true,
-      "proof_sketch": "Use the finite model `T = ULift (Fin 2)` with left-projection multiplication `x * y = x`. This satisfies the `SemigroupLike01` axioms by reflexivity. If the target statement held on `T`, then for any `e` and any `x`, the witness equation `x * y = e` would simplify to `x = e`. Applying this to the two distinct elements of `T` forces them to be equal, a contradiction.",
-      "proof_text": "intro h\nlet T : Type u := ULift (Fin 2)\nlet a0 : T := ULift.up (0 : Fin 2)\nlet a1 : T := ULift.up (1 : Fin 2)\nlet mulT : T -> T -> T := fun a _ => a\nletI : Fintype T := inferInstance\nlet sg : SemigroupLike01 T :=\n  { mul := mulT\n    ax_left_idempotent := by\n      intro x\n      rfl\n    ax_right_absorb_duplicate := by\n      intro x y\n      rfl\n    ax_middle_swap := by\n      intro x y z\n      rfl }\nletI : SemigroupLike01 T := sg\nobtain ⟨e, he⟩ := h (α := T)\nhave h0 : a0 = e := by\n  obtain ⟨y, hxy, _⟩ := he a0\n  simpa [mulT] using hxy\nhave h1 : a1 = e := by\n  obtain ⟨y, hxy, _⟩ := he a1\n  simpa [mulT] using hxy\nhave h01 : a0 = a1 := h0.trans h1.symm\nhave hne : a0 ≠ a1 := by\n  native_decide\nexact hne h01",
-      "counterexample_text": "Take `T = ULift (Fin 2)` with multiplication `x * y = x`. Then `T` is finite and satisfies all three axioms. But if `∃ e, ∀ x, ∃ y, x * y = e ∧ y * x = e` held, then from `x * y = e` we would get `x = e` for every `x`, impossible since `T` has two distinct elements.",
+      "proof_sketch": "Instantiate the statement on `ULift Bool` with the equality preorder, `□ = id`, and `⊠ = fun _ => ⊤`. Then the premise reduces to: if `x = y` and `y = x`, then `x ≡ y`, which is immediate. Since `□ = id`, both `false` and `true` are Henkin fixpoints, but they are not equivalent in the equality preorder.",
+      "proof_text": "intro hstmt\nletI : Top (ULift Bool) := ⟨⟨true⟩⟩\nletI : Bot (ULift Bool) := ⟨⟨false⟩⟩\nletI : LE (ULift Bool) := ⟨Eq⟩\nletI : LT (ULift Bool) := ⟨fun x y => x = y ∧ ¬ y = x⟩\nlet acrInst : ACR (ULift Bool) :=\n  { toTop := inferInstance\n    toBot := inferInstance\n    toLE := inferInstance\n    toLT := inferInstance\n    le_refl := by\n      intro x\n      rfl\n    le_trans := by\n      intro a b c hab hbc\n      exact hab.trans hbc\n    lt_iff_le_not_ge := by\n      intro a b\n      rfl }\nletI : ACR (ULift Bool) := acrInst\nlet provInst : ACR.Prov (ULift Bool) := ⟨fun x => x⟩\nletI : ACR.Prov (ULift Bool) := provInst\nlet reftInst : ACR.Reft (ULift Bool) := ⟨fun _ => ⟨true⟩⟩\nletI : ACR.Reft (ULift Bool) := reftInst\nlet apsInst : ACR.APS (ULift Bool) :=\n  { prov_mono := by\n      intro x y hxy\n      simpa using hxy\n    reft_anti_mono := by\n      intro x y hxy\n      rfl\n    top_le_reft_bot := by\n      rfl\n    le_reft_top_of_le_prov_of_le_reft := by\n      intro x y hxy hxr\n      simpa using hxr\n    reft_le_prov_reft := by\n      intro x\n      rfl }\nletI : ACR.APS (ULift Bool) := apsInst\nhave hpred : ∀ {x y : ULift Bool}, x ≤ y → □y ≤ x → x ≡ □y := by\n  intro x y hxy hyx\n  constructor\n  · simpa using hxy\n  · exact hyx\nlet hFalse : ACR.HenkinFixpoint (ULift Bool) := ⟨⟨false⟩, by\n  constructor <;> rfl⟩\nlet hTrue : ACR.HenkinFixpoint (ULift Bool) := ⟨⟨true⟩, by\n  constructor <;> rfl⟩\nhave hEq : hFalse.1 ≡ hTrue.1 := hstmt (α := ULift Bool) hpred hFalse hTrue\nhave hVal : hFalse.1 = hTrue.1 := hEq.1\nchange (⟨false⟩ : ULift Bool) = ⟨true⟩ at hVal\ncases hVal",
+      "counterexample_text": "Use `α = ULift Bool` with preorder `x ≤ y :↔ x = y`, top `⊤ = true`, bottom `⊥ = false`, provability `□x = x`, and refutability `⊠x = ⊤`. The APS axioms hold: monotonicity is equality transport, antitonicity of `⊠` is trivial because `⊠` is constant, `⊤ ≤ ⊠⊥` is `true = true`, the mixed APS axiom is discharged by the `x ≤ ⊠y` hypothesis, and `⊠x ≤ □⊠x` is again `true = true`. The premise then says that from `x = y` and `y = x` we get `x ≡ y`, which is immediate. But `false` and `true` are both Henkin fixpoints since `□ = id`, while they are not equivalent under the equality preorder.",
       "lean_error_excerpt": "",
       "lean_error_fingerprint": "no_diagnostics",
       "new_problems": []
     }
   ],
-  "op_000016": [
+  "op_000075": [
     {
       "stage": "statement_formalization",
-      "source_statement": "For every linearly ordered type α, if the multiplication is defined by x * y = min x y, then (∃ e : α, ∀ x : α, ∃ y : α, x * y = e ∧ y * x = e) holds if and only if α has a least element.",
-      "formalized_statement": "∀ {α : Type u} [LinearOrder α] [Mul α], (∀ x y : α, x * y = min x y) → ((∃ e : α, ∀ x : α, ∃ y : α, x * y = e ∧ y * x = e) ↔ ∃ e : α, ∀ x : α, e ≤ x)",
-      "statement_formalization_notes": "Formalized 'α has a least element' as `∃ e : α, ∀ x : α, e ≤ x`.",
+      "source_statement": "∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [PartialOrder α], Nonempty (ACR.HenkinFixpoint α) ↔ ∃ h : α, h = □h",
+      "formalized_statement": "∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [PartialOrder α], Nonempty (ACR.HenkinFixpoint α) ↔ ∃ h : α, h = ACR.Prov.prov h",
+      "statement_formalization_notes": "Formalized the fixed-point equation using explicit `ACR.Prov.prov` to avoid notation ambiguity.",
       "result": "ok",
       "verify_success": true,
       "proof_sketch": "",
@@ -369,48 +1055,22 @@
       "new_problems": []
     },
     {
-      "result": "proof",
-      "verify_success": true,
-      "proof_sketch": "Use the characterization of multiplication as `min`. For the forward implication, take the provided element `e`; for any `x`, a witness `y` with `x * y = e` yields `min x y = e`, hence `e ≤ x` by `min_le_left`. For the reverse implication, if `e` is a least element, then choosing `y = e` gives `x * e = e` and `e * x = e` by the standard `min_eq_right` and `min_eq_left` lemmas.",
-      "proof_text": "intro α _ _\nintro hmul\nconstructor\n· rintro ⟨e, he⟩\n  refine ⟨e, ?_⟩\n  intro x\n  rcases he x with ⟨y, hxy, _⟩\n  rw [hmul x y] at hxy\n  simpa [hxy] using (min_le_left x y)\n· rintro ⟨e, he⟩\n  refine ⟨e, ?_⟩\n  intro x\n  refine ⟨e, ?_, ?_⟩\n  · rw [hmul x e]\n    exact min_eq_right (he x)\n  · rw [hmul e x]\n    exact min_eq_left (he x)",
-      "counterexample_text": "",
-      "lean_error_excerpt": "",
-      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:7:2: warning: Try this: intro α _ _ hmul",
-      "new_problems": []
-    }
-  ],
-  "op_000017": [
-    {
-      "stage": "statement_formalization",
-      "source_statement": "∀ {α : Type u} [SemigroupLike01 α], (∀ join : α → α → α, ∀ x y z : α, x * (join y z) = join (x * y) (x * z)) → ∀ a b : α, a = b",
-      "formalized_statement": "∀ {α : Type _} [AutomatedTheoryConstruction.SemigroupLike01 α], (∀ join : α → α → α, ∀ x y z : α, x * (join y z) = join (x * y) (x * z)) → ∀ a b : α, a = b",
-      "statement_formalization_notes": "Used the repository's qualified class name to keep the proposition self-contained.",
-      "result": "ok",
-      "verify_success": true,
-      "proof_sketch": "",
+      "result": "stuck",
+      "verify_success": false,
+      "proof_sketch": "This is a standard `PartialOrder` upgrade from equivalence to equality. Reuse `thm_op_000035`, which already gives `Nonempty (ACR.HenkinFixpoint α) ↔ ∃ h : α, ACR.Equivalent h (ACR.Prov.prov h)`. For the forward/backward conversion on the existential, use `ACR.Equivalent h (□h)` as the pair `h ≤ □h ∧ □h ≤ h`, then apply `le_antisymm` (available from `[PartialOrder α]`) to get `h = □h`; conversely, from `h = □h`, `simpa [ACR.Equivalent]` gives the required two inequalities. So the target should close by `simpa` from `thm_op_000035` plus a small existential rewrite using `le_antisymm`.",
       "proof_text": "",
       "counterexample_text": "",
-      "lean_error_excerpt": "",
-      "lean_error_fingerprint": "statement_formalization",
-      "new_problems": []
-    },
-    {
-      "result": "proof",
-      "verify_success": true,
-      "proof_sketch": "Instantiate the hypothesis with a constant binary function to obtain `x * y = y` for all `x, y`. Then specialize `ax_middle_swap` at `(a, b, a)` and simplify; both sides reduce to `a` and `b`, yielding `a = b`.",
-      "proof_text": "intro α _ hjoin a b\nhave hright : ∀ x y : α, x * y = y := by\n  intro x y\n  simpa using hjoin (fun _ _ => y) x a b\nsimpa [AutomatedTheoryConstruction.op, hright] using\n  (AutomatedTheoryConstruction.SemigroupLike01.ax_middle_swap (x := a) (y := b) (z := a))",
-      "counterexample_text": "",
-      "lean_error_excerpt": "",
-      "lean_error_fingerprint": "no_diagnostics",
+      "lean_error_excerpt": "formalize worker timeout: Worker returned error: Command '['codex', 'exec', '-', '--sandbox', 'read-only', '--skip-git-repo-check', '--output-last-message', '/var/folders/2_/c2t72bmn00j3z7cnkfvqvyj80000gn/T/tmp_zivhs6t']' timed out after 390 seconds (task_type=formalize)",
+      "lean_error_fingerprint": "formalizer_timeout",
       "new_problems": []
     }
   ],
-  "op_000018": [
+  "op_000076": [
     {
       "stage": "statement_formalization",
-      "source_statement": "For every type α and every binary operation join : α → α → α, if multiplication is defined by x * y = x, then the statement ∀ x y z : α, x * (join y z) = join (x * y) (x * z) holds if and only if ∀ x : α, join x x = x.",
-      "formalized_statement": "∀ {α : Type _} [Mul α], ∀ join : α → α → α, (∀ x y : α, x * y = x) → ((∀ x y z : α, x * (join y z) = join (x * y) (x * z)) ↔ ∀ x : α, join x x = x)",
-      "statement_formalization_notes": "Formalized over an arbitrary `Mul α`, with the left-projection law `∀ x y, x * y = x` as a hypothesis and `join` fixed but arbitrary.",
+      "source_statement": "For every type α with instances [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α], every Henkin fixpoint h : ACR.HenkinFixpoint α, and every natural number n with 1 ≤ n, the n-fold iterate of □ applied to h.1 is equivalent to h.1.",
+      "formalized_statement": "∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α], ∀ (h : ACR.HenkinFixpoint α) (n : ℕ), 1 ≤ n → ACR.Equivalent (Function.iterate ACR.Prov.prov n h.1) h.1",
+      "statement_formalization_notes": "Formalized the n-fold application of □ using Function.iterate on ACR.Prov.prov.",
       "result": "ok",
       "verify_success": true,
       "proof_sketch": "",
@@ -423,30 +1083,148 @@
     {
       "result": "proof",
       "verify_success": false,
-      "proof_sketch": "Rewrite every multiplication using `h : ∀ x y, x * y = x`. Then the distributivity statement becomes `x = join x x`. For the forward direction, specialize at `x x x`; for the reverse direction, use symmetry of `hidem x` after rewriting.",
-      "proof_text": "intro α _ join h\nconstructor\n· intro hdist x\n  have hx := hdist x x x\n  rw [h x (join x x), h x x, h x x] at hx\n  exact hx.symm\n· intro hidem x y z\n  rw [h x (join y z), h x y, h x z]\n  symm\n  exact hidem x",
+      "proof_sketch": "Prove the stronger statement for all natural numbers by induction on the iterate count. The base case is reflexivity. For the step, `prov_mono` shows that `□` preserves equivalence, and then compose with the Henkin fixpoint equivalence `□h.1 ≡ h.1`.",
+      "proof_text": "intro α _ _ _ _ h n _\nhave hprov : ∀ {x y : α}, x ≡ y → □x ≡ □y := by\n  intro x y hxy\n  exact ⟨ACR.prov_mono hxy.1, ACR.prov_mono hxy.2⟩\nhave htrans : ∀ {x y z : α}, x ≡ y → y ≡ z → x ≡ z := by\n  intro x y z hxy hyz\n  exact ⟨le_trans hxy.1 hyz.1, le_trans hyz.2 hxy.2⟩\nhave hfix : □h.1 ≡ h.1 := ⟨h.2.2, h.2.1⟩\nhave hall : ∀ m : ℕ, ACR.Equivalent (Function.iterate ACR.Prov.prov m h.1) h.1 := by\n  intro m\n  induction m with\n  | zero =>\n      exact ⟨le_rfl, le_rfl⟩\n  | succ m ihm =>\n      have h1 : ACR.Equivalent (□(Function.iterate ACR.Prov.prov m h.1)) (□h.1) := hprov ihm\n      have h2 : ACR.Equivalent (Function.iterate ACR.Prov.prov (Nat.succ m) h.1) (□h.1) := by\n        simpa [Function.iterate_succ_apply'] using h1\n      exact htrans h2 hfix\nexact hall n",
       "counterexample_text": "",
-      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:11:31: error: Tactic `rewrite` failed: Did not find an occurrence of the pattern",
-      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:11:31: error: Tactic `rewrite` failed: Did not find an occurrence of the pattern | x * x | in the target expression",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:6:123: error(lean.synthInstanceFailed): failed to synthesize instance of type class",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:6:123: error(lean.synthInstanceFailed): failed to synthesize instance of type class | LE ℕ | Hint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command.",
+      "new_problems": []
+    },
+    {
+      "result": "stuck",
+      "verify_success": false,
+      "proof_sketch": "The mathematical direction is still correct: for a Henkin fixpoint, every positive iterate of `□` is equivalent to the original point by induction on the predecessor and monotonicity of `□`. However, the fixed statement itself does not elaborate in the current local environment because `Function.iterate` is unavailable without an additional Mathlib iterate import, and that cannot be repaired from `proof_text` alone under the by-block-only constraint.",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:6:134: error(lean.synthInstanceFailed): failed to synthesize instance of type class",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:6:134: error(lean.synthInstanceFailed): failed to synthesize instance of type class | LE ℕ | Hint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command.",
+      "new_problems": []
+    },
+    {
+      "result": "stuck",
+      "verify_success": false,
+      "proof_sketch": "The intended direction is still a proof: for a Henkin fixpoint h with h.1 ≡ □h.1, one can show positive iterates of □ remain equivalent to h.1 by induction, using monotonicity of □ and transitivity of equivalence. However, the fixed statement cannot be formalized in the current environment because `Function.iterate` does not elaborate under the available imports. A direct check with the same imports gives `Unknown identifier Function.iterate`, while `Nat.one_le_iff_ne_zero` is available, so the earlier `LE ℕ` noise is secondary fallout from the failed statement elaboration. Since `stmt` is fixed and `proof_text` may only contain the body of the `by` block, this cannot be repaired from tactic code alone.",
+      "proof_text": "",
+      "counterexample_text": "No mathematical counterexample is indicated by the current diagnostics. The blocker is syntactic/elaboration-level: the statement itself uses `Function.iterate`, which is unavailable in the imported environment of `Scratch.lean`.",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:6:134: error(lean.synthInstanceFailed): failed to synthesize instance of type class",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:6:134: error(lean.synthInstanceFailed): failed to synthesize instance of type class | LE ℕ | Hint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command.",
+      "new_problems": []
+    },
+    {
+      "result": "stuck",
+      "verify_success": false,
+      "proof_sketch": "The mathematical direction is still a proof: for a Henkin fixpoint h, positive provability iterates stay equivalent to h.1 by induction using monotonicity of □ and h.2. But the fixed statement does not elaborate in the current scratch environment: `Function.iterate` is unknown here, and the reported `LE ℕ` / `OfNat ℕ 1` errors are secondary fallout. Since `proof_text` may only be the body of `by`, this cannot be repaired from tactic code alone.",
+      "proof_text": "",
+      "counterexample_text": "No mathematical counterexample is indicated by the diagnostics. The blocker is declaration-level elaboration of `stmt`; the environment exposes iterate lemmas/notation via `Nat.iterate` and `f^[n]`, not the identifier `Function.iterate` used in the fixed statement.",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:6:134: error(lean.synthInstanceFailed): failed to synthesize instance of type class",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:6:134: error(lean.synthInstanceFailed): failed to synthesize instance of type class | LE ℕ | Hint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command.",
+      "new_problems": []
+    },
+    {
+      "result": "stuck",
+      "verify_success": false,
+      "proof_sketch": "The intended direction is still a proof: for a Henkin fixpoint h with h.1 ≡ □h.1, positive provability iterates should stay equivalent to h.1 by induction, using prov_mono and transitivity of Equivalent. But this cannot be formalized from proof_text alone because the fixed statement does not elaborate in the current environment.",
+      "proof_text": "",
+      "counterexample_text": "No mathematical counterexample is indicated by the diagnostics. The blocker is declaration-level elaboration of stmt itself: Scratch.lean reports Unknown identifier `Function.iterate`, and the LE ℕ / OfNat ℕ 1 errors are cascading fallout from that failed header elaboration. Since proof_text may only supply the body of `by`, this repair is not possible without changing imports or the statement.",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:6:134: error(lean.synthInstanceFailed): failed to synthesize instance of type class",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:6:134: error(lean.synthInstanceFailed): failed to synthesize instance of type class | LE ℕ | Hint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command.",
+      "new_problems": []
+    }
+  ],
+  "op_000077": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α], (∃ g : ACR.GödelFixpoint α, □(□g.1) ≤ □g.1) → ∃ h : ACR.HenkinFixpoint α, ∃ g : ACR.GödelFixpoint α, h.1 = □g.1",
+      "formalized_statement": "∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α], (∃ g : ACR.GödelFixpoint α, □(□(g.1)) ≤ □(g.1)) → ∃ h : ACR.HenkinFixpoint α, ∃ g : ACR.GödelFixpoint α, h.1 = □(g.1)",
+      "statement_formalization_notes": "Direct formalization of the given statement with explicit parentheses around projections under □.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
       "new_problems": []
     },
     {
       "result": "proof",
       "verify_success": true,
-      "proof_sketch": "Use the hypothesis `h : ∀ x y, x * y = x` to collapse every multiplication to its left input. Then the distributivity statement becomes `x = join x x`, which is equivalent to `join x x = x` by symmetry.",
-      "proof_text": "intro α _ join h\nconstructor\n· intro hdist x\n  have hx : x = join x x := by\n    simpa [h x (join x x), h x x] using hdist x x x\n  exact hx.symm\n· intro hidem x y z\n  simpa [h x (join y z), h x y, h x z] using (hidem x).symm",
+      "proof_sketch": "Choose g from the premise and define the Henkin witness to be □(g.1). Its second inequality is exactly the hypothesis, and its first inequality follows by provability monotonicity from g.1 ≤ ⊠g.1 ≤ □(g.1). Then return the same g, with equality by rfl.",
+      "proof_text": "intro α _ _ _ _ h\nrcases h with ⟨g, hg⟩\nrefine ⟨⟨□(g.1), ?_⟩, g, rfl⟩\nconstructor\n· exact ACR.prov_mono (le_trans g.2.1 (ACR.reft_gf_le_box_gf (g := g)))\n· exact hg",
       "counterexample_text": "",
-      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:11:31: error: Tactic `rewrite` failed: Did not find an occurrence of the pattern",
+      "lean_error_excerpt": "",
       "lean_error_fingerprint": "no_diagnostics",
       "new_problems": []
     }
   ],
-  "op_000019": [
+  "op_000078": [
     {
       "stage": "statement_formalization",
-      "source_statement": "∀ {α : Type u} [SemigroupLike01 α], (∃ x : α, ∀ y z : α, x * y = x * z → y = z) → ∀ a b : α, a = b",
-      "formalized_statement": "∀ {α : Type u} [SemigroupLike01 α], (∃ x : α, ∀ y z : α, x * y = x * z → y = z) → ∀ a b : α, a = b",
-      "statement_formalization_notes": "Direct formalization of the given proposition in the repository's namespace style.",
+      "source_statement": "∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α], (∃ g : ACR.GödelFixpoint α, □(□g.1) ≤ □g.1) → ∃ x : α, x ≡ □x ∧ ∃ g : ACR.GödelFixpoint α, x = □g.1",
+      "formalized_statement": "∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α], (∃ g : ACR.GödelFixpoint α, □(□g.1) ≤ □g.1) → ∃ x : α, x ≡ □x ∧ ∃ g : ACR.GödelFixpoint α, x = □g.1",
+      "statement_formalization_notes": "Direct formalization of the given statement using the repository's existing ACR notation.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": false,
+      "proof_sketch": "Choose a witness g from the hypothesis and set x := □g.1. Then x = □g.1 by definition, and x ≡ □x follows because □(□g.1) ≤ □g.1 is the assumed backward inequality, while the forward inequality comes from monotonicity of □ applied to g.1 ≤ ⊠g.1 ≤ □g.1.",
+      "proof_text": "intro α _ _ _ _ h\nrcases h with ⟨g, hbox⟩\nrefine ⟨□g.1, ?_, ⟨g, rfl⟩⟩\nconstructor\n· have hg : g.1 ≤ □g.1 := le_trans g.2.1 (ACR.reft_gf_le_box_gf (g := g))\n  exact prov_mono hg\n· exact hbox",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:12:10: error(lean.unknownIdentifier): Unknown identifier `prov_mono`",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:12:10: error(lean.unknownIdentifier): Unknown identifier `prov_mono`",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "Take the witness g from the hypothesis and set x := □g.1. Then x = □g.1 immediately. To show x ≡ □x, the backward inequality is the assumption □(□g.1) ≤ □g.1, and the forward inequality follows from monotonicity of □ applied to g.1 ≤ ⊠g.1 ≤ □g.1.",
+      "proof_text": "intro α _ _ _ _ h\nrcases h with ⟨g, hbox⟩\nrefine ⟨□g.1, ?_, ⟨g, rfl⟩⟩\nconstructor\n· exact ACR.prov_mono (le_trans g.2.1 (ACR.reft_gf_le_box_gf (g := g)))\n· exact hbox",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:12:10: error(lean.unknownIdentifier): Unknown identifier `prov_mono`",
+      "lean_error_fingerprint": "no_diagnostics",
+      "new_problems": []
+    }
+  ],
+  "op_000079": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], ∀ g : ACR.GödelFixpoint α, □g.1 ≤ g.1",
+      "formalized_statement": "∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], ∀ g : ACR.GödelFixpoint α, □g.1 ≤ g.1",
+      "statement_formalization_notes": "Direct formalization of the given statement using the repository's existing notation.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": false,
+      "proof_sketch": "The counterexample direction is not defensible: a previously verified derived theorem already gives that for any Godel fixpoint under C5, □g.1 is equivalent to g.1. Unpacking equivalence yields the required inequality □g.1 ≤ g.1.",
+      "proof_text": "intro α _ _ _ _ _ g\nsimpa [ACR.Equivalent] using (thm_op_000007 (g := g)).2",
+      "counterexample_text": "The proposed counterexample conflicts with the verified derived result thm_op_000007, which implies □g.1 ≤ g.1 for every Godel fixpoint under C5.",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:8:2: error: Type mismatch: After simplification, term",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:8:2: error: Type mismatch: After simplification, term | (thm_op_000007 g).right | has type",
+      "new_problems": []
+    }
+  ],
+  "op_000080": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], Nonempty (ACR.GödelFixpoint α) → □(⊠(⊤ : α)) ≤ ⊠(⊤ : α)",
+      "formalized_statement": "∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], Nonempty (ACR.GödelFixpoint α) → □(⊠(⊤ : α)) ≤ ⊠(⊤ : α)",
+      "statement_formalization_notes": "The input statement is already a valid Lean proposition in the repository's notation.",
       "result": "ok",
       "verify_success": true,
       "proof_sketch": "",
@@ -459,129 +1237,21 @@
     {
       "result": "counterexample",
       "verify_success": false,
-      "proof_sketch": "Instantiate the universal statement at β := ULift Bool with multiplication induced by boolean conjunction. This gives a SemigroupLike01 structure on β. The witness x = up true makes left multiplication injective because true && y = y. Applying the assumed theorem then forces all elements of β to be equal, contradicting up false ≠ up true.",
-      "proof_text": "intro h\nlet β : Type u := ULift Bool\nlet x0 : β := ULift.up true\nlet a0 : β := ULift.up false\nlet b0 : β := ULift.up true\nlet mulβ : β → β → β := fun a b => ULift.up (a.down && b.down)\nlet s : SemigroupLike01 β :=\n  { mul := mulβ\n    ax_left_idempotent := by\n      intro x\n      cases x with\n      | up x =>\n          cases x <;> rfl\n    ax_right_absorb_duplicate := by\n      intro x y\n      cases x with\n      | up x =>\n          cases y with\n          | up y =>\n              cases x <;> cases y <;> rfl\n    ax_middle_swap := by\n      intro x y z\n      cases x with\n      | up x =>\n          cases y with\n          | up y =>\n              cases z with\n              | up z =>\n                  cases x <;> cases y <;> cases z <;> rfl }\nletI : SemigroupLike01 β := s\nhave hinj : ∃ x : β, ∀ y z : β, x * y = x * z → y = z := by\n  refine ⟨x0, ?_⟩\n  intro y z hyz\n  cases y with\n  | up y =>\n      cases z with\n      | up z =>\n          have hyz' : y = z := by\n            simpa [x0, mulβ] using congrArg ULift.down hyz\n          cases hyz'\n          rfl\nhave hall : ∀ a b : β, a = b := h (α := β) hinj\nhave hne : a0 ≠ b0 := by\n  intro hab\n  have : (false : Bool) = true := by\n    simpa [a0, b0] using congrArg ULift.down hab\n  simp at this\nexact hne (hall a0 b0)",
-      "counterexample_text": "Use β := ULift Bool with multiplication up x * up y := up (x && y). The axioms hold by case split on booleans. The element up true gives injective left multiplication, but up false and up true are distinct.",
-      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:45:14: error: Type mismatch: After simplification, term",
-      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:45:14: error: Type mismatch: After simplification, term | congrArg ULift.down hyz | has type",
+      "proof_sketch": "Instantiate the statement at `Fin 3` with the chain order `0 < 1 < 2`, top `2`, bottom `0`, `□x := if x = 0 then 0 else 2`, and `⊠x := if x = 0 then 2 else 1`. All required axioms are decidable and can be discharged by computation. The element `1` is a Gödel fixpoint, but the target inequality reduces to `2 ≤ 1`, contradiction.",
+      "proof_text": "intro h\nlet prov : Fin 3 → Fin 3 := fun x => if x = 0 then 0 else 2\nlet reft : Fin 3 → Fin 3 := fun x => if x = 0 then 2 else 1\nletI : ACR (Fin 3) where\n  top := 2\n  bot := 0\n  le := fun a b => a.1 ≤ b.1\n  le_refl := by\n    intro a\n    exact Nat.le_refl a.1\n  le_trans := by\n    intro a b c hab hbc\n    exact Nat.le_trans hab hbc\nletI : ACR.Prov (Fin 3) := ⟨prov⟩\nletI : ACR.Reft (Fin 3) := ⟨reft⟩\nletI : ACR.APS (Fin 3) where\n  prov_mono := by\n    native_decide\n  reft_anti_mono := by\n    native_decide\n  top_le_reft_bot := by\n    native_decide\n  le_reft_top_of_le_prov_of_le_reft := by\n    native_decide\n  reft_le_prov_reft := by\n    native_decide\nletI : ACR.C5 (Fin 3) where\n  le_top := by\n    native_decide\nhave hg : Nonempty (ACR.GödelFixpoint (Fin 3)) := by\n  refine ⟨⟨1, ?_⟩⟩\n  native_decide\nhave hle : □(⊠(⊤ : Fin 3)) ≤ ⊠(⊤ : Fin 3) := h (α := Fin 3) hg\nhave hfalse : ¬ (□(⊠(⊤ : Fin 3)) ≤ ⊠(⊤ : Fin 3)) := by\n  native_decide\nexact hfalse hle",
+      "counterexample_text": "Use `Fin 3` with the usual order on values, top `2`, bottom `0`, `⊠0 = 2`, `⊠1 = 1`, `⊠2 = 1`, and `□0 = 0`, `□1 = 2`, `□2 = 2`. Then `1 ≡ ⊠1`, so a Gödel fixpoint exists, while `⊠⊤ = 1` and `□(⊠⊤) = 2`, so the required inequality fails.",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:10:20: error: unexpected token 'where'; expected ':=' or '|'",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:10:20: error: unexpected token 'where'; expected ':=' or '|' | AutomatedTheoryConstruction/Scratch.lean:10:7: error: Missing cases: | AutomatedTheoryConstruction/Scratch.lean:6:167: error: unsolved goals",
       "new_problems": []
     },
     {
       "result": "counterexample",
       "verify_success": false,
-      "proof_sketch": "Instantiate the universal claim at β := ULift Bool with multiplication induced by conjunction. This structure satisfies the three axioms by case split. The element ULift.up true makes left multiplication injective, since true && b = b. Applying the assumed theorem yields that all elements of β are equal, contradicting ULift.up false ≠ ULift.up true.",
-      "proof_text": "intro h\nlet β : Type u := ULift Bool\nlet x0 : β := ULift.up true\nlet a0 : β := ULift.up false\nlet b0 : β := ULift.up true\nlet mulβ : β → β → β := fun a b => ULift.up (a.down && b.down)\nlet s : SemigroupLike01 β :=\n  { mul := mulβ\n    ax_left_idempotent := by\n      intro x\n      cases x with\n      | up x =>\n          cases x <;> rfl\n    ax_right_absorb_duplicate := by\n      intro x y\n      cases x with\n      | up x =>\n          cases y with\n          | up y =>\n              cases x <;> cases y <;> rfl\n    ax_middle_swap := by\n      intro x y z\n      cases x with\n      | up x =>\n          cases y with\n          | up y =>\n              cases z with\n              | up z =>\n                  cases x <;> cases y <;> cases z <;> rfl }\nletI : SemigroupLike01 β := s\nhave hinj : ∃ x : β, ∀ y z : β, x * y = x * z → y = z := by\n  refine ⟨x0, ?_⟩\n  intro y z hyz\n  cases y with\n  | up y =>\n      cases z with\n      | up z =>\n          change ULift.up y = ULift.up z\n          simpa [x0, mulβ] using hyz\nhave hall : ∀ a b : β, a = b := h (α := β) hinj\nhave hne : a0 ≠ b0 := by\n  intro hab\n  have : (false : Bool) = true := by\n    simpa [a0, b0] using congrArg ULift.down hab\n  simp at this\nexact hne (hall a0 b0)",
-      "counterexample_text": "Take β := ULift Bool with multiplication ULift.up p * ULift.up q := ULift.up (p && q). The axioms hold by a finite case split. Left multiplication by ULift.up true is injective, but ULift.up false and ULift.up true are distinct.",
-      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:45:12: error: Type mismatch: After simplification, term",
-      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:45:12: error: Type mismatch: After simplification, term | hyz | has type",
-      "new_problems": []
-    },
-    {
-      "result": "counterexample",
-      "verify_success": false,
-      "proof_sketch": "Instantiate the statement at β := ULift Bool with multiplication given by boolean conjunction. This structure satisfies the three SemigroupLike01 axioms by finite case split. The element ULift.up true has injective left multiplication, again by case split, but the conclusion would force ULift.up false = ULift.up true, contradicting decidable inequality.",
-      "proof_text": "intro h\nlet β : Type u := ULift Bool\nlet x0 : β := ULift.up true\nlet a0 : β := ULift.up false\nlet b0 : β := ULift.up true\nlet mulβ : β → β → β := fun a b => ULift.up (a.down && b.down)\nlet s : SemigroupLike01 β :=\n  { mul := mulβ\n    ax_left_idempotent := by\n      intro x\n      cases x with\n      | up x =>\n          cases x <;> rfl\n    ax_right_absorb_duplicate := by\n      intro x y\n      cases x with\n      | up x =>\n          cases y with\n          | up y =>\n              cases x <;> cases y <;> rfl\n    ax_middle_swap := by\n      intro x y z\n      cases x with\n      | up x =>\n          cases y with\n          | up y =>\n              cases z with\n              | up z =>\n                  cases x <;> cases y <;> cases z <;> rfl }\nletI : SemigroupLike01 β := s\nhave hinj : ∃ x : β, ∀ y z : β, x * y = x * z → y = z := by\n  refine ⟨x0, ?_⟩\n  intro y z hyz\n  cases y with\n  | up y =>\n      cases z with\n      | up z =>\n          cases y <;> cases z <;> simp [x0, mulβ] at hyz ⊢\nhave hall : ∀ a b : β, a = b := h (α := β) hinj\nhave hne : a0 ≠ b0 := by\n  native_decide\nexact hne (hall a0 b0)",
-      "counterexample_text": "Take β := ULift Bool with multiplication defined by ULift.up p * ULift.up q = ULift.up (p && q). The axioms hold by checking the four boolean cases. Left multiplication by ULift.up true is injective, but ULift.up false and ULift.up true are distinct, so the universal conclusion is false.",
-      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:43:15: error: unsolved goals",
-      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:43:15: error: unsolved goals | case up.up.false.true | h : ∀ {α : Type u} [inst : SemigroupLike01 α], (∃ x, ∀ (y z : α), x * y = x * z → y = z) → ∀ (a b : α), a = b",
-      "new_problems": []
-    },
-    {
-      "result": "counterexample",
-      "verify_success": true,
-      "proof_sketch": "Use the same countermodel as before: take β := ULift Bool with multiplication induced by boolean conjunction. This satisfies the SemigroupLike01 axioms by finite case split. The element ULift.up true makes left multiplication injective, which can be discharged directly by finite decision. Applying the assumed universal statement to this β then forces ULift.up false = ULift.up true, contradicting decidable inequality.",
-      "proof_text": "intro h\nlet β : Type u := ULift Bool\nlet x0 : β := ULift.up true\nlet a0 : β := ULift.up false\nlet b0 : β := ULift.up true\nlet mulβ : β → β → β := fun a b => ULift.up (a.down && b.down)\nlet s : SemigroupLike01 β :=\n  { mul := mulβ\n    ax_left_idempotent := by\n      intro x\n      cases x with\n      | up x =>\n          cases x <;> rfl\n    ax_right_absorb_duplicate := by\n      intro x y\n      cases x with\n      | up x =>\n          cases y with\n          | up y =>\n              cases x <;> cases y <;> rfl\n    ax_middle_swap := by\n      intro x y z\n      cases x with\n      | up x =>\n          cases y with\n          | up y =>\n              cases z with\n              | up z =>\n                  cases x <;> cases y <;> cases z <;> rfl }\nletI : SemigroupLike01 β := s\nhave hinj : ∃ x : β, ∀ y z : β, x * y = x * z → y = z := by\n  refine ⟨x0, ?_⟩\n  native_decide\nhave hall : ∀ a b : β, a = b := h (α := β) hinj\nhave hne : a0 ≠ b0 := by\n  native_decide\nexact hne (hall a0 b0)",
-      "counterexample_text": "Take β := ULift Bool and define multiplication by ULift.up p * ULift.up q = ULift.up (p && q). The three SemigroupLike01 axioms hold. Left multiplication by ULift.up true is injective, since true && b = b. But β has two distinct elements, ULift.up false and ULift.up true, so the conclusion that all elements are equal is false.",
-      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:43:15: error: unsolved goals",
-      "lean_error_fingerprint": "no_diagnostics",
-      "new_problems": []
-    }
-  ],
-  "op_000020": [
-    {
-      "stage": "statement_formalization",
-      "source_statement": "For every linearly ordered type α, if multiplication is defined by x * y = min x y, then the property ∀ x y z : α, x * y = x * z → y = z holds if and only if ∀ a b : α, a = b.",
-      "formalized_statement": "∀ {α : Type u} [LinearOrder α] [Mul α], (∀ x y : α, x * y = min x y) → ((∀ x y z : α, x * y = x * z → y = z) ↔ ∀ a b : α, a = b)",
-      "statement_formalization_notes": "Formalized directly using a linear order and a multiplication operation constrained to be `min`.",
-      "result": "ok",
-      "verify_success": true,
-      "proof_sketch": "",
-      "proof_text": "",
-      "counterexample_text": "",
-      "lean_error_excerpt": "",
-      "lean_error_fingerprint": "statement_formalization",
-      "new_problems": []
-    },
-    {
-      "result": "proof",
-      "verify_success": false,
-      "proof_sketch": "Assume `hmin`. For the forward implication, given left-cancellation and any `a b`, use totality of the linear order. If `a ≤ b`, then `a * a = min a a = a` and `a * b = min a b = a`, so `a * a = a * b`; cancellation with left factor `a` yields `a = b`. If `b ≤ a`, similarly `b * a = b * b`, so cancellation with left factor `b` yields `a = b`. For the reverse implication, if all elements are equal, then any `y` and `z` are equal, so cancellation is trivial.",
-      "proof_text": "intro hmin\nconstructor\n· intro hcancel a b\n  rcases le_total a b with hab | hba\n  · exact hcancel a a b (by rw [hmin, hmin, min_eq_left le_rfl, min_eq_left hab])\n  · exact hcancel b a b (by rw [hmin, hmin, min_eq_left hba, min_eq_left le_rfl])\n· intro h x y z hxy\n  exact h y z",
-      "counterexample_text": "",
-      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:8:2: error: Tactic `constructor` failed: target is not an inductive datatype",
-      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:8:2: error: Tactic `constructor` failed: target is not an inductive datatype | hmin : Type u | ⊢ ∀ [inst : LinearOrder hmin] [inst_1 : Mul hmin],",
-      "new_problems": []
-    },
-    {
-      "result": "proof",
-      "verify_success": true,
-      "proof_sketch": "Introduce the implicit type and typeclass arguments before the hypothesis `hmin`. For the forward direction, use totality of the linear order on `a` and `b`: if `a ≤ b`, then `a * a = a * b` because both sides are `a = min a a = min a b`, so left-cancellation gives `a = b`; the case `b ≤ a` is symmetric. For the reverse direction, if all elements are equal, cancellation is immediate.",
-      "proof_text": "intro α _ _ hmin\nconstructor\n· intro hcancel a b\n  rcases le_total a b with hab | hba\n  · exact hcancel a a b (by rw [hmin, hmin, min_eq_left le_rfl, min_eq_left hab])\n  · exact hcancel b a b (by rw [hmin, hmin, min_eq_left hba, min_eq_left le_rfl])\n· intro h x y z hxy\n  exact h y z",
-      "counterexample_text": "",
-      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:8:2: error: Tactic `constructor` failed: target is not an inductive datatype",
-      "lean_error_fingerprint": "no_diagnostics",
-      "new_problems": []
-    }
-  ],
-  "op_000021": [
-    {
-      "stage": "statement_formalization",
-      "source_statement": "∀ {α : Type u} [SemigroupLike01 α], ∀ x y z : α, (x * y) * (x * z) = (x * y) * z",
-      "formalized_statement": "∀ {α : Type u} [SemigroupLike01 α], ∀ x y z : α, (x * y) * (x * z) = (x * y) * z",
-      "statement_formalization_notes": "Direct restatement of the target, matching the statement style already used in Derived.lean inside namespace AutomatedTheoryConstruction.",
-      "result": "ok",
-      "verify_success": true,
-      "proof_sketch": "",
-      "proof_text": "",
-      "counterexample_text": "",
-      "lean_error_excerpt": "",
-      "lean_error_fingerprint": "statement_formalization",
-      "new_problems": []
-    },
-    {
-      "result": "proof",
-      "verify_success": false,
-      "proof_sketch": "Use `ax_middle_swap` to swap the middle and right factors, then apply `ax_right_absorb_duplicate` to collapse `x * (x * z)` to `x * z`, and finally use `ax_middle_swap` again in reverse.",
-      "proof_text": "intro α _ x y z\ncalc\n  (x * y) * (x * z) = (x * (x * z)) * y := by\n    simpa [AutomatedTheoryConstruction.op] using\n      (AutomatedTheoryConstruction.SemigroupLike01.ax_middle_swap (α := α) x y (x * z))\n  _ = (x * z) * y := by\n    simpa [AutomatedTheoryConstruction.op] using\n      congrArg (fun t => t * y)\n        (AutomatedTheoryConstruction.SemigroupLike01.ax_right_absorb_duplicate (α := α) x z)\n  _ = (x * y) * z := by\n    simpa [AutomatedTheoryConstruction.op] using\n      (AutomatedTheoryConstruction.SemigroupLike01.ax_middle_swap (α := α) x z y).symm",
-      "counterexample_text": "",
-      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:17:6: error: Type mismatch: After simplification, term",
-      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:17:6: error: Type mismatch: After simplification, term | Eq.symm (SemigroupLike01.ax_middle_swap x z y) | has type",
-      "new_problems": []
-    },
-    {
-      "result": "proof",
-      "verify_success": true,
-      "proof_sketch": "Use `ax_middle_swap` to rewrite `(x * y) * (x * z)` as `(x * (x * z)) * y`, then apply `ax_right_absorb_duplicate` to reduce `x * (x * z)` to `x * z`, and finally use `ax_middle_swap` with arguments `x z y` to get `(x * z) * y = (x * y) * z`.",
-      "proof_text": "intro α _ x y z\ncalc\n  (x * y) * (x * z) = (x * (x * z)) * y := by\n    simpa [AutomatedTheoryConstruction.op] using\n      (AutomatedTheoryConstruction.SemigroupLike01.ax_middle_swap (α := α) x y (x * z))\n  _ = (x * z) * y := by\n    simpa [AutomatedTheoryConstruction.op] using\n      congrArg (fun t => t * y)\n        (AutomatedTheoryConstruction.SemigroupLike01.ax_right_absorb_duplicate (α := α) x z)\n  _ = (x * y) * z := by\n    simpa [AutomatedTheoryConstruction.op] using\n      (AutomatedTheoryConstruction.SemigroupLike01.ax_middle_swap (α := α) x z y)",
-      "counterexample_text": "",
-      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:17:6: error: Type mismatch: After simplification, term",
-      "lean_error_fingerprint": "no_diagnostics",
-      "new_problems": []
-    }
-  ],
-  "op_000022": [
-    {
-      "stage": "statement_formalization",
-      "source_statement": "For every type α, if multiplication is defined by x * y = y for all x y : α, then this multiplication satisfies the SemigroupLike01 axioms if and only if ∀ a b : α, a = b.",
-      "formalized_statement": "∀ {α : Type _} [Mul α], (∀ x y : α, x * y = y) → (((∀ x : α, x * x = x) ∧ (∀ x y : α, x * (x * y) = x * y) ∧ (∀ x y z : α, (x * y) * z = (x * z) * y)) ↔ ∀ a b : α, a = b)",
-      "statement_formalization_notes": "Formalized 'satisfies the SemigroupLike01 axioms' as the conjunction of the three axioms for the given multiplication.",
-      "result": "ok",
-      "verify_success": true,
-      "proof_sketch": "",
-      "proof_text": "",
-      "counterexample_text": "",
-      "lean_error_excerpt": "",
-      "lean_error_fingerprint": "statement_formalization",
+      "proof_sketch": "Use `Fin 3` with its inherited linear order, top, and bot. Define `□x := if x = 0 then 0 else 2` and `⊠x := if x = 0 then 2 else 1`. These satisfy `ACR.APS` and `ACR.C5` by finite computation. The element `1` is a Gödel fixpoint, but `⊠⊤ = 1` and `□(⊠⊤) = 2`, so the target inequality fails.",
+      "proof_text": "intro h\nlet prov : Fin 3 → Fin 3 := fun x => if x = 0 then 0 else 2\nlet reft : Fin 3 → Fin 3 := fun x => if x = 0 then 2 else 1\nlet acrInst : ACR (Fin 3) :=\n  { toTop := inferInstance\n    toBot := inferInstance\n    toLE := inferInstance\n    toLT := inferInstance\n    le_refl := by\n      intro a\n      exact Preorder.le_refl a\n    le_trans := by\n      intro a b c hab hbc\n      exact Preorder.le_trans _ _ _ hab hbc\n    lt_iff_le_not_ge := by\n      intro a b\n      exact Preorder.lt_iff_le_not_ge _ _ }\nletI : ACR (Fin 3) := acrInst\nlet provInst : ACR.Prov (Fin 3) := ⟨prov⟩\nletI : ACR.Prov (Fin 3) := provInst\nlet reftInst : ACR.Reft (Fin 3) := ⟨reft⟩\nletI : ACR.Reft (Fin 3) := reftInst\nlet apsInst : ACR.APS (Fin 3) :=\n  { prov_mono := by\n      native_decide\n    reft_anti_mono := by\n      native_decide\n    top_le_reft_bot := by\n      native_decide\n    le_reft_top_of_le_prov_of_le_reft := by\n      native_decide\n    reft_le_prov_reft := by\n      native_decide }\nletI : ACR.APS (Fin 3) := apsInst\nlet c5Inst : ACR.C5 (Fin 3) :=\n  { le_top := by\n      native_decide }\nletI : ACR.C5 (Fin 3) := c5Inst\nhave hg : Nonempty (ACR.GödelFixpoint (Fin 3)) := by\n  refine ⟨⟨1, ?_⟩⟩\n  native_decide\nhave hle : □(⊠(⊤ : Fin 3)) ≤ ⊠(⊤ : Fin 3) := h (α := Fin 3) hg\nhave hfalse : ¬ (□(⊠(⊤ : Fin 3)) ≤ ⊠(⊤ : Fin 3)) := by\n  native_decide\nexact hfalse hle",
+      "counterexample_text": "Take `α = Fin 3` with the usual order, `⊤ = 2`, `⊥ = 0`, `□0 = 0`, `□1 = □2 = 2`, and `⊠0 = 2`, `⊠1 = ⊠2 = 1`. Then `1 ≡ ⊠1`, so `Nonempty (ACR.GödelFixpoint α)` holds. But `⊠⊤ = 1` and `□(⊠⊤) = 2`, hence `□(⊠⊤) ≤ ⊠⊤` is false.",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:11:15: error(lean.synthInstanceFailed): failed to synthesize instance of type class",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:11:15: error(lean.synthInstanceFailed): failed to synthesize instance of type class | Top (Fin 3) | Hint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command.",
       "new_problems": []
     }
   ]

@@ -1,0 +1,37 @@
+title: Automated Theory Construction Blog
+description: Automated Theory Construction の進捗や実験メモを書くための GitHub Pages サイト
+lang: ja
+timezone: Asia/Tokyo
+url: "https://tukamilano.github.io"
+baseurl: "/Automated_Theory_Construction"
+markdown: kramdown
+permalink: /blog/:year/:month/:day/:title/
+
+defaults:
+  - scope:
+      path: ""
+    values:
+      layout: default
+  - scope:
+      path: ""
+      type: posts
+    values:
+      layout: post
+
+exclude:
+  - .codex
+  - .git
+  - .github
+  - .lake
+  - .venv
+  - AutomatedTheoryConstruction
+  - data
+  - example
+  - prompts
+  - scripts
+  - AGENTS.md
+  - LICENSE
+  - README.md
+  - lake-manifest.json
+  - lakefile.lean
+  - lean-toolchain

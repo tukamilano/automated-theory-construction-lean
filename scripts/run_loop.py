@@ -1414,7 +1414,7 @@ def main() -> None:
 
     # Fixed runtime paths and hidden compatibility defaults.
     args.data_dir = "data"
-    args.seeds_file = "theories/semigroup_like_01/seeds.jsonl"
+    args.seeds_file = "AutomatedTheoryConstruction/seeds.jsonl"
     args.scratch_file = "AutomatedTheoryConstruction/Scratch.lean"
     args.derived_file = "AutomatedTheoryConstruction/Derived.lean"
     args.reset_scratch_on_start = True
