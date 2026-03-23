@@ -7,6 +7,7 @@ from pathlib import Path
 
 THEOREM_NAME_PATTERN = re.compile(r"\btheorem\s+([A-Za-z0-9_']+)\b")
 THEOREM_HEADER_PATTERN = re.compile(r"\btheorem\s+([A-Za-z0-9_']+)\s*:\s*(.+?)\s*:=", re.DOTALL)
+LEAN_DECL_NAME_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_']*$")
 
 
 def normalize_statement_text(statement: str) -> str:
@@ -18,6 +19,17 @@ def build_derived_entry(theorem_name: str, statement: str) -> dict[str, str]:
         "theorem_name": theorem_name.strip(),
         "statement": normalize_statement_text(statement),
     }
+
+
+def validate_theorem_name(theorem_name: str) -> str:
+    cleaned = theorem_name.strip()
+    if not cleaned:
+        raise ValueError("theorem_name must be non-empty")
+    if cleaned == "None":
+        raise ValueError("theorem_name must not be the literal None")
+    if not LEAN_DECL_NAME_PATTERN.fullmatch(cleaned):
+        raise ValueError("theorem_name must match ^[A-Za-z_][A-Za-z0-9_']*$")
+    return cleaned
 
 
 def iter_theorem_headers(derived_file: Path, max_theorems: int | None = None) -> list[tuple[str, str]]:
@@ -65,6 +77,7 @@ def append_theorem(
         if not match:
             raise ValueError("Could not detect theorem name from theorem_code")
         theorem_name = match.group(1)
+    theorem_name = validate_theorem_name(theorem_name)
 
     content = derived_file.read_text(encoding="utf-8")
     blocks_to_add: list[str] = []

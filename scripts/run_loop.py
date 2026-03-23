@@ -45,6 +45,7 @@ DERIVED_TEMPLATE = (
 )
 
 THEOREM_NAME_STEM_PATTERN = re.compile(r"^[a-z][a-z0-9_]*$")
+THEOREM_NAME_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_']*$")
 
 
 def normalize_stmt_text(stmt: str) -> str:
@@ -106,6 +107,17 @@ def validate_theorem_name_stem(stem: str) -> str:
         raise ValueError("prover_statement theorem_name_stem must not have leading/trailing/repeated underscores")
     if re.search(r"_\d+$", cleaned):
         raise ValueError("prover_statement theorem_name_stem must not end with a numeric suffix")
+    return cleaned
+
+
+def validate_theorem_name(theorem_name: str) -> str:
+    cleaned = theorem_name.strip()
+    if not cleaned:
+        raise ValueError("theorem_name must be non-empty")
+    if cleaned == "None":
+        raise ValueError("theorem_name must not be the literal None")
+    if not THEOREM_NAME_PATTERN.fullmatch(cleaned):
+        raise ValueError("theorem_name must match ^[A-Za-z_][A-Za-z0-9_']*$")
     return cleaned
 
 
@@ -245,6 +257,7 @@ def formalize_to_scratch(
     counterexample_text: str,
     include_mathlib_import: bool,
 ) -> tuple[str, str]:
+    theorem_name = validate_theorem_name(theorem_name)
     if mode == "proof":
         raw_body = proof_text.strip() if proof_text.strip() else "sorry"
         body = "\n  ".join(line.rstrip() for line in raw_body.splitlines())
@@ -972,8 +985,9 @@ def resolve_solver_statement(
     open_rows: list[dict[str, Any]],
     theory_context: str,
     current_iteration_full_logs: list[dict[str, Any]],
-) -> tuple[str, str, str, str, dict[str, Any]]:
+) -> tuple[str, str, str, str, bool, dict[str, Any]]:
     prover_statement_worker_meta: dict[str, Any] = {}
+    blocked_by_alpha_duplicate = False
     if prover_statement_worker_settings is None:
         if original_stmt:
             return (
@@ -981,9 +995,10 @@ def resolve_solver_statement(
                 "ok",
                 "statement_target",
                 "No prover_statement worker configured; using the existing statement directly.",
+                blocked_by_alpha_duplicate,
                 prover_statement_worker_meta,
             )
-        return "", "stuck", "", "Original statement is empty.", prover_statement_worker_meta
+        return "", "stuck", "", "Original statement is empty.", blocked_by_alpha_duplicate, prover_statement_worker_meta
 
     emit_phase_log(
         phase_logs,
@@ -1030,6 +1045,7 @@ def resolve_solver_statement(
             result = "stuck"
             formalized_stmt = ""
             theorem_name_stem = ""
+            blocked_by_alpha_duplicate = True
             duplicate_note = "alpha-equivalent to existing theorem/lemma: " + ", ".join(matched_names[:5])
             notes = f"{notes} {duplicate_note}".strip() if notes else duplicate_note
         elif not bool(alpha_filter_result.get("candidate_elaborated", True)):
@@ -1047,7 +1063,7 @@ def resolve_solver_statement(
         theorem_name_stem=theorem_name_stem,
         notes=notes,
     )
-    return solver_stmt, result, theorem_name_stem, notes, prover_statement_worker_meta
+    return solver_stmt, result, theorem_name_stem, notes, blocked_by_alpha_duplicate, prover_statement_worker_meta
 
 
 def request_expand_candidates(
@@ -1126,7 +1142,7 @@ def attempt_formalization_until_timeout(
     phase_logger: Callable[..., None] | None = None,
 ) -> tuple[bool, str | None, str, str, str, list[str], str]:
     verify_success = False
-    theorem_name: str | None = None
+    current_theorem_name = validate_theorem_name(theorem_name)
     verify_error_excerpt = ""
     include_mathlib_import = False
     retained_new_problems = list(new_problems)
@@ -1149,7 +1165,7 @@ def attempt_formalization_until_timeout(
             }
         )
         save_formalization_memory(memory_path, problem_id, persisted_history)
-        return verify_success, theorem_name, result, proof_text, counterexample_text, new_problems, verify_error_excerpt
+        return verify_success, current_theorem_name, result, proof_text, counterexample_text, new_problems, verify_error_excerpt
 
     if not proof_text.strip():
         if formalize_worker_settings is None:
@@ -1167,7 +1183,7 @@ def attempt_formalization_until_timeout(
                 }
             )
             save_formalization_memory(memory_path, problem_id, persisted_history)
-            return verify_success, theorem_name, "stuck", proof_text, counterexample_text, new_problems, verify_error_excerpt
+            return verify_success, current_theorem_name, "stuck", proof_text, counterexample_text, new_problems, verify_error_excerpt
 
         try:
             same_problem_history_tail = load_formalization_memory(memory_path, problem_id)[-8:]
@@ -1201,7 +1217,7 @@ def attempt_formalization_until_timeout(
                     }
                 )
                 save_formalization_memory(memory_path, problem_id, persisted_history)
-                return verify_success, theorem_name, "stuck", proof_text, counterexample_text, new_problems, verify_error_excerpt
+                return verify_success, current_theorem_name, "stuck", proof_text, counterexample_text, new_problems, verify_error_excerpt
             raise
         if result not in {"proof", "counterexample"}:
             persisted_history = load_formalization_memory(memory_path, problem_id)
@@ -1218,7 +1234,7 @@ def attempt_formalization_until_timeout(
                 }
             )
             save_formalization_memory(memory_path, problem_id, persisted_history)
-            return verify_success, theorem_name, result, proof_text, counterexample_text, new_problems, verify_error_excerpt
+            return verify_success, current_theorem_name, result, proof_text, counterexample_text, new_problems, verify_error_excerpt
 
     deadline = time.monotonic() + max(1, formalization_retry_budget_sec)
     persisted_history = load_formalization_memory(memory_path, problem_id)
@@ -1234,7 +1250,7 @@ def attempt_formalization_until_timeout(
                 repair_round=repair_round,
             )
         theorem_name, scratch_code = formalize_to_scratch(
-            theorem_name=theorem_name,
+            theorem_name=current_theorem_name,
             stmt=stmt,
             mode=result,
             proof_text=proof_text,
@@ -1285,7 +1301,7 @@ def attempt_formalization_until_timeout(
             save_formalization_memory(memory_path, problem_id, repair_history)
             return (
                 verify_success,
-                theorem_name,
+                current_theorem_name,
                 result,
                 proof_text,
                 counterexample_text,
@@ -1297,7 +1313,7 @@ def attempt_formalization_until_timeout(
             save_formalization_memory(memory_path, problem_id, repair_history)
             return (
                 verify_success,
-                theorem_name,
+                current_theorem_name,
                 result,
                 proof_text,
                 counterexample_text,
@@ -1601,6 +1617,7 @@ def main() -> None:
             statement_formalization_result,
             theorem_name_stem,
             statement_formalization_notes,
+            blocked_by_alpha_duplicate,
             prover_statement_worker_meta,
         ) = resolve_solver_statement(
             prover_statement_worker_settings=prover_statement_worker_settings,
@@ -1748,7 +1765,7 @@ def main() -> None:
 
         new_problems = list(solver_new_problem_suggestions)
 
-        if worker_settings is not None:
+        if worker_settings is not None and not blocked_by_alpha_duplicate:
             emit_phase_log(
                 args.phase_logs,
                 "expand_generate",
@@ -1792,6 +1809,14 @@ def main() -> None:
                     problem_id=problem_id,
                     error=str(exc),
                 )
+        elif worker_settings is not None and blocked_by_alpha_duplicate:
+            emit_phase_log(
+                args.phase_logs,
+                "expand_generate_skipped",
+                iteration=completed_iterations + 1,
+                problem_id=problem_id,
+                reason="alpha_duplicate",
+            )
 
         report = apply_state_update(
             data_dir=data_dir,
@@ -1813,6 +1838,7 @@ def main() -> None:
         report["prover_statement_result"] = statement_formalization_result
         report["prover_statement_theorem_name_stem"] = theorem_name_stem
         report["prover_statement_notes"] = statement_formalization_notes
+        report["prover_statement_blocked_by_alpha_duplicate"] = blocked_by_alpha_duplicate
         report["prover_attempts_used"] = prover_attempts_used
         report["prover_proof_sketch"] = proof_sketch
         report["prover_counterexample_text"] = counterexample_text

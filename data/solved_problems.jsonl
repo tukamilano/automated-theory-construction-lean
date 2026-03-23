@@ -1,0 +1,6 @@
+{"id":"op_000001","stmt":"∀ {α : Type u} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α], ∀ g : ACR.GödelFixpoint α, g.1 ≤ □g.1","thm":"thm_godel_fixpoint_le_prov_000001"}
+{"id":"op_000002","stmt":"∀ {α : Type u} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], ∀ g h : ACR.GödelFixpoint α, g.1 ≡ h.1","thm":"thm_godel_fixpoints_equivalent_000002"}
+{"id":"op_000003","stmt":"∀ {α : Type u} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α] [Nonempty (ACR.GödelFixpoint α)], ⊠(⊤ : α) ≡ ⊠⊠(⊤ : α)","thm":"thm_reft_top_equiv_double_reft_top_000003"}
+{"id":"op_000004","stmt":"∀ {α : Type u} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α] [Nonempty (ACR.GödelFixpoint α)], ∃ g : ACR.GödelFixpoint α, g.1 ≡ ⊠(⊤ : α)","thm":"thm_exists_godel_fixpoint_equiv_reft_top_000004"}
+{"id":"op_000005","stmt":"∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α] [Nonempty (ACR.GödelFixpoint α)], ACR.HenkinFixpoint α := { h : α // h ≡ □h } is nonempty","thm":"thm_henkin_fixpoint_nonempty_000005"}
+{"id":"op_000007","stmt":"For every type α equipped with ACR, Prov, Reft, APS, and C5, if the underlying preorder on α is antisymmetric, then any two elements of `ACR.GödelFixpoint α` are equal.","thm":"thm_godel_fixpoints_equal_of_antisymm_000007"}

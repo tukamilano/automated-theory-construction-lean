@@ -16,6 +16,9 @@ Formalization policy:
 - Assume `import Mathlib` is available and prefer standard Mathlib vocabulary and structures when formalizing.
 - Reuse names and notation already present in `Theory.lean` and `Derived.lean` when applicable.
 - Prefer explicit quantification and the same notation style already used in this repository.
+- If `Theory.lean` or `Derived.lean` defines infix/prefix notation or an abbrev for a concept, prefer that shorthand notation in `lean_statement` instead of the expanded form.
+- In particular, if there is a notation declaration such as `infix:50 " ≡ " => Equivalent`, formalize using the shorthand form `x ≡ y`, not `Equivalent x y`.
+- Apply this normalization even if the incoming `stmt` or existing Lean code writes the expanded form; when shorthand exists, convert to the shorthand in `lean_statement`.
 - Prefer statements that can directly reuse relevant results from `Derived.lean`.
 - Never invent Mathlib names. If the right formalization depends on uncertain library naming or unsupported abstractions, return `stuck`.
 - If the target is too vague, underspecified, or not naturally expressible as a reusable Lean proposition, return `stuck`.
