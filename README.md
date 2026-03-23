@@ -163,6 +163,36 @@ ATC_CODEX_TIMEOUT=390 \
 uv run scripts/run_loop.py --enable-worker
 ```
 
+### Final Two-Stage Refactor For `Derived.lean`
+
+After the main loop has accumulated enough theorems in `AutomatedTheoryConstruction/Derived.lean`,
+run the final cleanup in two passes.
+
+Pass 1 performs the main structural refactor and writes a preview file:
+
+```bash
+uv run python scripts/refactor_derived.py \
+  --worker-command "uv run python scripts/codex_worker.py" \
+  --output-file AutomatedTheoryConstruction/Derived.refactored.preview.lean
+```
+
+Pass 2 keeps the refactored theorem inventory but applies a review-focused non-semantic polish using
+the thin `codex exec` wrapper and the repository skills directly. No dedicated review prompt file is
+needed:
+
+```bash
+uv run python scripts/direct_refactor_derived.py \
+  --input-file AutomatedTheoryConstruction/Derived.refactored.preview.lean \
+  --output-file AutomatedTheoryConstruction/Derived.refactored.reviewed.lean
+```
+
+If `AutomatedTheoryConstruction/Derived.refactored.reviewed.lean` already exists and you want Codex
+to continue editing it without copying from the preview again, use:
+
+```bash
+uv run python scripts/direct_refactor_derived.py --skip-copy
+```
+
 ## Initialization Behavior
 
 By default, `scripts/run_loop.py` starts with `--initialize-on-start`, which means it will:
@@ -173,6 +203,8 @@ By default, `scripts/run_loop.py` starts with `--initialize-on-start`, which mea
 - reset `data/formalization_memory.json`
 - reset `AutomatedTheoryConstruction/Scratch.lean`
 - reset `AutomatedTheoryConstruction/Derived.lean`
+- delete `AutomatedTheoryConstruction/Derived.refactored.preview.lean` if present
+- delete `AutomatedTheoryConstruction/Derived.refactored.reviewed.lean` if present
 - run `lake build`
 
 If you want to continue from the current runtime state and keep accumulated theorems in `Derived.lean`, use:

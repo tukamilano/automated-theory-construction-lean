@@ -18,6 +18,7 @@ Policy:
 - Treat `open_problems` as the current queue snapshot. Before returning any candidate, compare it against that queue and drop anything that is already present or is only a shallow rewording of an open problem.
 - If `theory_context` lists relevant verified theorems, use them to avoid proposing duplicates and to infer missing intermediate lemmas.
 - Also use the verified-theorem information in `theory_context` as a duplicate filter: if a candidate is already represented there, or differs only by superficial syntactic variation, do not return it.
+- In particular, avoid candidates that are alpha-equivalent to statements already present in `Derived.lean` / `theory_context`, or that are likely equivalent to them up to propositional-logic or first-order logical reformulation.
 - Prefer follow-up problems that arose naturally in the current iteration logs over generic guesses.
 - Avoid local one-step variants of the current target or recent failed follow-up ideas when they do not add a genuinely new proof pattern.
 - Prefer diversity across candidates: if you return two candidates, they should differ meaningfully in shape or role, not just in variable names or superficial rewrites.
@@ -51,6 +52,8 @@ Low-quality candidates to reject:
 - cosmetic rephrasings, variable-renamings, notation-only rewrites, or namespace-only rewrites
 - shallow specializations or shallow generalizations that preserve the same mathematical content
 - near-duplicates of existing open, solved, or counterexampled statements
+- alpha-equivalent restatements of a theorem already present in `Derived.lean`
+- statements that are merely propositional-logically or first-order logically equivalent to an existing theorem in `Derived.lean`, even if phrased very differently
 - one-off handcrafted example checks whose main value is only local verification
 - statements that merely restate a known witness, counterexample, or already verified pattern in slightly different packaging
 - narrow local decompositions when a stronger outward-looking follow-up is available

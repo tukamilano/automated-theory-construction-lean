@@ -30,6 +30,7 @@ def _prover_statement_result(payload: dict[str, Any]) -> dict[str, Any]:
         "problem_id": problem_id,
         "result": "ok" if stmt else "stuck",
         "lean_statement": stmt,
+        "theorem_name_stem": "statement_target" if stmt else "",
         "notes": "mock_worker: echoed input statement" if stmt else "mock_worker: no statement provided",
     }
 
@@ -72,6 +73,16 @@ def _expand_result(payload: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _refactor_derived_result(payload: dict[str, Any]) -> dict[str, Any]:
+    derived_code = str(payload.get("derived_code", "")).strip()
+    return {
+        "result": "ok" if derived_code else "stuck",
+        "refactored_code": derived_code,
+        "summary": "mock_worker: echoed input Derived.lean" if derived_code else "mock_worker: no Derived.lean content provided",
+        "change_notes": ["mock_worker: no refactor applied"] if derived_code else [],
+    }
+
+
 def main() -> None:
     try:
         request = _read_request()
@@ -90,6 +101,8 @@ def main() -> None:
             result_payload = _repair_result(payload)
         elif task_type == "expand":
             result_payload = _expand_result(payload)
+        elif task_type == "refactor_derived":
+            result_payload = _refactor_derived_result(payload)
         else:
             raise ValueError(f"unsupported task_type: {task_type}")
 

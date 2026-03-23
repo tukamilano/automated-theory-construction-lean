@@ -19,11 +19,16 @@ Formalization policy:
 - Prefer statements that can directly reuse relevant results from `Derived.lean`.
 - Never invent Mathlib names. If the right formalization depends on uncertain library naming or unsupported abstractions, return `stuck`.
 - If the target is too vague, underspecified, or not naturally expressible as a reusable Lean proposition, return `stuck`.
+- When `result` is `ok`, also provide `theorem_name_stem`: a short snake_case English phrase describing the claim.
+- `theorem_name_stem` must use only lowercase letters, digits, and underscores, start with a letter, omit any `thm` prefix, and omit the trailing numeric problem suffix.
+- Prefer concise semantic names of about 3 to 6 words, such as `godel_fixpoint_below_box` or `semigroup_mul_comm`.
+- When `result` is `stuck`, return `""` for `theorem_name_stem`.
 
 Output schema:
 {
   "problem_id": "<match input>",
   "result": "ok|stuck",
   "lean_statement": "Lean proposition statement only",
+  "theorem_name_stem": "short snake_case semantic name, or empty when stuck",
   "notes": "short note about the formalization or why it is stuck"
 }

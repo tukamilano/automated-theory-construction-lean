@@ -12,7 +12,7 @@ from typing import Any
 @dataclass(frozen=True)
 class WorkerSettings:
     command: str
-    timeout_sec: int
+    timeout_sec: int | None
 
 
 def _single_line_excerpt(text: str, limit: int = 240) -> str:
@@ -24,9 +24,14 @@ def _single_line_excerpt(text: str, limit: int = 240) -> str:
     return normalized[: limit - 3] + "..."
 
 
-def _resolve_timeout_seconds(timeout_text: str | None, default: int) -> int:
+def _resolve_timeout_seconds(timeout_text: str | None, default: int | None) -> int | None:
     raw = (timeout_text or "").strip()
-    return int(raw) if raw else default
+    if not raw:
+        return default
+    parsed = int(raw)
+    if parsed == 0:
+        return None
+    return parsed
 
 
 def load_worker_settings(
@@ -35,11 +40,13 @@ def load_worker_settings(
 ) -> WorkerSettings:
     command = (command_override or os.getenv("ATC_WORKER_COMMAND") or "").strip()
     timeout_from_env = _resolve_timeout_seconds(os.getenv("ATC_WORKER_TIMEOUT"), 180)
-    timeout_sec = timeout_override if timeout_override is not None else timeout_from_env
+    timeout_sec = (
+        None if timeout_override == 0 else timeout_override
+    ) if timeout_override is not None else timeout_from_env
 
     if not command:
         raise ValueError("Worker command is required. Set --worker-command or ATC_WORKER_COMMAND.")
-    if timeout_sec <= 0:
+    if timeout_sec is not None and timeout_sec <= 0:
         raise ValueError("Worker timeout must be > 0 seconds.")
 
     return WorkerSettings(command=command, timeout_sec=timeout_sec)
@@ -62,11 +69,13 @@ def load_task_worker_settings(
         os.getenv(f"{env_prefix}_TIMEOUT"),
         base_settings.timeout_sec,
     )
-    timeout_sec = timeout_override if timeout_override is not None else timeout_from_env
+    timeout_sec = (
+        None if timeout_override == 0 else timeout_override
+    ) if timeout_override is not None else timeout_from_env
 
     if not command:
         raise ValueError(f"{task_name} worker command must not be empty.")
-    if timeout_sec <= 0:
+    if timeout_sec is not None and timeout_sec <= 0:
         raise ValueError(f"{task_name} worker timeout must be > 0 seconds.")
 
     return WorkerSettings(command=command, timeout_sec=timeout_sec)
@@ -163,6 +172,10 @@ def invoke_worker_json(
     if not cmd:
         raise ValueError("Worker command could not be parsed")
 
+    worker_env = os.environ.copy()
+    if settings.timeout_sec is not None:
+        worker_env[f"ATC_{task_type.upper()}_WORKER_TIMEOUT"] = str(settings.timeout_sec)
+
     try:
         completed = subprocess.run(
             cmd,
@@ -170,12 +183,27 @@ def invoke_worker_json(
             capture_output=True,
             text=True,
             timeout=settings.timeout_sec,
+            env=worker_env,
             check=False,
         )
     except subprocess.TimeoutExpired as exc:
+        timeout_label = f"{settings.timeout_sec}s" if settings.timeout_sec is not None else "without a limit"
+        stderr_excerpt = _single_line_excerpt(
+            (exc.stderr.decode() if isinstance(exc.stderr, bytes) else exc.stderr) or ""
+        )
+        stdout_excerpt = _single_line_excerpt(
+            (exc.stdout.decode() if isinstance(exc.stdout, bytes) else exc.stdout) or ""
+        )
+        detail_parts: list[str] = []
+        if stderr_excerpt:
+            detail_parts.append(f"stderr={stderr_excerpt}")
+        if stdout_excerpt:
+            detail_parts.append(f"stdout={stdout_excerpt}")
+        detail_suffix = f" ({'; '.join(detail_parts)})" if detail_parts else ""
         raise RuntimeError(
-            f"Worker timed out after {settings.timeout_sec}s. "
+            f"Worker timed out after {timeout_label}. "
             "Try increasing --worker-timeout (or ATC_WORKER_TIMEOUT), e.g. 180-300."
+            f"{detail_suffix}"
         ) from exc
 
     if completed.returncode != 0:
