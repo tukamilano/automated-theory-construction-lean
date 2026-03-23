@@ -3,18 +3,17 @@
 
 @import "minima";
 
-.page-content {
-  overflow-x: clip;
-}
-
-.post-content code,
-.home code,
-.page-content code {
+.post-content :not(pre) > code,
+.home :not(pre) > code,
+.page-content :not(pre) > code {
   white-space: normal;
   overflow-wrap: anywhere;
   word-break: break-word;
 }
 
+.post-content .highlighter-rouge,
+.home .highlighter-rouge,
+.page-content .highlighter-rouge,
 .post-content pre,
 .post-content .highlight,
 .home pre,
@@ -31,6 +30,17 @@
   white-space: pre;
   overflow-wrap: normal;
   word-break: normal;
+  display: block;
+  min-width: max-content;
+}
+
+.post-content pre,
+.post-content .highlight pre,
+.home pre,
+.home .highlight pre,
+.page-content pre,
+.page-content .highlight pre {
+  white-space: pre;
 }
 
 .post-content img,

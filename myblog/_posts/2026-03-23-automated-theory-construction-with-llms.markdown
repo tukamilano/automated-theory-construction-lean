@@ -97,7 +97,7 @@ These are formalized versions of statements from Sections 2 and 3 of [arXiv:1602
 
 The results obtained so far are available in [this gist](https://gist.github.com/tukamilano/d25609aeb416005e24be23308c4abd3d). I am currently receiving feedback on the generated code.
 
-I attach the[ChatGPT response](https://chatgpt.com/share/69c0ea0a-8d40-8008-bc0b-892de6a6b429) for reference.
+I attach the [ChatGPT response](https://chatgpt.com/share/69c0ea0a-8d40-8008-bc0b-892de6a6b429) for reference.
 
 ## What I Still Do Not Fully Understand
 
