@@ -1,24 +1,6 @@
 # Automated Theory Construction
 
-In other words, this repository is aimed at exploratory theorem generation in underdeveloped formal settings, not only automation inside familiar, well-prepared theories.
-
 It implements an automated theory-construction loop on top of Lean 4 + Mathlib. Given a base theory, the system proposes candidate statements, attempts to formalize and prove them in Lean, verifies successful results, and accumulates the verified theorems into the derived theory.
-
-## Most Important Principle
-
-The most important part of this repository is the solved-and-verified follow-up policy in `prompts/new_problem_expander.md`.
-
-If you read only one design rule, read this one: when the current problem is solved and verified (`verify_success = true` and `result = proof|counterexample`), the system should prefer outward-looking follow-up problems that extend the theory rather than merely staying near the last proof script.
-
-More concretely, follow-up generation should favor, roughly in this order:
-
-1. natural generalizations or reusable abstractions
-2. converses, strict separations, or failure-of-converse statements
-3. existence, uniqueness, impossibility, or rigidity phenomena
-4. finite-model behavior, extremal behavior, boundary cases, or classification fragments
-5. adjacent structural consequences that clarify the global shape of the theory
-
-When a genuinely useful candidate is available, it should ideally broaden, reinterpret, or reuse the verified result beyond the immediate local target. Prefer candidates that teach something non-obvious about the theory or its models. If only weak local variants are available, returning no follow-up is acceptable. If a more informative model-level, structural, or boundary-case follow-up is available, prefer it over a nearby local rewrite.
 
 ## Quick Mental Model
 
