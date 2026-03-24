@@ -1432,19 +1432,22 @@ def initialize_runtime_state(
 def prebuild_lean_project() -> None:
     """Build Lean artifacts once during initialization.
 
-    This keeps heavy compilation outside the per-problem solving path.
+    Build only the stable library modules here.
+    Scratch.lean is a transient verification target and should remain outside
+    initialization builds so a broken scratch proof does not block the loop.
     """
-    proc = subprocess.run(
-        ["lake", "build"],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    if proc.returncode != 0:
-        stderr = (proc.stderr or "").strip()
-        stdout = (proc.stdout or "").strip()
-        excerpt = stderr or stdout or "lake build failed without output"
-        raise RuntimeError(f"Initialization build failed: {excerpt}")
+    for target in ("AutomatedTheoryConstruction.Theory", "AutomatedTheoryConstruction.Derived"):
+        proc = subprocess.run(
+            ["lake", "build", target],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if proc.returncode != 0:
+            stderr = (proc.stderr or "").strip()
+            stdout = (proc.stdout or "").strip()
+            excerpt = stderr or stdout or f"lake build {target} failed without output"
+            raise RuntimeError(f"Initialization build failed for {target}: {excerpt}")
 
 
 def main() -> None:

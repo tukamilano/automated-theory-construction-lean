@@ -924,8 +924,84 @@
       "stage": "statement_formalization",
       "source_statement": "There exists a type `α` with instances `ACR α`, `ACR.Prov α`, `ACR.Reft α`, `ACR.APS α`, and `ACR.C5 α` such that `ACR.Consistent α` holds, `((⊠⊠(⊤ : α)) ≐ ⊠(⊤ : α))` holds, and `¬ ((⊠(⊤ : α)) ≐ □(⊠(⊤ : α)))`.",
       "formalized_statement": "∃ (α : Type _), ∃ (_ : ACR α), ∃ (_ : ACR.Prov α), ∃ (_ : ACR.Reft α), ∃ (_ : ACR.APS α), ∃ (_ : ACR.C5 α), ACR.Consistent α ∧ (⊠⊠(⊤ : α) ≐ ⊠(⊤ : α)) ∧ ¬ (⊠(⊤ : α) ≐ □(⊠(⊤ : α)))",
-      "theorem_name_stem": "consistent_reft_top_not_box_equiv",
       "statement_formalization_notes": "Formalized as an existential package over the carrier and all required instances, using the repository notation `≐`, `⊠`, and `□`.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": false,
+      "proof_sketch": "Use the concrete finite model α = Fin 3 with the usual order, ⊥ = 0, ⊤ = 2, □x = if x = 0 then 1 else 2, and ⊠x = if x = 0 then 2 else 1. The ACR, APS, and C5 axioms are all closed finite checks, so they are discharged by `decide`. In this model, consistency is immediate, `⊠⊠⊤` and `⊠⊤` both compute to 1, while `□(⊠⊤)` computes to 2, so `⊠⊤ ≐ □(⊠⊤)` fails.",
+      "proof_text": "let acr : ACR (Fin 3) := {\n  toTop := inferInstance\n  toBot := inferInstance\n  toPreorder := inferInstance\n}\nletI : ACR (Fin 3) := acr\nlet prov : ACR.Prov (Fin 3) := ⟨fun x => if x = 0 then 1 else 2⟩\nlet reft : ACR.Reft (Fin 3) := ⟨fun x => if x = 0 then 2 else 1⟩\nletI : ACR.Prov (Fin 3) := prov\nletI : ACR.Reft (Fin 3) := reft\nlet aps : ACR.APS (Fin 3) := {\n  prov_mono := by decide\n  reft_anti_mono := by decide\n  top_le_reft_bot := by decide\n  le_reft_top_of_le_prov_of_le_reft := by decide\n  reft_le_prov_reft := by decide\n}\nletI : ACR.APS (Fin 3) := aps\nlet c5 : ACR.C5 (Fin 3) := {\n  le_top := by decide\n}\nrefine ⟨Fin 3, acr, prov, reft, aps, c5, ?_⟩\nconstructor\n· decide\nconstructor\n· constructor <;> decide\n· decide",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:8:13: error(lean.synthInstanceFailed): failed to synthesize instance of type class",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:8:13: error(lean.synthInstanceFailed): failed to synthesize instance of type class | Top (Fin 3) | Hint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command.",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": false,
+      "proof_sketch": "Instantiate `α` as `Fin 3` with a manually supplied 3-point preorder, top `2`, bottom `0`, `□0 = 1` and `□x = 2` otherwise, and `⊠0 = 2` and `⊠x = 1` otherwise. The previous failure came from missing `Top`/`Bot`/`Preorder` instances for `Fin 3`, so those are built locally first; then all `ACR`, `APS`, and `C5` axioms are finite checks solved by `decide`. In this model, consistency is `¬ (2 ≤ 0)`, `⊠⊠⊤` and `⊠⊤` both compute to `1`, while `□(⊠⊤)` computes to `2`, so the final equivalence fails.",
+      "proof_text": "let α : Type := Fin 3\nletI : Top α := ⟨2⟩\nletI : Bot α := ⟨0⟩\nletI : Preorder α := {\n  le := fun x y => x.1 ≤ y.1\n  le_refl := by\n    intro x\n    exact Nat.le_refl x.1\n  le_trans := by\n    intro a b c hab hbc\n    exact Nat.le_trans hab hbc\n}\nlet acr : ACR α := {\n  toTop := inferInstance\n  toBot := inferInstance\n  toPreorder := inferInstance\n}\nletI : ACR α := acr\nlet prov : ACR.Prov α := ⟨fun x => if x = 0 then 1 else 2⟩\nlet reft : ACR.Reft α := ⟨fun x => if x = 0 then 2 else 1⟩\nletI : ACR.Prov α := prov\nletI : ACR.Reft α := reft\nlet aps : ACR.APS α := {\n  prov_mono := by decide\n  reft_anti_mono := by decide\n  top_le_reft_bot := by decide\n  le_reft_top_of_le_prov_of_le_reft := by decide\n  reft_le_prov_reft := by decide\n}\nletI : ACR.APS α := aps\nlet c5 : ACR.C5 α := {\n  le_top := by decide\n}\nrefine ⟨α, acr, prov, reft, aps, c5, ?_⟩\nconstructor\n· decide\nconstructor\n· constructor <;> decide\n· decide",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:10:23: error: could not synthesize default value for field 'lt_iff_le_not_ge' of 'Preorder' using tactics",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:10:23: error: could not synthesize default value for field 'lt_iff_le_not_ge' of 'Preorder' using tactics | AutomatedTheoryConstruction/Scratch.lean:10:23: error: Tactic `rfl` failed: The left-hand side | a✝ < b✝",
+      "new_problems": []
+    }
+  ],
+  "op_000029": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "There exists a type `α` with instances `ACR α`, `ACR.Prov α`, `ACR.Reft α`, `ACR.APS α`, and `ACR.C5 α`, and an element `x : α`, such that `x ≐ ⊠(⊤ : α)` holds but `¬ (x ≐ ⊠x)` holds.",
+      "formalized_statement": "∃ (α : Type _), ∃ (_ : ACR α), ∃ (_ : ACR.Prov α), ∃ (_ : ACR.Reft α), ∃ (_ : ACR.APS α), ∃ (_ : ACR.C5 α), ∃ (x : α), x ≐ ⊠(⊤ : α) ∧ ¬ (x ≐ ⊠x)",
+      "statement_formalization_notes": "Packaged the ambient typeclass structure and witness element with explicit nested existential binders, using the repository notation `≐` and `⊠`.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "stuck",
+      "verify_success": false,
+      "proof_sketch": "A direct existence proof looks promising by building a tiny finite preorder model. Take a three-element chain `0 ≤ 1 ≤ 2`, with `⊥ = 0`, `⊤ = 2`, `□x := 2` for all `x`, and `⊠x := if x = 0 then 2 else 1`. Then `⊠` is antitone, `top_le_reft_bot` becomes `2 ≤ ⊠0 = 2`, and `reft_le_prov_reft` is trivial because `□⊠x = 2`. The key APS axiom `x ≤ □y → x ≤ ⊠y → x ≤ ⊠⊤` also holds since `□y = 2`, so it reduces to `x ≤ ⊠y → x ≤ 1`, and for all `y` one has `⊠y ≥ 1` only when `⊠⊤ = 1`, making the implication valid. With `x := 1`, we get `x ≐ ⊠⊤` because `⊠⊤ = 1`, but `⊠x = 1`'s image can be arranged to differ from `x` in the preorder-equivalence sense; in this concrete choice, checking `x ≐ ⊠x` is the only remaining verification step, and the model shape strongly suggests the existential target is satisfiable. This depends only on standard finite-instance construction, not on any deep derived theorem.",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "formalize worker timeout: Worker returned error: Command '['codex', 'exec', '-', '--sandbox', 'read-only', '--skip-git-repo-check', '--output-last-message', '/var/folders/2_/c2t72bmn00j3z7cnkfvqvyj80000gn/T/tmp_f28l85q']' timed out after 390 seconds (task_type=formalize)",
+      "lean_error_fingerprint": "formalizer_timeout",
+      "new_problems": []
+    }
+  ],
+  "op_000030": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "There exists a type `α` with instances `ACR α`, `ACR.Prov α`, `ACR.Reft α`, `ACR.APS α`, and `ACR.C5 α` such that `¬ Nonempty (ACR.GödelFixpoint α)` and `∃ x : α, x ≐ ⊠(⊤ : α)` both hold.",
+      "formalized_statement": "∃ (α : Type _), ∃ (hA : ACR α), ∃ (hP : @ACR.Prov α hA), ∃ (hR : @ACR.Reft α hA), ∃ (hAPS : @ACR.APS α hA hP hR), ∃ (hC5 : @ACR.C5 α hA hP hR hAPS), let _ : ACR α := hA; let _ : ACR.Prov α := hP; let _ : ACR.Reft α := hR; let _ : ACR.APS α := hAPS; let _ : ACR.C5 α := hC5; ¬ Nonempty (ACR.GödelFixpoint α) ∧ ∃ x : α, x ≐ ⊠(⊤ : α)",
+      "statement_formalization_notes": "The statement is formalized as an explicit existential package of the type and structure witnesses, then those witnesses are reintroduced as local instances in the body to use the repository notations `≐` and `⊠`.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "stage": "statement_formalization",
+      "source_statement": "There exists a type `α` with instances `ACR α`, `ACR.Prov α`, `ACR.Reft α`, `ACR.APS α`, and `ACR.C5 α` such that `¬ Nonempty (ACR.GödelFixpoint α)` and `∃ x : α, x ≐ ⊠(⊤ : α)` both hold.",
+      "formalized_statement": "∃ (α : Type _), ∃ (_ : ACR α), ∃ (_ : ACR.Prov α), ∃ (_ : ACR.Reft α), ∃ (_ : ACR.APS α), ∃ (_ : ACR.C5 α), ¬ Nonempty (ACR.GödelFixpoint α) ∧ ∃ x : α, x ≐ ⊠(⊤ : α)",
+      "theorem_name_stem": "exists_no_godel_fixpoint_reft_top_witness",
+      "statement_formalization_notes": "Formalized as an explicit existential package of the type, required instances, and the two requested properties.",
       "result": "ok",
       "verify_success": true,
       "proof_sketch": "",

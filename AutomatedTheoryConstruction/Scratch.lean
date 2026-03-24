@@ -1,35 +1,47 @@
-import Mathlib.Logic.Function.Iterate
 import AutomatedTheoryConstruction.Theory
 import AutomatedTheoryConstruction.Derived
 
 namespace AutomatedTheoryConstruction
 
-theorem thm_reft_iterate_top_equiv_000026 : ∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], ⊠⊠(⊤ : α) ≐ ⊠(⊤ : α) → ∀ n : Nat, (Nat.iterate (fun y : α => ⊠ y) (n + 1) (⊤ : α)) ≐ ⊠(⊤ : α) := by
-  intro α _ _ _ _ _ h n
-  let f : α → α := fun y => ⊠ y
-  have hmap : ∀ {x y : α}, x ≐ y → f x ≐ f y := by
-    intro x y hxy
-    exact ⟨ACR.reft_anti_mono hxy.2, ACR.reft_anti_mono hxy.1⟩
-  have hiter_map : ∀ m : Nat, ∀ {x y : α}, x ≐ y → Nat.iterate f m x ≐ Nat.iterate f m y := by
-    intro m
-    induction m with
-    | zero =>
-        intro x y hxy
-        simpa [Nat.iterate] using hxy
-    | succ m ihm =>
-        intro x y hxy
-        simpa [f, Nat.iterate] using ihm (x := f x) (y := f y) (hmap hxy)
-  have hstable : ∀ m : Nat, Nat.iterate f m (⊠(⊤ : α)) ≐ ⊠(⊤ : α) := by
-    intro m
-    induction m with
-    | zero =>
-        exact ⟨le_rfl, le_rfl⟩
-    | succ m ihm =>
-        have hstep : Nat.iterate f m (⊠⊠(⊤ : α)) ≐ Nat.iterate f m (⊠(⊤ : α)) :=
-          hiter_map m (x := ⊠⊠(⊤ : α)) (y := ⊠(⊤ : α)) h
-        constructor
-        · exact le_trans hstep.1 ihm.1
-        · exact le_trans ihm.2 hstep.2
-  simpa [f, Nat.iterate] using hstable n
+theorem thm_consistent_reft_top_not_box_equiv_000028 : ∃ (α : Type _), ∃ (_ : ACR α), ∃ (_ : ACR.Prov α), ∃ (_ : ACR.Reft α), ∃ (_ : ACR.APS α), ∃ (_ : ACR.C5 α), ACR.Consistent α ∧ (⊠⊠(⊤ : α) ≐ ⊠(⊤ : α)) ∧ ¬ (⊠(⊤ : α) ≐ □(⊠(⊤ : α))) := by
+  let α : Type := Fin 3
+  letI : Top α := ⟨2⟩
+  letI : Bot α := ⟨0⟩
+  letI : Preorder α := {
+    le := fun x y => x.1 ≤ y.1
+    le_refl := by
+      intro x
+      exact Nat.le_refl x.1
+    le_trans := by
+      intro a b c hab hbc
+      exact Nat.le_trans hab hbc
+  }
+  let acr : ACR α := {
+    toTop := inferInstance
+    toBot := inferInstance
+    toPreorder := inferInstance
+  }
+  letI : ACR α := acr
+  let prov : ACR.Prov α := ⟨fun x => if x = 0 then 1 else 2⟩
+  let reft : ACR.Reft α := ⟨fun x => if x = 0 then 2 else 1⟩
+  letI : ACR.Prov α := prov
+  letI : ACR.Reft α := reft
+  let aps : ACR.APS α := {
+    prov_mono := by decide
+    reft_anti_mono := by decide
+    top_le_reft_bot := by decide
+    le_reft_top_of_le_prov_of_le_reft := by decide
+    reft_le_prov_reft := by decide
+  }
+  letI : ACR.APS α := aps
+  let c5 : ACR.C5 α := {
+    le_top := by decide
+  }
+  refine ⟨α, acr, prov, reft, aps, c5, ?_⟩
+  constructor
+  · decide
+  constructor
+  · constructor <;> decide
+  · decide
 
 end AutomatedTheoryConstruction
