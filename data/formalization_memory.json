@@ -866,5 +866,74 @@
       "lean_error_fingerprint": "no_diagnostics",
       "new_problems": []
     }
+  ],
+  "op_000026": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], ⊠⊠(⊤ : α) ≐ ⊠(⊤ : α) → ∀ n : Nat, (Nat.iterate (fun y : α => ⊠ y) (n + 1) (⊤ : α)) ≐ ⊠(⊤ : α)",
+      "formalized_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], ⊠⊠(⊤ : α) ≐ ⊠(⊤ : α) → ∀ n : Nat, (Nat.iterate (fun y : α => ⊠ y) (n + 1) (⊤ : α)) ≐ ⊠(⊤ : α)",
+      "statement_formalization_notes": "Direct formalization of the given statement using the repo's existing ≐ and ⊠ notation.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "Let f := fun y => ⊠ y. First show that if x ≐ y, then f x ≐ f y, so Nat.iterate f preserves equivalence by induction on the iterate count. Then, using the hypothesis ⊠⊠⊤ ≐ ⊠⊤, prove by induction on m that Nat.iterate f m (⊠⊤) ≐ ⊠⊤ for all m. Finally, unfold one iterate to rewrite the original (n + 1)-fold iterate of ⊤ as the n-fold iterate of ⊠⊤.",
+      "proof_text": "intro α _ _ _ _ _ h n\nlet f : α → α := fun y => ⊠ y\nhave hmap : ∀ {x y : α}, x ≐ y → f x ≐ f y := by\n  intro x y hxy\n  exact ⟨ACR.reft_anti_mono hxy.2, ACR.reft_anti_mono hxy.1⟩\nhave hiter_map : ∀ m : Nat, ∀ {x y : α}, x ≐ y → Nat.iterate f m x ≐ Nat.iterate f m y := by\n  intro m\n  induction m with\n  | zero =>\n      intro x y hxy\n      simpa [Nat.iterate] using hxy\n  | succ m ihm =>\n      intro x y hxy\n      simpa [f, Nat.iterate] using ihm (x := f x) (y := f y) (hmap hxy)\nhave hstable : ∀ m : Nat, Nat.iterate f m (⊠(⊤ : α)) ≐ ⊠(⊤ : α) := by\n  intro m\n  induction m with\n  | zero =>\n      exact ⟨le_rfl, le_rfl⟩\n  | succ m ihm =>\n      have hstep : Nat.iterate f m (⊠⊠(⊤ : α)) ≐ Nat.iterate f m (⊠(⊤ : α)) :=\n        hiter_map m (x := ⊠⊠(⊤ : α)) (y := ⊠(⊤ : α)) h\n      constructor\n      · exact le_trans hstep.1 ihm.1\n      · exact le_trans ihm.2 hstep.2\nsimpa [f, Nat.iterate] using hstable n",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "no_diagnostics",
+      "new_problems": []
+    }
+  ],
+  "op_000027": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "There exists a type `α` with instances `ACR α`, `ACR.Prov α`, `ACR.Reft α`, `ACR.APS α`, and `ACR.C5 α` such that `ACR.Consistent α` holds and `¬ ((⊠⊠(⊤ : α)) ≐ ⊠(⊤ : α))`.",
+      "formalized_statement": "∃ (α : Type _), ∃ (hA : ACR α), ∃ (hP : @ACR.Prov α hA), ∃ (hR : @ACR.Reft α hA), ∃ (hAPS : @ACR.APS α hA hP hR), ∃ (hC5 : @ACR.C5 α hA hP hR hAPS), letI : ACR α := hA; letI : ACR.Prov α := hP; letI : ACR.Reft α := hR; letI : ACR.APS α := hAPS; letI : ACR.C5 α := hC5; ACR.Consistent α ∧ ¬ ((⊠⊠(⊤ : α)) ≐ ⊠(⊤ : α))",
+      "statement_formalization_notes": "Packaged the existential class witnesses explicitly, then reintroduced them with letI so the repository notation ⊠ and ≐ can be used in the proposition.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "stuck",
+      "verify_success": false,
+      "proof_sketch": "A promising witness is the two-element chain `α = {⊥ < ⊤}` with `□x := x` and `⊠x` the order-reversing involution swapping `⊥` and `⊤`. Then `prov_mono` is immediate, `reft_anti_mono` holds because `⊠` reverses the chain, `top_le_reft_bot` is `⊤ ≤ ⊤`, `reft_le_prov_reft` is trivial since `□ = id`, and `le_reft_top_of_le_prov_of_le_reft` holds because `x ≤ y` and `x ≤ ⊠y` force `x = ⊥ = ⊠⊤`. The model is consistent since `⊤ ≤ ⊥` is false. Finally, `⊠⊤ = ⊥` while `⊠⊠⊤ = ⊤`, so `((⊠⊠⊤) ≐ (⊠⊤))` fails. Equivalently, by `thm_double_reft_top_iff_godel_fixpoint_000001`, this is a consistent `C5` model with no Gödel fixpoint.",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "formalize worker timeout: Worker returned error: Command '['codex', 'exec', '-', '--sandbox', 'read-only', '--skip-git-repo-check', '--output-last-message', '/var/folders/2_/c2t72bmn00j3z7cnkfvqvyj80000gn/T/tmpb7und2pq']' timed out after 390 seconds (task_type=formalize)",
+      "lean_error_fingerprint": "formalizer_timeout",
+      "new_problems": []
+    }
+  ],
+  "op_000028": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "There exists a type `α` with instances `ACR α`, `ACR.Prov α`, `ACR.Reft α`, `ACR.APS α`, and `ACR.C5 α` such that `ACR.Consistent α` holds, `((⊠⊠(⊤ : α)) ≐ ⊠(⊤ : α))` holds, and `¬ ((⊠(⊤ : α)) ≐ □(⊠(⊤ : α)))`.",
+      "formalized_statement": "∃ (α : Type _), ∃ (_ : ACR α), ∃ (_ : ACR.Prov α), ∃ (_ : ACR.Reft α), ∃ (_ : ACR.APS α), ∃ (_ : ACR.C5 α), ACR.Consistent α ∧ (⊠⊠(⊤ : α) ≐ ⊠(⊤ : α)) ∧ ¬ (⊠(⊤ : α) ≐ □(⊠(⊤ : α)))",
+      "theorem_name_stem": "consistent_reft_top_not_box_equiv",
+      "statement_formalization_notes": "Formalized as an existential package over the carrier and all required instances, using the repository notation `≐`, `⊠`, and `□`.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    }
   ]
 }

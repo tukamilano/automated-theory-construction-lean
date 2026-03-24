@@ -18,7 +18,6 @@ from common import parse_problem_index, read_jsonl, write_jsonl_atomic
 from import_inference import infer_minimal_imports, render_import_block
 from lean_verify import verify_scratch
 from state_update import apply_state_update
-from statement_alpha_filter import run_statement_alpha_filter
 from worker_client import invoke_worker_json, load_task_worker_settings, load_worker_settings
 
 
@@ -975,8 +974,6 @@ def resolve_solver_statement(
     *,
     prover_statement_worker_settings: Any,
     prover_statement_prompt_file: str,
-    theory_file: Path,
-    derived_file: Path,
     phase_logs: bool,
     iteration: int,
     problem_id: str,
@@ -984,9 +981,8 @@ def resolve_solver_statement(
     open_rows: list[dict[str, Any]],
     theory_context: str,
     current_iteration_full_logs: list[dict[str, Any]],
-) -> tuple[str, str, str, str, bool, dict[str, Any]]:
+) -> tuple[str, str, str, str, dict[str, Any]]:
     prover_statement_worker_meta: dict[str, Any] = {}
-    blocked_by_alpha_duplicate = False
     if prover_statement_worker_settings is None:
         if original_stmt:
             return (
@@ -994,10 +990,9 @@ def resolve_solver_statement(
                 "ok",
                 "statement_target",
                 "No prover_statement worker configured; using the existing statement directly.",
-                blocked_by_alpha_duplicate,
                 prover_statement_worker_meta,
             )
-        return "", "stuck", "", "Original statement is empty.", blocked_by_alpha_duplicate, prover_statement_worker_meta
+        return "", "stuck", "", "Original statement is empty.", prover_statement_worker_meta
 
     emit_phase_log(
         phase_logs,
@@ -1033,40 +1028,6 @@ def resolve_solver_statement(
             worker_meta=prover_statement_worker_meta,
         )
 
-    if result == "ok" and formalized_stmt:
-        alpha_filter_result = run_statement_alpha_filter(
-            candidate_statement=formalized_stmt,
-            theory_file=theory_file,
-            derived_file=derived_file,
-        )
-        matched_names = alpha_filter_result.get("matched_names", [])
-        if bool(alpha_filter_result.get("is_duplicate", False)) and matched_names:
-            result = "stuck"
-            formalized_stmt = ""
-            theorem_name_stem = ""
-            blocked_by_alpha_duplicate = True
-            duplicate_note = "alpha-equivalent to existing theorem/lemma: " + ", ".join(matched_names[:5])
-            notes = f"{notes} {duplicate_note}".strip() if notes else duplicate_note
-        elif not bool(alpha_filter_result.get("candidate_elaborated", True)):
-            alpha_error = str(alpha_filter_result.get("error", "")).strip()
-            result = "stuck"
-            formalized_stmt = ""
-            theorem_name_stem = ""
-            skip_note = (
-                f"statement elaboration failed before proof search: {alpha_error}"
-                if alpha_error
-                else "statement elaboration failed before proof search"
-            )
-            notes = f"{notes} {skip_note}".strip() if notes else skip_note
-        elif bool(alpha_filter_result.get("duplicate_check_timed_out", False)):
-            alpha_error = str(alpha_filter_result.get("error", "")).strip()
-            timeout_note = (
-                f"alpha-equivalence duplicate check timed out; continuing without duplicate filtering: {alpha_error}"
-                if alpha_error
-                else "alpha-equivalence duplicate check timed out; continuing without duplicate filtering"
-            )
-            notes = f"{notes} {timeout_note}".strip() if notes else timeout_note
-
     solver_stmt = formalized_stmt if result == "ok" else ""
     emit_phase_log(
         phase_logs,
@@ -1077,7 +1038,7 @@ def resolve_solver_statement(
         theorem_name_stem=theorem_name_stem,
         notes=notes,
     )
-    return solver_stmt, result, theorem_name_stem, notes, blocked_by_alpha_duplicate, prover_statement_worker_meta
+    return solver_stmt, result, theorem_name_stem, notes, prover_statement_worker_meta
 
 
 def request_expand_candidates(
@@ -1638,13 +1599,10 @@ def main() -> None:
             statement_formalization_result,
             theorem_name_stem,
             statement_formalization_notes,
-            blocked_by_alpha_duplicate,
             prover_statement_worker_meta,
         ) = resolve_solver_statement(
             prover_statement_worker_settings=prover_statement_worker_settings,
             prover_statement_prompt_file=args.prover_statement_prompt_file,
-            theory_file=Path(args.theory_file),
-            derived_file=Path(args.derived_file),
             phase_logs=args.phase_logs,
             iteration=completed_iterations + 1,
             problem_id=problem_id,
@@ -1786,7 +1744,7 @@ def main() -> None:
 
         new_problems = list(solver_new_problem_suggestions)
 
-        if worker_settings is not None and not blocked_by_alpha_duplicate:
+        if worker_settings is not None:
             emit_phase_log(
                 args.phase_logs,
                 "expand_generate",
@@ -1830,14 +1788,6 @@ def main() -> None:
                     problem_id=problem_id,
                     error=str(exc),
                 )
-        elif worker_settings is not None and blocked_by_alpha_duplicate:
-            emit_phase_log(
-                args.phase_logs,
-                "expand_generate_skipped",
-                iteration=completed_iterations + 1,
-                problem_id=problem_id,
-                reason="alpha_duplicate",
-            )
 
         report = apply_state_update(
             data_dir=data_dir,
@@ -1846,7 +1796,6 @@ def main() -> None:
             verify_success=verify_success,
             theorem_name=theorem_name,
             new_problems=new_problems,
-            drop_open_duplicate=blocked_by_alpha_duplicate,
         )
         emit_phase_log(args.phase_logs, "state_update", iteration=completed_iterations + 1, problem_id=problem_id)
         completed_iterations += 1
@@ -1860,7 +1809,6 @@ def main() -> None:
         report["prover_statement_result"] = statement_formalization_result
         report["prover_statement_theorem_name_stem"] = theorem_name_stem
         report["prover_statement_notes"] = statement_formalization_notes
-        report["prover_statement_blocked_by_alpha_duplicate"] = blocked_by_alpha_duplicate
         report["prover_attempts_used"] = prover_attempts_used
         report["prover_proof_sketch"] = proof_sketch
         report["prover_counterexample_text"] = counterexample_text
