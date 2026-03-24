@@ -4,7 +4,7 @@ It implements an automated theory-construction loop on top of Lean 4 + Mathlib. 
 
 For more details and generation examples, please see here.
 - [Blog post: Growing Theories with LLMs and Lean](https://tukamilano.github.io/automated-theory-construction-lean/research/lean/llm/2026/03/23/automated-theory-construction-with-llms.html)
-- [Application to provability logic](https://gist.github.com/tukamilano/d25609aeb416005e24be23308c4abd3d)
+- [Application to provability logic](https://gist.github.com/tukamilano/4fdcbc3c8d3836654ae9e7d27a73e3de) (update 3.25)
 
 ## Quick Mental Model
 
@@ -140,7 +140,7 @@ uv run python scripts/run_pipeline.py \
   --article-file docs/context.tex \
   --worker-command "uv run python scripts/codex_worker.py" \
   --worker-timeout 420 \
-  --max-iteration 100
+  --max-iteration 40
 ```
 
 - Repeat `--article-file` when you want multiple context files.
@@ -179,6 +179,9 @@ uv run python scripts/refactor_derived.py \
   --worker-command "uv run python scripts/codex_worker.py" \
   --output-file AutomatedTheoryConstruction/Derived.refactored.preview.lean
 ```
+
+When `--worker-timeout` is omitted for `scripts/refactor_derived.py`, the refactor worker now defaults to no outer timeout.
+Set `--worker-timeout <seconds>` (or `ATC_REFACTOR_DERIVED_WORKER_TIMEOUT`) if you want a bound for this pass.
 
 Pass 2 keeps the refactored theorem inventory but applies a review-focused non-semantic polish using
 the thin `codex exec` wrapper and the repository skills directly. No dedicated review prompt file is

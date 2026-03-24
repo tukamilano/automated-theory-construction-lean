@@ -15,9 +15,9 @@ from append_derived import (
     build_derived_entries_from_file,
 )
 from common import parse_problem_index, read_jsonl, write_jsonl_atomic
+from import_inference import infer_minimal_imports, render_import_block
 from lean_verify import verify_scratch
 from state_update import apply_state_update
-from statement_alpha_filter import run_statement_alpha_filter
 from worker_client import invoke_worker_json, load_task_worker_settings, load_worker_settings
 
 
@@ -46,6 +46,7 @@ DERIVED_TEMPLATE = (
 
 THEOREM_NAME_STEM_PATTERN = re.compile(r"^[a-z][a-z0-9_]*$")
 THEOREM_NAME_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_']*$")
+DERIVED_THEOREM_HEADER_PATTERN = re.compile(r"\btheorem\s+([A-Za-z0-9_']+)\s*:\s*(.+?)\s*:=", re.DOTALL)
 
 
 def normalize_stmt_text(stmt: str) -> str:
@@ -258,6 +259,7 @@ def formalize_to_scratch(
     include_mathlib_import: bool,
 ) -> tuple[str, str]:
     theorem_name = validate_theorem_name(theorem_name)
+    extra_imports = infer_minimal_imports(stmt)
     if mode == "proof":
         raw_body = proof_text.strip() if proof_text.strip() else "sorry"
         body = "\n  ".join(line.rstrip() for line in raw_body.splitlines())
@@ -270,13 +272,10 @@ def formalize_to_scratch(
         body = "\n  ".join(line.rstrip() for line in raw_body.splitlines())
         theorem = f"theorem {theorem_name}_is_false : ¬({stmt}) := by\n  {body}\n"
 
-    import_block = ""
-    if include_mathlib_import:
-        import_block = "import Mathlib\n"
-
     scratch = (
-        import_block
-        + "import AutomatedTheoryConstruction.Theory\n"
+        render_import_block(extra_imports)
+        + 
+        "import AutomatedTheoryConstruction.Theory\n"
         "import AutomatedTheoryConstruction.Derived\n\n"
         "namespace AutomatedTheoryConstruction\n\n"
         f"{theorem}\n"
@@ -462,8 +461,8 @@ def make_timeout_subgoals(
 
 def extract_derived_theorem_entries(
     derived_path: Path,
-    max_theorems: int = 50,
-) -> list[dict[str, Any]]:
+    max_theorems: int | None = None,
+) -> list[dict[str, str]]:
     """Extract theorem entries directly from Derived.lean."""
     fallback_entries = build_derived_entries_from_file(derived_path, max_theorems=max_theorems)
     return [
@@ -474,6 +473,35 @@ def extract_derived_theorem_entries(
         for entry in fallback_entries[:max_theorems]
         if str(entry.get("theorem_name", "")).strip() and str(entry.get("statement", "")).strip()
     ]
+
+
+def extract_derived_entry_from_theorem_code(theorem_code: str) -> dict[str, str] | None:
+    match = DERIVED_THEOREM_HEADER_PATTERN.search(theorem_code)
+    if match is None:
+        return None
+
+    theorem_name = str(match.group(1)).strip()
+    statement = normalize_stmt_text(str(match.group(2)).strip())
+    if not theorem_name or not statement:
+        return None
+
+    return {
+        "name": theorem_name,
+        "statement": statement,
+    }
+
+
+def append_derived_entry_cache(
+    entries: list[dict[str, str]],
+    theorem_code: str,
+) -> None:
+    entry = extract_derived_entry_from_theorem_code(theorem_code)
+    if entry is None:
+        return
+    if any(existing["name"] == entry["name"] for existing in entries):
+        return
+    entries.append(entry)
+
 
 def classify_statement_shape(stmt: str) -> dict[str, bool]:
     normalized = normalize_stmt_text(stmt)
@@ -694,11 +722,10 @@ def render_mathlib_hint_context(stmt: str, entries: list[dict[str, Any]], max_ch
 
 def build_problem_theory_context(
     theory_context: str,
-    derived_path: Path,
+    derived_entries: list[dict[str, str]],
     stmt: str,
 ) -> str:
-    entries = extract_derived_theorem_entries(derived_path)
-    relevant_entries = shortlist_relevant_derived_entries(entries, stmt)
+    relevant_entries = shortlist_relevant_derived_entries(derived_entries, stmt)
     relevant_summary = render_relevant_derived_context(relevant_entries)
     mathlib_summary = render_mathlib_hint_context(stmt, relevant_entries)
     context = theory_context
@@ -976,8 +1003,6 @@ def resolve_solver_statement(
     *,
     prover_statement_worker_settings: Any,
     prover_statement_prompt_file: str,
-    theory_file: Path,
-    derived_file: Path,
     phase_logs: bool,
     iteration: int,
     problem_id: str,
@@ -985,9 +1010,8 @@ def resolve_solver_statement(
     open_rows: list[dict[str, Any]],
     theory_context: str,
     current_iteration_full_logs: list[dict[str, Any]],
-) -> tuple[str, str, str, str, bool, dict[str, Any]]:
+) -> tuple[str, str, str, str, dict[str, Any]]:
     prover_statement_worker_meta: dict[str, Any] = {}
-    blocked_by_alpha_duplicate = False
     if prover_statement_worker_settings is None:
         if original_stmt:
             return (
@@ -995,10 +1019,9 @@ def resolve_solver_statement(
                 "ok",
                 "statement_target",
                 "No prover_statement worker configured; using the existing statement directly.",
-                blocked_by_alpha_duplicate,
                 prover_statement_worker_meta,
             )
-        return "", "stuck", "", "Original statement is empty.", blocked_by_alpha_duplicate, prover_statement_worker_meta
+        return "", "stuck", "", "Original statement is empty.", prover_statement_worker_meta
 
     emit_phase_log(
         phase_logs,
@@ -1034,25 +1057,6 @@ def resolve_solver_statement(
             worker_meta=prover_statement_worker_meta,
         )
 
-    if result == "ok" and formalized_stmt:
-        alpha_filter_result = run_statement_alpha_filter(
-            candidate_statement=formalized_stmt,
-            theory_file=theory_file,
-            derived_file=derived_file,
-        )
-        matched_names = alpha_filter_result.get("matched_names", [])
-        if bool(alpha_filter_result.get("is_duplicate", False)) and matched_names:
-            result = "stuck"
-            formalized_stmt = ""
-            theorem_name_stem = ""
-            blocked_by_alpha_duplicate = True
-            duplicate_note = "alpha-equivalent to existing theorem/lemma: " + ", ".join(matched_names[:5])
-            notes = f"{notes} {duplicate_note}".strip() if notes else duplicate_note
-        elif not bool(alpha_filter_result.get("candidate_elaborated", True)):
-            alpha_error = str(alpha_filter_result.get("error", "")).strip()
-            skip_note = f"alpha filter skipped: {alpha_error}" if alpha_error else "alpha filter skipped"
-            notes = f"{notes} {skip_note}".strip() if notes else skip_note
-
     solver_stmt = formalized_stmt if result == "ok" else ""
     emit_phase_log(
         phase_logs,
@@ -1063,7 +1067,7 @@ def resolve_solver_statement(
         theorem_name_stem=theorem_name_stem,
         notes=notes,
     )
-    return solver_stmt, result, theorem_name_stem, notes, blocked_by_alpha_duplicate, prover_statement_worker_meta
+    return solver_stmt, result, theorem_name_stem, notes, prover_statement_worker_meta
 
 
 def request_expand_candidates(
@@ -1457,19 +1461,22 @@ def initialize_runtime_state(
 def prebuild_lean_project() -> None:
     """Build Lean artifacts once during initialization.
 
-    This keeps heavy compilation outside the per-problem solving path.
+    Build only the stable library modules here.
+    Scratch.lean is a transient verification target and should remain outside
+    initialization builds so a broken scratch proof does not block the loop.
     """
-    proc = subprocess.run(
-        ["lake", "build"],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    if proc.returncode != 0:
-        stderr = (proc.stderr or "").strip()
-        stdout = (proc.stdout or "").strip()
-        excerpt = stderr or stdout or "lake build failed without output"
-        raise RuntimeError(f"Initialization build failed: {excerpt}")
+    for target in ("AutomatedTheoryConstruction.Theory", "AutomatedTheoryConstruction.Derived"):
+        proc = subprocess.run(
+            ["lake", "build", target],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if proc.returncode != 0:
+            stderr = (proc.stderr or "").strip()
+            stdout = (proc.stdout or "").strip()
+            excerpt = stderr or stdout or f"lake build {target} failed without output"
+            raise RuntimeError(f"Initialization build failed for {target}: {excerpt}")
 
 
 def main() -> None:
@@ -1543,6 +1550,7 @@ def main() -> None:
 
     base_theory_context = load_optional_text(args.theory_file)
     derived_path = Path(args.derived_file)
+    derived_entries = extract_derived_theorem_entries(derived_path)
     open_path = data_dir / "open_problems.jsonl"
 
     worker_settings = None
@@ -1615,7 +1623,7 @@ def main() -> None:
 
         problem_id = str(picked["id"])
         original_stmt = str(picked.get("stmt", ""))
-        initial_theory_context = build_problem_theory_context(base_theory_context, derived_path, original_stmt)
+        initial_theory_context = build_problem_theory_context(base_theory_context, derived_entries, original_stmt)
         emit_phase_log(args.phase_logs, "problem_selected", iteration=completed_iterations + 1, problem_id=problem_id)
 
         current_iteration_full_logs: list[dict[str, Any]] = []
@@ -1624,13 +1632,10 @@ def main() -> None:
             statement_formalization_result,
             theorem_name_stem,
             statement_formalization_notes,
-            blocked_by_alpha_duplicate,
             prover_statement_worker_meta,
         ) = resolve_solver_statement(
             prover_statement_worker_settings=prover_statement_worker_settings,
             prover_statement_prompt_file=args.prover_statement_prompt_file,
-            theory_file=Path(args.theory_file),
-            derived_file=Path(args.derived_file),
             phase_logs=args.phase_logs,
             iteration=completed_iterations + 1,
             problem_id=problem_id,
@@ -1665,7 +1670,7 @@ def main() -> None:
 
         theory_context = build_problem_theory_context(
             base_theory_context,
-            derived_path,
+            derived_entries,
             target_stmt,
         )
 
@@ -1758,12 +1763,15 @@ def main() -> None:
             if theorem_body_match:
                 # Append the newly verified theorem before expansion so follow-up
                 # generation can immediately reuse the latest derived facts.
-                append_theorem(
+                theorem_code = theorem_body_match.group(1)
+                appended = append_theorem(
                     Path(args.derived_file),
-                    theorem_body_match.group(1),
+                    theorem_code,
                     None,
                 )
-                theory_context = build_problem_theory_context(base_theory_context, derived_path, target_stmt)
+                if appended:
+                    append_derived_entry_cache(derived_entries, theorem_code)
+                theory_context = build_problem_theory_context(base_theory_context, derived_entries, target_stmt)
 
         solver_new_problem_suggestions = list(new_problems)
         expander_new_problem_suggestions: list[str] = []
@@ -1772,7 +1780,7 @@ def main() -> None:
 
         new_problems = list(solver_new_problem_suggestions)
 
-        if worker_settings is not None and not blocked_by_alpha_duplicate:
+        if worker_settings is not None:
             emit_phase_log(
                 args.phase_logs,
                 "expand_generate",
@@ -1816,14 +1824,6 @@ def main() -> None:
                     problem_id=problem_id,
                     error=str(exc),
                 )
-        elif worker_settings is not None and blocked_by_alpha_duplicate:
-            emit_phase_log(
-                args.phase_logs,
-                "expand_generate_skipped",
-                iteration=completed_iterations + 1,
-                problem_id=problem_id,
-                reason="alpha_duplicate",
-            )
 
         report = apply_state_update(
             data_dir=data_dir,
@@ -1845,7 +1845,6 @@ def main() -> None:
         report["prover_statement_result"] = statement_formalization_result
         report["prover_statement_theorem_name_stem"] = theorem_name_stem
         report["prover_statement_notes"] = statement_formalization_notes
-        report["prover_statement_blocked_by_alpha_duplicate"] = blocked_by_alpha_duplicate
         report["prover_attempts_used"] = prover_attempts_used
         report["prover_proof_sketch"] = proof_sketch
         report["prover_counterexample_text"] = counterexample_text

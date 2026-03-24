@@ -17,8 +17,12 @@ Formalization policy:
 - Reuse names and notation already present in `Theory.lean` and `Derived.lean` when applicable.
 - Prefer explicit quantification and the same notation style already used in this repository.
 - If `Theory.lean` or `Derived.lean` defines infix/prefix notation or an abbrev for a concept, prefer that shorthand notation in `lean_statement` instead of the expanded form.
-- In particular, if there is a notation declaration such as `infix:50 " ≡ " => Equivalent`, formalize using the shorthand form `x ≡ y`, not `Equivalent x y`.
+- In particular, if there is a notation declaration such as `infix:50 " ≐ " => Equivalent`, formalize using the shorthand form `x ≐ y`, not `Equivalent x y`.
 - Apply this normalization even if the incoming `stmt` or existing Lean code writes the expanded form; when shorthand exists, convert to the shorthand in `lean_statement`.
+- For existential counterexample statements that say "there exists a type with instances ... and witnesses ...", encode the whole package using ordinary existential binders, e.g. `∃ (α : Type _), ∃ (_ : ACR α), ∃ (_ : ACR.Prov α), ...`.
+- Do not write typeclass brackets such as `[ACR α]` or `[ACR.Prov α]` inside an existential package. Bracket binders are for ambient assumptions in `∀`-style statements, not for witnesses being introduced by `∃`.
+- When the statement introduces witness elements after existentially introducing a type and its structure, continue with ordinary binders such as `∃ (x y : α), ...`.
+- If the intended existential packaging is clear but you are unsure about binder syntax, prefer a conservative explicit nested-`∃` formulation over a shorter but riskier notation.
 - Prefer statements that can directly reuse relevant results from `Derived.lean`.
 - Never invent Mathlib names. If the right formalization depends on uncertain library naming or unsupported abstractions, return `stuck`.
 - If the target is too vague, underspecified, or not naturally expressible as a reusable Lean proposition, return `stuck`.

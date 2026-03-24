@@ -4,10 +4,13 @@ import argparse
 import re
 from pathlib import Path
 
+from import_inference import infer_minimal_imports, render_import_block
+
 
 THEOREM_NAME_PATTERN = re.compile(r"\btheorem\s+([A-Za-z0-9_']+)\b")
 THEOREM_HEADER_PATTERN = re.compile(r"\btheorem\s+([A-Za-z0-9_']+)\s*:\s*(.+?)\s*:=", re.DOTALL)
 LEAN_DECL_NAME_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_']*$")
+LEAN_IMPORT_PATTERN = re.compile(r"^import\s+([A-Za-z0-9_.']+)\s*$", re.MULTILINE)
 
 
 def normalize_statement_text(statement: str) -> str:
@@ -60,15 +63,38 @@ def build_derived_entries_from_file(derived_file: Path, max_theorems: int | None
     return [build_derived_entry(theorem_name, statement) for theorem_name, statement in theorem_rows]
 
 
+def ensure_imports(content: str, required_imports: list[str]) -> str:
+    if not required_imports:
+        return content
+
+    existing_imports = {match.group(1) for match in LEAN_IMPORT_PATTERN.finditer(content)}
+    missing_imports = [module_name for module_name in required_imports if module_name not in existing_imports]
+    if not missing_imports:
+        return content
+
+    namespace_match = re.search(r"^namespace\s+AutomatedTheoryConstruction\s*$", content, re.MULTILINE)
+    if namespace_match is None:
+        raise ValueError("Derived file is missing namespace marker")
+
+    prefix = content[: namespace_match.start()]
+    if prefix and not prefix.endswith("\n"):
+        prefix += "\n"
+    if prefix and not prefix.endswith("\n\n"):
+        prefix += "\n"
+    return prefix + render_import_block(missing_imports) + content[namespace_match.start() :]
+
+
 def append_theorem(
     derived_file: Path,
     theorem_code: str,
     theorem_name: str | None = None,
 ) -> bool:
     derived_file.parent.mkdir(parents=True, exist_ok=True)
+    required_imports = infer_minimal_imports(theorem_code)
     if not derived_file.exists():
         derived_file.write_text(
-            "import AutomatedTheoryConstruction.Theory\n\nnamespace AutomatedTheoryConstruction\n\nend AutomatedTheoryConstruction\n",
+            render_import_block(required_imports)
+            + "import AutomatedTheoryConstruction.Theory\n\nnamespace AutomatedTheoryConstruction\n\nend AutomatedTheoryConstruction\n",
             encoding="utf-8",
         )
 
@@ -80,6 +106,7 @@ def append_theorem(
     theorem_name = validate_theorem_name(theorem_name)
 
     content = derived_file.read_text(encoding="utf-8")
+    content = ensure_imports(content, required_imports)
     blocks_to_add: list[str] = []
 
     if not re.search(rf"\btheorem\s+{re.escape(theorem_name)}\b", content):
