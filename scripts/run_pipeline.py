@@ -107,9 +107,7 @@ def build_refactor_command(args: argparse.Namespace) -> list[str]:
         args.preview_file,
     ]
     refactor_worker_command = args.refactor_worker_command or args.worker_command
-    refactor_worker_timeout = (
-        args.refactor_worker_timeout if args.refactor_worker_timeout is not None else args.worker_timeout
-    )
+    refactor_worker_timeout = args.refactor_worker_timeout
     append_optional_flag(cmd, "--worker-command", refactor_worker_command)
     append_optional_flag(cmd, "--worker-timeout", refactor_worker_timeout)
     append_optional_flag(cmd, "--verify-timeout", args.refactor_verify_timeout)

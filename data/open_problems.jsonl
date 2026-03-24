@@ -1,9 +1,4 @@
-{"id":"op_000009","stmt":"∀ {α : Type u} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α] [Nonempty (ACR.GödelFixpoint α)] {x : α}, x ≡ ⊠(⊤ : α) ↔ x ≡ ⊠x","src":"generated"}
-{"id":"op_000010","stmt":"∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], (⊤ : α) ≡ □(⊤ : α)","src":"generated"}
-{"id":"op_000011","stmt":"There exists a type α with instances `[ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α] [Nonempty (ACR.GödelFixpoint α)]` such that `¬ (□(⊠(⊤ : α)) ≡ ⊠(⊤ : α))`.","src":"generated"}
-{"id":"op_000012","stmt":"There exists a three-element linearly ordered type α with elements `0 < a < 1`, equipped with `⊤ = 1`, `⊥ = 0`, `⊠0 = 1`, `⊠a = a`, `⊠1 = a`, `□0 = 0`, `□a = 1`, and `□1 = 1`, such that `[ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α]` holds, `a` is a Gödel fixpoint, and `□(⊠(⊤ : α)) ≠ ⊠(⊤ : α)`.","src":"generated"}
-{"id":"op_000006","stmt":"∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α] [Nonempty (ACR.GödelFixpoint α)], □(⊠(⊤ : α)) ≡ ⊠(⊤ : α)","src":"generated"}
-{"id":"op_000013","stmt":"∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α] [Nonempty (ACR.GödelFixpoint α)], (∀ ⦃x y : α⦄, x ≤ y → y ≤ x → x = y) → ∀ h : ACR.HenkinFixpoint α, h.1 = ⊠(⊤ : α)","src":"generated"}
-{"id":"op_000014","stmt":"∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], (∀ ⦃x y : α⦄, x ≤ y → y ≤ x → x = y) → ∀ g : ACR.GödelFixpoint α, g.1 = ⊠(⊤ : α)","src":"generated"}
-{"id":"op_000015","stmt":"∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α] [Nonempty (ACR.GödelFixpoint α)] {x y : α}, x ≡ y → ⊠x ≡ ⊠y","src":"generated"}
-{"id":"op_000008","stmt":"For every type α equipped with ACR, Prov, Reft, APS, and C5, if `ACR.GödelFixpoint α` is nonempty, then every positive iterate of `⊠` on `(⊤ : α)` is equivalent to `⊠(⊤ : α)`: for every natural number `n` with `1 ≤ n`, the `n`-fold iterate of `⊠` applied to `(⊤ : α)` is equivalent to `⊠(⊤ : α)`.","src":"generated"}
+{"id":"op_000001","stmt":"∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], (⊠⊠(⊤ : α) ≡ ⊠(⊤ : α)) ↔ Nonempty (ACR.GödelFixpoint α)","src":"seed"}
+{"id":"op_000002","stmt":"∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α] {x : α}, Nonempty (ACR.GödelFixpoint α) → x ≡ ⊠(⊤ : α) → x ≡ ⊠x","src":"seed"}
+{"id":"op_000003","stmt":"∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α], ACR.Consistent α → ∀ g : ACR.GödelFixpoint α, ¬ (⊬ □g.1)","src":"seed"}
+{"id":"op_000004","stmt":"∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] {h : ACR.HenkinFixpoint α}, h.1 ≤ ⊠h.1 → h.1 ≤ ⊠(⊤ : α)","src":"seed"}

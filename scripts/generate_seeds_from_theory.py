@@ -106,17 +106,33 @@ def build_prompt(
 
 Task:
 - Generate {seed_count} initial open problems for the automated theory-construction loop.
-- Base every candidate on the actual definitions, notation, classes, axioms, and small lemmas available in the theory.
-- Prefer conservative next-step conjectures: intermediate lemmas, monotonicity/anti-monotonicity consequences, existence/uniqueness statements, equivalences, or natural closure properties.
-- Each candidate must be one Lean proposition string suitable for the `stmt` field in `seeds.jsonl`.
+- Base every candidate on the actual definitions, notation, classes, axioms, and proved lemmas visible in the files above.
+- Stay faithful to the mathematics already described in those files.
+- Generate statements that remain within the concepts and proof-relevant structure that `Theory.lean` can actually express and manipulate.
+- Each candidate must be one standalone Lean proposition string suitable for the `stmt` field in `seeds.jsonl`.
+
+Mathematical scope:
+- Prefer statements that materially sharpen or extend the visible theory: structural consequences, converses or separations, existence or uniqueness claims, impossibility claims, fixpoint consequences, or useful intermediate lemmas.
+- Do not default to immediate one-line corollaries or cosmetic rewrites of visible lemmas.
+- Use only objects, notation, classes, predicates, and constructions that already exist in the files above.
+- Reuse exact symbol names from the source files. Do not invent new definitions or predicates.
+- Quantify every extra variable or witness explicitly inside the proposition.
+- Keep assumptions minimal but sufficient.
+
+Quality filter:
 - Do not restate declarations already proved in `{theory_file.resolve()}`.
-{derived_rule}{extra_block}
+{derived_rule}- Do not propose a theorem that is already present in the read files up to cosmetic rewrites, alpha-renaming, trivial reassociation of binders, or other shallow reformulations.
+- Do not propose propositions that are vacuous, purely definitional unfoldings, or trivial preorder facts.
+- Avoid seeds that differ only by notation changes, variable renaming, or tiny local rewrites.
+- Keep the seeds mathematically diverse when possible.
+- Make each proposition read like something that could be pasted directly into a theorem statement in Lean.
+{extra_block}
 Output contract:
 - Return exactly one JSON object and nothing else.
 - The JSON object must have exactly this shape: {{"seeds": ["stmt1", "stmt2"]}}
 - Return exactly {seed_count} seed statements.
 - Do not include markdown fences.
-- Do not include ids, rationale, or commentary.
+- Do not include ids, rationale, commentary, theorem names, or surrounding prose.
 """
 
 
