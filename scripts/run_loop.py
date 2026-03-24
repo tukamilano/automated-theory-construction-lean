@@ -14,9 +14,10 @@ from append_derived import (
     append_theorem,
     build_derived_entries_from_file,
 )
-from common import read_jsonl, write_jsonl_atomic
+from common import parse_problem_index, read_jsonl, write_jsonl_atomic
 from lean_verify import verify_scratch
 from state_update import apply_state_update
+from statement_alpha_filter import run_statement_alpha_filter
 from worker_client import invoke_worker_json, load_task_worker_settings, load_worker_settings
 
 
@@ -42,6 +43,9 @@ DERIVED_TEMPLATE = (
     "-- Keep any short theorem docstrings/comments here instead of a separate metadata index.\n\n"
     "end AutomatedTheoryConstruction\n"
 )
+
+THEOREM_NAME_STEM_PATTERN = re.compile(r"^[a-z][a-z0-9_]*$")
+THEOREM_NAME_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_']*$")
 
 
 def normalize_stmt_text(stmt: str) -> str:
@@ -87,10 +91,50 @@ def validate_prover_output(payload: dict[str, Any], expected_problem_id: str) ->
     return result, proof_sketch, counterexample_text, new_problems
 
 
-def validate_prover_statement_output(payload: dict[str, Any], expected_problem_id: str) -> tuple[str, str, str]:
-    required_keys = {"problem_id", "result", "lean_statement", "notes"}
+def validate_theorem_name_stem(stem: str) -> str:
+    cleaned = stem.strip()
+    if not cleaned:
+        raise ValueError("prover_statement theorem_name_stem must be non-empty when result=ok")
+    if len(cleaned) > 80:
+        raise ValueError("prover_statement theorem_name_stem must be <= 80 characters")
+    if not THEOREM_NAME_STEM_PATTERN.fullmatch(cleaned):
+        raise ValueError(
+            "prover_statement theorem_name_stem must match ^[a-z][a-z0-9_]*$"
+        )
+    if cleaned.startswith("thm_") or cleaned == "thm":
+        raise ValueError("prover_statement theorem_name_stem must not include the thm prefix")
+    if cleaned.startswith("_") or cleaned.endswith("_") or "__" in cleaned:
+        raise ValueError("prover_statement theorem_name_stem must not have leading/trailing/repeated underscores")
+    if re.search(r"_\d+$", cleaned):
+        raise ValueError("prover_statement theorem_name_stem must not end with a numeric suffix")
+    return cleaned
+
+
+def validate_theorem_name(theorem_name: str) -> str:
+    cleaned = theorem_name.strip()
+    if not cleaned:
+        raise ValueError("theorem_name must be non-empty")
+    if cleaned == "None":
+        raise ValueError("theorem_name must not be the literal None")
+    if not THEOREM_NAME_PATTERN.fullmatch(cleaned):
+        raise ValueError("theorem_name must match ^[A-Za-z_][A-Za-z0-9_']*$")
+    return cleaned
+
+
+def build_theorem_name(problem_id: str, theorem_name_stem: str) -> str:
+    problem_index = parse_problem_index(problem_id)
+    if problem_index is None:
+        raise ValueError(f"invalid problem_id for theorem naming: {problem_id}")
+    stem = validate_theorem_name_stem(theorem_name_stem)
+    return f"thm_{stem}_{problem_index:06d}"
+
+
+def validate_prover_statement_output(payload: dict[str, Any], expected_problem_id: str) -> tuple[str, str, str, str]:
+    required_keys = {"problem_id", "result", "lean_statement", "theorem_name_stem", "notes"}
     if set(payload.keys()) != required_keys:
-        raise ValueError("prover_statement output must contain exactly: problem_id, result, lean_statement, notes")
+        raise ValueError(
+            "prover_statement output must contain exactly: problem_id, result, lean_statement, theorem_name_stem, notes"
+        )
 
     problem_id = payload.get("problem_id")
     if problem_id != expected_problem_id:
@@ -101,13 +145,20 @@ def validate_prover_statement_output(payload: dict[str, Any], expected_problem_i
         raise ValueError("prover_statement result must be one of: ok, stuck")
 
     lean_statement = payload.get("lean_statement")
+    theorem_name_stem = payload.get("theorem_name_stem")
     notes = payload.get("notes")
-    if not isinstance(lean_statement, str) or not isinstance(notes, str):
-        raise ValueError("prover_statement lean_statement and notes must be strings")
+    if not isinstance(lean_statement, str) or not isinstance(theorem_name_stem, str) or not isinstance(notes, str):
+        raise ValueError("prover_statement lean_statement, theorem_name_stem, and notes must be strings")
     if result == "ok" and not lean_statement.strip():
         raise ValueError("prover_statement lean_statement must be non-empty when result=ok")
+    if result == "ok":
+        theorem_name_stem = validate_theorem_name_stem(theorem_name_stem)
+    else:
+        theorem_name_stem = theorem_name_stem.strip()
+        if theorem_name_stem:
+            raise ValueError("prover_statement theorem_name_stem must be empty when result=stuck")
 
-    return result, lean_statement.strip(), notes.strip()
+    return result, lean_statement.strip(), theorem_name_stem, notes.strip()
 
 
 def validate_formalizer_output(payload: dict[str, Any], expected_problem_id: str) -> tuple[str, str, str, str]:
@@ -199,14 +250,14 @@ def load_optional_text(file_path: str) -> str:
 
 
 def formalize_to_scratch(
-    problem_id: str,
+    theorem_name: str,
     stmt: str,
     mode: str,
     proof_text: str,
     counterexample_text: str,
     include_mathlib_import: bool,
 ) -> tuple[str, str]:
-    theorem_name = f"thm_{problem_id}"
+    theorem_name = validate_theorem_name(theorem_name)
     if mode == "proof":
         raw_body = proof_text.strip() if proof_text.strip() else "sorry"
         body = "\n  ".join(line.rstrip() for line in raw_body.splitlines())
@@ -897,7 +948,7 @@ def request_prover_statement_formalization(
     open_rows: list[dict[str, Any]],
     theory_context: str,
     current_iteration_full_logs: list[dict[str, Any]],
-) -> tuple[str, str, str, dict[str, Any]]:
+) -> tuple[str, str, str, str, dict[str, Any]]:
     statement_payload: dict[str, Any] = {
         "problem_id": problem_id,
         "stmt": stmt,
@@ -917,14 +968,16 @@ def request_prover_statement_formalization(
         index=1,
         worker_meta=worker_meta,
     )
-    result, lean_statement, notes = validate_prover_statement_output(formalized, problem_id)
-    return result, lean_statement, notes, worker_meta
+    result, lean_statement, theorem_name_stem, notes = validate_prover_statement_output(formalized, problem_id)
+    return result, lean_statement, theorem_name_stem, notes, worker_meta
 
 
 def resolve_solver_statement(
     *,
     prover_statement_worker_settings: Any,
     prover_statement_prompt_file: str,
+    theory_file: Path,
+    derived_file: Path,
     phase_logs: bool,
     iteration: int,
     problem_id: str,
@@ -932,17 +985,20 @@ def resolve_solver_statement(
     open_rows: list[dict[str, Any]],
     theory_context: str,
     current_iteration_full_logs: list[dict[str, Any]],
-) -> tuple[str, str, str, dict[str, Any]]:
+) -> tuple[str, str, str, str, bool, dict[str, Any]]:
     prover_statement_worker_meta: dict[str, Any] = {}
+    blocked_by_alpha_duplicate = False
     if prover_statement_worker_settings is None:
         if original_stmt:
             return (
                 original_stmt,
                 "ok",
+                "statement_target",
                 "No prover_statement worker configured; using the existing statement directly.",
+                blocked_by_alpha_duplicate,
                 prover_statement_worker_meta,
             )
-        return "", "stuck", "Original statement is empty.", prover_statement_worker_meta
+        return "", "stuck", "", "Original statement is empty.", blocked_by_alpha_duplicate, prover_statement_worker_meta
 
     emit_phase_log(
         phase_logs,
@@ -953,7 +1009,7 @@ def resolve_solver_statement(
     )
     prover_statement_prompt = load_prompt_text(prover_statement_prompt_file)
     try:
-        result, formalized_stmt, notes, prover_statement_worker_meta = request_prover_statement_formalization(
+        result, formalized_stmt, theorem_name_stem, notes, prover_statement_worker_meta = request_prover_statement_formalization(
             worker_settings=prover_statement_worker_settings,
             prover_statement_prompt=prover_statement_prompt,
             problem_id=problem_id,
@@ -967,6 +1023,7 @@ def resolve_solver_statement(
             raise
         result = "stuck"
         formalized_stmt = ""
+        theorem_name_stem = ""
         notes = f"prover_statement worker timeout: {exc}"
     else:
         emit_parse_phase_log(
@@ -977,6 +1034,25 @@ def resolve_solver_statement(
             worker_meta=prover_statement_worker_meta,
         )
 
+    if result == "ok" and formalized_stmt:
+        alpha_filter_result = run_statement_alpha_filter(
+            candidate_statement=formalized_stmt,
+            theory_file=theory_file,
+            derived_file=derived_file,
+        )
+        matched_names = alpha_filter_result.get("matched_names", [])
+        if bool(alpha_filter_result.get("is_duplicate", False)) and matched_names:
+            result = "stuck"
+            formalized_stmt = ""
+            theorem_name_stem = ""
+            blocked_by_alpha_duplicate = True
+            duplicate_note = "alpha-equivalent to existing theorem/lemma: " + ", ".join(matched_names[:5])
+            notes = f"{notes} {duplicate_note}".strip() if notes else duplicate_note
+        elif not bool(alpha_filter_result.get("candidate_elaborated", True)):
+            alpha_error = str(alpha_filter_result.get("error", "")).strip()
+            skip_note = f"alpha filter skipped: {alpha_error}" if alpha_error else "alpha filter skipped"
+            notes = f"{notes} {skip_note}".strip() if notes else skip_note
+
     solver_stmt = formalized_stmt if result == "ok" else ""
     emit_phase_log(
         phase_logs,
@@ -984,9 +1060,10 @@ def resolve_solver_statement(
         iteration=iteration,
         problem_id=problem_id,
         formalized=result == "ok",
+        theorem_name_stem=theorem_name_stem,
         notes=notes,
     )
-    return solver_stmt, result, notes, prover_statement_worker_meta
+    return solver_stmt, result, theorem_name_stem, notes, blocked_by_alpha_duplicate, prover_statement_worker_meta
 
 
 def request_expand_candidates(
@@ -1043,6 +1120,7 @@ def request_expand_candidates(
 def attempt_formalization_until_timeout(
     *,
     problem_id: str,
+    theorem_name: str,
     stmt: str,
     result: str,
     proof_sketch: str,
@@ -1064,7 +1142,7 @@ def attempt_formalization_until_timeout(
     phase_logger: Callable[..., None] | None = None,
 ) -> tuple[bool, str | None, str, str, str, list[str], str]:
     verify_success = False
-    theorem_name: str | None = None
+    current_theorem_name = validate_theorem_name(theorem_name)
     verify_error_excerpt = ""
     include_mathlib_import = False
     retained_new_problems = list(new_problems)
@@ -1087,7 +1165,7 @@ def attempt_formalization_until_timeout(
             }
         )
         save_formalization_memory(memory_path, problem_id, persisted_history)
-        return verify_success, theorem_name, result, proof_text, counterexample_text, new_problems, verify_error_excerpt
+        return verify_success, current_theorem_name, result, proof_text, counterexample_text, new_problems, verify_error_excerpt
 
     if not proof_text.strip():
         if formalize_worker_settings is None:
@@ -1105,7 +1183,7 @@ def attempt_formalization_until_timeout(
                 }
             )
             save_formalization_memory(memory_path, problem_id, persisted_history)
-            return verify_success, theorem_name, "stuck", proof_text, counterexample_text, new_problems, verify_error_excerpt
+            return verify_success, current_theorem_name, "stuck", proof_text, counterexample_text, new_problems, verify_error_excerpt
 
         try:
             same_problem_history_tail = load_formalization_memory(memory_path, problem_id)[-8:]
@@ -1139,7 +1217,7 @@ def attempt_formalization_until_timeout(
                     }
                 )
                 save_formalization_memory(memory_path, problem_id, persisted_history)
-                return verify_success, theorem_name, "stuck", proof_text, counterexample_text, new_problems, verify_error_excerpt
+                return verify_success, current_theorem_name, "stuck", proof_text, counterexample_text, new_problems, verify_error_excerpt
             raise
         if result not in {"proof", "counterexample"}:
             persisted_history = load_formalization_memory(memory_path, problem_id)
@@ -1156,7 +1234,7 @@ def attempt_formalization_until_timeout(
                 }
             )
             save_formalization_memory(memory_path, problem_id, persisted_history)
-            return verify_success, theorem_name, result, proof_text, counterexample_text, new_problems, verify_error_excerpt
+            return verify_success, current_theorem_name, result, proof_text, counterexample_text, new_problems, verify_error_excerpt
 
     deadline = time.monotonic() + max(1, formalization_retry_budget_sec)
     persisted_history = load_formalization_memory(memory_path, problem_id)
@@ -1172,7 +1250,7 @@ def attempt_formalization_until_timeout(
                 repair_round=repair_round,
             )
         theorem_name, scratch_code = formalize_to_scratch(
-            problem_id=problem_id,
+            theorem_name=current_theorem_name,
             stmt=stmt,
             mode=result,
             proof_text=proof_text,
@@ -1223,7 +1301,7 @@ def attempt_formalization_until_timeout(
             save_formalization_memory(memory_path, problem_id, repair_history)
             return (
                 verify_success,
-                theorem_name,
+                current_theorem_name,
                 result,
                 proof_text,
                 counterexample_text,
@@ -1235,7 +1313,7 @@ def attempt_formalization_until_timeout(
             save_formalization_memory(memory_path, problem_id, repair_history)
             return (
                 verify_success,
-                theorem_name,
+                current_theorem_name,
                 result,
                 proof_text,
                 counterexample_text,
@@ -1347,6 +1425,7 @@ def initialize_runtime_state(
     scratch_file: Path,
     reset_scratch: bool,
     derived_file: Path,
+    derived_cleanup_files: tuple[Path, ...],
     reset_derived: bool,
     formalization_memory_file: Path,
     reset_formalization_memory: bool,
@@ -1367,6 +1446,8 @@ def initialize_runtime_state(
     if reset_derived:
         derived_file.parent.mkdir(parents=True, exist_ok=True)
         derived_file.write_text(DERIVED_TEMPLATE, encoding="utf-8")
+        for cleanup_file in derived_cleanup_files:
+            cleanup_file.unlink(missing_ok=True)
 
     if reset_formalization_memory:
         formalization_memory_file.parent.mkdir(parents=True, exist_ok=True)
@@ -1394,6 +1475,7 @@ def prebuild_lean_project() -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run the minimal prototype loop.")
     parser.add_argument("--initialize-on-start", action=argparse.BooleanOptionalAction, default=True)
+    parser.add_argument("--max-iterations", type=int)
     parser.add_argument("--enable-worker", action="store_true")
     parser.add_argument("--worker-command")
     parser.add_argument("--worker-timeout", type=int)
@@ -1411,6 +1493,8 @@ def main() -> None:
     parser.add_argument("--phase-logs", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--skip-verify", action="store_true")
     args = parser.parse_args()
+    if args.max_iterations is not None and args.max_iterations < 0:
+        raise ValueError("--max-iterations must be >= 0")
 
     # Fixed runtime paths and hidden compatibility defaults.
     args.data_dir = "data"
@@ -1445,6 +1529,10 @@ def main() -> None:
             scratch_file=scratch_file,
             reset_scratch=args.reset_scratch_on_start,
             derived_file=Path(args.derived_file),
+            derived_cleanup_files=(
+                Path("AutomatedTheoryConstruction/Derived.refactored.preview.lean"),
+                Path("AutomatedTheoryConstruction/Derived.refactored.reviewed.lean"),
+            ),
             reset_derived=args.reset_derived_on_start,
             formalization_memory_file=memory_path,
             reset_formalization_memory=args.reset_formalization_memory_on_start,
@@ -1502,6 +1590,10 @@ def main() -> None:
             print({"status": "no_open_problems", "iterations_completed": completed_iterations})
             return
 
+        if args.max_iterations is not None and completed_iterations >= args.max_iterations:
+            print({"status": "max_iterations_reached", "iterations_completed": completed_iterations})
+            return
+
         iteration_num = completed_iterations + 1
         debug_log(f"=== Iteration {iteration_num} START ===")
         debug_log(f"{len(open_rows)} total problems in queue")
@@ -1530,11 +1622,15 @@ def main() -> None:
         (
             solver_stmt,
             statement_formalization_result,
+            theorem_name_stem,
             statement_formalization_notes,
+            blocked_by_alpha_duplicate,
             prover_statement_worker_meta,
         ) = resolve_solver_statement(
             prover_statement_worker_settings=prover_statement_worker_settings,
             prover_statement_prompt_file=args.prover_statement_prompt_file,
+            theory_file=Path(args.theory_file),
+            derived_file=Path(args.derived_file),
             phase_logs=args.phase_logs,
             iteration=completed_iterations + 1,
             problem_id=problem_id,
@@ -1544,6 +1640,7 @@ def main() -> None:
             current_iteration_full_logs=current_iteration_full_logs,
         )
         target_stmt = solver_stmt or original_stmt
+        theorem_name = build_theorem_name(problem_id, theorem_name_stem) if solver_stmt else None
 
         append_formalization_memory_entry(
             memory_path,
@@ -1552,6 +1649,7 @@ def main() -> None:
                 "stage": "statement_formalization",
                 "source_statement": original_stmt,
                 "formalized_statement": solver_stmt,
+                "theorem_name_stem": theorem_name_stem,
                 "statement_formalization_notes": statement_formalization_notes,
                 "result": statement_formalization_result,
                 "verify_success": bool(solver_stmt),
@@ -1629,6 +1727,7 @@ def main() -> None:
             verify_error_excerpt,
         ) = attempt_formalization_until_timeout(
             problem_id=problem_id,
+            theorem_name=theorem_name or build_theorem_name(problem_id, "statement_target"),
             stmt=target_stmt,
             result=result,
             proof_sketch=proof_sketch,
@@ -1673,7 +1772,7 @@ def main() -> None:
 
         new_problems = list(solver_new_problem_suggestions)
 
-        if worker_settings is not None:
+        if worker_settings is not None and not blocked_by_alpha_duplicate:
             emit_phase_log(
                 args.phase_logs,
                 "expand_generate",
@@ -1717,6 +1816,14 @@ def main() -> None:
                     problem_id=problem_id,
                     error=str(exc),
                 )
+        elif worker_settings is not None and blocked_by_alpha_duplicate:
+            emit_phase_log(
+                args.phase_logs,
+                "expand_generate_skipped",
+                iteration=completed_iterations + 1,
+                problem_id=problem_id,
+                reason="alpha_duplicate",
+            )
 
         report = apply_state_update(
             data_dir=data_dir,
@@ -1736,7 +1843,9 @@ def main() -> None:
         report["original_stmt"] = original_stmt
         report["formalized_stmt"] = solver_stmt
         report["prover_statement_result"] = statement_formalization_result
+        report["prover_statement_theorem_name_stem"] = theorem_name_stem
         report["prover_statement_notes"] = statement_formalization_notes
+        report["prover_statement_blocked_by_alpha_duplicate"] = blocked_by_alpha_duplicate
         report["prover_attempts_used"] = prover_attempts_used
         report["prover_proof_sketch"] = proof_sketch
         report["prover_counterexample_text"] = counterexample_text

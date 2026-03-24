@@ -30,6 +30,22 @@ def _resolve_task_env(task_type: str, suffix: str, default: str = "") -> str:
     return (os.getenv(f"ATC_{suffix}") or default).strip()
 
 
+def _default_worker_timeout_for_task(task_type: str) -> int | None:
+    if task_type == "refactor_derived":
+        return None
+    return 180
+
+
+def _resolve_timeout_seconds(timeout_text: str | None, default: int | None) -> int | None:
+    raw = (timeout_text or "").strip()
+    if not raw:
+        return default
+    parsed = int(raw)
+    if parsed == 0:
+        return None
+    return parsed
+
+
 def _iter_braced_json_candidates(text: str) -> list[str]:
     candidates: list[str] = []
     start_idx: int | None = None
@@ -141,7 +157,7 @@ def _build_contract_repair_prompt(
     )
 
 
-def _run_codex(task_type: str, prompt: str, timeout_sec: int) -> tuple[str, str]:
+def _run_codex(task_type: str, prompt: str, timeout_sec: int | None) -> tuple[str, str]:
     model = _resolve_task_env(task_type, "CODEX_MODEL")
     base_cmd: list[str] = [
         "codex",
@@ -220,13 +236,24 @@ def main() -> None:
         if not isinstance(payload, dict):
             raise ValueError("payload must be a JSON object")
 
-        if task_type not in {"prover_statement", "prover", "formalize", "repair", "expand"}:
+        if task_type not in {"prover_statement", "prover", "formalize", "repair", "expand", "refactor_derived"}:
             raise ValueError(f"unsupported task_type: {task_type}")
 
-        outer_timeout = int(_resolve_task_env(task_type, "WORKER_TIMEOUT", "180"))
+        default_outer_timeout = _default_worker_timeout_for_task(task_type)
+        default_outer_timeout_text = "" if default_outer_timeout is None else str(default_outer_timeout)
+        outer_timeout = _resolve_timeout_seconds(
+            _resolve_task_env(task_type, "WORKER_TIMEOUT", default_outer_timeout_text),
+            default_outer_timeout,
+        )
         codex_timeout_text = _resolve_task_env(task_type, "CODEX_TIMEOUT")
-        # Keep inner timeout slightly below outer timeout to avoid subprocess timeout races.
-        timeout_sec = int(codex_timeout_text) if codex_timeout_text else max(30, outer_timeout - 10)
+        codex_timeout = _resolve_timeout_seconds(codex_timeout_text, None)
+        # Keep inner timeout slightly below outer timeout to avoid subprocess timeout races when both are bounded.
+        if codex_timeout is not None:
+            timeout_sec = codex_timeout
+        elif outer_timeout is not None:
+            timeout_sec = max(30, outer_timeout - 10)
+        else:
+            timeout_sec = None
         prompt = _build_prompt(task_type=task_type, system_prompt=system_prompt, payload=payload)
         model_output, resolved_model = _run_codex(task_type=task_type, prompt=prompt, timeout_sec=timeout_sec)
         try:
@@ -243,7 +270,7 @@ def main() -> None:
             model_output, resolved_model = _run_codex(
                 task_type=task_type,
                 prompt=repair_prompt,
-                timeout_sec=max(30, timeout_sec // 2),
+                timeout_sec=max(30, timeout_sec // 2) if timeout_sec is not None else None,
             )
             try:
                 result_payload, parse_attempts, used_fallback = _extract_json_object(model_output)

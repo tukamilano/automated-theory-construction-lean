@@ -1,4 +1,4 @@
-{"id":"op_000001","stmt":"∀ {α : Type u} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α], ∀ g : ACR.GödelFixpoint α, g.1 ≤ □g.1","src":"seed"}
-{"id":"op_000002","stmt":"∀ {α : Type u} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], ∀ g h : ACR.GödelFixpoint α, g.1 ≡ h.1","src":"seed"}
-{"id":"op_000003","stmt":"∀ {α : Type u} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α] [Nonempty (ACR.GödelFixpoint α)], ⊠(⊤ : α) ≡ ⊠⊠(⊤ : α)","src":"seed"}
-{"id":"op_000004","stmt":"∀ {α : Type u} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α] [Nonempty (ACR.GödelFixpoint α)], ∃ g : ACR.GödelFixpoint α, g.1 ≡ ⊠(⊤ : α)","src":"seed"}
+{"id":"op_000001","stmt":"∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], (⊠⊠(⊤ : α) ≡ ⊠(⊤ : α)) ↔ Nonempty (ACR.GödelFixpoint α)","src":"seed"}
+{"id":"op_000002","stmt":"∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α] {x : α}, Nonempty (ACR.GödelFixpoint α) → x ≡ ⊠(⊤ : α) → x ≡ ⊠x","src":"seed"}
+{"id":"op_000003","stmt":"∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α], ACR.Consistent α → ∀ g : ACR.GödelFixpoint α, ¬ (⊬ □g.1)","src":"seed"}
+{"id":"op_000004","stmt":"∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] {h : ACR.HenkinFixpoint α}, h.1 ≤ ⊠h.1 → h.1 ≤ ⊠(⊤ : α)","src":"seed"}

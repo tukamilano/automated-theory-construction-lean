@@ -93,5 +93,6 @@ Use repository-local skills under `.codex/skills/` as supporting guidance:
 - `lean-rule`
 - `mathlib-usage`
 - `prover-interface`
+- `refactoring`
 
 `AGENTS.md` remains the primary authority.

@@ -18,6 +18,7 @@ Policy:
 - Treat `open_problems` as the current queue snapshot. Before returning any candidate, compare it against that queue and drop anything that is already present or is only a shallow rewording of an open problem.
 - If `theory_context` lists relevant verified theorems, use them to avoid proposing duplicates and to infer missing intermediate lemmas.
 - Also use the verified-theorem information in `theory_context` as a duplicate filter: if a candidate is already represented there, or differs only by superficial syntactic variation, do not return it.
+- In particular, avoid candidates that are alpha-equivalent to statements already present in `Derived.lean` / `theory_context`, or that are likely equivalent to them up to propositional-logic or first-order logical reformulation.
 - Prefer follow-up problems that arose naturally in the current iteration logs over generic guesses.
 - Avoid local one-step variants of the current target or recent failed follow-up ideas when they do not add a genuinely new proof pattern.
 - Prefer diversity across candidates: if you return two candidates, they should differ meaningfully in shape or role, not just in variable names or superficial rewrites.
@@ -40,6 +41,7 @@ When the current problem is solved and verified (`verify_success = true` and `re
 - It is good to return at least one candidate that meaningfully broadens, reinterprets, or reuses the verified result beyond the immediate local target.
 - Prefer candidates whose resolution would teach something non-obvious about the theory or its models, rather than merely restating the solved fact in slightly altered form.
 - If a more informative model-level, structural, or boundary-case follow-up is available, prefer it over a nearby local rewrite.
+- It is also good, when appropriate, to propose a follow-up that analyzes the theory's own internal language or expressive structure, especially when Mathlib or other standard library abstractions make that analysis precise, provided the statement remains anchored to the active theory rather than drifting into unrelated meta-theory.
 
 Quality checklist for every returned candidate:
 - It should add theory-level information, not only repackage the current statement.
@@ -51,6 +53,8 @@ Low-quality candidates to reject:
 - cosmetic rephrasings, variable-renamings, notation-only rewrites, or namespace-only rewrites
 - shallow specializations or shallow generalizations that preserve the same mathematical content
 - near-duplicates of existing open, solved, or counterexampled statements
+- alpha-equivalent restatements of a theorem already present in `Derived.lean`
+- statements that are merely propositional-logically or first-order logically equivalent to an existing theorem in `Derived.lean`, even if phrased very differently
 - one-off handcrafted example checks whose main value is only local verification
 - statements that merely restate a known witness, counterexample, or already verified pattern in slightly different packaging
 - narrow local decompositions when a stronger outward-looking follow-up is available
@@ -64,6 +68,7 @@ Candidate format constraints:
   - its objects, quantifiers, assumptions, and conclusion are explicit in the statement
   - it does not contain undefined evaluative language or ask the reader to search for something
   - it does not leave the choice of an additional axiom or auxiliary predicate to the reader
+- If a candidate studies the theory's internal language or expressive power, state it as a concrete mathematical claim (for example about definability, closure, normal forms, or expressive limitations), not as an open-ended search task or vague meta-level prompt.
 - Reject hard-coded local trivia. Do not propose statements whose main content is a one-off computation in a specially crafted instance unless it is explicitly serving as a witness for a broader theory-level claim.
 - Reject low-value verification tasks about a hand-crafted example when they do not clarify a broader structural point.
 - Avoid trivial restatements, pure renamings, immediate corollaries with no new conceptual content, direct negation templates, duplicates of `existing_new_problems`, duplicates of `open_problems`, and candidates already represented among the verified theorems visible in `theory_context`.

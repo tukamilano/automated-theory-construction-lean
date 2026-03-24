@@ -9,50 +9,37 @@ For more details and generation examples, please see here.
 ## Quick Mental Model
 
 ```text
-[Theory.lean]
-  base symbols + axioms
+[Theory.lean] + [articles / notes / paper]
         ↓
-[scripts/run_loop.py]
-  generate / formalize / prove / repair
+[scripts/generate_seeds_from_theory.py]
+  generate initial open problems
         ↓
-[Scratch.lean]
-  temporary Lean verification
+[seeds.jsonl]
         ↓
-[Derived.lean]
-  accumulated verified theorems
++-------------------------------------------+
+| [Theory.lean]                             |
+|   base symbols + axioms                   |
+|         ↓                                 |
+| [scripts/run_loop.py]                     |
+|   generate / formalize / prove / repair   |
+|         ↓                                 |
+| [Scratch.lean]                            |
+|   temporary Lean verification             |
+|         ↓                                 |
+| [Derived.lean]                            |
+|   accumulated verified theorems           |
++-------------------------------------------+
+        ↓
+[scripts/refactor_derived.py]
+  structural refactor
+        ↓
+[Derived.refactored.preview.lean]
+        ↓
+[scripts/direct_refactor_derived.py]
+  review-focused non-semantic cleanup
+        ↓
+[Derived.refactored.reviewed.lean]
 ```
-
-## Illustrative Results
-
-These are representative examples from the current repository state. They are intentionally cherry-picked to show the kind of output the loop can already produce, not to claim broad coverage or maturity yet.
-
-Starting from the three axioms of `SemigroupLike01`, the system has automatically derived nontrivial universal consequences such as:
-
-```lean
-∀ {α : Type u} [SemigroupLike01 α], ∀ x y : α, (x * y) * x = x * y
-```
-
-and
-
-```lean
-∀ {α : Type _} [SemigroupLike01 α], ∀ e : α,
-  (∀ x : α, x * e = e) → ∀ x : α, e * x = e
-```
-
-It has also produced stronger derived identities, for example:
-
-```lean
-∀ {α : Type u} [SemigroupLike01 α], ∀ x y z : α,
-  (x * y) * (x * z) = (x * y) * z
-```
-
-The system does not only accumulate positive laws. It can also reject tempting but false universal conjectures by constructing explicit finite countermodels. For example, it verified a 3-element model satisfying the three axioms while failing associativity, so:
-
-```lean
-¬(∀ {α : Type u} [SemigroupLike01 α], ∀ x y z : α, (x * y) * z = x * (y * z))
-```
-
-is accompanied by a certified concrete witness rather than only a failed proof search.
 
 For a first-time reader, the core idea is:
 
@@ -143,6 +130,23 @@ Edit the active theory:
 - `AutomatedTheoryConstruction/Theory.lean`
 - `AutomatedTheoryConstruction/seeds.jsonl`
 
+### One-Shot Pipeline
+
+To generate `seeds.jsonl` from `Theory.lean` plus article/context files, run `run_loop.py`, and then run the two-stage refactor in one go:
+
+```bash
+ATC_CODEX_TIMEOUT=390 \
+uv run python scripts/run_pipeline.py \
+  --article-file docs/context.tex \
+  --worker-command "uv run python scripts/codex_worker.py" \
+  --worker-timeout 420 \
+  --max-iteration 100
+```
+
+- Repeat `--article-file` when you want multiple context files.
+- `--dry-run` prints the underlying commands without executing them.
+- The wrapper uses the fixed active runtime files: `AutomatedTheoryConstruction/Theory.lean`, `AutomatedTheoryConstruction/seeds.jsonl`, and `AutomatedTheoryConstruction/Derived.lean`.
+
 Then choose a worker mode.
 
 ### Dry Run With Mock Worker
@@ -163,6 +167,36 @@ ATC_CODEX_TIMEOUT=390 \
 uv run scripts/run_loop.py --enable-worker
 ```
 
+### Final Two-Stage Refactor For `Derived.lean`
+
+After the main loop has accumulated enough theorems in `AutomatedTheoryConstruction/Derived.lean`,
+run the final cleanup in two passes.
+
+Pass 1 performs the main structural refactor and writes a preview file:
+
+```bash
+uv run python scripts/refactor_derived.py \
+  --worker-command "uv run python scripts/codex_worker.py" \
+  --output-file AutomatedTheoryConstruction/Derived.refactored.preview.lean
+```
+
+Pass 2 keeps the refactored theorem inventory but applies a review-focused non-semantic polish using
+the thin `codex exec` wrapper and the repository skills directly. No dedicated review prompt file is
+needed:
+
+```bash
+uv run python scripts/direct_refactor_derived.py \
+  --input-file AutomatedTheoryConstruction/Derived.refactored.preview.lean \
+  --output-file AutomatedTheoryConstruction/Derived.refactored.reviewed.lean
+```
+
+If `AutomatedTheoryConstruction/Derived.refactored.reviewed.lean` already exists and you want Codex
+to continue editing it without copying from the preview again, use:
+
+```bash
+uv run python scripts/direct_refactor_derived.py --skip-copy
+```
+
 ## Initialization Behavior
 
 By default, `scripts/run_loop.py` starts with `--initialize-on-start`, which means it will:
@@ -173,6 +207,8 @@ By default, `scripts/run_loop.py` starts with `--initialize-on-start`, which mea
 - reset `data/formalization_memory.json`
 - reset `AutomatedTheoryConstruction/Scratch.lean`
 - reset `AutomatedTheoryConstruction/Derived.lean`
+- delete `AutomatedTheoryConstruction/Derived.refactored.preview.lean` if present
+- delete `AutomatedTheoryConstruction/Derived.refactored.reviewed.lean` if present
 - run `lake build`
 
 If you want to continue from the current runtime state and keep accumulated theorems in `Derived.lean`, use:

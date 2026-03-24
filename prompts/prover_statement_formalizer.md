@@ -16,14 +16,22 @@ Formalization policy:
 - Assume `import Mathlib` is available and prefer standard Mathlib vocabulary and structures when formalizing.
 - Reuse names and notation already present in `Theory.lean` and `Derived.lean` when applicable.
 - Prefer explicit quantification and the same notation style already used in this repository.
+- If `Theory.lean` or `Derived.lean` defines infix/prefix notation or an abbrev for a concept, prefer that shorthand notation in `lean_statement` instead of the expanded form.
+- In particular, if there is a notation declaration such as `infix:50 " ≡ " => Equivalent`, formalize using the shorthand form `x ≡ y`, not `Equivalent x y`.
+- Apply this normalization even if the incoming `stmt` or existing Lean code writes the expanded form; when shorthand exists, convert to the shorthand in `lean_statement`.
 - Prefer statements that can directly reuse relevant results from `Derived.lean`.
 - Never invent Mathlib names. If the right formalization depends on uncertain library naming or unsupported abstractions, return `stuck`.
 - If the target is too vague, underspecified, or not naturally expressible as a reusable Lean proposition, return `stuck`.
+- When `result` is `ok`, also provide `theorem_name_stem`: a short snake_case English phrase describing the claim.
+- `theorem_name_stem` must use only lowercase letters, digits, and underscores, start with a letter, omit any `thm` prefix, and omit the trailing numeric problem suffix.
+- Prefer concise semantic names of about 3 to 6 words, such as `godel_fixpoint_below_box` or `semigroup_mul_comm`.
+- When `result` is `stuck`, return `""` for `theorem_name_stem`.
 
 Output schema:
 {
   "problem_id": "<match input>",
   "result": "ok|stuck",
   "lean_statement": "Lean proposition statement only",
+  "theorem_name_stem": "short snake_case semantic name, or empty when stuck",
   "notes": "short note about the formalization or why it is stuck"
 }

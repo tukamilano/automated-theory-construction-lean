@@ -25,4 +25,5 @@ AutomatedTheoryConstruction/
 !AutomatedTheoryConstruction/
 AutomatedTheoryConstruction/*
 !AutomatedTheoryConstruction/seeds.jsonl
-data/
+data/*
+docs/*
