@@ -3,45 +3,54 @@ import AutomatedTheoryConstruction.Derived
 
 namespace AutomatedTheoryConstruction
 
-theorem thm_consistent_reft_top_not_box_equiv_000028 : ∃ (α : Type _), ∃ (_ : ACR α), ∃ (_ : ACR.Prov α), ∃ (_ : ACR.Reft α), ∃ (_ : ACR.APS α), ∃ (_ : ACR.C5 α), ACR.Consistent α ∧ (⊠⊠(⊤ : α) ≐ ⊠(⊤ : α)) ∧ ¬ (⊠(⊤ : α) ≐ □(⊠(⊤ : α))) := by
-  let α : Type := Fin 3
-  letI : Top α := ⟨2⟩
-  letI : Bot α := ⟨0⟩
-  letI : Preorder α := {
-    le := fun x y => x.1 ≤ y.1
-    le_refl := by
-      intro x
-      exact Nat.le_refl x.1
-    le_trans := by
-      intro a b c hab hbc
-      exact Nat.le_trans hab hbc
-  }
-  let acr : ACR α := {
-    toTop := inferInstance
-    toBot := inferInstance
-    toPreorder := inferInstance
-  }
-  letI : ACR α := acr
-  let prov : ACR.Prov α := ⟨fun x => if x = 0 then 1 else 2⟩
-  let reft : ACR.Reft α := ⟨fun x => if x = 0 then 2 else 1⟩
-  letI : ACR.Prov α := prov
-  letI : ACR.Reft α := reft
-  let aps : ACR.APS α := {
-    prov_mono := by decide
-    reft_anti_mono := by decide
-    top_le_reft_bot := by decide
-    le_reft_top_of_le_prov_of_le_reft := by decide
-    reft_le_prov_reft := by decide
-  }
-  letI : ACR.APS α := aps
-  let c5 : ACR.C5 α := {
-    le_top := by decide
-  }
-  refine ⟨α, acr, prov, reft, aps, c5, ?_⟩
-  constructor
-  · decide
-  constructor
-  · constructor <;> decide
-  · decide
+theorem thm_reft_fixpoint_iff_reft_top_000005_is_false : ¬(∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α] {x : α}, x ≐ ⊠x ↔ x ≐ ⊠(⊤ : α)) := by
+  intro h
+  let T : Type := Bool
+  let rel : T → T → Prop := fun a b => a = false ∨ b = true
+  let rf : T → T := Bool.not
+  let acrT : ACR T :=
+    { top := true
+      bot := false
+      le := rel
+      le_refl := by
+        intro a
+        cases a <;> simp [rel]
+      le_trans := by
+        intro a b c hab hbc
+        cases a <;> cases b <;> cases c <;> simp [rel] at hab hbc ⊢ }
+  letI : ACR T := acrT
+  let provT : ACR.Prov T :=
+    { prov := id }
+  letI : ACR.Prov T := provT
+  let reftT : ACR.Reft T :=
+    { reft := rf }
+  letI : ACR.Reft T := reftT
+  let apsT : ACR.APS T :=
+    { prov_mono := by
+        intro x y hxy
+        simpa [rel] using hxy
+      reft_anti_mono := by
+        intro x y hxy
+        cases x <;> cases y <;> simp [rel, rf] at hxy ⊢
+      top_le_reft_bot := by
+        simp [rel, rf]
+      le_reft_top_of_le_prov_of_le_reft := by
+        intro x y hxy hxry
+        cases x <;> cases y <;> simp [rel, rf] at hxy hxry ⊢
+      reft_le_prov_reft := by
+        intro x
+        cases x <;> simp [rel, rf] }
+  letI : ACR.APS T := apsT
+  let c5T : ACR.C5 T :=
+    { le_top := by
+        intro x
+        cases x <;> simp [rel] }
+  letI : ACR.C5 T := c5T
+  have h0 : ((false : T) ≐ ⊠(false : T)) ↔ ((false : T) ≐ ⊠(⊤ : T)) := h (α := T) (x := false)
+  have hRight : (false : T) ≐ ⊠(⊤ : T) := by
+    constructor <;> simp [rel, rf]
+  have hLeft : (false : T) ≐ ⊠(false : T) := h0.2 hRight
+  have htf : (true : T) ≤ (false : T) := hLeft.2
+  simpa [rel] using htf
 
 end AutomatedTheoryConstruction

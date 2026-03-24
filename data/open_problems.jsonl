@@ -1,4 +1,3 @@
-{"id":"op_000030","stmt":"There exists a type `α` with instances `ACR α`, `ACR.Prov α`, `ACR.Reft α`, `ACR.APS α`, and `ACR.C5 α` such that `¬ Nonempty (ACR.GödelFixpoint α)` and `∃ x : α, x ≐ ⊠(⊤ : α)` both hold.","src":"generated"}
 {"id":"op_000005","stmt":"∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α] {x : α}, x ≐ ⊠x ↔ x ≐ ⊠(⊤ : α)","src":"generated"}
 {"id":"op_000031","stmt":"∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], Nonempty (ACR.GödelFixpoint α) → ∀ x : α, ⊠⊠x ≤ ⊠x","src":"generated"}
 {"id":"op_000032","stmt":"∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], Nonempty (ACR.GödelFixpoint α) → ((⊠(⊤ : α)) ≐ □(⊠(⊤ : α))) → ∀ {x : α}, x ≐ ⊠x → ∀ n : Nat, (Nat.iterate (fun y : α => □ y) n) x ≐ x","src":"generated"}
@@ -30,3 +29,6 @@
 {"id":"op_000055","stmt":"Let α be the three-element chain 0 < 1 < 2 with ⊥ := 0 and ⊤ := 2. Define □x := 2 for all x : α, and define ⊠0 := 2, ⊠1 := 0, and ⊠2 := 1. Then α admits instances ACR α, ACR.Prov α, ACR.Reft α, ACR.APS α, and ACR.C5 α.","src":"generated"}
 {"id":"op_000056","stmt":"In the three-element chain 0 < 1 < 2 with ⊥ := 0, ⊤ := 2, □x := 2 for all x : α, and ⊠0 := 2, ⊠1 := 0, ⊠2 := 1, the element 1 satisfies 1 ≐ ⊠(⊤ : α) and ¬ (1 ≐ ⊠1).","src":"generated"}
 {"id":"op_000029","stmt":"There exists a type `α` with instances `ACR α`, `ACR.Prov α`, `ACR.Reft α`, `ACR.APS α`, and `ACR.C5 α`, and an element `x : α`, such that `x ≐ ⊠(⊤ : α)` holds but `¬ (x ≐ ⊠x)` holds.","src":"generated"}
+{"id":"op_000057","stmt":"Let α be the two-element chain {⊥, ⊤} with its usual order, define □x := x for all x : α, and define ⊠⊥ := ⊤ and ⊠⊤ := ⊥. Then for every x : α, ¬ (x ≐ ⊠x).","src":"generated"}
+{"id":"op_000058","stmt":"Let α be the two-element chain {⊥, ⊤} with its usual order, define □x := x for all x : α, and define ⊠⊥ := ⊤ and ⊠⊤ := ⊥. Then for all x y : α, if x ≤ □y and x ≤ ⊠y, then x ≤ ⊠(⊤ : α).","src":"generated"}
+{"id":"op_000030","stmt":"There exists a type `α` with instances `ACR α`, `ACR.Prov α`, `ACR.Reft α`, `ACR.APS α`, and `ACR.C5 α` such that `¬ Nonempty (ACR.GödelFixpoint α)` and `∃ x : α, x ≐ ⊠(⊤ : α)` both hold.","src":"generated"}

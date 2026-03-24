@@ -46,6 +46,7 @@ DERIVED_TEMPLATE = (
 
 THEOREM_NAME_STEM_PATTERN = re.compile(r"^[a-z][a-z0-9_]*$")
 THEOREM_NAME_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_']*$")
+DERIVED_THEOREM_HEADER_PATTERN = re.compile(r"\btheorem\s+([A-Za-z0-9_']+)\s*:\s*(.+?)\s*:=", re.DOTALL)
 
 
 def normalize_stmt_text(stmt: str) -> str:
@@ -460,8 +461,8 @@ def make_timeout_subgoals(
 
 def extract_derived_theorem_entries(
     derived_path: Path,
-    max_theorems: int = 50,
-) -> list[dict[str, Any]]:
+    max_theorems: int | None = None,
+) -> list[dict[str, str]]:
     """Extract theorem entries directly from Derived.lean."""
     fallback_entries = build_derived_entries_from_file(derived_path, max_theorems=max_theorems)
     return [
@@ -472,6 +473,35 @@ def extract_derived_theorem_entries(
         for entry in fallback_entries[:max_theorems]
         if str(entry.get("theorem_name", "")).strip() and str(entry.get("statement", "")).strip()
     ]
+
+
+def extract_derived_entry_from_theorem_code(theorem_code: str) -> dict[str, str] | None:
+    match = DERIVED_THEOREM_HEADER_PATTERN.search(theorem_code)
+    if match is None:
+        return None
+
+    theorem_name = str(match.group(1)).strip()
+    statement = normalize_stmt_text(str(match.group(2)).strip())
+    if not theorem_name or not statement:
+        return None
+
+    return {
+        "name": theorem_name,
+        "statement": statement,
+    }
+
+
+def append_derived_entry_cache(
+    entries: list[dict[str, str]],
+    theorem_code: str,
+) -> None:
+    entry = extract_derived_entry_from_theorem_code(theorem_code)
+    if entry is None:
+        return
+    if any(existing["name"] == entry["name"] for existing in entries):
+        return
+    entries.append(entry)
+
 
 def classify_statement_shape(stmt: str) -> dict[str, bool]:
     normalized = normalize_stmt_text(stmt)
@@ -692,11 +722,10 @@ def render_mathlib_hint_context(stmt: str, entries: list[dict[str, Any]], max_ch
 
 def build_problem_theory_context(
     theory_context: str,
-    derived_path: Path,
+    derived_entries: list[dict[str, str]],
     stmt: str,
 ) -> str:
-    entries = extract_derived_theorem_entries(derived_path)
-    relevant_entries = shortlist_relevant_derived_entries(entries, stmt)
+    relevant_entries = shortlist_relevant_derived_entries(derived_entries, stmt)
     relevant_summary = render_relevant_derived_context(relevant_entries)
     mathlib_summary = render_mathlib_hint_context(stmt, relevant_entries)
     context = theory_context
@@ -1521,6 +1550,7 @@ def main() -> None:
 
     base_theory_context = load_optional_text(args.theory_file)
     derived_path = Path(args.derived_file)
+    derived_entries = extract_derived_theorem_entries(derived_path)
     open_path = data_dir / "open_problems.jsonl"
 
     worker_settings = None
@@ -1593,7 +1623,7 @@ def main() -> None:
 
         problem_id = str(picked["id"])
         original_stmt = str(picked.get("stmt", ""))
-        initial_theory_context = build_problem_theory_context(base_theory_context, derived_path, original_stmt)
+        initial_theory_context = build_problem_theory_context(base_theory_context, derived_entries, original_stmt)
         emit_phase_log(args.phase_logs, "problem_selected", iteration=completed_iterations + 1, problem_id=problem_id)
 
         current_iteration_full_logs: list[dict[str, Any]] = []
@@ -1640,7 +1670,7 @@ def main() -> None:
 
         theory_context = build_problem_theory_context(
             base_theory_context,
-            derived_path,
+            derived_entries,
             target_stmt,
         )
 
@@ -1733,12 +1763,15 @@ def main() -> None:
             if theorem_body_match:
                 # Append the newly verified theorem before expansion so follow-up
                 # generation can immediately reuse the latest derived facts.
-                append_theorem(
+                theorem_code = theorem_body_match.group(1)
+                appended = append_theorem(
                     Path(args.derived_file),
-                    theorem_body_match.group(1),
+                    theorem_code,
                     None,
                 )
-                theory_context = build_problem_theory_context(base_theory_context, derived_path, target_stmt)
+                if appended:
+                    append_derived_entry_cache(derived_entries, theorem_code)
+                theory_context = build_problem_theory_context(base_theory_context, derived_entries, target_stmt)
 
         solver_new_problem_suggestions = list(new_problems)
         expander_new_problem_suggestions: list[str] = []
