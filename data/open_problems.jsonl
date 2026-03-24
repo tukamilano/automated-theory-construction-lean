@@ -1,5 +1,3 @@
-{"id":"op_000005","stmt":"∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α] {x : α}, x ≐ ⊠x ↔ x ≐ ⊠(⊤ : α)","src":"generated"}
-{"id":"op_000031","stmt":"∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], Nonempty (ACR.GödelFixpoint α) → ∀ x : α, ⊠⊠x ≤ ⊠x","src":"generated"}
 {"id":"op_000032","stmt":"∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], Nonempty (ACR.GödelFixpoint α) → ((⊠(⊤ : α)) ≐ □(⊠(⊤ : α))) → ∀ {x : α}, x ≐ ⊠x → ∀ n : Nat, (Nat.iterate (fun y : α => □ y) n) x ≐ x","src":"generated"}
 {"id":"op_000033","stmt":"There exists a type α with instances ACR α, ACR.Prov α, ACR.Reft α, ACR.APS α, and ACR.C5 α such that Nonempty (ACR.GödelFixpoint α) holds, ((⊠(⊤ : α)) ≐ □(⊠(⊤ : α))) holds, and some element x : α satisfies x ≐ □x but not x ≐ ⊠x.","src":"generated"}
 {"id":"op_000034","stmt":"∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], Nonempty (ACR.GödelFixpoint α) → ∀ x : α, ⊠⊠x ≤ ⊠(⊤ : α)","src":"generated"}
@@ -32,3 +30,8 @@
 {"id":"op_000057","stmt":"Let α be the two-element chain {⊥, ⊤} with its usual order, define □x := x for all x : α, and define ⊠⊥ := ⊤ and ⊠⊤ := ⊥. Then for every x : α, ¬ (x ≐ ⊠x).","src":"generated"}
 {"id":"op_000058","stmt":"Let α be the two-element chain {⊥, ⊤} with its usual order, define □x := x for all x : α, and define ⊠⊥ := ⊤ and ⊠⊤ := ⊥. Then for all x y : α, if x ≤ □y and x ≤ ⊠y, then x ≤ ⊠(⊤ : α).","src":"generated"}
 {"id":"op_000030","stmt":"There exists a type `α` with instances `ACR α`, `ACR.Prov α`, `ACR.Reft α`, `ACR.APS α`, and `ACR.C5 α` such that `¬ Nonempty (ACR.GödelFixpoint α)` and `∃ x : α, x ≐ ⊠(⊤ : α)` both hold.","src":"generated"}
+{"id":"op_000059","stmt":"∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α] {x : α}, Nonempty (ACR.GödelFixpoint α) → (x ≐ ⊠x ↔ x ≐ ⊠(⊤ : α))","src":"generated"}
+{"id":"op_000060","stmt":"∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], (∀ {x : α}, x ≐ ⊠(⊤ : α) → x ≐ ⊠x) ↔ Nonempty (ACR.GödelFixpoint α)","src":"generated"}
+{"id":"op_000005","stmt":"∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α] {x : α}, x ≐ ⊠x ↔ x ≐ ⊠(⊤ : α)","src":"generated"}
+{"id":"op_000061","stmt":"∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], (∀ x : α, ⊠⊠x ≤ ⊠x) ↔ Nonempty (ACR.GödelFixpoint α)","src":"generated"}
+{"id":"op_000062","stmt":"∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], Nonempty (ACR.GödelFixpoint α) → ∀ x : α, ⊠⊠x ≐ ⊠(⊤ : α)","src":"generated"}

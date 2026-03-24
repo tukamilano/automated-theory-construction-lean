@@ -35,11 +35,11 @@ When the current problem is solved and verified (`verify_success = true` and `re
   1. natural generalizations or reusable abstractions
   2. converses, strict separations, or failure-of-converse statements
   3. existence, uniqueness, impossibility, or rigidity phenomena
-  4. finite-model behavior, extremal behavior, boundary cases, or classification fragments
+  4. sharp boundary phenomena, minimal-hypothesis thresholds, or reusable structural dichotomies
   5. adjacent structural consequences that clarify the global shape of the theory
 - It is good to return at least one candidate that meaningfully broadens, reinterprets, or reuses the verified result beyond the immediate local target.
 - Prefer candidates whose resolution would teach something non-obvious about the theory or its models, rather than merely restating the solved fact in slightly altered form.
-- If a more informative model-level, structural, or boundary-case follow-up is available, prefer it over a nearby local rewrite.
+- If a more informative structural or threshold-style follow-up is available, prefer it over a nearby local rewrite.
 ```
 
 The goal is not merely to stay close to the last proof, but to push outward toward statements that clarify the structure of the theory.

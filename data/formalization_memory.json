@@ -1072,5 +1072,48 @@
       "lean_error_fingerprint": "formalizer_timeout",
       "new_problems": []
     }
+  ],
+  "op_000031": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], Nonempty (ACR.GödelFixpoint α) → ∀ x : α, ⊠⊠x ≤ ⊠x",
+      "formalized_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], Nonempty (ACR.GödelFixpoint α) → ∀ x : α, ⊠⊠x ≤ ⊠x",
+      "statement_formalization_notes": "The input stmt is already a valid Lean proposition and already uses the repository's notation.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "Install the given nonempty Godel-fixpoint assumption as an instance, use C5 to get x ≤ ⊤, apply anti-monotonicity of ⊠ twice to obtain ⊠⊠x ≤ ⊠⊠⊤ and ⊠⊤ ≤ ⊠x, then compose with ACR.reft_reft_top_le_reft_top.",
+      "proof_text": "intro α _ _ _ _ _ hG x\nletI : Nonempty (ACR.GödelFixpoint α) := hG\nhave hx_top : x ≤ (⊤ : α) := ACR.le_top\nhave htop : ⊠(⊤ : α) ≤ ⊠x := ACR.reft_anti_mono hx_top\nhave hxx : ⊠⊠x ≤ ⊠⊠(⊤ : α) := ACR.reft_anti_mono htop\nexact le_trans hxx (le_trans (ACR.reft_reft_top_le_reft_top (α := α)) htop)",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "no_diagnostics",
+      "new_problems": []
+    }
+  ],
+  "op_000032": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], Nonempty (ACR.GödelFixpoint α) → ((⊠(⊤ : α)) ≐ □(⊠(⊤ : α))) → ∀ {x : α}, x ≐ ⊠x → ∀ n : Nat, (Nat.iterate (fun y : α => □ y) n) x ≐ x",
+      "formalized_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], Nonempty (ACR.GödelFixpoint α) → ((⊠(⊤ : α)) ≐ □(⊠(⊤ : α))) → ∀ {x : α}, x ≐ ⊠x → ∀ n : Nat, (Nat.iterate (fun y : α => □ y) n) x ≐ x",
+      "theorem_name_stem": "iterate_box_eq_of_reft_fixpoint",
+      "statement_formalization_notes": "Direct formalization of the given statement, reusing the repository notation `≐`, `□`, and `⊠`.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    }
   ]
 }

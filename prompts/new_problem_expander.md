@@ -11,7 +11,7 @@ Policy:
 - Do not output proof text or theorem names.
 - If `original_stmt` is present, use it as background context for phrasing and intent, while treating `stmt` as the exact formal target of the current attempt.
 - Keep candidates anchored to the active theory.
-- Prefer statements that preserve the central objects, assumptions, and invariants visible in `stmt`, `original_stmt`, and `theory_context`, or explicit claims about the models, instances, or boundary cases of that theory.
+- Prefer statements that preserve the central objects, assumptions, and invariants visible in `stmt`, `original_stmt`, and `theory_context`, or explicit claims about sharp hypotheses, thresholds, or reusable structural consequences already latent in that theory.
 - Do not drift to a mostly unrelated framework.
 - Read `current_iteration_full_logs` first and mine the current prover/formalize/repair attempts, current result, verification outcome, and same-problem history for natural follow-up problems.
 - If `expand_generation_policy` is present, follow it strictly.
@@ -36,11 +36,11 @@ When the current problem is solved and verified (`verify_success = true` and `re
   1. natural generalizations or reusable abstractions
   2. converses, strict separations, or failure-of-converse statements
   3. existence, uniqueness, impossibility, or rigidity phenomena
-  4. finite-model behavior, extremal behavior, boundary cases, or classification fragments
+  4. sharp boundary phenomena, minimal-hypothesis thresholds, or reusable structural dichotomies
   5. adjacent structural consequences that clarify the global shape of the theory
 - It is good to return at least one candidate that meaningfully broadens, reinterprets, or reuses the verified result beyond the immediate local target.
 - Prefer candidates whose resolution would teach something non-obvious about the theory or its models, rather than merely restating the solved fact in slightly altered form.
-- If a more informative model-level, structural, or boundary-case follow-up is available, prefer it over a nearby local rewrite.
+- If a more informative structural or threshold-style follow-up is available, prefer it over a nearby local rewrite.
 - When appropriate, it is also good to propose a follow-up that analyzes the theory's internal language or expressive structure, provided the statement remains anchored to the active theory.
 
 Quality checklist for every returned candidate:
@@ -53,6 +53,7 @@ Low-quality candidates to reject:
 - near-duplicates of existing open, solved, counterexampled, or already-verified statements, including alpha-equivalent restatements of theorems already present in `Derived.lean`
 - shallow specializations or shallow generalizations that preserve the same mathematical content
 - purely one-off example checks whose main value is only local verification
+- ad hoc finite-model existence claims, hand-crafted two- or three-element structures, or case-by-case classification prompts unless the current logs already produced that instance as a necessary witness for a broader theory-level claim
 - statements that merely restate a known witness, counterexample, or already verified pattern in slightly different packaging
 - narrow local decompositions when a stronger outward-looking follow-up is available
 
@@ -68,6 +69,7 @@ Candidate format constraints:
 - If a candidate studies the theory's internal language or expressive power, state it as a concrete mathematical claim rather than an open-ended search task or vague meta-level prompt.
 - Reject hard-coded local trivia. Do not propose statements whose main content is a one-off computation in a specially crafted instance unless it is explicitly serving as a witness for a broader theory-level claim.
 - Reject low-value verification tasks about a hand-crafted example when they do not clarify a broader structural point.
+- Prefer theory-internal statements over externally specified toy models unless the candidate's main point is to witness a broader impossibility, separation, or non-implication claim already forced by the current logs.
 - Avoid trivial restatements, pure renamings, immediate corollaries with no new conceptual content, and direct negation templates unless they introduce a genuinely new mathematical angle.
 - Use the `rationale` field to explain why the candidate is non-trivial, how it connects to the current solved/unsolved state, and what kind of theory-growth it aims to produce.
 - If the strongest available follow-ups are only weak local-instance checks or cosmetic variants, return an empty `candidates` array instead of filling the quota.
