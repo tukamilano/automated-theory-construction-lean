@@ -22,9 +22,9 @@ prefix:50 "⊬ " => Refutable
 
 @[grind]
 def Equivalent (x y : α) := (x ≤ y) ∧ (y ≤ x)
-infix:50 " ≡ " => Equivalent
+infix:50 " ≐ " => Equivalent
 
-instance [ACR α] : Trans (LE.le (α := α)) (· ≡ ·) (· ≤ ·) where
+instance [ACR α] : Trans (LE.le (α := α)) (· ≐ ·) (· ≤ ·) where
   trans hab hbc := by grind;
 
 def Inconsistent (α) [ACR α] := (⊤ : α) ≤ ⊥
@@ -50,8 +50,8 @@ attribute [grind <=] prov_mono reft_anti_mono
 attribute [grind <=] le_reft_top_of_le_prov_of_le_reft
 attribute [grind .] top_le_reft_bot reft_le_prov_reft
 
-abbrev GödelFixpoint (α) [ACR α] [Reft α] := { g : α // g ≡ ⊠g }
-abbrev HenkinFixpoint (α) [ACR α] [Prov α] := { h : α // h ≡ □h }
+abbrev GödelFixpoint (α) [ACR α] [Reft α] := { g : α // g ≐ ⊠g }
+abbrev HenkinFixpoint (α) [ACR α] [Prov α] := { h : α // h ≐ □h }
 
 variable [Prov α] [Reft α] [APS α] {g : GödelFixpoint α}
 
@@ -104,7 +104,7 @@ export C5 (le_top)
 attribute [grind .] le_top
 
 /-- Theorem 2 -/
-lemma gf_equiv_reft_top [C5 α] {g : GödelFixpoint α} : g.1 ≡ ⊠⊤ := by
+lemma gf_equiv_reft_top [C5 α] {g : GödelFixpoint α} : g.1 ≐ ⊠⊤ := by
   constructor;
   . grind;
   . have : g.1 ≤ ⊤ := le_top;

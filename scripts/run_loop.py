@@ -15,6 +15,7 @@ from append_derived import (
     build_derived_entries_from_file,
 )
 from common import parse_problem_index, read_jsonl, write_jsonl_atomic
+from import_inference import infer_minimal_imports, render_import_block
 from lean_verify import verify_scratch
 from state_update import apply_state_update
 from statement_alpha_filter import run_statement_alpha_filter
@@ -258,6 +259,7 @@ def formalize_to_scratch(
     include_mathlib_import: bool,
 ) -> tuple[str, str]:
     theorem_name = validate_theorem_name(theorem_name)
+    extra_imports = infer_minimal_imports(stmt)
     if mode == "proof":
         raw_body = proof_text.strip() if proof_text.strip() else "sorry"
         body = "\n  ".join(line.rstrip() for line in raw_body.splitlines())
@@ -270,13 +272,10 @@ def formalize_to_scratch(
         body = "\n  ".join(line.rstrip() for line in raw_body.splitlines())
         theorem = f"theorem {theorem_name}_is_false : ¬({stmt}) := by\n  {body}\n"
 
-    import_block = ""
-    if include_mathlib_import:
-        import_block = "import Mathlib\n"
-
     scratch = (
-        import_block
-        + "import AutomatedTheoryConstruction.Theory\n"
+        render_import_block(extra_imports)
+        + 
+        "import AutomatedTheoryConstruction.Theory\n"
         "import AutomatedTheoryConstruction.Derived\n\n"
         "namespace AutomatedTheoryConstruction\n\n"
         f"{theorem}\n"
@@ -1050,8 +1049,23 @@ def resolve_solver_statement(
             notes = f"{notes} {duplicate_note}".strip() if notes else duplicate_note
         elif not bool(alpha_filter_result.get("candidate_elaborated", True)):
             alpha_error = str(alpha_filter_result.get("error", "")).strip()
-            skip_note = f"alpha filter skipped: {alpha_error}" if alpha_error else "alpha filter skipped"
+            result = "stuck"
+            formalized_stmt = ""
+            theorem_name_stem = ""
+            skip_note = (
+                f"statement elaboration failed before proof search: {alpha_error}"
+                if alpha_error
+                else "statement elaboration failed before proof search"
+            )
             notes = f"{notes} {skip_note}".strip() if notes else skip_note
+        elif bool(alpha_filter_result.get("duplicate_check_timed_out", False)):
+            alpha_error = str(alpha_filter_result.get("error", "")).strip()
+            timeout_note = (
+                f"alpha-equivalence duplicate check timed out; continuing without duplicate filtering: {alpha_error}"
+                if alpha_error
+                else "alpha-equivalence duplicate check timed out; continuing without duplicate filtering"
+            )
+            notes = f"{notes} {timeout_note}".strip() if notes else timeout_note
 
     solver_stmt = formalized_stmt if result == "ok" else ""
     emit_phase_log(
@@ -1832,6 +1846,7 @@ def main() -> None:
             verify_success=verify_success,
             theorem_name=theorem_name,
             new_problems=new_problems,
+            drop_open_duplicate=blocked_by_alpha_duplicate,
         )
         emit_phase_log(args.phase_logs, "state_update", iteration=completed_iterations + 1, problem_id=problem_id)
         completed_iterations += 1

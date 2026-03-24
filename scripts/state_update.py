@@ -14,6 +14,7 @@ def apply_state_update(
     verify_success: bool,
     theorem_name: str | None,
     new_problems: list[str],
+    drop_open_duplicate: bool = False,
 ) -> dict[str, Any]:
     open_path = data_dir / "open_problems.jsonl"
     solved_path = data_dir / "solved_problems.jsonl"
@@ -64,6 +65,8 @@ def apply_state_update(
     elif verify_success and result == "counterexample":
         counter_rows.append({"id": target["id"], "stmt": target["stmt"]})
         moved_to = "counterexample"
+    elif drop_open_duplicate:
+        moved_to = "dropped_duplicate"
     else:
         remaining_open.append(target)
 
@@ -86,6 +89,7 @@ def main() -> None:
     parser.add_argument("--verify-success", action="store_true")
     parser.add_argument("--theorem-name")
     parser.add_argument("--new-problem", action="append", default=[])
+    parser.add_argument("--drop-open-duplicate", action="store_true")
     args = parser.parse_args()
 
     report = apply_state_update(
@@ -95,6 +99,7 @@ def main() -> None:
         verify_success=args.verify_success,
         theorem_name=args.theorem_name,
         new_problems=args.new_problem,
+        drop_open_duplicate=args.drop_open_duplicate,
     )
     print(report)
 

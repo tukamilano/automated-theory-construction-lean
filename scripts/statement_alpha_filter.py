@@ -8,6 +8,8 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
+from import_inference import infer_minimal_imports, render_import_block
+
 
 DECL_NAME_PATTERN = re.compile(r"^\s*(lemma|theorem)\s+([A-Za-z0-9_']+)\b")
 NAMESPACE_PATTERN = re.compile(r"^\s*namespace\s+([A-Za-z0-9_.']+)\s*$")
@@ -89,7 +91,8 @@ def build_alpha_filter_lean_source(
         existing_names.append(str(entry["lean_name"]))
         existing_labels.append(str(entry["label"]))
 
-    return f"""import Lean
+    extra_imports = render_import_block(infer_minimal_imports(candidate_statement))
+    return f"""{extra_imports}import Lean
 import Lean.Data.Json
 import AutomatedTheoryConstruction.Theory
 import AutomatedTheoryConstruction.Derived
@@ -134,24 +137,34 @@ end AutomatedTheoryConstructionStatementAlphaFilter
 """
 
 
-def run_statement_alpha_filter(
+def build_statement_elaboration_check_source(
     *,
     candidate_statement: str,
-    theory_file: Path,
-    derived_file: Path,
-    timeout_sec: int = 60,
-) -> dict[str, Any]:
-    entries = build_statement_entries_from_file(theory_file) + build_statement_entries_from_file(derived_file)
-    lean_source = build_alpha_filter_lean_source(
-        candidate_statement=candidate_statement,
-        entries=entries,
-    )
+) -> str:
+    extra_imports = render_import_block(infer_minimal_imports(candidate_statement))
+    return f"""{extra_imports}import AutomatedTheoryConstruction.Theory
+import AutomatedTheoryConstruction.Derived
 
+namespace AutomatedTheoryConstructionStatementAlphaFilter
+
+axiom candidateStmt : {candidate_statement}
+
+end AutomatedTheoryConstructionStatementAlphaFilter
+"""
+
+
+def _run_lean_source(
+    *,
+    theory_file: Path,
+    prefix: str,
+    lean_source: str,
+    timeout_sec: int,
+) -> tuple[bool, str]:
     with tempfile.NamedTemporaryFile(
         mode="w",
         encoding="utf-8",
         suffix=".lean",
-        prefix="StatementAlphaFilter.",
+        prefix=prefix,
         dir=str(theory_file.parent),
         delete=False,
     ) as handle:
@@ -169,26 +182,67 @@ def run_statement_alpha_filter(
             )
         except subprocess.TimeoutExpired as exc:
             stderr_text = (exc.stderr or "") if isinstance(exc.stderr, str) else ""
-            return {
-                "candidate_elaborated": False,
-                "is_duplicate": False,
-                "matched_names": [],
-                "error": f"alpha filter timed out after {timeout_sec}s: {stderr_text}".strip(),
-            }
+            return False, f"timed out after {timeout_sec}s: {stderr_text}".strip()
 
         if proc.returncode != 0:
             stderr = (proc.stderr or "").strip()
             stdout = (proc.stdout or "").strip()
-            excerpt = (stderr or stdout).splitlines()[0] if (stderr or stdout) else "Lean alpha filter failed"
+            excerpt = (stderr or stdout).splitlines()[0] if (stderr or stdout) else "Lean check failed"
+            return False, excerpt
+
+        return True, (proc.stdout or "").strip()
+    finally:
+        temp_path.unlink(missing_ok=True)
+
+
+def run_statement_alpha_filter(
+    *,
+    candidate_statement: str,
+    theory_file: Path,
+    derived_file: Path,
+    timeout_sec: int = 60,
+) -> dict[str, Any]:
+    elaboration_source = build_statement_elaboration_check_source(
+        candidate_statement=candidate_statement,
+    )
+    elaborated, elaboration_detail = _run_lean_source(
+        theory_file=theory_file,
+        prefix="StatementElabCheck.",
+        lean_source=elaboration_source,
+        timeout_sec=max(10, timeout_sec),
+    )
+    if not elaborated:
+        prefix = "statement elaboration timed out" if "timed out" in elaboration_detail else "statement elaboration failed"
+        return {
+            "candidate_elaborated": False,
+            "is_duplicate": False,
+            "matched_names": [],
+            "duplicate_check_timed_out": False,
+            "error": f"{prefix}: {elaboration_detail}".strip(),
+        }
+
+    entries = build_statement_entries_from_file(theory_file) + build_statement_entries_from_file(derived_file)
+    lean_source = build_alpha_filter_lean_source(
+        candidate_statement=candidate_statement,
+        entries=entries,
+    )
+    ok, output = _run_lean_source(
+        theory_file=theory_file,
+        prefix="StatementAlphaFilter.",
+        lean_source=lean_source,
+        timeout_sec=timeout_sec,
+    )
+    if not ok:
+        if "timed out" in output:
             return {
-                "candidate_elaborated": False,
+                "candidate_elaborated": True,
                 "is_duplicate": False,
                 "matched_names": [],
-                "error": excerpt,
+                "duplicate_check_timed_out": True,
+                "error": f"alpha filter {output}".strip(),
             }
-
         parsed: dict[str, Any] | None = None
-        for line in reversed((proc.stdout or "").splitlines()):
+        for line in reversed(output.splitlines()):
             text = line.strip()
             if not text:
                 continue
@@ -200,26 +254,47 @@ def run_statement_alpha_filter(
                 parsed = payload
                 break
 
-        if parsed is None:
-            return {
-                "candidate_elaborated": False,
-                "is_duplicate": False,
-                "matched_names": [],
-                "error": "alpha filter did not emit a JSON payload",
-            }
-
-        matched_names = parsed.get("matched_names", [])
-        if not isinstance(matched_names, list):
-            matched_names = []
-
         return {
-            "candidate_elaborated": bool(parsed.get("candidate_elaborated", False)),
-            "is_duplicate": bool(parsed.get("is_duplicate", False)),
-            "matched_names": [str(item) for item in matched_names if str(item).strip()],
-            "error": str(parsed.get("error", "")).strip(),
+            "candidate_elaborated": False,
+            "is_duplicate": False,
+            "matched_names": [],
+            "duplicate_check_timed_out": False,
+            "error": f"alpha filter failed: {output}".strip(),
         }
-    finally:
-        temp_path.unlink(missing_ok=True)
+
+    parsed: dict[str, Any] | None = None
+    for line in reversed(output.splitlines()):
+        text = line.strip()
+        if not text:
+            continue
+        try:
+            payload = json.loads(text)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(payload, dict):
+            parsed = payload
+            break
+
+    if parsed is None:
+        return {
+            "candidate_elaborated": True,
+            "is_duplicate": False,
+            "matched_names": [],
+            "duplicate_check_timed_out": False,
+            "error": "alpha filter did not emit a JSON payload",
+        }
+
+    matched_names = parsed.get("matched_names", [])
+    if not isinstance(matched_names, list):
+        matched_names = []
+
+    return {
+        "candidate_elaborated": bool(parsed.get("candidate_elaborated", False)),
+        "is_duplicate": bool(parsed.get("is_duplicate", False)),
+        "matched_names": [str(item) for item in matched_names if str(item).strip()],
+        "duplicate_check_timed_out": False,
+        "error": str(parsed.get("error", "")).strip(),
+    }
 
 
 def main() -> None:
