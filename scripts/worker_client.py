@@ -37,9 +37,10 @@ def _resolve_timeout_seconds(timeout_text: str | None, default: int | None) -> i
 def load_worker_settings(
     command_override: str | None,
     timeout_override: int | None,
+    default_timeout_sec: int | None = 180,
 ) -> WorkerSettings:
     command = (command_override or os.getenv("ATC_WORKER_COMMAND") or "").strip()
-    timeout_from_env = _resolve_timeout_seconds(os.getenv("ATC_WORKER_TIMEOUT"), 180)
+    timeout_from_env = _resolve_timeout_seconds(os.getenv("ATC_WORKER_TIMEOUT"), default_timeout_sec)
     timeout_sec = (
         None if timeout_override == 0 else timeout_override
     ) if timeout_override is not None else timeout_from_env

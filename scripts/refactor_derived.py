@@ -243,6 +243,7 @@ def main() -> None:
     base_worker_settings = load_worker_settings(
         command_override=args.worker_command,
         timeout_override=args.worker_timeout,
+        default_timeout_sec=None,
     )
     worker_settings = load_task_worker_settings(
         task_name="refactor_derived",
