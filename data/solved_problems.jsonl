@@ -1,0 +1,1 @@
+{"id":"op_000001","stmt":"∀ {V : Type*} [AddCommGroup V] [Module ℂ V] (bc : BosonCore V) (n : ℕ), bc.number (bc.ket n) = (n : ℂ) • bc.ket n","thm":"thm_number_ket_eigenvalue_000001"}

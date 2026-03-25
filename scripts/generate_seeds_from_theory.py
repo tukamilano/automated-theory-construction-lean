@@ -383,7 +383,14 @@ def main() -> int:
     seeds = validate_seed_payload(payload, args.seed_count)
 
     rows = [
-        {"id": f"op_{index:06d}", "stmt": stmt, "src": args.seed_src}
+        {
+            "id": f"op_{index:06d}",
+            "stmt": stmt,
+            "src": args.seed_src,
+            "priority": "unknown",
+            "priority_rationale": "",
+            "failure_count": 0,
+        }
         for index, stmt in enumerate(seeds, 1)
     ]
     write_jsonl_atomic(output_file, rows)

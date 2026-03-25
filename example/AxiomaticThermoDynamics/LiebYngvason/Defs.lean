@@ -97,6 +97,10 @@ class LYAxioms (Γ : Type*) where
       `(tX, (1-t)X) ≺ X` for `0 < t < 1`. -/
   recombine : ∀ (X : Γ) (t : ℝ), 0 < t → t < 1 →
     prec [(t, X), (1 - t, X)] (single X)
+  /-- A zero-mass spectator can be adjoined without changing accessibility. -/
+  zero_append : ∀ (s : CState Γ) (Z : Γ), prec s (s ++ [(0, Z)])
+  /-- A zero-mass spectator can be removed without changing accessibility. -/
+  zero_drop : ∀ (s : CState Γ) (Z : Γ), prec (s ++ [(0, Z)]) s
   /-- **A6: Stability.** An infinitesimal perturbation cannot enlarge
       the set of accessible states:
       if `(s₁, εZ₀) ≺ (s₂, εZ₁)` for all `ε > 0`, then `s₁ ≺ s₂`. -/
@@ -138,6 +142,10 @@ def equivS (X Y : Γ) : Prop := equiv (single X) (single Y)
 def forwardSector (X : Γ) : Set Γ :=
   { Y : Γ | precS X Y }
 
+/-- States lying between the reference points `X₀` and `X₁`. -/
+def InReferenceStrip (X₀ X₁ X : Γ) : Prop :=
+  precS X₀ X ∧ precS X X₁
+
 end LYAxioms
 
 /-! ### Comparison Hypothesis -/
@@ -159,13 +167,14 @@ class ComparisonHypothesis (Γ : Type*) [LYAxioms Γ] where
 /-- The **canonical entropy function** on `Γ` with reference points `X₀ ≺≺ X₁`.
 
     Definition (2.14) in the paper:
-    `S(X) = sup { t : ((1-t)X₀, tX₁) ≺ X }`
+    `S(X) = sup { t ∈ [0,1] : ((1-t)X₀, tX₁) ≺ X }`
 
     This function assigns to each state `X` the supremum of the set of
     mixing parameters `t` such that the mixed reference state `((1-t)X₀, tX₁)`
-    is adiabatically accessible to `X`. -/
+    is adiabatically accessible to `X`, restricted to the physically
+    meaningful interval `0 ≤ t ≤ 1`. -/
 noncomputable def canonicalEntropy [LYAxioms Γ] (X₀ X₁ : Γ) (X : Γ) : ℝ :=
-  sSup { t : ℝ | LYAxioms.prec (mix t X₀ X₁) (single X) }
+  sSup { t : ℝ | 0 ≤ t ∧ t ≤ 1 ∧ LYAxioms.prec (mix t X₀ X₁) (single X) }
 
 /-! ### Convex State Spaces (Axiom A7) -/
 

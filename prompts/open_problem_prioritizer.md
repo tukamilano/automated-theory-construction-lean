@@ -22,6 +22,7 @@ Core rubric:
 Important evaluation rules:
 - Read the current `derived_theorems` carefully before assigning labels.
 - Treat priority as dynamic: a problem can become less important if stronger or more reusable theorems were already proved earlier.
+- Do not lower a problem's priority merely because it belongs to a different theme or is not connected to the current main theorem cluster.
 - If a problem now looks like a shallow corollary, cosmetic rewrite, direct weakening, or near-duplicate of material already in `Derived.lean`, label it `low`.
 - If a problem would likely serve as a reusable bridge lemma or sharpen the current theory architecture, prefer `high`.
 - Prefer `medium` when genuinely uncertain. Do not invent extra labels.

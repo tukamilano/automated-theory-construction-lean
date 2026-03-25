@@ -5,6 +5,7 @@ import json
 import re
 import subprocess
 import sys
+import tempfile
 import time
 from pathlib import Path
 from typing import Callable
@@ -40,15 +41,19 @@ def debug_log(msg: str) -> None:
 
 
 SCRATCH_TEMPLATE = (
+    "import Mathlib\n"
     "import AutomatedTheoryConstruction.Theory\n"
     "import AutomatedTheoryConstruction.Derived\n\n"
+    "set_option autoImplicit false\n\n"
     "namespace AutomatedTheoryConstruction\n\n"
     "-- Temporary Lean code generated for verification is written here.\n\n"
     "end AutomatedTheoryConstruction\n"
 )
 
 DERIVED_TEMPLATE = (
+    "import Mathlib\n"
     "import AutomatedTheoryConstruction.Theory\n\n"
+    "set_option autoImplicit false\n\n"
     "namespace AutomatedTheoryConstruction\n\n"
     "-- Verified theorems are appended here by scripts/append_derived.py.\n"
     "-- Keep any short theorem docstrings/comments here instead of a separate metadata index.\n\n"
@@ -164,10 +169,10 @@ def build_theorem_docstring(
     if not summary:
         summary = normalize_docstring_summary(statement_formalization_notes)
     if not summary:
-        return f"Auto-generated theorem for {problem_id}."
+        return "Auto-generated theorem."
     if summary[-1] not in ".!?":
         summary += "."
-    return f"{summary} Auto-generated from {problem_id}."
+    return summary
 
 
 def is_trivial_negation_style(stmt: str) -> bool:
@@ -421,10 +426,10 @@ def formalize_to_scratch(
     mode: str,
     proof_text: str,
     counterexample_text: str,
-    include_mathlib_import: bool,
 ) -> tuple[str, str]:
     theorem_name = validate_theorem_name(theorem_name)
-    extra_imports = infer_minimal_imports(stmt)
+    _ = stmt
+    extra_imports = infer_minimal_imports("")
     if mode == "proof":
         raw_body = proof_text.strip() if proof_text.strip() else "sorry"
         body = "\n  ".join(line.rstrip() for line in raw_body.splitlines())
@@ -442,11 +447,43 @@ def formalize_to_scratch(
         + 
         "import AutomatedTheoryConstruction.Theory\n"
         "import AutomatedTheoryConstruction.Derived\n\n"
+        "set_option autoImplicit false\n\n"
         "namespace AutomatedTheoryConstruction\n\n"
         f"{theorem}\n"
         "end AutomatedTheoryConstruction\n"
     )
     return theorem_name, scratch
+
+
+def validate_solver_statement_with_lean(
+    *,
+    problem_id: str,
+    theorem_name: str,
+    stmt: str,
+    timeout_sec: int = 180,
+) -> dict[str, Any]:
+    _, scratch = formalize_to_scratch(
+        theorem_name=theorem_name,
+        stmt=stmt,
+        mode="proof",
+        proof_text="sorry",
+        counterexample_text="",
+    )
+    temp_path: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            suffix=".lean",
+            prefix=f"stmt_check_{problem_id}_",
+            delete=False,
+        ) as handle:
+            handle.write(scratch)
+            temp_path = Path(handle.name)
+        return verify_scratch(problem_id, "proof", temp_path, timeout_sec=timeout_sec)
+    finally:
+        if temp_path is not None:
+            temp_path.unlink(missing_ok=True)
 
 
 def parse_new_problems(raw_values: list[str]) -> list[str]:
@@ -1168,6 +1205,7 @@ def resolve_solver_statement(
     *,
     prover_statement_worker_settings: Any,
     prover_statement_prompt_file: str,
+    statement_verify_timeout_sec: int = 180,
     phase_logs: bool,
     iteration: int,
     problem_id: str,
@@ -1223,6 +1261,28 @@ def resolve_solver_statement(
             problem_id=problem_id,
             worker_meta=prover_statement_worker_meta,
         )
+
+    if result == "ok":
+        theorem_name = build_theorem_name(problem_id, theorem_name_stem)
+        verify_result = validate_solver_statement_with_lean(
+            problem_id=problem_id,
+            theorem_name=theorem_name,
+            stmt=formalized_stmt,
+            timeout_sec=statement_verify_timeout_sec,
+        )
+        if not bool(verify_result.get("success", False)):
+            lean_stderr = str(verify_result.get("stderr", "")).strip()
+            lean_stdout = str(verify_result.get("stdout", "")).strip()
+            lean_excerpt = (lean_stderr or lean_stdout).splitlines()[0] if (lean_stderr or lean_stdout) else "Lean statement validation failed"
+            result = "stuck"
+            formalized_stmt = ""
+            theorem_name_stem = ""
+            docstring_summary = ""
+            notes = (
+                f"{notes}\nLean statement validation failed before proof search: {lean_excerpt}"
+                if notes
+                else f"Lean statement validation failed before proof search: {lean_excerpt}"
+            )
 
     solver_stmt = formalized_stmt if result == "ok" else ""
     emit_phase_log(
@@ -1357,7 +1417,6 @@ def attempt_formalization_until_timeout(
     verify_success = False
     current_theorem_name = validate_theorem_name(theorem_name)
     verify_error_excerpt = ""
-    include_mathlib_import = False
     retained_new_problems = list(new_problems)
     proof_text = initial_proof_text
 
@@ -1458,6 +1517,7 @@ def attempt_formalization_until_timeout(
         if phase_logger is not None:
             phase_logger(
                 phase="formalize_and_verify",
+                status="begin",
                 problem_id=problem_id,
                 result=result,
                 repair_round=repair_round,
@@ -1468,13 +1528,13 @@ def attempt_formalization_until_timeout(
             mode=result,
             proof_text=proof_text,
             counterexample_text=counterexample_text,
-            include_mathlib_import=include_mathlib_import,
         )
 
         lean_diagnostics = ""
         scratch_file.write_text(scratch_code, encoding="utf-8")
         if skip_verify:
             verify_success = True
+            verify_error_excerpt = ""
             verify_error_analysis = {
                 "fingerprint": "verify_skipped",
                 "categories": ["verify_skipped"],
@@ -1490,9 +1550,21 @@ def attempt_formalization_until_timeout(
                 verify_stderr = str(verify_result.get("stderr", "")).strip()
                 verify_stdout = str(verify_result.get("stdout", "")).strip()
                 verify_error_excerpt = (verify_stderr or verify_stdout).splitlines()[0] if (verify_stderr or verify_stdout) else "Lean verification failed"
+            else:
+                verify_error_excerpt = ""
             verify_error_analysis = analyze_lean_failure(
                 str(verify_result.get("stderr", "")),
                 str(verify_result.get("stdout", "")),
+            )
+
+        if phase_logger is not None:
+            phase_logger(
+                phase="formalize_and_verify_result",
+                problem_id=problem_id,
+                result=result,
+                repair_round=repair_round,
+                verify_success=verify_success,
+                error_fingerprint=str(verify_error_analysis.get("fingerprint", "")),
             )
 
         if verify_success:
@@ -1589,7 +1661,7 @@ def attempt_formalization_until_timeout(
             "lean_error_top_lines": verify_error_analysis.get("top_lines", []),
             "lean_diagnostics": "\n".join(lean_diagnostics.splitlines()[:60]),
             "current_scratch_code": scratch_code or "",
-            "mathlib_import_in_scratch": include_mathlib_import,
+            "mathlib_import_in_scratch": True,
         }
 
         try:
@@ -1625,12 +1697,6 @@ def attempt_formalization_until_timeout(
         except ValueError as exc:
             verify_error_excerpt = f"repair output invalid: {exc}"
             continue
-
-        # Keep default path lightweight. Enable Mathlib import only when diagnostics suggest missing tactics/symbols.
-        categories = verify_error_analysis.get("categories", [])
-        if "unknown_tactic" in categories or "unknown_symbol" in categories:
-            include_mathlib_import = True
-
 
 def initialize_runtime_state(
     data_dir: Path,

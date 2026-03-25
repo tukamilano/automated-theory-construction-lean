@@ -1,0 +1,27 @@
+---
+layout: post
+title: "Progress"
+slug: progress
+date: 2026-03-25 20:45:00 +0900
+categories: notes draft
+---
+
+One thing that feels newly possible is a style of mathematical exploration that is not centered on a single target theorem from the beginning.
+
+AI-generated questions can still improve, but even at this stage, it has become possible to automatically explore a surprisingly wide range of properties by manipulating expressions and checking what follows from them. That already changes the shape of the workflow.
+
+There seems to be two different modes of doing mathematics: exploration mode and problem-solving mode.
+
+Formalizing an important theorem is, of course, a valuable goal. But when working in an area that is still largely unexplored, it is just as important to build a broader understanding of the terrain around the result you care about. You need to know not only how to prove one theorem, but also what kinds of structures, patterns, and neighboring facts are present in the surrounding theory.
+
+This repository is not mainly about formalizing one major theorem. Its more concrete aim is to give AI a kind of mathematical curiosity: to let it automatically discover, organize, and refine interesting facts within a domain. In the long run, I want this system to help build `Basic.lean` file for areas that have not yet been systematically developed.
+
+That is the goal. At the moment, there are still some obvious challenges.
+
+## Interpretability
+
+Because I have been pushing toward a fully automated workflow, even I sometimes lose track of what the generated output is actually doing. The system may produce results, but the overall picture can become difficult to interpret from the developer's side.
+
+## Where To Start
+
+I still do not have a good answer to a basic question: how can we make the system write clean, well-motivated definitions, as you find in Mathlib?
