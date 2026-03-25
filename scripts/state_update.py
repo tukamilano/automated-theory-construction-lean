@@ -5,9 +5,13 @@ from pathlib import Path
 from typing import Any
 
 from common import (
+    ARCHIVED_PROBLEMS_FILENAME,
+    is_active_open_problem,
     next_problem_id,
     normalize_open_problem_row,
+    partition_open_problem_rows,
     normalize_stmt,
+    read_archived_problem_rows,
     read_jsonl,
     write_jsonl_atomic,
 )
@@ -20,34 +24,37 @@ def apply_state_update(
     verify_success: bool,
     theorem_name: str | None,
     new_problems: list[str],
+    failure_threshold: int = 2,
     current_iteration: int = 0,
 ) -> dict[str, Any]:
     open_path = data_dir / "open_problems.jsonl"
+    archived_path = data_dir / ARCHIVED_PROBLEMS_FILENAME
     solved_path = data_dir / "solved_problems.jsonl"
     counterexamples_path = data_dir / "counterexamples.jsonl"
 
     open_rows = [normalize_open_problem_row(row) for row in read_jsonl(open_path)]
+    archived_rows = read_archived_problem_rows(data_dir)
     solved_rows = read_jsonl(solved_path)
     counter_rows = read_jsonl(counterexamples_path)
 
     target = None
-    remaining_open: list[dict[str, Any]] = []
-    for row in open_rows:
+    remaining_tracked: list[dict[str, Any]] = []
+    for row in open_rows + archived_rows:
         if row.get("id") == problem_id and target is None:
             target = dict(row)
         else:
-            remaining_open.append(dict(row))
+            remaining_tracked.append(dict(row))
 
     if target is None:
-        raise ValueError(f"problem_id not found in open_problems.jsonl: {problem_id}")
+        raise ValueError(f"problem_id not found in open or archived problem sets: {problem_id}")
 
     seen_norms = {
         normalize_stmt(str(row.get("stmt", "")))
-        for row in (remaining_open + solved_rows + counter_rows)
+        for row in (remaining_tracked + solved_rows + counter_rows)
         if row.get("stmt")
     }
 
-    all_ids = [str(row.get("id", "")) for row in open_rows + solved_rows + counter_rows]
+    all_ids = [str(row.get("id", "")) for row in open_rows + archived_rows + solved_rows + counter_rows]
     added_problem_ids: list[str] = []
     for stmt in new_problems:
         norm = normalize_stmt(stmt)
@@ -56,7 +63,7 @@ def apply_state_update(
         new_id = next_problem_id(all_ids)
         all_ids.append(new_id)
         seen_norms.add(norm)
-        remaining_open.append(
+        remaining_tracked.append(
             normalize_open_problem_row(
                 {
                     "id": new_id,
@@ -80,9 +87,16 @@ def apply_state_update(
         moved_to = "counterexample"
     else:
         target["failure_count"] = int(target.get("failure_count", 0) or 0) + 1
-        remaining_open.append(target)
+        remaining_tracked.append(target)
+        if not is_active_open_problem(target, failure_threshold=failure_threshold):
+            moved_to = "archived"
 
-    write_jsonl_atomic(open_path, remaining_open)
+    active_rows, archived_rows = partition_open_problem_rows(
+        remaining_tracked,
+        failure_threshold=failure_threshold,
+    )
+    write_jsonl_atomic(open_path, active_rows)
+    write_jsonl_atomic(archived_path, archived_rows)
     write_jsonl_atomic(solved_path, solved_rows)
     write_jsonl_atomic(counterexamples_path, counter_rows)
 
@@ -101,6 +115,7 @@ def main() -> None:
     parser.add_argument("--verify-success", action="store_true")
     parser.add_argument("--theorem-name")
     parser.add_argument("--new-problem", action="append", default=[])
+    parser.add_argument("--open-problem-failure-threshold", type=int, default=2)
     args = parser.parse_args()
 
     report = apply_state_update(
@@ -110,6 +125,7 @@ def main() -> None:
         verify_success=args.verify_success,
         theorem_name=args.theorem_name,
         new_problems=args.new_problem,
+        failure_threshold=args.open_problem_failure_threshold,
         current_iteration=0,
     )
     print(report)

@@ -8,13 +8,66 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-from common import write_jsonl_atomic
+from common import (
+    ARCHIVED_PROBLEMS_FILENAME,
+    LEGACY_DEFERRED_PROBLEMS_FILENAME,
+    LEGACY_PRUNED_OPEN_PROBLEMS_FILENAME,
+    write_jsonl_atomic,
+)
+from run_loop import DERIVED_TEMPLATE, SCRATCH_TEMPLATE, prebuild_lean_project
 
 
 DEFAULT_THEORY = Path("AutomatedTheoryConstruction/Theory.lean")
 DEFAULT_DERIVED = Path("AutomatedTheoryConstruction/Derived.lean")
 DEFAULT_OUTPUT = Path("AutomatedTheoryConstruction/seeds.jsonl")
 DEFAULT_REPO_ROOT = Path(__file__).resolve().parent.parent
+DEFAULT_DATA_DIR = Path("data")
+DEFAULT_SCRATCH = Path("AutomatedTheoryConstruction/Scratch.lean")
+DEFAULT_FORMALIZATION_MEMORY = Path("data/formalization_memory.json")
+DEFAULT_ARCHIVED = Path("data/archived_problems.jsonl")
+
+
+def _preview_file_for(derived_file: Path) -> Path:
+    return derived_file.with_name(f"{derived_file.stem}.refactored.preview{derived_file.suffix}")
+
+
+def _reviewed_file_for(derived_file: Path) -> Path:
+    return derived_file.with_name(f"{derived_file.stem}.refactored.reviewed{derived_file.suffix}")
+
+
+def reset_runtime_before_seed_generation(
+    *,
+    data_dir: Path,
+    seeds_file: Path,
+    scratch_file: Path,
+    derived_file: Path,
+    derived_cleanup_files: tuple[Path, ...],
+    formalization_memory_file: Path,
+    archived_problems_file: Path,
+) -> None:
+    data_dir.mkdir(parents=True, exist_ok=True)
+    seeds_file.unlink(missing_ok=True)
+    write_jsonl_atomic(data_dir / "open_problems.jsonl", [])
+    write_jsonl_atomic(archived_problems_file, [])
+    write_jsonl_atomic(data_dir / "solved_problems.jsonl", [])
+    write_jsonl_atomic(data_dir / "counterexamples.jsonl", [])
+    (data_dir / LEGACY_DEFERRED_PROBLEMS_FILENAME).unlink(missing_ok=True)
+    (data_dir / LEGACY_PRUNED_OPEN_PROBLEMS_FILENAME).unlink(missing_ok=True)
+
+    scratch_file.parent.mkdir(parents=True, exist_ok=True)
+    scratch_file.write_text(SCRATCH_TEMPLATE, encoding="utf-8")
+
+    derived_file.parent.mkdir(parents=True, exist_ok=True)
+    derived_file.write_text(DERIVED_TEMPLATE, encoding="utf-8")
+    for cleanup_file in derived_cleanup_files:
+        cleanup_file.unlink(missing_ok=True)
+
+    formalization_memory_file.parent.mkdir(parents=True, exist_ok=True)
+    formalization_memory_file.write_text("{}\n", encoding="utf-8")
+
+
+def sync_open_problems_from_seed_rows(*, data_dir: Path, rows: list[dict[str, Any]]) -> None:
+    write_jsonl_atomic(data_dir / "open_problems.jsonl", rows)
 
 
 def _normalize_stmt(stmt: str) -> str:
@@ -246,6 +299,7 @@ def main() -> int:
     parser.add_argument("--model")
     parser.add_argument("--sandbox", default="read-only")
     parser.add_argument("--repo-root", default=str(DEFAULT_REPO_ROOT))
+    parser.add_argument("--initialize-runtime-state", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
 
@@ -264,13 +318,29 @@ def main() -> int:
 
     if not theory_file.exists():
         raise SystemExit(f"Theory file not found: {theory_file}")
+    for path in context_files:
+        if not path.exists():
+            raise SystemExit(f"Context file not found: {path}")
+
+    if args.initialize_runtime_state and not args.dry_run:
+        reset_runtime_before_seed_generation(
+            data_dir=(repo_root / DEFAULT_DATA_DIR).resolve(),
+            seeds_file=output_file,
+            scratch_file=(repo_root / DEFAULT_SCRATCH).resolve(),
+            derived_file=derived_file,
+            derived_cleanup_files=(
+                _preview_file_for(derived_file),
+                _reviewed_file_for(derived_file),
+            ),
+            formalization_memory_file=(repo_root / DEFAULT_FORMALIZATION_MEMORY).resolve(),
+            archived_problems_file=(repo_root / DEFAULT_ARCHIVED).resolve(),
+        )
+        prebuild_lean_project()
+
     if derived_file.exists():
         effective_derived: Path | None = derived_file
     else:
         effective_derived = None
-    for path in context_files:
-        if not path.exists():
-            raise SystemExit(f"Context file not found: {path}")
 
     prompt = build_prompt(
         theory_file=theory_file,
@@ -317,7 +387,14 @@ def main() -> int:
         for index, stmt in enumerate(seeds, 1)
     ]
     write_jsonl_atomic(output_file, rows)
+    if args.initialize_runtime_state:
+        sync_open_problems_from_seed_rows(
+            data_dir=(repo_root / DEFAULT_DATA_DIR).resolve(),
+            rows=rows,
+        )
     sys.stdout.write(f"Wrote {len(rows)} seeds to {output_file}\n")
+    if args.initialize_runtime_state:
+        sys.stdout.write("Reset runtime state before seed generation and loaded the regenerated seeds into open problems.\n")
     return 0
 
 

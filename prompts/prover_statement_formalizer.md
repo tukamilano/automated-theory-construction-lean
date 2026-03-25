@@ -29,7 +29,11 @@ Formalization policy:
 - When `result` is `ok`, also provide `theorem_name_stem`: a short snake_case English phrase describing the claim.
 - `theorem_name_stem` must use only lowercase letters, digits, and underscores, start with a letter, omit any `thm` prefix, and omit the trailing numeric problem suffix.
 - Prefer concise semantic names of about 3 to 6 words, such as `godel_fixpoint_below_box` or `semigroup_mul_comm`.
+- When `result` is `ok`, also provide `docstring_summary`: one short English sentence describing the theorem in natural language.
+- `docstring_summary` should read like library documentation, not like Lean code. Prefer ordinary mathematical English over symbols and binder syntax.
+- Keep `docstring_summary` concise and specific, ideally under 18 words.
 - When `result` is `stuck`, return `""` for `theorem_name_stem`.
+- When `result` is `stuck`, return `""` for `docstring_summary`.
 
 Output schema:
 {
@@ -37,5 +41,6 @@ Output schema:
   "result": "ok|stuck",
   "lean_statement": "Lean proposition statement only",
   "theorem_name_stem": "short snake_case semantic name, or empty when stuck",
+  "docstring_summary": "short natural-language theorem summary, or empty when stuck",
   "notes": "short note about the formalization or why it is stuck"
 }

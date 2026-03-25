@@ -59,6 +59,8 @@ def build_seed_command(args: argparse.Namespace) -> list[str]:
     ]
     append_optional_flag(cmd, "--extra-instruction", args.seed_extra_instruction)
     append_optional_flag(cmd, "--model", args.seed_model)
+    if not args.initialize_on_start:
+        cmd.append("--no-initialize-runtime-state")
     for path in args.context_files:
         cmd.extend(["--context-file", path])
     return cmd
@@ -71,9 +73,8 @@ def build_loop_command(args: argparse.Namespace) -> list[str]:
         "python",
         "scripts/run_loop.py",
         "--enable-worker",
+        "--no-initialize-on-start",
     ]
-    if not args.initialize_on_start:
-        cmd.append("--no-initialize-on-start")
     if not args.phase_logs:
         cmd.append("--no-phase-logs")
     if args.skip_loop_verify:
@@ -93,8 +94,7 @@ def build_loop_command(args: argparse.Namespace) -> list[str]:
     append_optional_flag(cmd, "--prioritize-open-problems-worker-command", args.prioritize_open_problems_worker_command)
     append_optional_flag(cmd, "--prioritize-open-problems-worker-timeout", args.prioritize_open_problems_worker_timeout)
     append_optional_flag(cmd, "--priority-refresh-theorem-interval", args.priority_refresh_theorem_interval)
-    append_optional_flag(cmd, "--open-problem-prune-threshold", args.open_problem_prune_threshold)
-    append_optional_flag(cmd, "--open-problem-failure-prune-threshold", args.open_problem_failure_prune_threshold)
+    append_optional_flag(cmd, "--open-problem-failure-threshold", args.open_problem_failure_threshold)
     return cmd
 
 
@@ -180,8 +180,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--prioritize-open-problems-worker-command")
     parser.add_argument("--prioritize-open-problems-worker-timeout", type=int)
     parser.add_argument("--priority-refresh-theorem-interval", type=int)
-    parser.add_argument("--open-problem-prune-threshold", type=int)
-    parser.add_argument("--open-problem-failure-prune-threshold", type=int)
+    parser.add_argument("--open-problem-failure-threshold", type=int)
+    parser.add_argument(
+        "--open-problem-failure-prune-threshold",
+        dest="open_problem_failure_threshold",
+        type=int,
+        help=argparse.SUPPRESS,
+    )
     parser.add_argument("--refactor-worker-command")
     parser.add_argument("--refactor-worker-timeout", type=int)
     parser.add_argument("--refactor-verify-timeout", type=int)
