@@ -4,7 +4,13 @@ import argparse
 from pathlib import Path
 from typing import Any
 
-from common import next_problem_id, normalize_stmt, read_jsonl, write_jsonl_atomic
+from common import (
+    next_problem_id,
+    normalize_open_problem_row,
+    normalize_stmt,
+    read_jsonl,
+    write_jsonl_atomic,
+)
 
 
 def apply_state_update(
@@ -14,24 +20,23 @@ def apply_state_update(
     verify_success: bool,
     theorem_name: str | None,
     new_problems: list[str],
+    current_iteration: int = 0,
 ) -> dict[str, Any]:
     open_path = data_dir / "open_problems.jsonl"
     solved_path = data_dir / "solved_problems.jsonl"
     counterexamples_path = data_dir / "counterexamples.jsonl"
 
-    open_rows = read_jsonl(open_path)
+    open_rows = [normalize_open_problem_row(row) for row in read_jsonl(open_path)]
     solved_rows = read_jsonl(solved_path)
     counter_rows = read_jsonl(counterexamples_path)
 
     target = None
     remaining_open: list[dict[str, Any]] = []
     for row in open_rows:
-        cleaned_row = dict(row)
-        cleaned_row.pop("n", None)
         if row.get("id") == problem_id and target is None:
-            target = cleaned_row
+            target = dict(row)
         else:
-            remaining_open.append(cleaned_row)
+            remaining_open.append(dict(row))
 
     if target is None:
         raise ValueError(f"problem_id not found in open_problems.jsonl: {problem_id}")
@@ -51,7 +56,16 @@ def apply_state_update(
         new_id = next_problem_id(all_ids)
         all_ids.append(new_id)
         seen_norms.add(norm)
-        remaining_open.append({"id": new_id, "stmt": stmt, "src": "generated"})
+        remaining_open.append(
+            normalize_open_problem_row(
+                {
+                    "id": new_id,
+                    "stmt": stmt,
+                    "src": "generated",
+                    "priority": "unknown",
+                }
+            )
+        )
         added_problem_ids.append(new_id)
 
     moved_to = "open"
@@ -65,6 +79,7 @@ def apply_state_update(
         counter_rows.append({"id": target["id"], "stmt": target["stmt"]})
         moved_to = "counterexample"
     else:
+        target["failure_count"] = int(target.get("failure_count", 0) or 0) + 1
         remaining_open.append(target)
 
     write_jsonl_atomic(open_path, remaining_open)
@@ -95,6 +110,7 @@ def main() -> None:
         verify_success=args.verify_success,
         theorem_name=args.theorem_name,
         new_problems=args.new_problem,
+        current_iteration=0,
     )
     print(report)
 

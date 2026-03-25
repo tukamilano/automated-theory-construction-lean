@@ -4,7 +4,7 @@
       "stage": "statement_formalization",
       "source_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], (⊠⊠(⊤ : α) ≐ ⊠(⊤ : α)) ↔ Nonempty (ACR.GödelFixpoint α)",
       "formalized_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], (⊠⊠(⊤ : α) ≐ ⊠(⊤ : α)) ↔ Nonempty (ACR.GödelFixpoint α)",
-      "statement_formalization_notes": "Formalized directly from the seed statement, reusing the existing `≐`, `⊠`, and `ACR.GödelFixpoint` notation.",
+      "statement_formalization_notes": "Used the repository's existing notation `≐` and the existing subtype abbreviation `ACR.GödelFixpoint`.",
       "result": "ok",
       "verify_success": true,
       "proof_sketch": "",
@@ -17,96 +17,8 @@
     {
       "result": "proof",
       "verify_success": true,
-      "proof_sketch": "For the forward direction, use the witness g := ⊠⊤; the target g ≐ ⊠g is exactly the given equivalence with its two inequalities swapped. For the reverse direction, install the assumed Nonempty Gödel fixpoint as an instance and reuse ACR.reft_reft_top_le_reft_top for one inequality; the other follows from antitonicity of reft applied to C5.le_top on ⊠⊤.",
-      "proof_text": "intro α _ _ _ _ _\nconstructor\n· intro h\n  exact ⟨⟨⊠(⊤ : α), ⟨h.2, h.1⟩⟩⟩\n· intro hg\n  constructor\n  · letI : Nonempty (ACR.GödelFixpoint α) := hg\n    simpa using (ACR.reft_reft_top_le_reft_top (α := α))\n  · exact ACR.reft_anti_mono (ACR.le_top (x := ⊠(⊤ : α)))",
-      "counterexample_text": "",
-      "lean_error_excerpt": "",
-      "lean_error_fingerprint": "no_diagnostics",
-      "new_problems": []
-    }
-  ],
-  "op_000002": [
-    {
-      "stage": "statement_formalization",
-      "source_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α] {x : α}, Nonempty (ACR.GödelFixpoint α) → x ≐ ⊠(⊤ : α) → x ≐ ⊠x",
-      "formalized_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α] {x : α}, Nonempty (ACR.GödelFixpoint α) → x ≐ ⊠(⊤ : α) → x ≐ ⊠x",
-      "statement_formalization_notes": "Used the seed statement directly, preserving the repository's existing shorthand notation `≐` and `⊠`.",
-      "result": "ok",
-      "verify_success": true,
-      "proof_sketch": "",
-      "proof_text": "",
-      "counterexample_text": "",
-      "lean_error_excerpt": "",
-      "lean_error_fingerprint": "statement_formalization",
-      "new_problems": []
-    },
-    {
-      "result": "proof",
-      "verify_success": false,
-      "proof_sketch": "From x ≐ ⊠⊤, the forward inequality follows by antitonicity of ⊠ applied to x ≤ ⊤. The reverse inequality follows by antitonicity applied to ⊠⊤ ≤ x, then composing with ACR.reft_reft_top_le_reft_top obtained from the assumed Nonempty Gödel fixpoint.",
-      "proof_text": "intro hg hx\nconstructor\n· have htop : x ≤ (⊤ : α) := ACR.le_top (α := α) (x := x)\n  exact le_trans hx.1 (ACR.reft_anti_mono htop)\n· have hxx : ⊠x ≤ ⊠(⊠(⊤ : α)) := ACR.reft_anti_mono hx.2\n  letI : Nonempty (ACR.GödelFixpoint α) := hg\n  have htop : ⊠(⊠(⊤ : α)) ≤ ⊠(⊤ : α) := ACR.reft_reft_top_le_reft_top (α := α)\n  exact le_trans hxx (le_trans htop hx.2)",
-      "counterexample_text": "",
-      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:8:2: error: Tactic `constructor` failed: target is not an inductive datatype",
-      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:8:2: error: Tactic `constructor` failed: target is not an inductive datatype | hg : Type u_1 | hx : ACR hg",
-      "new_problems": []
-    },
-    {
-      "result": "proof",
-      "verify_success": true,
-      "proof_sketch": "Introduce all implicit parameters first. Unfold both equivalence hypotheses into their two order inequalities. For the forward direction, compose x ≤ ⊠⊤ with antitonicity of ⊠ applied to x ≤ ⊤. For the reverse direction, use antitonicity on ⊠⊤ ≤ x to get ⊠x ≤ ⊠⊠⊤, then install the assumed Nonempty Gödel fixpoint instance and apply reft_reft_top_le_reft_top, finishing with ⊠⊤ ≤ x.",
-      "proof_text": "intro α _ _ _ _ _ x hg hx\nchange x ≤ ⊠x ∧ ⊠x ≤ x\nchange x ≤ ⊠(⊤ : α) ∧ ⊠(⊤ : α) ≤ x at hx\nrcases hx with ⟨hxt, htx⟩\nconstructor\n· have htop : x ≤ (⊤ : α) := ACR.le_top (α := α) (x := x)\n  exact le_trans hxt (ACR.reft_anti_mono htop)\n· have hxx : ⊠x ≤ ⊠(⊠(⊤ : α)) := ACR.reft_anti_mono htx\n  letI : Nonempty (ACR.GödelFixpoint α) := hg\n  have htop : ⊠(⊠(⊤ : α)) ≤ ⊠(⊤ : α) := ACR.reft_reft_top_le_reft_top (α := α)\n  exact le_trans hxx (le_trans htop htx)",
-      "counterexample_text": "",
-      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:8:2: error: Tactic `constructor` failed: target is not an inductive datatype",
-      "lean_error_fingerprint": "no_diagnostics",
-      "new_problems": []
-    }
-  ],
-  "op_000003": [
-    {
-      "stage": "statement_formalization",
-      "source_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α], ACR.Consistent α → ∀ g : ACR.GödelFixpoint α, ¬ (⊬ □g.1)",
-      "formalized_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α], ACR.Consistent α → ∀ g : ACR.GödelFixpoint α, ¬ (⊬ (□g.1))",
-      "statement_formalization_notes": "Used the repository's prefix notation for provability and refutability, with explicit parentheses to avoid parsing ambiguity.",
-      "result": "ok",
-      "verify_success": true,
-      "proof_sketch": "",
-      "proof_text": "",
-      "counterexample_text": "",
-      "lean_error_excerpt": "",
-      "lean_error_fingerprint": "statement_formalization",
-      "new_problems": []
-    },
-    {
-      "result": "proof",
-      "verify_success": true,
-      "proof_sketch": "Assume `□g.1` is refutable. Then `g.1 ≤ ⊠g.1 ≤ □g.1 ≤ ⊥`, so `g.1` is refutable. By antitonicity of `⊠`, this gives `⊠⊥ ≤ ⊠g.1`, and the fixpoint equivalence gives `⊠g.1 ≤ g.1`, hence `⊠⊥ ≤ g.1`. Composing `⊤ ≤ ⊠⊥` with these inequalities yields `⊤ ≤ ⊥`, contradicting consistency.",
-      "proof_text": "intro α _ _ _ _ hCons g hbox\napply hCons\nchange (⊤ : α) ≤ ⊥\nhave hg_bot : g.1 ≤ (⊥ : α) := by\n  calc\n    g.1 ≤ ⊠g.1 := g.2.1\n    _ ≤ □g.1 := ACR.reft_gf_le_box_gf (g := g)\n    _ ≤ ⊥ := hbox\nhave hreft_bot : ⊠(⊥ : α) ≤ g.1 := by\n  calc\n    ⊠(⊥ : α) ≤ ⊠g.1 := ACR.reft_anti_mono hg_bot\n    _ ≤ g.1 := g.2.2\ncalc\n  (⊤ : α) ≤ ⊠⊥ := ACR.top_le_reft_bot\n  _ ≤ g.1 := hreft_bot\n  _ ≤ ⊥ := hg_bot",
-      "counterexample_text": "",
-      "lean_error_excerpt": "",
-      "lean_error_fingerprint": "no_diagnostics",
-      "new_problems": []
-    }
-  ],
-  "op_000004": [
-    {
-      "stage": "statement_formalization",
-      "source_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] {h : ACR.HenkinFixpoint α}, h.1 ≤ ⊠h.1 → h.1 ≤ ⊠(⊤ : α)",
-      "formalized_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] {h : ACR.HenkinFixpoint α}, h.1 ≤ ⊠h.1 → h.1 ≤ ⊠(⊤ : α)",
-      "statement_formalization_notes": "The input statement is already a valid Lean proposition and uses the repository's existing notation for reft and Henkin fixpoints.",
-      "result": "ok",
-      "verify_success": true,
-      "proof_sketch": "",
-      "proof_text": "",
-      "counterexample_text": "",
-      "lean_error_excerpt": "",
-      "lean_error_fingerprint": "statement_formalization",
-      "new_problems": []
-    },
-    {
-      "result": "proof",
-      "verify_success": true,
-      "proof_sketch": "Use the APS axiom `le_reft_top_of_le_prov_of_le_reft`. For a Henkin fixpoint, `h.2.1` gives `h.1 ≤ □h.1`, and the hypothesis gives `h.1 ≤ ⊠h.1`, so the conclusion follows immediately.",
-      "proof_text": "intro α _ _ _ _ h hh\nexact ACR.le_reft_top_of_le_prov_of_le_reft h.2.1 hh",
+      "proof_sketch": "For the forward direction, use the witness g := ⊠⊤; the assumed equivalence ⊠⊠⊤ ≐ ⊠⊤ gives exactly g ≐ ⊠g after swapping the two inequalities. For the reverse direction, install the given Nonempty Gödel-fixpoint witness as an instance and apply ACR.reft_reft_top_le_reft_top for ⊠⊠⊤ ≤ ⊠⊤; the converse inequality ⊠⊤ ≤ ⊠⊠⊤ follows from C5.le_top and antitonicity of reft.",
+      "proof_text": "intro α _ _ _ _ _\nconstructor\n· intro h\n  refine ⟨⟨⊠(⊤ : α), ?_⟩⟩\n  exact ⟨h.2, h.1⟩\n· intro hg\n  letI : Nonempty (ACR.GödelFixpoint α) := hg\n  constructor\n  · simpa using (ACR.reft_reft_top_le_reft_top (α := α))\n  · simpa using (ACR.reft_anti_mono (ACR.le_top (x := ⊠(⊤ : α))))",
       "counterexample_text": "",
       "lean_error_excerpt": "",
       "lean_error_fingerprint": "no_diagnostics",
@@ -116,9 +28,189 @@
   "op_000005": [
     {
       "stage": "statement_formalization",
-      "source_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α] {x : α}, x ≐ ⊠x ↔ x ≐ ⊠(⊤ : α)",
-      "formalized_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α] {x : α}, x ≐ ⊠x ↔ x ≐ ⊠(⊤ : α)",
-      "statement_formalization_notes": "Used the repository's shorthand notation `≐` and `⊠`; the statement is already directly expressible as a Lean proposition.",
+      "source_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], Nonempty (ACR.GödelFixpoint α) → ∀ {x : α}, (x ≐ ⊠x) ↔ x ≐ ⊠(⊤ : α)",
+      "formalized_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], Nonempty (ACR.GödelFixpoint α) → ∀ {x : α}, (x ≐ ⊠x) ↔ x ≐ ⊠(⊤ : α)",
+      "statement_formalization_notes": "The input statement is already a valid Lean proposition and uses the repository's shorthand notation.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": false,
+      "proof_sketch": "Use `ACR.gf_equiv_reft_top` for the forward direction by packaging `x` with its fixed-point witness. For the reverse direction, obtain `⊠⊠⊤ ≐ ⊠⊤` from `thm_double_reft_top_iff_godel_fixpoint_000001` and compose it with anti-monotonicity of `⊠` applied to the two inequalities in `x ≐ ⊠⊤`.",
+      "proof_text": "intro α _ _ _ _ _ hg x\nconstructor\n· intro hx\n  simpa using (ACR.gf_equiv_reft_top (g := ⟨x, hx⟩))\n· intro hx\n  have htop : ⊠⊠(⊤ : α) ≐ ⊠(⊤ : α) :=\n    (AutomatedTheoryConstruction.thm_double_reft_top_iff_godel_fixpoint_000001 (α := α)).2 hg\n  constructor\n  · calc\n      x ≤ ⊠(⊤ : α) := hx.1\n      _ ≤ ⊠⊠(⊤ : α) := htop.2\n      _ ≤ ⊠x := ACR.reft_anti_mono hx.1\n  · calc\n      ⊠x ≤ ⊠⊠(⊤ : α) := ACR.reft_anti_mono hx.2\n      _ ≤ ⊠(⊤ : α) := htop.1\n      _ ≤ x := hx.2",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:13:7: error(lean.unknownIdentifier): Unknown identifier `AutomatedTheoryConstruction.thm_double_reft_top_iff_godel_fixpoint_000001`",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:13:7: error(lean.unknownIdentifier): Unknown identifier `AutomatedTheoryConstruction.thm_double_reft_top_iff_godel_fixpoint_000001`",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "Forward: package `x` together with `x ≐ ⊠x` as a Gödel fixpoint and apply `ACR.gf_equiv_reft_top`. Reverse: from `hg`, install a local `Nonempty (ACR.GödelFixpoint α)` instance and derive `⊠⊠⊤ ≐ ⊠⊤` using `ACR.reft_reft_top_le_reft_top` plus anti-monotonicity of `⊠`; then compose this with the two inequalities in `x ≐ ⊠⊤` to obtain `x ≐ ⊠x`.",
+      "proof_text": "intro α _ _ _ _ _ hg x\nconstructor\n· intro hx\n  simpa using (ACR.gf_equiv_reft_top (g := ⟨x, hx⟩))\n· intro hx\n  letI : Nonempty (ACR.GödelFixpoint α) := hg\n  have htop : ⊠⊠(⊤ : α) ≐ ⊠(⊤ : α) := by\n    constructor\n    · simpa using (ACR.reft_reft_top_le_reft_top (α := α))\n    · simpa using (ACR.reft_anti_mono (ACR.le_top (x := ⊠(⊤ : α))))\n  constructor\n  · calc\n      x ≤ ⊠(⊤ : α) := hx.1\n      _ ≤ ⊠⊠(⊤ : α) := htop.2\n      _ ≤ ⊠x := ACR.reft_anti_mono hx.1\n  · calc\n      ⊠x ≤ ⊠⊠(⊤ : α) := ACR.reft_anti_mono hx.2\n      _ ≤ ⊠(⊤ : α) := htop.1\n      _ ≤ x := hx.2",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:13:7: error(lean.unknownIdentifier): Unknown identifier `AutomatedTheoryConstruction.thm_double_reft_top_iff_godel_fixpoint_000001`",
+      "lean_error_fingerprint": "no_diagnostics",
+      "new_problems": []
+    }
+  ],
+  "op_000003": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α], ACR.Consistent α → ∀ g : ACR.GödelFixpoint α, ¬ (⊬ □g.1)",
+      "formalized_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α], ACR.Consistent α → ∀ g : ACR.GödelFixpoint α, ¬ (⊬ □g.1)",
+      "statement_formalization_notes": "The input statement is already a valid Lean proposition and uses the repository's notation.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": false,
+      "proof_sketch": "From the fixpoint inequalities, we have g.1 ≤ ⊠g.1 ≤ □g.1. If □g.1 were refutable, then g.1 ≤ ⊥. Antitonicity of reft gives ⊠⊥ ≤ ⊠g.1, hence ⊠⊥ ≤ g.1. Together with ⊤ ≤ ⊠⊥, this yields ⊤ ≤ ⊥, contradicting consistency.",
+      "proof_text": "intro hcons g hbox\napply hcons\nhave h1 : g.1 ≤ (⊥ : α) :=\n  le_trans (le_trans g.2.1 (ACR.reft_gf_le_box_gf (g := g))) hbox\nhave h2 : ⊠(⊥ : α) ≤ ⊠g.1 := ACR.reft_anti_mono h1\nhave h3 : ⊠(⊥ : α) ≤ g.1 := le_trans h2 g.2.2\ncalc\n  (⊤ : α) ≤ ⊠(⊥ : α) := ACR.top_le_reft_bot\n  _ ≤ g.1 := h3\n  _ ≤ ⊥ := h1",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:8:2: error: Tactic `apply` failed: could not unify the type of `hcons`",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:8:2: error: Tactic `apply` failed: could not unify the type of `hcons` | Type u_1 | with the goal",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "Introduce the implicit type and typeclass parameters first. Then assume `⊬ □g.1`, derive `g.1 ≤ ⊥` from the fixpoint relation `g.1 ≤ ⊠g.1 ≤ □g.1`, use antitonicity of `⊠` to get `⊠⊥ ≤ ⊠g.1 ≤ g.1`, and conclude `⊤ ≤ ⊥`, contradicting consistency.",
+      "proof_text": "intro α _ _ _ _ hcons g hbox\nhave h1 : g.1 ≤ (⊥ : α) :=\n  le_trans (le_trans g.2.1 (ACR.reft_gf_le_box_gf (g := g))) hbox\nhave h2 : ⊠(⊥ : α) ≤ ⊠g.1 := ACR.reft_anti_mono h1\nhave h3 : ⊠(⊥ : α) ≤ g.1 := le_trans h2 g.2.2\nexact hcons <|\n  calc\n    (⊤ : α) ≤ ⊠(⊥ : α) := ACR.top_le_reft_bot\n    _ ≤ g.1 := h3\n    _ ≤ ⊥ := h1",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:8:2: error: Tactic `apply` failed: could not unify the type of `hcons`",
+      "lean_error_fingerprint": "no_diagnostics",
+      "new_problems": []
+    }
+  ],
+  "op_000007": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "For every type α with instances [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], any two elements x y : α that satisfy x ≐ ⊠x and y ≐ ⊠y are equivalent: x ≐ y.",
+      "formalized_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α] {x y : α}, x ≐ ⊠x → y ≐ ⊠y → x ≐ y",
+      "statement_formalization_notes": "Uses the repository shorthand `≐` and `⊠`, with the two fixed-point assumptions as implications.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "Build Gödel fixpoints from the two hypotheses, apply `ACR.gf_equiv_reft_top` to show both elements are equivalent to `⊠⊤`, then compose the two equivalences to obtain `x ≐ y`.",
+      "proof_text": "intro α _ _ _ _ _ x y hx hy\nhave hx' : x ≐ ⊠(⊤ : α) := by\n  simpa using (ACR.gf_equiv_reft_top (g := ⟨x, hx⟩))\nhave hy' : y ≐ ⊠(⊤ : α) := by\n  simpa using (ACR.gf_equiv_reft_top (g := ⟨y, hy⟩))\nconstructor\n· exact le_trans hx'.1 hy'.2\n· exact le_trans hy'.1 hx'.2",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "no_diagnostics",
+      "new_problems": []
+    }
+  ],
+  "op_000008": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "There exists a type α with instances [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] and an element x : α such that Nonempty (ACR.GödelFixpoint α) and x ≐ ⊠x both hold, but x ≐ ⊠(⊤ : α) does not hold.",
+      "formalized_statement": "∃ (α : Type _), ∃ (hA : ACR α), ∃ (hP : @ACR.Prov α hA), ∃ (hR : @ACR.Reft α hA), ∃ (hAPS : @ACR.APS α hA hP hR), letI : ACR α := hA; letI : ACR.Prov α := hP; letI : ACR.Reft α := hR; letI : ACR.APS α := hAPS; ∃ x : α, Nonempty (ACR.GödelFixpoint α) ∧ x ≐ ⊠x ∧ ¬ (x ≐ ⊠(⊤ : α))",
+      "statement_formalization_notes": "Packaged the carrier and structure witnesses explicitly, then reinstated them with letI so the repository notation can be used in the existential counterexample statement.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": false,
+      "proof_sketch": "Take α = Fin 3 with the preorder given by the usual order on values, but set the ACR top to 0 and bot to 2. Let □ be constantly 2 and let ⊠ be Fin.rev, so ⊠0 = 2, ⊠1 = 1, and ⊠2 = 0. Then APS holds because Fin.rev is antitone and every element is ≤ 2. Choosing x = 1 gives x ≐ ⊠x, hence a Gödel fixpoint exists, while x ≐ ⊠⊤ fails since ⊠⊤ = 2 and 2 ≤ 1 is false.",
+      "proof_text": "  let hA : ACR (Fin 3) :=\n    { top := 0\n      bot := 2\n      le := fun x y => x.1 ≤ y.1\n      le_refl := by\n        intro x\n        exact Nat.le_refl x.1\n      le_trans := by\n        intro x y z hxy hyz\n        exact Nat.le_trans hxy hyz }\n  let hP : @ACR.Prov (Fin 3) hA :=\n    { prov := fun _ => 2 }\n  let hR : @ACR.Reft (Fin 3) hA :=\n    { reft := Fin.rev }\n  letI : ACR (Fin 3) := hA\n  letI : ACR.Prov (Fin 3) := hP\n  letI : ACR.Reft (Fin 3) := hR\n  let hAPS : ACR.APS (Fin 3) :=\n    { prov_mono := by\n        intro x y hxy\n        exact Nat.le_refl 2\n      reft_anti_mono := by\n        intro x y hxy\n        exact Fin.rev_anti hxy\n      top_le_reft_bot := by\n        decide\n      le_reft_top_of_le_prov_of_le_reft := by\n        intro x y hxy hxry\n        simpa using (Fin.le_val_last x)\n      reft_le_prov_reft := by\n        intro x\n        simpa using (Fin.le_val_last (Fin.rev x)) }\n  letI : ACR.APS (Fin 3) := hAPS\n  refine ⟨Fin 3, hA, hP, hR, hAPS, ?_⟩\n  refine ⟨1, ?_⟩\n  refine ⟨?_, ?_, ?_⟩\n  · refine ⟨⟨1, ?_⟩⟩\n    constructor <;> decide\n  · constructor <;> decide\n  · decide",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:8:6: error: could not synthesize default value for field 'lt_iff_le_not_ge' of 'ACR' using tactics",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:8:6: error: could not synthesize default value for field 'lt_iff_le_not_ge' of 'ACR' using tactics | AutomatedTheoryConstruction/Scratch.lean:8:6: error: Tactic `rfl` failed: The left-hand side | a✝ < b✝",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "Witness the existential with alpha = ULift Nat. Use the preorder induced by the Nat order on `down`, but set `top = 0` and `bot = 2`. Let `Prov.prov` be constantly 2 and `Reft.reft x = 2 - x.down`. The APS axioms reduce to basic Nat inequalities. Then `x = 1` is reft-fixed since `2 - 1 = 1`, so a Godel fixpoint exists, while `reft top = 2`, hence `1 ≐ reft top` fails because `2 ≤ 1` is false.",
+      "proof_text": "let hA : ACR (ULift Nat) :=\n  { top := ⟨0⟩\n    bot := ⟨2⟩\n    le := fun x y => x.down ≤ y.down\n    lt := fun x y => x.down ≤ y.down ∧ ¬ y.down ≤ x.down\n    le_refl := by\n      intro x\n      exact Nat.le_refl x.down\n    le_trans := by\n      intro x y z hxy hyz\n      exact Nat.le_trans hxy hyz }\nlet hP : @ACR.Prov (ULift Nat) hA :=\n  { prov := fun _ => ⟨2⟩ }\nlet hR : @ACR.Reft (ULift Nat) hA :=\n  { reft := fun x => ⟨2 - x.down⟩ }\nletI : ACR (ULift Nat) := hA\nletI : ACR.Prov (ULift Nat) := hP\nletI : ACR.Reft (ULift Nat) := hR\nlet hAPS : ACR.APS (ULift Nat) :=\n  { prov_mono := by\n      intro x y hxy\n      exact Nat.le_refl 2\n    reft_anti_mono := by\n      intro x y hxy\n      show 2 - y.down ≤ 2 - x.down\n      exact Nat.sub_le_sub_left hxy 2\n    top_le_reft_bot := by\n      show 0 ≤ (2 - 2)\n      decide\n    le_reft_top_of_le_prov_of_le_reft := by\n      intro x y hxy hxry\n      show x.down ≤ 2\n      simpa using hxy\n    reft_le_prov_reft := by\n      intro x\n      show 2 - x.down ≤ 2\n      exact Nat.sub_le _ _ }\nletI : ACR.APS (ULift Nat) := hAPS\nrefine ⟨ULift Nat, hA, hP, hR, hAPS, ?_⟩\nrefine ⟨⟨1⟩, ?_⟩\nrefine ⟨?_, ?_, ?_⟩\n· refine ⟨⟨⟨1⟩, ?_⟩⟩\n  constructor\n  · show 1 ≤ 1\n    exact Nat.le_refl 1\n  · show 1 ≤ 1\n    exact Nat.le_refl 1\n· constructor\n  · show 1 ≤ 1\n    exact Nat.le_refl 1\n  · show 1 ≤ 1\n    exact Nat.le_refl 1\n· intro hx\n  have h21 : 2 ≤ 1 := by\n    change ((⟨2⟩ : ULift Nat) ≤ ⟨1⟩)\n    exact hx.2\n  have h : ¬ 2 ≤ 1 := by decide\n  exact h h21",
+      "counterexample_text": "A concrete witness is the universe-polymorphic lift `ULift Nat` with `top = 0`, `bot = 2`, constant box `2`, and reft map `x |-> 2 - x`. The element `1` is a reft-fixed point, but it is not equivalent to `reft top = 2`.",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:8:6: error: could not synthesize default value for field 'lt_iff_le_not_ge' of 'ACR' using tactics",
+      "lean_error_fingerprint": "no_diagnostics",
+      "new_problems": []
+    }
+  ],
+  "op_000009": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α], ACR.Consistent α → ∀ g : ACR.GödelFixpoint α, ¬ (⊬ g.1)",
+      "formalized_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α], ACR.Consistent α → ∀ g : ACR.GödelFixpoint α, ¬ (⊬ g.1)",
+      "statement_formalization_notes": "The input statement is already a valid Lean proposition and uses the repository's established notation.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": false,
+      "proof_sketch": "Assume `g.1 ≤ ⊥`. Antitonicity of `⊠` gives `⊠⊥ ≤ ⊠g.1`, and the Gödel fixpoint equivalence gives `⊠g.1 ≤ g.1`. Together with `⊤ ≤ ⊠⊥`, this yields `⊤ ≤ ⊥`, contradicting consistency.",
+      "proof_text": "intro hC g hg\napply hC\nhave h1 : g.1 ≤ (⊥ : α) := hg\nhave h2 : ⊠(⊥ : α) ≤ ⊠g.1 := reft_anti_mono h1\nhave h3 : ⊠(⊥ : α) ≤ g.1 := le_trans h2 g.2.2\ncalc\n  (⊤ : α) ≤ ⊠⊥ := top_le_reft_bot\n  _ ≤ g.1 := h3\n  _ ≤ ⊥ := h1",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:8:2: error: Tactic `apply` failed: could not unify the type of `hC`",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:8:2: error: Tactic `apply` failed: could not unify the type of `hC` | Type u_1 | with the goal",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": false,
+      "proof_sketch": "Introduce the type and instances first. Then assume `g.1 ≤ ⊥`; antitonicity of `⊠` gives `⊠⊥ ≤ ⊠g.1`, and the Gödel fixpoint equation gives `⊠g.1 ≤ g.1`. Combined with `⊤ ≤ ⊠⊥`, this yields `⊤ ≤ ⊥`, contradicting consistency.",
+      "proof_text": "intro α _ _ _ _ hC g hg\napply hC\nhave h1 : g.1 ≤ (⊥ : α) := hg\nhave h2 : ⊠(⊥ : α) ≤ ⊠g.1 := reft_anti_mono h1\nhave h3 : ⊠(⊥ : α) ≤ g.1 := le_trans h2 g.2.2\ncalc\n  (⊤ : α) ≤ ⊠⊥ := top_le_reft_bot\n  _ ≤ g.1 := h3\n  _ ≤ ⊥ := h1",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:10:31: error(lean.unknownIdentifier): Unknown identifier `reft_anti_mono`",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:10:31: error(lean.unknownIdentifier): Unknown identifier `reft_anti_mono` | AutomatedTheoryConstruction/Scratch.lean:13:20: error(lean.unknownIdentifier): Unknown identifier `top_le_reft_bot`",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "Use the same contradiction pattern as the boxed variant, but directly from `g.1 ≤ ⊥`. Antitonicity of `⊠` gives `⊠⊥ ≤ ⊠g.1`, the Gödel fixpoint gives `⊠g.1 ≤ g.1`, and `⊤ ≤ ⊠⊥` then yields `⊤ ≤ ⊥`, contradicting consistency. The repair is to use fully qualified names `ACR.reft_anti_mono` and `ACR.top_le_reft_bot`.",
+      "proof_text": "intro α _ _ _ _ hC g hg\nhave h1 : g.1 ≤ (⊥ : α) := hg\nhave h2 : ⊠(⊥ : α) ≤ ⊠g.1 := ACR.reft_anti_mono h1\nhave h3 : ⊠(⊥ : α) ≤ g.1 := le_trans h2 g.2.2\nexact hC <|\n  calc\n    (⊤ : α) ≤ ⊠(⊥ : α) := ACR.top_le_reft_bot\n    _ ≤ g.1 := h3\n    _ ≤ ⊥ := h1",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:10:31: error(lean.unknownIdentifier): Unknown identifier `reft_anti_mono`",
+      "lean_error_fingerprint": "no_diagnostics",
+      "new_problems": []
+    }
+  ],
+  "op_000013": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α], ACR.Consistent α → Nonempty (ACR.GödelFixpoint α) → ∀ {x : α}, x ≐ ⊠x → x ≐ ⊠(⊤ : α)",
+      "formalized_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α], ACR.Consistent α → Nonempty (ACR.GödelFixpoint α) → ∀ {x : α}, x ≐ ⊠x → x ≐ ⊠(⊤ : α)",
+      "statement_formalization_notes": "Formalized directly from `stmt` using the repository's existing notation `≐` and `⊠`.",
       "result": "ok",
       "verify_success": true,
       "proof_sketch": "",
@@ -135,18 +227,18 @@
       "statement_formalization_notes": "",
       "result": "stuck",
       "verify_success": false,
-      "proof_sketch": "A concrete two-point model suggests the statement is false. Take a preorder with elements 0 ≤ 1, with `⊤ = 1` and `⊥ = 0`, let `□` be the identity, and define `⊠0 = 1`, `⊠1 = 0`. Then `reft_anti_mono`, `top_le_reft_bot`, `reft_le_prov_reft`, `le_top`, and `le_reft_top_of_le_prov_of_le_reft` all check in this chain. For `x = 0`, the right side `x ≐ ⊠⊤` is true because `⊠⊤ = ⊠1 = 0`, but the left side `x ≐ ⊠x` is false because `⊠0 = 1` and `0` is not equivalent to `1`.",
+      "proof_sketch": "A proof direction looks unpromising because the available axioms only give the forward inequality `x ≤ ⊠⊤` from `x ≐ ⊠x`; the missing reverse inequality `⊠⊤ ≤ x` is exactly what `ACR.C5` supplies in the verified theorem `gf_equiv_reft_top`. The Derived theorem hint for reft-fixed points also appears to require `[ACR.C5 α]`, while the target statement does not assume it. So the natural library reuse path is blocked, and the statement is likely false as stated. A small preorder model witnesses this failure: one can satisfy `Consistent`, `Nonempty (GödelFixpoint α)`, and `x ≐ ⊠x` for some `x`, while still having `⊠⊤ ≰ x`.",
       "proof_text": "",
-      "counterexample_text": "Model intuition: use the 2-element chain `0 ≤ 1` with top `1`, bottom `0`, `Prov := id`, and `Reft` order-reversing by swapping the two points (`⊠0 = 1`, `⊠1 = 0`). Then `⊠⊤ = 0`, so choosing `x = 0` makes `x ≐ ⊠⊤` true. But `⊠x = 1`, so `x ≐ ⊠x` fails. Thus the biconditional does not hold in general under the listed axioms.",
-      "lean_error_excerpt": "formalize worker timeout: Worker returned error: Command '['codex', 'exec', '-', '--sandbox', 'read-only', '--skip-git-repo-check', '--output-last-message', '/var/folders/2_/c2t72bmn00j3z7cnkfvqvyj80000gn/T/tmpgrdzcz12']' timed out after 390 seconds (task_type=formalize)",
+      "counterexample_text": "Take a 4-element preorder with elements `T, B, P, Q`, with only reflexive relations plus `Q ≤ P` and `T ≤ P`, and with designated constants `⊤ = T`, `⊥ = B`. Define `□x := P` for all `x`, and define `⊠T = P`, `⊠B = P`, `⊠P = Q`, `⊠Q = Q`. Then `APS` holds: `prov_mono` is trivial, `reft_anti_mono` holds on the only nontrivial order relations, `top_le_reft_bot` is `T ≤ P`, `le_reft_top_of_le_prov_of_le_reft` is trivial because `□y = P`, and `reft_le_prov_reft` reduces to `⊠x ≤ P`, which holds. The structure is consistent since `T ≰ B`. Also `Q` is a Gödel fixed point, so `Nonempty (ACR.GödelFixpoint α)` holds, and for `x = Q` we have `x ≐ ⊠x`. But `⊠⊤ = P`, and `P ≤ Q` is false, so `Q ≐ ⊠⊤` fails.",
+      "lean_error_excerpt": "formalize worker timeout: Worker returned error: Command '['codex', 'exec', '-', '--sandbox', 'read-only', '--skip-git-repo-check', '--output-last-message', '/var/folders/2_/c2t72bmn00j3z7cnkfvqvyj80000gn/T/tmpn1qgj0zp']' timed out after 390 seconds (task_type=formalize)",
       "lean_error_fingerprint": "formalizer_timeout",
       "new_problems": []
     },
     {
       "stage": "statement_formalization",
-      "source_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α] {x : α}, x ≐ ⊠x ↔ x ≐ ⊠(⊤ : α)",
-      "formalized_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α] {x : α}, x ≐ ⊠x ↔ x ≐ ⊠(⊤ : α)",
-      "statement_formalization_notes": "The input statement is already a valid Lean proposition and uses the repository's preferred shorthand notation `≐` and `⊠`.",
+      "source_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α], ACR.Consistent α → Nonempty (ACR.GödelFixpoint α) → ∀ {x : α}, x ≐ ⊠x → x ≐ ⊠(⊤ : α)",
+      "formalized_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α], ACR.Consistent α → Nonempty (ACR.GödelFixpoint α) → ∀ {x : α}, x ≐ ⊠x → x ≐ ⊠(⊤ : α)",
+      "statement_formalization_notes": "Direct formalization of the given statement using the repository's shorthand notation.",
       "result": "ok",
       "verify_success": true,
       "proof_sketch": "",
@@ -163,18 +255,18 @@
       "statement_formalization_notes": "",
       "result": "stuck",
       "verify_success": false,
-      "proof_sketch": "The target looks too strong because the converse direction lacks any `Nonempty (GödelFixpoint α)` assumption. A standard derived fact likely gives the converse only under existence of a Gödel fixpoint, while the forward direction is easy by packaging `x` as a Gödel fixpoint and using `gf_equiv_reft_top`. The missing existence hypothesis can fail. In the two-element chain `0 ≤ 1` with `⊤ = 1`, `⊥ = 0`, `□ := id`, and `⊠` defined by swapping the points, the listed APS and `C5` axioms are satisfied, but there is no Gödel fixpoint. Then for `x = 0`, we have `x ≐ ⊠⊤` since `⊠⊤ = ⊠1 = 0`, while `x ≐ ⊠x` fails since `⊠0 = 1` and `0` is not equivalent to `1`.",
+      "proof_sketch": "The standard proof route is blocked because the reusable theorem `ACR.gf_equiv_reft_top` and the derived equivalence theorem both require `[ACR.C5 α]`, which is not assumed here. From `x ≐ ⊠x`, the APS axioms do give the forward inequality `x ≤ ⊠⊤` by combining `⊠x ≤ □⊠x`, monotonicity of `□`, and `le_reft_top_of_le_prov_of_le_reft`; but they do not force the reverse inequality `⊠⊤ ≤ x`. This gap is real, not just a proof-search issue. A small preorder model satisfies `Consistent α`, `Nonempty (ACR.GödelFixpoint α)`, and has a reft-fixed point `x`, while still making `⊠⊤ ≤ x` false.",
       "proof_text": "",
-      "counterexample_text": "Concrete model: take `α = {0,1}` ordered by `0 ≤ 1`, with `⊤ = 1`, `⊥ = 0`, `Prov.prov := id`, and `Reft.reft` given by `⊠0 = 1`, `⊠1 = 0`. This `⊠` is order-reversing, `top_le_reft_bot` becomes `1 ≤ 1`, `reft_le_prov_reft` is trivial because `□ = id`, and `le_reft_top_of_le_prov_of_le_reft` holds by case analysis on the chain. For `x = 0`, the right side is true because `⊠⊤ = 0`, so `0 ≐ 0`; the left side is false because `⊠0 = 1`, so `0 ≐ 1` fails. Hence the biconditional is false in general.",
-      "lean_error_excerpt": "formalize worker timeout: Worker returned error: Command '['codex', 'exec', '-', '--sandbox', 'read-only', '--skip-git-repo-check', '--output-last-message', '/var/folders/2_/c2t72bmn00j3z7cnkfvqvyj80000gn/T/tmp64m8_r27']' timed out after 390 seconds (task_type=formalize)",
+      "counterexample_text": "Use a 4-element preorder with elements `T, B, P, Q`, with only reflexive relations plus `Q ≤ P` and `T ≤ P`; take constants `⊤ = T` and `⊥ = B`. Define `□x := P` for all `x`, and define `⊠T = P`, `⊠B = P`, `⊠P = Q`, `⊠Q = Q`. Then `prov_mono` is trivial, `reft_anti_mono` holds on the only nontrivial order relations, `top_le_reft_bot` is `T ≤ P`, `le_reft_top_of_le_prov_of_le_reft` is immediate because its conclusion is exactly `x ≤ P`, and `reft_le_prov_reft` reduces to `⊠x ≤ P`, which always holds. The structure is consistent since `T ≤ B` is false, and `Q` is a Gödel fixed point because `Q ≐ ⊠Q`. But `⊠⊤ = P`, and `P ≤ Q` is false, so for `x = Q` we have `x ≐ ⊠x` but not `x ≐ ⊠⊤`.",
+      "lean_error_excerpt": "formalize worker timeout: Worker returned error: Command '['codex', 'exec', '-', '--sandbox', 'read-only', '--skip-git-repo-check', '--output-last-message', '/var/folders/2_/c2t72bmn00j3z7cnkfvqvyj80000gn/T/tmp2z1fkiap']' timed out after 390 seconds (task_type=formalize)",
       "lean_error_fingerprint": "formalizer_timeout",
       "new_problems": []
     },
     {
       "stage": "statement_formalization",
-      "source_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α] {x : α}, x ≐ ⊠x ↔ x ≐ ⊠(⊤ : α)",
-      "formalized_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α] {x : α}, x ≐ ⊠x ↔ x ≐ ⊠(⊤ : α)",
-      "statement_formalization_notes": "The input statement is already a valid Lean proposition and uses the repository's preferred notation `≐` and `⊠`.",
+      "source_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α], ACR.Consistent α → Nonempty (ACR.GödelFixpoint α) → ∀ {x : α}, x ≐ ⊠x → x ≐ ⊠(⊤ : α)",
+      "formalized_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α], ACR.Consistent α → Nonempty (ACR.GödelFixpoint α) → ∀ {x : α}, x ≐ ⊠x → x ≐ ⊠(⊤ : α)",
+      "statement_formalization_notes": "The input statement is already a valid Lean proposition and already uses the repository shorthands `≐` and `⊠`.",
       "result": "ok",
       "verify_success": true,
       "proof_sketch": "",
@@ -185,9 +277,23 @@
       "new_problems": []
     },
     {
+      "stage": "",
+      "source_statement": "",
+      "formalized_statement": "",
+      "statement_formalization_notes": "",
+      "result": "stuck",
+      "verify_success": false,
+      "proof_sketch": "A proof direction is not promising because the available APS axioms only force the forward inequality `x ≤ ⊠⊤` from `x ≐ ⊠x`; the missing reverse inequality `⊠⊤ ≤ x` is exactly what the repository's theorem `gf_equiv_reft_top` gets from the extra assumption `[ACR.C5 α]`. The listed derived reuse theorem for reft-fixed points also appears to require `[ACR.C5 α]`, so the standard library path is blocked for the present statement. There is a concrete small preorder model satisfying all stated assumptions where some reft-fixed point is not equivalent to `⊠⊤`. So the target is best treated as having a counterexample direction rather than a proof direction.",
+      "proof_text": "",
+      "counterexample_text": "Consider a 4-element preorder with elements `T, B, P, Q`, with only reflexive relations plus `Q ≤ P` and `T ≤ P`; set `⊤ = T` and `⊥ = B`. Define `□x := P` for every `x`, and define `⊠T = P`, `⊠B = P`, `⊠P = Q`, `⊠Q = Q`. Then `prov_mono` is trivial, `reft_anti_mono` holds on the only nontrivial order relations, `top_le_reft_bot` is `T ≤ P`, `le_reft_top_of_le_prov_of_le_reft` is immediate because its first premise already gives `x ≤ P = ⊠⊤`, and `reft_le_prov_reft` reduces to `⊠x ≤ P`, which holds for all four elements. The structure is consistent since `T ≤ B` is false, and `Q` is a Gödel fixed point because `Q ≐ ⊠Q`. But `⊠⊤ = P`, and `P ≤ Q` is false, so for `x = Q` we have `x ≐ ⊠x` but not `x ≐ ⊠⊤`.",
+      "lean_error_excerpt": "formalize worker timeout: Worker returned error: Command '['codex', 'exec', '-', '--sandbox', 'read-only', '--skip-git-repo-check', '--output-last-message', '/var/folders/2_/c2t72bmn00j3z7cnkfvqvyj80000gn/T/tmpiq6jmkcj']' timed out after 390 seconds (task_type=formalize)",
+      "lean_error_fingerprint": "formalizer_timeout",
+      "new_problems": []
+    },
+    {
       "stage": "statement_formalization",
-      "source_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α] {x : α}, x ≐ ⊠x ↔ x ≐ ⊠(⊤ : α)",
-      "formalized_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α] {x : α}, x ≐ ⊠x ↔ x ≐ ⊠(⊤ : α)",
+      "source_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α], ACR.Consistent α → Nonempty (ACR.GödelFixpoint α) → ∀ {x : α}, x ≐ ⊠x → x ≐ ⊠(⊤ : α)",
+      "formalized_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α], ACR.Consistent α → Nonempty (ACR.GödelFixpoint α) → ∀ {x : α}, x ≐ ⊠x → x ≐ ⊠(⊤ : α)",
       "statement_formalization_notes": "The input statement is already a valid Lean proposition and uses the repository's preferred notation.",
       "result": "ok",
       "verify_success": true,
@@ -199,32 +305,271 @@
       "new_problems": []
     },
     {
-      "result": "counterexample",
+      "stage": "",
+      "source_statement": "",
+      "formalized_statement": "",
+      "statement_formalization_notes": "",
+      "result": "stuck",
       "verify_success": false,
-      "proof_sketch": "Assume the universal biconditional. Instantiate it on the two-point chain `Bool` with order `false ≤ true`, `⊤ = true`, `⊥ = false`, `□ = id`, and `⊠ = Bool.not`. The ACR, APS, and C5 axioms hold by finite case analysis. For `x = false`, the right side `x ≐ ⊠⊤` is true since `⊠⊤ = false`, but the left side `x ≐ ⊠x` would force `true ≤ false`, contradiction.",
-      "proof_text": "intro h\nlet T := Bool\nlet rel : T → T → Prop := fun a b => a = false ∨ b = true\nlet rf : T → T := Bool.not\nletI : ACR T where\n  top := true\n  bot := false\n  le := rel\n  le_refl := by\n    intro a\n    cases a <;> simp [rel]\n  le_trans := by\n    intro a b c hab hbc\n    cases a <;> cases b <;> cases c <;> simp [rel] at hab hbc ⊢\nletI : ACR.Prov T where\n  prov := id\nletI : ACR.Reft T where\n  reft := rf\nletI : ACR.APS T where\n  prov_mono := by\n    intro x y hxy\n    simpa [rel] using hxy\n  reft_anti_mono := by\n    intro x y hxy\n    cases x <;> cases y <;> simp [rel, rf] at hxy ⊢\n  top_le_reft_bot := by\n    simp [rel, rf]\n  le_reft_top_of_le_prov_of_le_reft := by\n    intro x y hxy hxry\n    cases x <;> cases y <;> simp [rel, rf] at hxy hxry ⊢\n  reft_le_prov_reft := by\n    intro x\n    cases x <;> simp [rel, rf]\nletI : ACR.C5 T where\n  le_top := by\n    intro x\n    cases x <;> simp [rel]\nhave h0 : ((false : T) ≐ ⊠(false : T)) ↔ ((false : T) ≐ ⊠(⊤ : T)) := h (α := T) (x := false)\nhave hRight : (false : T) ≐ ⊠(⊤ : T) := by\n  constructor <;> simp [rel, rf]\nhave hLeft : (false : T) ≐ ⊠(false : T) := h0.2 hRight\nhave htf : (true : T) ≤ (false : T) := hLeft.2\nsimpa [rel] using htf",
-      "counterexample_text": "Take `α = Bool` with preorder `a ≤ b :↔ a = false ∨ b = true`, so `false < true`, and set `⊤ = true`, `⊥ = false`, `□x = x`, `⊠x = Bool.not x`. Then `APS` and `C5` hold. For `x = false`, we have `⊠⊤ = false`, hence `x ≐ ⊠⊤` is true. But `⊠x = true`, so `x ≐ ⊠x` would require `true ≤ false`, which is false. Therefore the biconditional fails in this model.",
-      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:11:14: error: unexpected token 'where'; expected ':=' or '|'",
-      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:11:14: error: unexpected token 'where'; expected ':=' or '|' | AutomatedTheoryConstruction/Scratch.lean:11:7: error: Missing cases: | AutomatedTheoryConstruction/Scratch.lean:6:166: error: unsolved goals",
+      "proof_sketch": "The standard proof route is blocked because the reusable theorem `ACR.gf_equiv_reft_top` and the listed derived fixed-point theorem require `[ACR.C5 α]`, which is not assumed here. From `x ≐ ⊠x`, the APS axioms do give `x ≤ ⊠⊤`: combine `x ≤ ⊠x`, `⊠x ≤ □⊠x`, monotonicity of `□`, and `le_reft_top_of_le_prov_of_le_reft`. But the reverse inequality `⊠⊤ ≤ x` is not forced by the present hypotheses. This is a real semantic gap, not just a failed proof search. A small preorder model satisfies `Consistent α`, `Nonempty (ACR.GödelFixpoint α)`, and `x ≐ ⊠x` for some `x`, while `x ≐ ⊠⊤` still fails.",
+      "proof_text": "",
+      "counterexample_text": "Take a 4-element preorder with elements `T, B, P, Q`, with only reflexive relations plus `Q ≤ P` and `T ≤ P`, and set `⊤ = T`, `⊥ = B`. Define `□x := P` for every `x`, and define `⊠T = P`, `⊠B = P`, `⊠P = Q`, `⊠Q = Q`. Then all APS axioms hold: `prov_mono` is trivial, `reft_anti_mono` holds on the only nontrivial order pairs, `top_le_reft_bot` is `T ≤ P`, `le_reft_top_of_le_prov_of_le_reft` follows from its first premise because `⊠⊤ = P`, and `reft_le_prov_reft` reduces to `⊠x ≤ P`, which always holds. The structure is consistent since `T ≤ B` is false, and `Q` is a Gödel fixed point because `Q ≐ ⊠Q`. But `⊠⊤ = P` and `P ≤ Q` is false, so for `x = Q` we have `x ≐ ⊠x` but not `x ≐ ⊠⊤`.",
+      "lean_error_excerpt": "formalize worker timeout: Worker returned error: Command '['codex', 'exec', '-', '--sandbox', 'read-only', '--skip-git-repo-check', '--output-last-message', '/var/folders/2_/c2t72bmn00j3z7cnkfvqvyj80000gn/T/tmpqlqcfh3b']' timed out after 390 seconds (task_type=formalize)",
+      "lean_error_fingerprint": "formalizer_timeout",
       "new_problems": []
     },
     {
-      "result": "counterexample",
+      "stage": "statement_formalization",
+      "source_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α], ACR.Consistent α → Nonempty (ACR.GödelFixpoint α) → ∀ {x : α}, x ≐ ⊠x → x ≐ ⊠(⊤ : α)",
+      "formalized_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α], ACR.Consistent α → Nonempty (ACR.GödelFixpoint α) → ∀ {x : α}, x ≐ ⊠x → x ≐ ⊠(⊤ : α)",
+      "statement_formalization_notes": "The input stmt is already a valid Lean proposition and uses the repository's preferred notation.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "stage": "",
+      "source_statement": "",
+      "formalized_statement": "",
+      "statement_formalization_notes": "",
+      "result": "stuck",
       "verify_success": false,
-      "proof_sketch": "The statement is false in the two-point chain on `Bool`. Use `false ≤ true`, `⊤ = true`, `⊥ = false`, `□ = id`, and `⊠ = Bool.not`. The `ACR`, `Prov`, `Reft`, `APS`, and `C5` instances are verified by finite case analysis. Then for `x = false`, the right side `x ≐ ⊠⊤` is true because `⊠⊤ = false`, while the left side `x ≐ ⊠x` would force `true ≤ false`, impossible.",
-      "proof_text": "intro h\nlet T : Type := Bool\nlet rel : T → T → Prop := fun a b => a = false ∨ b = true\nlet rf : T → T := Bool.not\nlet acrT : ACR T :=\n  { top := true\n    bot := false\n    le := rel\n    le_refl := by\n      intro a\n      cases a <;> simp [rel]\n    le_trans := by\n      intro a b c hab hbc\n      cases a <;> cases b <;> cases c <;> simp [rel] at hab hbc ⊢ }\nletI : ACR T := acrT\nlet provT : ACR.Prov T :=\n  { prov := id }\nletI : ACR.Prov T := provT\nlet reftT : ACR.Reft T :=\n  { reft := rf }\nletI : ACR.Reft T := reftT\nlet apsT : ACR.APS T :=\n  { prov_mono := by\n      intro x y hxy\n      simpa [rel] using hxy\n    reft_anti_mono := by\n      intro x y hxy\n      cases x <;> cases y <;> simp [rel, rf] at hxy ⊢\n    top_le_reft_bot := by\n      simp [rel, rf]\n    le_reft_top_of_le_prov_of_le_reft := by\n      intro x y hxy hxry\n      cases x <;> cases y <;> simp [rel, rf] at hxy hxry ⊢\n    reft_le_prov_reft := by\n      intro x\n      cases x <;> simp [rel, rf] }\nletI : ACR.APS T := apsT\nlet c5T : ACR.C5 T :=\n  { le_top := by\n      intro x\n      cases x <;> simp [rel] }\nletI : ACR.C5 T := c5T\nhave h0 : ((false : T) ≐ ⊠(false : T)) ↔ ((false : T) ≐ ⊠(⊤ : T)) := h (α := T) (x := false)\nhave hRight : (false : T) ≐ ⊠(⊤ : T) := by\n  constructor <;> simp [rel, rf]\nhave hLeft : (false : T) ≐ ⊠(false : T) := h0.2 hRight\nhave htf : (true : T) ≤ (false : T) := hLeft.2\nsimpa [rel] using htf",
-      "counterexample_text": "Take `α = Bool` with preorder `a ≤ b :↔ a = false ∨ b = true`, so `false < true`, and set `⊤ = true`, `⊥ = false`, `□x = x`, `⊠x = Bool.not x`. These operations satisfy the listed `ACR`, `APS`, and `C5` axioms by case analysis. For `x = false`, we have `⊠⊤ = false`, so `x ≐ ⊠⊤` holds. But `⊠x = true`, so `x ≐ ⊠x` would require `true ≤ false`, which is false. Hence the biconditional does not hold in general.",
-      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:12:4: error: could not synthesize default value for field 'lt_iff_le_not_ge' of 'ACR' using tactics",
-      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:12:4: error: could not synthesize default value for field 'lt_iff_le_not_ge' of 'ACR' using tactics | AutomatedTheoryConstruction/Scratch.lean:12:4: error: Tactic `rfl` failed: The left-hand side | a✝ < b✝",
+      "proof_sketch": "A proof direction is not promising from the stated hypotheses alone. The APS axioms let one derive the forward inequality `x ≤ ⊠⊤` from `x ≐ ⊠x`, using `x ≤ ⊠x`, `⊠x ≤ □⊠x`, monotonicity of `□`, and `le_reft_top_of_le_prov_of_le_reft`. But the reverse inequality `⊠⊤ ≤ x` is exactly the part supplied by the extra assumption `[ACR.C5 α]` in the verified theorem `gf_equiv_reft_top`, and that assumption is absent here. The listed Derived reuse theorem for reft-fixed points also appears to require `[ACR.C5 α]`, so the standard library reuse path is blocked. This suggests the target is false as stated, not merely hard to prove.",
+      "proof_text": "",
+      "counterexample_text": "Consider a 4-element preorder with elements `T, B, P, Q`, with only reflexive relations plus `Q ≤ P` and `T ≤ P`; set `⊤ = T` and `⊥ = B`. Define `□x := P` for all `x`, and define `⊠T = P`, `⊠B = P`, `⊠P = Q`, `⊠Q = Q`. Then `prov_mono` is trivial, `reft_anti_mono` holds on the only nontrivial order relations, `top_le_reft_bot` is `T ≤ P`, `le_reft_top_of_le_prov_of_le_reft` is immediate because its conclusion is `x ≤ ⊠⊤ = P`, and `reft_le_prov_reft` reduces to `⊠x ≤ P`, which always holds. The structure is consistent since `T ≤ B` is false, and `Q` is a Gödel fixed point because `Q ≐ ⊠Q`. But `⊠⊤ = P` and `P ≤ Q` is false, so for `x = Q` we have `x ≐ ⊠x` but not `x ≐ ⊠⊤`.",
+      "lean_error_excerpt": "formalize worker timeout: Worker returned error: Command '['codex', 'exec', '-', '--sandbox', 'read-only', '--skip-git-repo-check', '--output-last-message', '/var/folders/2_/c2t72bmn00j3z7cnkfvqvyj80000gn/T/tmpgtiswaww']' timed out after 390 seconds (task_type=formalize)",
+      "lean_error_fingerprint": "formalizer_timeout",
+      "new_problems": []
+    },
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α], ACR.Consistent α → Nonempty (ACR.GödelFixpoint α) → ∀ {x : α}, x ≐ ⊠x → x ≐ ⊠(⊤ : α)",
+      "formalized_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α], ACR.Consistent α → Nonempty (ACR.GödelFixpoint α) → ∀ {x : α}, x ≐ ⊠x → x ≐ ⊠(⊤ : α)",
+      "statement_formalization_notes": "Kept the statement in the repository's existing notation; it is already a valid Lean proposition.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "stage": "",
+      "source_statement": "",
+      "formalized_statement": "",
+      "statement_formalization_notes": "",
+      "result": "stuck",
+      "verify_success": false,
+      "proof_sketch": "The statement has a concrete counterexample direction, not a promising proof direction. From `x ≐ ⊠x`, the APS axioms do give the forward inequality `x ≤ ⊠⊤`, by combining `x ≤ ⊠x`, `⊠x ≤ □⊠x`, monotonicity of `□`, and `le_reft_top_of_le_prov_of_le_reft`. But the reverse inequality `⊠⊤ ≤ x` is not forced by the present hypotheses; in the repository, that step is exactly what `gf_equiv_reft_top` obtains from the extra assumption `[ACR.C5 α]`. So the missing `C5` assumption is a real semantic gap, not just a proof-search issue. A small preorder model satisfies all stated assumptions and has a reft-fixed point `x` with `x ≐ ⊠x` while `x ≐ ⊠⊤` fails.",
+      "proof_text": "",
+      "counterexample_text": "Use a 4-element preorder with elements `T, B, P, Q`, with only reflexive relations plus `Q ≤ P` and `T ≤ P`; set `⊤ = T` and `⊥ = B`. Define `□x := P` for every `x`, and define `⊠T = P`, `⊠B = P`, `⊠P = Q`, `⊠Q = Q`. Then `prov_mono` is trivial, `reft_anti_mono` holds on the only nontrivial order pairs, `top_le_reft_bot` is `T ≤ P`, `le_reft_top_of_le_prov_of_le_reft` is immediate because its first premise already gives the conclusion `x ≤ ⊠⊤ = P`, and `reft_le_prov_reft` reduces to `⊠x ≤ P`, which holds for all four elements. The structure is consistent since `T ≤ B` is false, and `Q` is a Gödel fixed point because `Q ≐ ⊠Q`. But `⊠⊤ = P` and `P ≤ Q` is false, so taking `x = Q` gives `x ≐ ⊠x` but not `x ≐ ⊠⊤`.",
+      "lean_error_excerpt": "formalize worker timeout: Worker returned error: Command '['codex', 'exec', '-', '--sandbox', 'read-only', '--skip-git-repo-check', '--output-last-message', '/var/folders/2_/c2t72bmn00j3z7cnkfvqvyj80000gn/T/tmp_zfxs1mb']' timed out after 390 seconds (task_type=formalize)",
+      "lean_error_fingerprint": "formalizer_timeout",
+      "new_problems": []
+    },
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α], ACR.Consistent α → Nonempty (ACR.GödelFixpoint α) → ∀ {x : α}, x ≐ ⊠x → x ≐ ⊠(⊤ : α)",
+      "formalized_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α], ACR.Consistent α → Nonempty (ACR.GödelFixpoint α) → ∀ {x : α}, x ≐ ⊠x → x ≐ ⊠(⊤ : α)",
+      "theorem_name_stem": "reft_fixedpoint_eq_reft_top",
+      "statement_formalization_notes": "Direct formalization of the given statement using the repository's existing notation and classes.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    }
+  ],
+  "op_000018": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∃ (α : Type _), ∃ (hA : ACR α), ∃ (hP : @ACR.Prov α hA), ∃ (hR : @ACR.Reft α hA), ∃ (hAPS : @ACR.APS α hA hP hR), letI : ACR α := hA; letI : ACR.Prov α := hP; letI : ACR.Reft α := hR; letI : ACR.APS α := hAPS; ACR.Consistent α ∧ Nonempty (ACR.GödelFixpoint α) ∧ ∃ x : α, x ≐ ⊠x ∧ ¬ (x ≐ ⊠(⊤ : α))",
+      "formalized_statement": "∃ (α : Type _), ∃ (hA : ACR α), ∃ (hP : @ACR.Prov α hA), ∃ (hR : @ACR.Reft α hA), ∃ (hAPS : @ACR.APS α hA hP hR), letI : ACR α := hA; letI : ACR.Prov α := hP; letI : ACR.Reft α := hR; letI : ACR.APS α := hAPS; ACR.Consistent α ∧ Nonempty (ACR.GödelFixpoint α) ∧ ∃ x : α, x ≐ ⊠x ∧ ¬ (x ≐ ⊠(⊤ : α))",
+      "statement_formalization_notes": "Kept the existential package explicit and used the repository notation `≐` and `⊠` with local `letI` bindings for the structure witnesses.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "stage": "",
+      "source_statement": "",
+      "formalized_statement": "",
+      "statement_formalization_notes": "",
+      "result": "stuck",
+      "verify_success": false,
+      "proof_sketch": "Promising proof by explicit finite model. Take a 4-element preorder with elements `b, m, t, u`, relations `b ≤ m`, `b ≤ t`, `b ≤ u`, `m ≤ u`, `t ≤ u`, and reflexive/transitive closure; set the designated `⊤ := t` and `⊥ := b`. Define `□x := u` for all `x`, and define `⊠b = u`, `⊠t = u`, `⊠m = m`, `⊠u = b`; then `⊠` is antitone, `top_le_reft_bot` is just `t ≤ u`, and `reft_le_prov_reft` is immediate because every `⊠x ≤ u = □(⊠x)`. The axiom `x ≤ □y → x ≤ ⊠y → x ≤ ⊠⊤` is also immediate here since `□y = u` and `⊠⊤ = u`, so `x ≤ □y` already gives `x ≤ ⊠⊤`. Now `m ≐ ⊠m`, so `m` yields `Nonempty (ACR.GödelFixpoint α)`, the structure is consistent because `t ≰ b`, and `m ≐ ⊠m` but `¬(m ≐ ⊠⊤)` since `⊠⊤ = u` and `u ≰ m`.",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "formalize worker timeout: Worker returned error: Command '['codex', 'exec', '-', '--sandbox', 'read-only', '--skip-git-repo-check', '--output-last-message', '/var/folders/2_/c2t72bmn00j3z7cnkfvqvyj80000gn/T/tmpsghlp4j3']' timed out after 390 seconds (task_type=formalize)",
+      "lean_error_fingerprint": "formalizer_timeout",
+      "new_problems": []
+    },
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∃ (α : Type _), ∃ (hA : ACR α), ∃ (hP : @ACR.Prov α hA), ∃ (hR : @ACR.Reft α hA), ∃ (hAPS : @ACR.APS α hA hP hR), letI : ACR α := hA; letI : ACR.Prov α := hP; letI : ACR.Reft α := hR; letI : ACR.APS α := hAPS; ACR.Consistent α ∧ Nonempty (ACR.GödelFixpoint α) ∧ ∃ x : α, x ≐ ⊠x ∧ ¬ (x ≐ ⊠(⊤ : α))",
+      "formalized_statement": "∃ (α : Type _), ∃ (hA : ACR α), ∃ (hP : @ACR.Prov α hA), ∃ (hR : @ACR.Reft α hA), ∃ (hAPS : @ACR.APS α hA hP hR), letI : ACR α := hA; letI : ACR.Prov α := hP; letI : ACR.Reft α := hR; letI : ACR.APS α := hAPS; ACR.Consistent α ∧ Nonempty (ACR.GödelFixpoint α) ∧ ∃ x : α, x ≐ ⊠x ∧ ¬ (x ≐ ⊠(⊤ : α))",
+      "statement_formalization_notes": "Used the repository's existing existential packaging with local `letI` instances and the shorthand notation `≐`.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": false,
+      "proof_sketch": "Construct a finite witness on `Fin 4` with preorder `x = 0 ∨ x = y ∨ y = 3`, designated `⊤ = 2` and `⊥ = 0`, constant provability `□x = 3`, and reft `⊠x = 1` for `x = 1` or `x = 3`, and `⊠x = 3` otherwise. Then the APS axioms hold by case analysis, the model is consistent because `2 ≰ 0`, `1` is a Gödel fixpoint, and `1` is not equivalent to `⊠⊤ = 3`.",
+      "proof_text": "let rel : Fin 4 → Fin 4 → Prop := fun x y => x = 0 ∨ x = y ∨ y = 3\nlet provFn : Fin 4 → Fin 4 := fun _ => 3\nlet reftFn : Fin 4 → Fin 4 := fun x => if x = 1 ∨ x = 3 then 1 else 3\nlet hA : ACR (Fin 4) :=\n  { top := 2\n    bot := 0\n    le := rel\n    le_refl := by\n      intro x\n      exact Or.inr <| Or.inl rfl\n    le_trans := by\n      intro x y z hxy hyz\n      rcases hxy with h0 | hxy | hy3\n      · subst h0\n        exact Or.inl rfl\n      · subst hxy\n        exact hyz\n      · subst hy3\n        have hz : z = 3 := by\n          simpa [rel] using hyz\n        subst hz\n        exact Or.inr <| Or.inr rfl }\nlet hP : @ACR.Prov (Fin 4) hA :=\n  { prov := provFn }\nlet hR : @ACR.Reft (Fin 4) hA :=\n  { reft := reftFn }\nletI : ACR (Fin 4) := hA\nletI : ACR.Prov (Fin 4) := hP\nletI : ACR.Reft (Fin 4) := hR\nlet hAPS : @ACR.APS (Fin 4) hA hP hR :=\n  { prov_mono := by\n      intro x y hxy\n      change rel (provFn x) (provFn y)\n      simp [rel, provFn]\n    reft_anti_mono := by\n      intro x y hxy\n      rcases hxy with h0 | hxy | hy3\n      · subst h0\n        change rel (reftFn y) (reftFn 0)\n        simp [rel, reftFn]\n      · subst hxy\n        change rel (reftFn y) (reftFn y)\n        simp [rel]\n      · subst hy3\n        change rel (reftFn 3) (reftFn x)\n        by_cases hx : x = 1 ∨ x = 3\n        · simp [rel, reftFn, hx]\n        · simp [rel, reftFn, hx]\n    top_le_reft_bot := by\n      change rel 2 (reftFn 0)\n      simp [rel, reftFn]\n    le_reft_top_of_le_prov_of_le_reft := by\n      intro x y hxy hxry\n      change rel x (reftFn 2)\n      simpa [rel, provFn, reftFn] using hxy\n    reft_le_prov_reft := by\n      intro x\n      change rel (reftFn x) (provFn (reftFn x))\n      simp [rel, provFn] }\nletI : ACR.APS (Fin 4) := hAPS\nrefine ⟨Fin 4, hA, hP, hR, hAPS, ?_⟩\nrefine ⟨?_, ?_, ?_⟩\n· change ¬ rel 2 0\n  simp [rel]\n· refine ⟨⟨1, ?_⟩⟩\n  constructor\n  · change rel 1 (reftFn 1)\n    simp [rel, reftFn]\n  · change rel (reftFn 1) 1\n    simp [rel, reftFn]\n· refine ⟨1, ?_⟩\n  constructor\n  · constructor\n    · change rel 1 (reftFn 1)\n      simp [rel, reftFn]\n    · change rel (reftFn 1) 1\n      simp [rel, reftFn]\n  · intro h\n    have h' : False := by\n      simpa [rel, reftFn] using h.2\n    exact h'",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:26:12: error: Type mismatch: After simplification, term",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:26:12: error: Type mismatch: After simplification, term | hyz | has type",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "Use an explicit model on `ULift Nat` with preorder `x ≤ y` defined as `x = 0 ∨ x = y ∨ y = 3`, top `2`, bottom `0`, constant provability `□x = 3`, and reflection `⊠x = 1` for `x = 1` or `x = 3`, otherwise `⊠x = 3`. The APS axioms are routine by case analysis. The model is consistent because `2 ≰ 0`, `1` is a Gödel fixpoint since `⊠1 = 1`, and `⊠⊤ = 3`, so `1` is not equivalent to `⊠⊤`.",
+      "proof_text": "let rel : ULift Nat → ULift Nat → Prop := fun x y => x.down = 0 ∨ x = y ∨ y.down = 3\nlet provFn : ULift Nat → ULift Nat := fun _ => ⟨3⟩\nlet reftFn : ULift Nat → ULift Nat := fun x => if x.down = 1 ∨ x.down = 3 then ⟨1⟩ else ⟨3⟩\nlet hA : ACR (ULift Nat) :=\n  { top := ⟨2⟩\n    bot := ⟨0⟩\n    le := rel\n    lt := fun a b => rel a b ∧ ¬ rel b a\n    le_refl := by\n      intro x\n      exact Or.inr <| Or.inl rfl\n    le_trans := by\n      intro x y z hxy hyz\n      rcases hxy with hx0 | hxy | hy3\n      · exact Or.inl hx0\n      · cases hxy\n        exact hyz\n      · cases y with\n        | up n =>\n            simp at hy3\n            subst hy3\n            rcases hyz with hy0 | hyEq | hz3\n            · simp at hy0\n            · cases hyEq\n              exact Or.inr <| Or.inr rfl\n            · exact Or.inr <| Or.inr hz3\n    lt_iff_le_not_ge := by\n      intro a b\n      rfl }\nlet hP : @ACR.Prov (ULift Nat) hA :=\n  { prov := provFn }\nlet hR : @ACR.Reft (ULift Nat) hA :=\n  { reft := reftFn }\nletI : ACR (ULift Nat) := hA\nletI : ACR.Prov (ULift Nat) := hP\nletI : ACR.Reft (ULift Nat) := hR\nlet hAPS : @ACR.APS (ULift Nat) hA hP hR :=\n  { prov_mono := by\n      intro x y hxy\n      change rel (provFn x) (provFn y)\n      simp [rel, provFn]\n    reft_anti_mono := by\n      intro x y hxy\n      change rel (reftFn y) (reftFn x)\n      rcases hxy with hx0 | hxy | hy3\n      · cases x with\n        | up n =>\n            simp at hx0\n            subst hx0\n            simp [rel, reftFn]\n      · cases hxy\n        simp [rel]\n      · cases y with\n        | up n =>\n            simp at hy3\n            subst hy3\n            by_cases hx : x.down = 1 ∨ x.down = 3\n            · simp [rel, reftFn, hx]\n            · simp [rel, reftFn, hx]\n    top_le_reft_bot := by\n      change rel ⟨2⟩ (reftFn ⟨0⟩)\n      simp [rel, reftFn]\n    le_reft_top_of_le_prov_of_le_reft := by\n      intro x y hxy hxry\n      change rel x (reftFn ⟨2⟩)\n      simp [rel, reftFn]\n    reft_le_prov_reft := by\n      intro x\n      change rel (reftFn x) (provFn (reftFn x))\n      simp [rel, provFn] }\nletI : ACR.APS (ULift Nat) := hAPS\nrefine ⟨ULift Nat, hA, hP, hR, hAPS, ?_⟩\nrefine ⟨?_, ?_, ?_⟩\n· change ¬ rel ⟨2⟩ ⟨0⟩\n  simp [rel]\n· refine ⟨⟨⟨1⟩, ?_⟩⟩\n  constructor\n  · change rel ⟨1⟩ (reftFn ⟨1⟩)\n    simp [rel, reftFn]\n  · change rel (reftFn ⟨1⟩) ⟨1⟩\n    simp [rel, reftFn]\n· refine ⟨⟨1⟩, ?_⟩\n  constructor\n  · constructor\n    · change rel ⟨1⟩ (reftFn ⟨1⟩)\n      simp [rel, reftFn]\n    · change rel (reftFn ⟨1⟩) ⟨1⟩\n      simp [rel, reftFn]\n  · intro h\n    have h31 := h.2\n    change rel (reftFn ⟨2⟩) ⟨1⟩ at h31\n    simp [rel, reftFn] at h31",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:26:12: error: Type mismatch: After simplification, term",
+      "lean_error_fingerprint": "no_diagnostics",
+      "new_problems": []
+    }
+  ],
+  "op_000019": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∃ (α : Type _), ∃ (hA : ACR α), ∃ (hP : @ACR.Prov α hA), ∃ (hR : @ACR.Reft α hA), ∃ (hAPS : @ACR.APS α hA hP hR), letI : ACR α := hA; letI : ACR.Prov α := hP; letI : ACR.Reft α := hR; letI : ACR.APS α := hAPS; ACR.Consistent α ∧ Nonempty (ACR.GödelFixpoint α) ∧ ∃ x : α, x ≐ ⊠x ∧ ¬ (⊠(⊤ : α) ≤ x)",
+      "formalized_statement": "∃ (α : Type _), ∃ (hA : ACR α), ∃ (hP : @ACR.Prov α hA), ∃ (hR : @ACR.Reft α hA), ∃ (hAPS : @ACR.APS α hA hP hR), letI : ACR α := hA; letI : ACR.Prov α := hP; letI : ACR.Reft α := hR; letI : ACR.APS α := hAPS; ACR.Consistent α ∧ Nonempty (ACR.GödelFixpoint α) ∧ ∃ x : α, x ≐ ⊠x ∧ ¬ (⊠(⊤ : α) ≤ x)",
+      "statement_formalization_notes": "Used the given existential packaging with explicit instance witnesses and local letI bindings.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "stage": "",
+      "source_statement": "",
+      "formalized_statement": "",
+      "statement_formalization_notes": "",
+      "result": "stuck",
+      "verify_success": false,
+      "proof_sketch": "A promising proof direction is to build an explicit finite model, because in `ACR` the `⊤` and `⊥` fields are only distinguished elements of a preorder, not actual greatest/least elements. Take a 4-element preorder with elements `t,b,r,p`, relations only by reflexivity plus `p ≤ r` and `t ≤ r`, let `⊤ := t`, `⊥ := b`, define `□x := r` for all `x`, and define `⊠` by `⊠b = t`, `⊠t = r`, `⊠p = p`, `⊠r = p`. Then `top_le_reft_bot` is immediate from `t ≤ t`, `prov_mono` is trivial because `□` is constant, `reft_anti_mono` holds because the only nontrivial order relations reverse to `p ≤ p` and `p ≤ r`, `reft_le_prov_reft` reduces to `⊠x ≤ r`, and `le_reft_top_of_le_prov_of_le_reft` is trivial since its first premise already gives `x ≤ r = ⊠⊤`. This structure is consistent because `t ≤ b` is false, `p` gives `Nonempty (ACR.GödelFixpoint α)` since `p ≐ ⊠p`, and the same `p` satisfies `¬ (⊠⊤ ≤ p)` because `⊠⊤ = r` and `r ≤ p` does not hold in the chosen preorder. So the existential statement looks directly provable by packaging this concrete model and checking the axioms by case analysis.",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "formalize worker timeout: Worker returned error: Command '['codex', 'exec', '-', '--sandbox', 'read-only', '--skip-git-repo-check', '--output-last-message', '/var/folders/2_/c2t72bmn00j3z7cnkfvqvyj80000gn/T/tmpq2t539ug']' timed out after 390 seconds (task_type=formalize)",
+      "lean_error_fingerprint": "formalizer_timeout",
+      "new_problems": []
+    },
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∃ (α : Type _), ∃ (hA : ACR α), ∃ (hP : @ACR.Prov α hA), ∃ (hR : @ACR.Reft α hA), ∃ (hAPS : @ACR.APS α hA hP hR), letI : ACR α := hA; letI : ACR.Prov α := hP; letI : ACR.Reft α := hR; letI : ACR.APS α := hAPS; ACR.Consistent α ∧ Nonempty (ACR.GödelFixpoint α) ∧ ∃ x : α, x ≐ ⊠x ∧ ¬ (⊠(⊤ : α) ≤ x)",
+      "formalized_statement": "∃ (α : Type _), ∃ (hA : ACR α), ∃ (hP : @ACR.Prov α hA), ∃ (hR : @ACR.Reft α hA), ∃ (hAPS : @ACR.APS α hA hP hR), letI : ACR α := hA; letI : ACR.Prov α := hP; letI : ACR.Reft α := hR; letI : ACR.APS α := hAPS; ACR.Consistent α ∧ Nonempty (ACR.GödelFixpoint α) ∧ ∃ x : α, x ≐ ⊠x ∧ ¬ (⊠(⊤ : α) ≤ x)",
+      "statement_formalization_notes": "The input statement is already a valid Lean proposition; kept the repository notation `≐` and explicit existential packaging with `letI` for the structure witnesses.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": false,
+      "proof_sketch": "Reuse thm_exists_consistent_fixpoint_not_reft_top_000018. It already gives a model with consistency, a Gödel fixpoint, and some x such that x ≐ ⊠x but not x ≐ ⊠⊤. For such an x, the packaged Gödel fixpoint ⟨x, hx⟩ lets us apply ACR.gf_le_reft_top, yielding x ≤ ⊠⊤. Therefore the failed equivalence cannot fail on the x ≤ ⊠⊤ side, so it must be ¬ (⊠⊤ ≤ x).",
+      "proof_text": "obtain ⟨α, hA, hP, hR, hAPS, hrest⟩ := thm_exists_consistent_fixpoint_not_reft_top_000018\nrefine ⟨α, hA, hP, hR, hAPS, ?_⟩\nletI : ACR α := hA\nletI : ACR.Prov α := hP\nletI : ACR.Reft α := hR\nletI : ACR.APS α := hAPS\nrcases hrest with ⟨hcons, hg, x, hxfix, hxne⟩\nrefine ⟨hcons, hg, x, hxfix, ?_⟩\nintro htop\napply hxne\nconstructor\n· simpa using (ACR.gf_le_reft_top (g := ⟨x, hxfix⟩))\n· exact htop",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:7:41: error(lean.unknownIdentifier): Unknown identifier `thm_exists_consistent_fixpoint_not_reft_top_000018`",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:7:41: error(lean.unknownIdentifier): Unknown identifier `thm_exists_consistent_fixpoint_not_reft_top_000018` | AutomatedTheoryConstruction/Scratch.lean:7:9: error: Tactic `rcases` failed: `x✝ : ?m.28` is not an inductive datatype",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "Build the same explicit finite ACR model used for the earlier existential construction directly inside the proof. In that model, the element 1 is a Gödel fixpoint, the theory is consistent, and `⊠⊤ = 3`, so `⊠⊤ ≤ 1` is false by the chosen preorder.",
+      "proof_text": "let rel : ULift Nat → ULift Nat → Prop := fun x y => x.down = 0 ∨ x = y ∨ y.down = 3\nlet provFn : ULift Nat → ULift Nat := fun _ => ⟨3⟩\nlet reftFn : ULift Nat → ULift Nat := fun x => if x.down = 1 ∨ x.down = 3 then ⟨1⟩ else ⟨3⟩\nlet hA : ACR (ULift Nat) :=\n  { top := ⟨2⟩\n    bot := ⟨0⟩\n    le := rel\n    lt := fun a b => rel a b ∧ ¬ rel b a\n    le_refl := by\n      intro x\n      exact Or.inr <| Or.inl rfl\n    le_trans := by\n      intro x y z hxy hyz\n      rcases hxy with hx0 | hxy | hy3\n      · exact Or.inl hx0\n      · cases hxy\n        exact hyz\n      · cases y with\n        | up n =>\n            simp at hy3\n            subst hy3\n            rcases hyz with hy0 | hyEq | hz3\n            · simp at hy0\n            · cases hyEq\n              exact Or.inr <| Or.inr rfl\n            · exact Or.inr <| Or.inr hz3\n    lt_iff_le_not_ge := by\n      intro a b\n      rfl }\nlet hP : @ACR.Prov (ULift Nat) hA :=\n  { prov := provFn }\nlet hR : @ACR.Reft (ULift Nat) hA :=\n  { reft := reftFn }\nletI : ACR (ULift Nat) := hA\nletI : ACR.Prov (ULift Nat) := hP\nletI : ACR.Reft (ULift Nat) := hR\nlet hAPS : @ACR.APS (ULift Nat) hA hP hR :=\n  { prov_mono := by\n      intro x y hxy\n      change rel (provFn x) (provFn y)\n      simp [rel, provFn]\n    reft_anti_mono := by\n      intro x y hxy\n      change rel (reftFn y) (reftFn x)\n      rcases hxy with hx0 | hxy | hy3\n      · cases x with\n        | up n =>\n            simp at hx0\n            subst hx0\n            simp [rel, reftFn]\n      · cases hxy\n        simp [rel]\n      · cases y with\n        | up n =>\n            simp at hy3\n            subst hy3\n            by_cases hx : x.down = 1 ∨ x.down = 3\n            · simp [rel, reftFn, hx]\n            · simp [rel, reftFn, hx]\n    top_le_reft_bot := by\n      change rel ⟨2⟩ (reftFn ⟨0⟩)\n      simp [rel, reftFn]\n    le_reft_top_of_le_prov_of_le_reft := by\n      intro x y hxy hxry\n      change rel x (reftFn ⟨2⟩)\n      simp [rel, reftFn]\n    reft_le_prov_reft := by\n      intro x\n      change rel (reftFn x) (provFn (reftFn x))\n      simp [rel, provFn] }\nletI : ACR.APS (ULift Nat) := hAPS\nrefine ⟨ULift Nat, hA, hP, hR, hAPS, ?_⟩\nrefine ⟨?_, ?_, ?_⟩\n· change ¬ rel ⟨2⟩ ⟨0⟩\n  simp [rel]\n· refine ⟨⟨⟨1⟩, ?_⟩⟩\n  constructor\n  · change rel ⟨1⟩ (reftFn ⟨1⟩)\n    simp [rel, reftFn]\n  · change rel (reftFn ⟨1⟩) ⟨1⟩\n    simp [rel, reftFn]\n· refine ⟨⟨1⟩, ?_⟩\n  constructor\n  · constructor\n    · change rel ⟨1⟩ (reftFn ⟨1⟩)\n      simp [rel, reftFn]\n    · change rel (reftFn ⟨1⟩) ⟨1⟩\n      simp [rel, reftFn]\n  · intro h\n    change rel (reftFn ⟨2⟩) ⟨1⟩ at h\n    simp [rel, reftFn] at h",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:7:41: error(lean.unknownIdentifier): Unknown identifier `thm_exists_consistent_fixpoint_not_reft_top_000018`",
+      "lean_error_fingerprint": "no_diagnostics",
+      "new_problems": []
+    }
+  ],
+  "op_000022": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] {x : α}, x ≐ ⊠x → x ≤ □x",
+      "formalized_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] {x : α}, x ≐ ⊠x → x ≤ □x",
+      "statement_formalization_notes": "Direct formalization of the given universal implication, using the existing shorthand notations ≐, ⊠, and □.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": false,
+      "proof_sketch": "From `h : x ≐ ⊠x`, we have `h.1 : x ≤ ⊠x` and `h.2 : ⊠x ≤ x`. Then `reft_le_prov_reft` gives `⊠x ≤ □⊠x`, and monotonicity `prov_mono h.2` gives `□⊠x ≤ □x`. Chaining these yields `x ≤ □x`.",
+      "proof_text": "intro h\ncalc\n  x ≤ ⊠x := h.1\n  _ ≤ □⊠x := reft_le_prov_reft\n  _ ≤ □x := prov_mono h.2",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:9:4: error(lean.unknownIdentifier): Unknown identifier `x`",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:9:4: error(lean.unknownIdentifier): Unknown identifier `x` | AutomatedTheoryConstruction/Scratch.lean:9:9: error(lean.unknownIdentifier): Unknown identifier `x` | AutomatedTheoryConstruction/Scratch.lean:9:8: error(lean.synthInstanceFailed): failed to synthesize instance of type class",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": false,
+      "proof_sketch": "The previous attempt failed because the universally quantified type, instances, and element were not introduced, so `x` and the APS lemmas were out of scope. After introducing all binders, chain `h.1 : x ≤ ⊠x`, `reft_le_prov_reft : ⊠x ≤ □⊠x`, and monotonicity `prov_mono h.2 : □⊠x ≤ □x`.",
+      "proof_text": "intro α _ _ _ _ x h\ncalc\n  x ≤ ⊠x := h.1\n  _ ≤ □⊠x := reft_le_prov_reft\n  _ ≤ □x := prov_mono h.2",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:10:15: error(lean.unknownIdentifier): Unknown identifier `reft_le_prov_reft`",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:10:15: error(lean.unknownIdentifier): Unknown identifier `reft_le_prov_reft` | AutomatedTheoryConstruction/Scratch.lean:11:14: error(lean.unknownIdentifier): Unknown identifier `prov_mono`",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "Introduce the quantified type, instances, and element. From h : x ≐ ⊠x, use h.1 : x ≤ ⊠x, then ACR.reft_le_prov_reft : ⊠x ≤ □⊠x, and finally ACR.prov_mono h.2 : □⊠x ≤ □x.",
+      "proof_text": "intro α _ _ _ _ x h\ncalc\n  x ≤ ⊠x := h.1\n  _ ≤ □⊠x := ACR.reft_le_prov_reft\n  _ ≤ □x := ACR.prov_mono h.2",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:10:15: error(lean.unknownIdentifier): Unknown identifier `reft_le_prov_reft`",
+      "lean_error_fingerprint": "no_diagnostics",
       "new_problems": []
     }
   ],
   "op_000006": [
     {
       "stage": "statement_formalization",
-      "source_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α] {x y : α}, x ≐ ⊠x → y ≐ ⊠y → x ≐ y",
-      "formalized_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α] {x y : α}, x ≐ ⊠x → y ≐ ⊠y → x ≐ y",
-      "statement_formalization_notes": "The statement is already a valid Lean proposition and uses the repository's shorthand notation `≐` and `⊠`.",
+      "source_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α] {h : ACR.HenkinFixpoint α}, h.1 ≤ ⊠h.1 ↔ h.1 ≤ ⊠(⊤ : α)",
+      "formalized_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α] {h : ACR.HenkinFixpoint α}, h.1 ≤ ⊠h.1 ↔ h.1 ≤ ⊠(⊤ : α)",
+      "statement_formalization_notes": "The input statement is already a valid Lean proposition and uses the repository's existing notation and structures.",
       "result": "ok",
       "verify_success": true,
       "proof_sketch": "",
@@ -237,174 +582,10 @@
     {
       "result": "proof",
       "verify_success": true,
-      "proof_sketch": "Package each hypothesis as a Gödel fixpoint, apply `ACR.gf_equiv_reft_top` to show both elements are equivalent to `⊠⊤`, then compose the two-sided inequalities through that common normal form.",
-      "proof_text": "intro α _ _ _ _ _ x y hx hy\nlet gx : ACR.GödelFixpoint α := ⟨x, hx⟩\nlet gy : ACR.GödelFixpoint α := ⟨y, hy⟩\nhave hx' : x ≐ ⊠(⊤ : α) := ACR.gf_equiv_reft_top (g := gx)\nhave hy' : y ≐ ⊠(⊤ : α) := ACR.gf_equiv_reft_top (g := gy)\nconstructor\n· exact le_trans hx'.1 hy'.2\n· exact le_trans hy'.1 hx'.2",
+      "proof_sketch": "Forward: apply `ACR.le_reft_top_of_le_prov_of_le_reft` to `h.2.1 : h.1 ≤ □h.1` and the assumption `h.1 ≤ ⊠h.1`. Reverse: from `ACR.le_top` get `h.1 ≤ ⊤`, hence `⊠⊤ ≤ ⊠h.1` by antitonicity of `⊠`; compose with the assumption `h.1 ≤ ⊠⊤`.",
+      "proof_text": "intro α _ _ _ _ _ h\nconstructor\n· intro hh\n  exact ACR.le_reft_top_of_le_prov_of_le_reft h.2.1 hh\n· intro hh\n  exact le_trans hh (ACR.reft_anti_mono (ACR.le_top (x := h.1)))",
       "counterexample_text": "",
       "lean_error_excerpt": "",
-      "lean_error_fingerprint": "no_diagnostics",
-      "new_problems": []
-    }
-  ],
-  "op_000007": [
-    {
-      "stage": "statement_formalization",
-      "source_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α] {x : α}, ACR.Consistent α → Nonempty (ACR.GödelFixpoint α) → x ≐ ⊠(⊤ : α) → ¬ (⊬ x)",
-      "formalized_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α] {x : α}, ACR.Consistent α → Nonempty (ACR.GödelFixpoint α) → x ≐ ⊠(⊤ : α) → ¬ (⊬ x)",
-      "statement_formalization_notes": "The statement is already a valid Lean proposition and uses the repository's preferred shorthand notation `≐`, `⊠`, and `⊬`.",
-      "result": "ok",
-      "verify_success": true,
-      "proof_sketch": "",
-      "proof_text": "",
-      "counterexample_text": "",
-      "lean_error_excerpt": "",
-      "lean_error_fingerprint": "statement_formalization",
-      "new_problems": []
-    },
-    {
-      "result": "proof",
-      "verify_success": false,
-      "proof_sketch": "Install the given `Nonempty (ACR.GödelFixpoint α)` as the required instance for `ACR.irrefutable_reft_top`. If `x` were refutable, then from `hx.2 : ⊠⊤ ≤ x` we get `⊠⊤ ≤ ⊥` by transitivity, contradicting irrefutability of `⊠⊤` under consistency.",
-      "proof_text": "intro hC hg hx\nletI : Nonempty (ACR.GödelFixpoint α) := hg\nintro hxr\nexact ACR.irrefutable_reft_top (α := α) hC (le_trans hx.2 hxr)",
-      "counterexample_text": "",
-      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:8:37: error(lean.unknownIdentifier): Unknown identifier `α`",
-      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:8:37: error(lean.unknownIdentifier): Unknown identifier `α` | AutomatedTheoryConstruction/Scratch.lean:10:39: error(lean.unknownIdentifier): Unknown identifier `α` | AutomatedTheoryConstruction/Scratch.lean:10:55: error: Invalid projection: Index `2` is invalid for this structure; the only valid index is 1",
-      "new_problems": []
-    },
-    {
-      "result": "proof",
-      "verify_success": true,
-      "proof_sketch": "Introduce the implicit type and element explicitly so `α` is available in the tactic state and `hx` has the intended equivalence type. Then install `hg` as the `Nonempty (ACR.GödelFixpoint α)` instance, assume `hxr : x ≤ ⊥`, and compose `hx.2 : ⊠⊤ ≤ x` with `hxr` to contradict `ACR.irrefutable_reft_top`.",
-      "proof_text": "intro α _ _ _ _ _ x hC hg hx\nletI : Nonempty (ACR.GödelFixpoint α) := hg\nintro hxr\nexact ACR.irrefutable_reft_top (α := α) hC (le_trans hx.2 hxr)",
-      "counterexample_text": "",
-      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:8:37: error(lean.unknownIdentifier): Unknown identifier `α`",
-      "lean_error_fingerprint": "no_diagnostics",
-      "new_problems": []
-    }
-  ],
-  "op_000008": [
-    {
-      "stage": "statement_formalization",
-      "source_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α], ACR.Consistent α → ∀ g : ACR.GödelFixpoint α, ¬ (⊬ g.1)",
-      "formalized_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α], ACR.Consistent α → ∀ g : ACR.GödelFixpoint α, ¬ (⊬ g.1)",
-      "statement_formalization_notes": "Formalized directly from stmt using the repository's `⊬` notation for refutability.",
-      "result": "ok",
-      "verify_success": true,
-      "proof_sketch": "",
-      "proof_text": "",
-      "counterexample_text": "",
-      "lean_error_excerpt": "",
-      "lean_error_fingerprint": "statement_formalization",
-      "new_problems": []
-    },
-    {
-      "result": "proof",
-      "verify_success": false,
-      "proof_sketch": "Assume `g.1 ≤ ⊥`. By antitonicity of `⊠`, this gives `⊠⊥ ≤ ⊠g.1`, and the Gödel-fixpoint equation gives `⊠g.1 ≤ g.1`. Chaining with `⊤ ≤ ⊠⊥` yields `⊤ ≤ g.1 ≤ ⊥`, contradicting consistency.",
-      "proof_text": "intro hC g h\napply hC\nhave h₁ : ⊠(⊥ : α) ≤ ⊠g.1 := reft_anti_mono h\nhave h₂ : ⊠(⊥ : α) ≤ g.1 := le_trans h₁ g.2.2\ncalc\n  (⊤ : α) ≤ ⊠⊥ := top_le_reft_bot\n  _ ≤ g.1 := h₂\n  _ ≤ ⊥ := h",
-      "counterexample_text": "",
-      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:8:2: error: Tactic `apply` failed: could not unify the type of `hC`",
-      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:8:2: error: Tactic `apply` failed: could not unify the type of `hC` | Type u_1 | with the goal",
-      "new_problems": []
-    },
-    {
-      "result": "proof",
-      "verify_success": false,
-      "proof_sketch": "Introduce the type and instance arguments explicitly. Then argue by contradiction: if `g.1 ≤ ⊥`, antitonicity of `⊠` gives `⊠⊥ ≤ ⊠g.1`, and the fixpoint equivalence gives `⊠g.1 ≤ g.1`. Chaining with `⊤ ≤ ⊠⊥` yields `⊤ ≤ ⊥`, contradicting consistency.",
-      "proof_text": "intro α _ _ _ _ hC g hg\napply hC\nhave h₁ : ⊠(⊥ : α) ≤ ⊠g.1 := reft_anti_mono hg\nhave h₂ : ⊠(⊥ : α) ≤ g.1 := le_trans h₁ g.2.2\ncalc\n  (⊤ : α) ≤ ⊠⊥ := top_le_reft_bot\n  _ ≤ g.1 := h₂\n  _ ≤ ⊥ := hg",
-      "counterexample_text": "",
-      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:9:31: error(lean.unknownIdentifier): Unknown identifier `reft_anti_mono`",
-      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:9:31: error(lean.unknownIdentifier): Unknown identifier `reft_anti_mono` | AutomatedTheoryConstruction/Scratch.lean:12:20: error(lean.unknownIdentifier): Unknown identifier `top_le_reft_bot`",
-      "new_problems": []
-    },
-    {
-      "result": "proof",
-      "verify_success": true,
-      "proof_sketch": "Use consistency directly. Assume `g.1` is refutable, so `g.1 ≤ ⊥`. By antitonicity of `⊠`, obtain `⊠⊥ ≤ ⊠g.1`, and then use the Gödel fixpoint equivalence `⊠g.1 ≤ g.1`. Chaining this with `⊤ ≤ ⊠⊥` yields `⊤ ≤ ⊥`, contradicting consistency.",
-      "proof_text": "intro α _ _ _ _ hC g hg\napply hC\nchange (⊤ : α) ≤ ⊥\nhave h₁ : ⊠(⊥ : α) ≤ ⊠g.1 := ACR.reft_anti_mono hg\nhave h₂ : ⊠(⊥ : α) ≤ g.1 := le_trans h₁ g.2.2\ncalc\n  (⊤ : α) ≤ ⊠⊥ := ACR.top_le_reft_bot\n  _ ≤ g.1 := h₂\n  _ ≤ ⊥ := hg",
-      "counterexample_text": "",
-      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:9:31: error(lean.unknownIdentifier): Unknown identifier `reft_anti_mono`",
-      "lean_error_fingerprint": "no_diagnostics",
-      "new_problems": []
-    }
-  ],
-  "op_000009": [
-    {
-      "stage": "statement_formalization",
-      "source_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], ACR.Consistent α → Nonempty (ACR.GödelFixpoint α) → ¬ (⊬ (□(⊠(⊤ : α))))",
-      "formalized_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], ACR.Consistent α → Nonempty (ACR.GödelFixpoint α) → ¬ (⊬ (□(⊠(⊤ : α))))",
-      "statement_formalization_notes": "The statement is already a valid Lean proposition and uses the repository's existing notation for provability and refutability.",
-      "result": "ok",
-      "verify_success": true,
-      "proof_sketch": "",
-      "proof_text": "",
-      "counterexample_text": "",
-      "lean_error_excerpt": "",
-      "lean_error_fingerprint": "statement_formalization",
-      "new_problems": []
-    },
-    {
-      "result": "proof",
-      "verify_success": false,
-      "proof_sketch": "Pick a Gödel fixpoint g from the nonempty witness. By C5, `ACR.gf_equiv_reft_top` gives `g.1 ≤ ⊠⊤`, so monotonicity of `□` yields `□g.1 ≤ □(⊠⊤)`. Any refutation of `□(⊠⊤)` therefore refutes `□g.1`, contradicting `thm_godel_fixpoint_box_irrefutable_000003` under consistency.",
-      "proof_text": "intro α _ _ _ _ _ hC hg hbox\nrcases hg with ⟨g⟩\nhave hg_top : g.1 ≤ ⊠(⊤ : α) := (ACR.gf_equiv_reft_top (g := g)).1\nhave hboxg : ⊬ (□g.1) := by\n  exact le_trans (ACR.prov_mono hg_top) hbox\nexact (thm_godel_fixpoint_box_irrefutable_000003 (α := α) hC g) hboxg",
-      "counterexample_text": "",
-      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:12:9: error(lean.unknownIdentifier): Unknown identifier `thm_godel_fixpoint_box_irrefutable_000003`",
-      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:12:9: error(lean.unknownIdentifier): Unknown identifier `thm_godel_fixpoint_box_irrefutable_000003`",
-      "new_problems": []
-    },
-    {
-      "result": "proof",
-      "verify_success": false,
-      "proof_sketch": "Choose a Gödel fixpoint g from the nonempty witness. By `ACR.gf_equiv_reft_top`, we have `g.1 ≤ ⊠⊤`, so monotonicity of `□` gives `□g.1 ≤ □(⊠⊤)`. Thus any refutation of `□(⊠⊤)` yields a refutation of `□g.1`, contradicting the already derived theorem that boxed Gödel fixpoints are irrefutable under consistency.",
-      "proof_text": "intro α _ _ _ _ _ hC hg hbox\nrcases hg with ⟨g⟩\nhave hg_top : g.1 ≤ ⊠(⊤ : α) := (ACR.gf_equiv_reft_top (g := g)).1\nhave hboxg : ⊬ (□g.1) := by\n  exact le_trans (ACR.prov_mono hg_top) hbox\nexact (AutomatedTheoryConstruction.thm_godel_fixpoint_box_irrefutable_000003 (α := α) hC g) hboxg",
-      "counterexample_text": "",
-      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:12:9: error(lean.unknownIdentifier): Unknown identifier `AutomatedTheoryConstruction.thm_godel_fixpoint_box_irrefutable_000003`",
-      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:12:9: error(lean.unknownIdentifier): Unknown identifier `AutomatedTheoryConstruction.thm_godel_fixpoint_box_irrefutable_000003`",
-      "new_problems": []
-    },
-    {
-      "result": "proof",
-      "verify_success": true,
-      "proof_sketch": "Install the `Nonempty (ACR.GödelFixpoint α)` witness as a local instance and use `ACR.irrefutable_reft_top` to get `¬ (⊬ (⊠⊤))`. Any refutation of `□(⊠⊤)` induces a refutation of `⊠⊤` via `ACR.reft_le_prov_reft`, yielding a contradiction.",
-      "proof_text": "intro α _ _ _ _ _ hC hg hbox\nletI : Nonempty (ACR.GödelFixpoint α) := hg\nhave hreft_top : ¬ (⊬ (⊠(⊤ : α))) := ACR.irrefutable_reft_top (α := α) hC\napply hreft_top\nexact le_trans (ACR.reft_le_prov_reft (x := (⊤ : α))) hbox",
-      "counterexample_text": "",
-      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:12:9: error(lean.unknownIdentifier): Unknown identifier `AutomatedTheoryConstruction.thm_godel_fixpoint_box_irrefutable_000003`",
-      "lean_error_fingerprint": "no_diagnostics",
-      "new_problems": []
-    }
-  ],
-  "op_000010": [
-    {
-      "stage": "statement_formalization",
-      "source_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α] {x y : α}, x ≤ □x → x ≤ ⊠x → x ≤ ⊠y",
-      "formalized_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α] {x y : α}, x ≤ □x → x ≤ ⊠x → x ≤ ⊠y",
-      "statement_formalization_notes": "Direct formalization of the given statement using the repository's □ and ⊠ notation.",
-      "result": "ok",
-      "verify_success": true,
-      "proof_sketch": "",
-      "proof_text": "",
-      "counterexample_text": "",
-      "lean_error_excerpt": "",
-      "lean_error_fingerprint": "statement_formalization",
-      "new_problems": []
-    },
-    {
-      "result": "proof",
-      "verify_success": false,
-      "proof_sketch": "From the two hypotheses, APS gives `x ≤ ⊠⊤` via `le_reft_top_of_le_prov_of_le_reft` with `y := x`. Then `y ≤ ⊤` by `le_top`, and antitonicity of `⊠` yields `⊠⊤ ≤ ⊠y`. Compose the inequalities.",
-      "proof_text": "intro α _ _ _ _ _ x y hxbox hxreft\nhave htop : x ≤ ⊠(⊤ : α) := by\n  exact le_reft_top_of_le_prov_of_le_reft hxbox hxreft\nhave hytop : y ≤ (⊤ : α) := by\n  exact le_top\nhave hmono : ⊠(⊤ : α) ≤ ⊠y := by\n  exact reft_anti_mono hytop\nexact le_trans htop hmono",
-      "counterexample_text": "",
-      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:9:10: error(lean.unknownIdentifier): Unknown identifier `le_reft_top_of_le_prov_of_le_reft`",
-      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:9:10: error(lean.unknownIdentifier): Unknown identifier `le_reft_top_of_le_prov_of_le_reft` | AutomatedTheoryConstruction/Scratch.lean:11:10: error(lean.unknownIdentifier): Unknown identifier `le_top` | AutomatedTheoryConstruction/Scratch.lean:13:10: error(lean.unknownIdentifier): Unknown identifier `reft_anti_mono`",
-      "new_problems": []
-    },
-    {
-      "result": "proof",
-      "verify_success": true,
-      "proof_sketch": "Use the APS axiom to derive `x ≤ ⊠⊤` from the two hypotheses. Then `y ≤ ⊤` by `C5.le_top`, and antitonicity of `⊠` gives `⊠⊤ ≤ ⊠y`. Compose the inequalities.",
-      "proof_text": "intro α _ _ _ _ _ x y hxbox hxreft\nhave htop : x ≤ ⊠(⊤ : α) := by\n  exact ACR.le_reft_top_of_le_prov_of_le_reft hxbox hxreft\nhave hmono : ⊠(⊤ : α) ≤ ⊠y := by\n  exact ACR.reft_anti_mono (ACR.le_top (x := y))\nexact le_trans htop hmono",
-      "counterexample_text": "",
-      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:9:10: error(lean.unknownIdentifier): Unknown identifier `le_reft_top_of_le_prov_of_le_reft`",
       "lean_error_fingerprint": "no_diagnostics",
       "new_problems": []
     }
@@ -412,9 +593,9 @@
   "op_000011": [
     {
       "stage": "statement_formalization",
-      "source_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], ACR.Consistent α → Nonempty (ACR.GödelFixpoint α) → ∀ x : α, ¬ (⊬ (⊠x))",
-      "formalized_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], ACR.Consistent α → Nonempty (ACR.GödelFixpoint α) → ∀ x : α, ¬ (⊬ (⊠ x))",
-      "statement_formalization_notes": "This directly formalizes the given statement using the repository's prefix notation for refutability and reflection.",
+      "source_statement": "There exists a type α with instances [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] and elements x y : α such that x ≐ ⊠x and y ≐ ⊠y hold, but x ≐ y does not hold.",
+      "formalized_statement": "∃ (α : Type _), ∃ (hA : ACR α), ∃ (hP : @ACR.Prov α hA), ∃ (hR : @ACR.Reft α hA), ∃ (hAPS : @ACR.APS α hA hP hR), letI : ACR α := hA; letI : ACR.Prov α := hP; letI : ACR.Reft α := hR; letI : ACR.APS α := hAPS; ∃ (x y : α), x ≐ ⊠x ∧ y ≐ ⊠y ∧ ¬ (x ≐ y)",
+      "statement_formalization_notes": "Formalized as an explicit existential package of the type, structure instances, and two distinct reft-fixpoint witnesses.",
       "result": "ok",
       "verify_success": true,
       "proof_sketch": "",
@@ -427,658 +608,20 @@
     {
       "result": "proof",
       "verify_success": true,
-      "proof_sketch": "Install the Gödel-fixpoint nonemptiness as an instance, then reduce refutability of `⊠ x` to refutability of `⊠ ⊤` via `reft_anti_mono (le_top : x ≤ ⊤)`, contradicting `ACR.irrefutable_reft_top`.",
-      "proof_text": "intro α _ _ _ _ _ h hg x hx\nletI : Nonempty (ACR.GödelFixpoint α) := hg\nexact ACR.irrefutable_reft_top h (le_trans (ACR.reft_anti_mono (ACR.le_top (x := x))) hx)",
+      "proof_sketch": "Use a preorder on `ULift Nat` given by `x ≤ y` iff `x = 0` or `x = y` or `y = 3`. Take `⊤ = 0`, `⊥ = 0`, let `□` be constantly `3`, and let `⊠` swap `0` and `3` while fixing all other points. Then `1` and `2` are both reft-fixed, but they are incomparable, so they are not equivalent.",
+      "proof_text": "let rel : ULift Nat → ULift Nat → Prop := fun x y => x.down = 0 ∨ x = y ∨ y.down = 3\nlet provFn : ULift Nat → ULift Nat := fun _ => ⟨3⟩\nlet reftFn : ULift Nat → ULift Nat := fun x =>\n  if x.down = 0 then ⟨3⟩ else if x.down = 3 then ⟨0⟩ else x\nlet hA : ACR (ULift Nat) :=\n  { top := ⟨0⟩\n    bot := ⟨0⟩\n    le := rel\n    lt := fun a b => rel a b ∧ ¬ rel b a\n    le_refl := by\n      intro x\n      exact Or.inr <| Or.inl rfl\n    le_trans := by\n      intro x y z hxy hyz\n      rcases hxy with hx0 | hxy | hy3\n      · exact Or.inl hx0\n      · cases hxy\n        exact hyz\n      · cases y with\n        | up n =>\n            simp at hy3\n            subst hy3\n            rcases hyz with hy0 | hyEq | hz3\n            · simp at hy0\n            · cases hyEq\n              exact Or.inr <| Or.inr rfl\n            · exact Or.inr <| Or.inr hz3\n    lt_iff_le_not_ge := by\n      intro a b\n      rfl }\nlet hP : @ACR.Prov (ULift Nat) hA :=\n  { prov := provFn }\nlet hR : @ACR.Reft (ULift Nat) hA :=\n  { reft := reftFn }\nletI : ACR (ULift Nat) := hA\nletI : ACR.Prov (ULift Nat) := hP\nletI : ACR.Reft (ULift Nat) := hR\nlet hAPS : @ACR.APS (ULift Nat) hA hP hR :=\n  { prov_mono := by\n      intro x y hxy\n      change rel (provFn x) (provFn y)\n      simp [rel, provFn]\n    reft_anti_mono := by\n      intro x y hxy\n      change rel (reftFn y) (reftFn x)\n      rcases hxy with hx0 | hxy | hy3\n      · cases x with\n        | up n =>\n            simp at hx0\n            subst hx0\n            simp [rel, reftFn]\n      · cases hxy\n        simp [rel]\n      · cases y with\n        | up n =>\n            simp at hy3\n            subst hy3\n            simp [rel, reftFn]\n    top_le_reft_bot := by\n      change rel ⟨0⟩ (reftFn ⟨0⟩)\n      simp [rel, reftFn]\n    le_reft_top_of_le_prov_of_le_reft := by\n      intro x y hxy hxry\n      change rel x (reftFn ⟨0⟩)\n      simpa [provFn, reftFn] using hxy\n    reft_le_prov_reft := by\n      intro x\n      change rel (reftFn x) (provFn (reftFn x))\n      simp [rel, provFn] }\nletI : ACR.APS (ULift Nat) := hAPS\nrefine ⟨ULift Nat, hA, hP, hR, hAPS, ?_⟩\nrefine ⟨⟨1⟩, ⟨2⟩, ?_⟩\nconstructor\n· constructor\n  · change rel ⟨1⟩ (reftFn ⟨1⟩)\n    simp [rel, reftFn]\n  · change rel (reftFn ⟨1⟩) ⟨1⟩\n    simp [rel, reftFn]\n· constructor\n  · constructor\n    · change rel ⟨2⟩ (reftFn ⟨2⟩)\n      simp [rel, reftFn]\n    · change rel (reftFn ⟨2⟩) ⟨2⟩\n      simp [rel, reftFn]\n  · intro h\n    have h12 := h.1\n    change rel ⟨1⟩ ⟨2⟩ at h12\n    simpa [rel] using h12",
       "counterexample_text": "",
       "lean_error_excerpt": "",
-      "lean_error_fingerprint": "no_diagnostics",
-      "new_problems": []
-    }
-  ],
-  "op_000012": [
-    {
-      "stage": "statement_formalization",
-      "source_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α] {x : α}, x ≐ ⊠(⊤ : α) → (x ≐ ⊠x ↔ ⊠⊠(⊤ : α) ≐ ⊠(⊤ : α))",
-      "formalized_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α] {x : α}, x ≐ ⊠(⊤ : α) → (x ≐ ⊠x ↔ ⊠⊠(⊤ : α) ≐ ⊠(⊤ : α))",
-      "statement_formalization_notes": "The input statement already matches the repository notation and is a valid Lean proposition statement.",
-      "result": "ok",
-      "verify_success": true,
-      "proof_sketch": "",
-      "proof_text": "",
-      "counterexample_text": "",
-      "lean_error_excerpt": "",
-      "lean_error_fingerprint": "statement_formalization",
-      "new_problems": []
-    },
-    {
-      "result": "proof",
-      "verify_success": false,
-      "proof_sketch": "Use the derived equivalence between double reflection at top and existence of a Godel fixpoint. From `x ≐ ⊠x`, build `⟨x, hxfix⟩`; conversely, obtain a Godel fixpoint from `⊠⊠⊤ ≐ ⊠⊤` and then apply the derived theorem turning `x ≐ ⊠⊤` into `x ≐ ⊠x`.",
-      "proof_text": "intro α _ _ _ _ _ x hx\nconstructor\n· intro hfix\n  have hg : Nonempty (ACR.GödelFixpoint α) := ⟨⟨x, hfix⟩⟩\n  exact (thm_double_reft_top_iff_godel_fixpoint_000001 (α := α)).2 hg\n· intro hdd\n  have hg : Nonempty (ACR.GödelFixpoint α) :=\n    (thm_double_reft_top_iff_godel_fixpoint_000001 (α := α)).1 hdd\n  exact thm_equiv_reft_top_implies_reft_fixpoint_000002 (α := α) hg hx",
-      "counterexample_text": "",
-      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:11:11: error(lean.unknownIdentifier): Unknown identifier `thm_double_reft_top_iff_godel_fixpoint_000001`",
-      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:11:11: error(lean.unknownIdentifier): Unknown identifier `thm_double_reft_top_iff_godel_fixpoint_000001` | AutomatedTheoryConstruction/Scratch.lean:14:7: error(lean.unknownIdentifier): Unknown identifier `thm_double_reft_top_iff_godel_fixpoint_000001` | AutomatedTheoryConstruction/Scratch.lean:15:10: error(lean.unknownIdentifier): Unknown identifier `thm_equiv_reft_top_implies_reft_fixpoint_000002`",
-      "new_problems": []
-    },
-    {
-      "result": "proof",
-      "verify_success": false,
-      "proof_sketch": "Use the verified equivalence between `⊠⊠⊤ ≐ ⊠⊤` and existence of a Gödel fixpoint. If `x ≐ ⊠x`, then `x` itself gives a Gödel fixpoint. Conversely, from `⊠⊠⊤ ≐ ⊠⊤`, obtain a Gödel fixpoint and apply the verified theorem that any `x` equivalent to `⊠⊤` is a reflection fixpoint.",
-      "proof_text": "intro α _ _ _ _ _ x hx\nconstructor\n· intro hfix\n  have hg : Nonempty (ACR.GödelFixpoint α) := ⟨⟨x, hfix⟩⟩\n  exact (_root_.AutomatedTheoryConstruction.thm_double_reft_top_iff_godel_fixpoint_000001 (α := α)).2 hg\n· intro hdd\n  have hg : Nonempty (ACR.GödelFixpoint α) :=\n    (_root_.AutomatedTheoryConstruction.thm_double_reft_top_iff_godel_fixpoint_000001 (α := α)).1 hdd\n  exact _root_.AutomatedTheoryConstruction.thm_equiv_reft_top_implies_reft_fixpoint_000002 (α := α) hg hx",
-      "counterexample_text": "",
-      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:11:11: error(lean.unknownIdentifier): Unknown identifier `_root_.AutomatedTheoryConstruction.thm_double_reft_top_iff_godel_fixpoint_000001`",
-      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:11:11: error(lean.unknownIdentifier): Unknown identifier `_root_.AutomatedTheoryConstruction.thm_double_reft_top_iff_godel_fixpoint_000001` | AutomatedTheoryConstruction/Scratch.lean:14:7: error(lean.unknownIdentifier): Unknown identifier `_root_.AutomatedTheoryConstruction.thm_double_reft_top_iff_godel_fixpoint_000001` | AutomatedTheoryConstruction/Scratch.lean:15:10: error(lean.unknownIdentifier): Unknown identifier `_root_.AutomatedTheoryConstruction.thm_equiv_reft_top_implies_reft_fixpoint_000002`",
-      "new_problems": []
-    },
-    {
-      "result": "proof",
-      "verify_success": true,
-      "proof_sketch": "Prove the forward direction directly by installing `x` as a Gödel fixpoint and using `ACR.reft_reft_top_le_reft_top` plus antitonicity of `⊠`. For the reverse direction, unpack `x ≐ ⊠⊤` and `⊠⊠⊤ ≐ ⊠⊤`; then use `ACR.reft_anti_mono` and `ACR.le_top` to derive `x ≤ ⊠x` and `⊠x ≤ x`.",
-      "proof_text": "intro α _ _ _ _ _ x hx\nconstructor\n· intro hfix\n  letI : Nonempty (ACR.GödelFixpoint α) := ⟨⟨x, hfix⟩⟩\n  change ⊠⊠(⊤ : α) ≤ ⊠(⊤ : α) ∧ ⊠(⊤ : α) ≤ ⊠⊠(⊤ : α)\n  constructor\n  · simpa using (ACR.reft_reft_top_le_reft_top (α := α))\n  · exact ACR.reft_anti_mono (ACR.le_top (α := α) (x := ⊠(⊤ : α)))\n· intro hdd\n  change x ≤ ⊠x ∧ ⊠x ≤ x\n  change x ≤ ⊠(⊤ : α) ∧ ⊠(⊤ : α) ≤ x at hx\n  rcases hx with ⟨hxt, htx⟩\n  change ⊠⊠(⊤ : α) ≤ ⊠(⊤ : α) ∧ ⊠(⊤ : α) ≤ ⊠⊠(⊤ : α) at hdd\n  constructor\n  · have htop : x ≤ (⊤ : α) := ACR.le_top (α := α) (x := x)\n    exact le_trans hxt (ACR.reft_anti_mono htop)\n  · have hxx : ⊠x ≤ ⊠⊠(⊤ : α) := ACR.reft_anti_mono htx\n    exact le_trans hxx (le_trans hdd.1 htx)",
-      "counterexample_text": "",
-      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:11:11: error(lean.unknownIdentifier): Unknown identifier `_root_.AutomatedTheoryConstruction.thm_double_reft_top_iff_godel_fixpoint_000001`",
-      "lean_error_fingerprint": "no_diagnostics",
-      "new_problems": []
-    }
-  ],
-  "op_000013": [
-    {
-      "stage": "statement_formalization",
-      "source_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], (∀ {x : α}, x ≐ ⊠x ↔ x ≐ ⊠(⊤ : α)) ↔ (⊠⊠(⊤ : α) ≐ ⊠(⊤ : α))",
-      "formalized_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], (∀ {x : α}, x ≐ ⊠x ↔ x ≐ ⊠(⊤ : α)) ↔ (⊠⊠(⊤ : α) ≐ ⊠(⊤ : α))",
-      "statement_formalization_notes": "The input statement is already a valid Lean proposition and uses the repository's preferred shorthand notation.",
-      "result": "ok",
-      "verify_success": true,
-      "proof_sketch": "",
-      "proof_text": "",
-      "counterexample_text": "",
-      "lean_error_excerpt": "",
-      "lean_error_fingerprint": "statement_formalization",
-      "new_problems": []
-    },
-    {
-      "result": "proof",
-      "verify_success": false,
-      "proof_sketch": "For the forward implication, specialize the equivalence at x = ⊠⊤. Since ⊠⊤ ≐ ⊠⊤ is reflexive, we get ⊠⊤ ≐ ⊠⊠⊤, and swapping the two inequalities yields ⊠⊠⊤ ≐ ⊠⊤. For the reverse implication, if ⊠⊠⊤ ≐ ⊠⊤ then thm_double_reft_top_iff_godel_fixpoint_000001 gives a nonempty Gödel-fixpoint type. Any x with x ≐ ⊠x is equivalent to ⊠⊤ by ACR.gf_equiv_reft_top, and any x with x ≐ ⊠⊤ is a reft-fixpoint by thm_equiv_reft_top_implies_reft_fixpoint_000002.",
-      "proof_text": "intro α _ _ _ _ _\nconstructor\n· intro h\n  have h' : (⊠(⊤ : α)) ≐ ⊠⊠(⊤ : α) :=\n    (h (x := ⊠(⊤ : α))).2 ⟨le_rfl, le_rfl⟩\n  exact ⟨h'.2, h'.1⟩\n· intro hfix\n  intro x\n  constructor\n  · intro hx\n    simpa using (ACR.gf_equiv_reft_top (α := α) (g := (⟨x, hx⟩ : ACR.GödelFixpoint α)))\n  · intro hx\n    have hg : Nonempty (ACR.GödelFixpoint α) :=\n      (thm_double_reft_top_iff_godel_fixpoint_000001 (α := α)).1 hfix\n    exact thm_equiv_reft_top_implies_reft_fixpoint_000002 (α := α) (x := x) hg hx",
-      "counterexample_text": "",
-      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:20:9: error(lean.unknownIdentifier): Unknown identifier `thm_double_reft_top_iff_godel_fixpoint_000001`",
-      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:20:9: error(lean.unknownIdentifier): Unknown identifier `thm_double_reft_top_iff_godel_fixpoint_000001` | AutomatedTheoryConstruction/Scratch.lean:21:12: error(lean.unknownIdentifier): Unknown identifier `thm_equiv_reft_top_implies_reft_fixpoint_000002`",
-      "new_problems": []
-    },
-    {
-      "result": "proof",
-      "verify_success": true,
-      "proof_sketch": "The forward implication is immediate by instantiating the universal equivalence at x = ⊠⊤, where x ≐ ⊠⊤ is reflexive. For the reverse implication, if ⊠⊠⊤ ≐ ⊠⊤ then any reft-fixpoint x is equivalent to ⊠⊤ by ACR.gf_equiv_reft_top, while from x ≐ ⊠⊤ we can prove x ≐ ⊠x directly: use anti-monotonicity of ⊠ and le_top to get x ≤ ⊠x, and use ⊠x ≤ ⊠⊠⊤ together with ⊠⊠⊤ ≤ ⊠⊤ ≤ x to get ⊠x ≤ x.",
-      "proof_text": "intro α _ _ _ _ _\nconstructor\n· intro h\n  have h' : (⊠(⊤ : α)) ≐ ⊠⊠(⊤ : α) :=\n    (h (x := ⊠(⊤ : α))).2 ⟨le_rfl, le_rfl⟩\n  exact ⟨h'.2, h'.1⟩\n· intro hfix\n  intro x\n  constructor\n  · intro hx\n    simpa using (ACR.gf_equiv_reft_top (α := α) (g := (⟨x, hx⟩ : ACR.GödelFixpoint α)))\n  · intro hx\n    rcases hx with ⟨hxt, htx⟩\n    constructor\n    · have htop : x ≤ (⊤ : α) := ACR.le_top (α := α) (x := x)\n      exact le_trans hxt (ACR.reft_anti_mono htop)\n    · have hxx : ⊠x ≤ ⊠⊠(⊤ : α) := ACR.reft_anti_mono htx\n      exact le_trans hxx (le_trans hfix.1 htx)",
-      "counterexample_text": "",
-      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:20:9: error(lean.unknownIdentifier): Unknown identifier `thm_double_reft_top_iff_godel_fixpoint_000001`",
-      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:13:4: warning: Try this: intro hfix x",
-      "new_problems": []
-    }
-  ],
-  "op_000014": [
-    {
-      "stage": "statement_formalization",
-      "source_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], Nonempty (ACR.GödelFixpoint α) → ∀ {x : α}, x ≐ ⊠x ↔ x ≐ ⊠(⊤ : α)",
-      "formalized_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], Nonempty (ACR.GödelFixpoint α) → ∀ {x : α}, x ≐ ⊠x ↔ x ≐ ⊠(⊤ : α)",
-      "statement_formalization_notes": "Used the repository's existing notation `≐` and `⊠`; the statement is already a valid Lean proposition and matches the ACR context.",
-      "result": "ok",
-      "verify_success": true,
-      "proof_sketch": "",
-      "proof_text": "",
-      "counterexample_text": "",
-      "lean_error_excerpt": "",
-      "lean_error_fingerprint": "statement_formalization",
-      "new_problems": []
-    },
-    {
-      "result": "proof",
-      "verify_success": true,
-      "proof_sketch": "Forward direction packages `x` as a Gödel fixpoint and applies `ACR.gf_equiv_reft_top`. Reverse direction unpacks `x ≐ ⊠⊤`, uses anti-monotonicity of `⊠` plus `ACR.le_top` to get `x ≤ ⊠x`, and uses the assumed Gödel-fixpoint witness through `ACR.reft_reft_top_le_reft_top` to derive `⊠x ≤ x`.",
-      "proof_text": "intro α _ _ _ _ _ hg x\nconstructor\n· intro hx\n  simpa using (ACR.gf_equiv_reft_top (α := α) (g := (⟨x, hx⟩ : ACR.GödelFixpoint α)))\n· intro hx\n  rcases hx with ⟨hxt, htx⟩\n  constructor\n  · have htop : x ≤ (⊤ : α) := ACR.le_top (α := α) (x := x)\n    exact le_trans hxt (ACR.reft_anti_mono htop)\n  · have hxx : ⊠x ≤ ⊠⊠(⊤ : α) := ACR.reft_anti_mono htx\n    letI : Nonempty (ACR.GödelFixpoint α) := hg\n    exact le_trans hxx (le_trans (ACR.reft_reft_top_le_reft_top (α := α)) htx)",
-      "counterexample_text": "",
-      "lean_error_excerpt": "",
-      "lean_error_fingerprint": "no_diagnostics",
-      "new_problems": []
-    }
-  ],
-  "op_000015": [
-    {
-      "stage": "statement_formalization",
-      "source_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], Nonempty (ACR.GödelFixpoint α) → ((⊠(⊤ : α)) ≐ □(⊠(⊤ : α))) ↔ ∀ {x : α}, x ≐ ⊠x → x ≐ □x)",
-      "formalized_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], Nonempty (ACR.GödelFixpoint α) → ((⊠(⊤ : α)) ≐ □(⊠(⊤ : α))) ↔ ∀ {x : α}, x ≐ ⊠x → x ≐ □x",
-      "statement_formalization_notes": "The input statement is already a valid Lean proposition and uses the repository's preferred shorthand notation `≐`, `□`, and `⊠`.",
-      "result": "ok",
-      "verify_success": true,
-      "proof_sketch": "",
-      "proof_text": "",
-      "counterexample_text": "",
-      "lean_error_excerpt": "",
-      "lean_error_fingerprint": "statement_formalization",
-      "new_problems": []
-    },
-    {
-      "result": "proof",
-      "verify_success": true,
-      "proof_sketch": "Lean parses the statement as `((Nonempty (ACR.GödelFixpoint α) → ((⊠⊤) ≐ □(⊠⊤))) ↔ ∀ {x}, x ≐ ⊠x → x ≐ □x)`. Forward: from `x ≐ ⊠x`, build a Gödel fixpoint `⟨x, hx⟩`, obtain `x ≐ ⊠⊤` from `ACR.gf_equiv_reft_top`, get `⊠⊤ ≐ □(⊠⊤)` from the implication hypothesis, and compose with `ACR.prov_mono` to show `x ≐ □x`. Reverse: assume the universal property and `Nonempty (ACR.GödelFixpoint α)`, install it as an instance, prove `⊠⊤ ≐ ⊠⊠⊤` using `ACR.reft_anti_mono` and `ACR.reft_reft_top_le_reft_top`, then apply the universal hypothesis at `x := ⊠⊤`.",
-      "proof_text": "intro α _ _ _ _ _\nconstructor\n· intro h x hx\n  have hg : Nonempty (ACR.GödelFixpoint α) := ⟨⟨x, hx⟩⟩\n  have htop : ⊠(⊤ : α) ≐ □(⊠(⊤ : α)) := h hg\n  have hxtop : x ≐ ⊠(⊤ : α) := by\n    simpa using (ACR.gf_equiv_reft_top (α := α) (g := (⟨x, hx⟩ : ACR.GödelFixpoint α)))\n  constructor\n  · calc\n      x ≤ ⊠(⊤ : α) := hxtop.1\n      _ ≤ □(⊠(⊤ : α)) := htop.1\n      _ ≤ □x := ACR.prov_mono hxtop.2\n  · calc\n      □x ≤ □(⊠(⊤ : α)) := ACR.prov_mono hxtop.1\n      _ ≤ ⊠(⊤ : α) := htop.2\n      _ ≤ x := hxtop.2\n· intro hall hg\n  letI : Nonempty (ACR.GödelFixpoint α) := hg\n  have hfix : (⊠(⊤ : α)) ≐ ⊠⊠(⊤ : α) := by\n    constructor\n    · exact ACR.reft_anti_mono (ACR.le_top (x := ⊠(⊤ : α)))\n    · simpa using (ACR.reft_reft_top_le_reft_top (α := α))\n  exact hall (x := ⊠(⊤ : α)) hfix",
-      "counterexample_text": "",
-      "lean_error_excerpt": "",
-      "lean_error_fingerprint": "no_diagnostics",
-      "new_problems": []
-    }
-  ],
-  "op_000016": [
-    {
-      "stage": "statement_formalization",
-      "source_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], Nonempty (ACR.GödelFixpoint α) ↔ ((⊠⊠(⊤ : α)) ≐ ⊠(⊤ : α))",
-      "formalized_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], Nonempty (ACR.GödelFixpoint α) ↔ (⊠⊠(⊤ : α) ≐ ⊠(⊤ : α))",
-      "statement_formalization_notes": "Direct formalization of the given statement, using the repository's shorthand notation `≐`; this matches the existing derived theorem up to iff symmetry.",
-      "result": "ok",
-      "verify_success": true,
-      "proof_sketch": "",
-      "proof_text": "",
-      "counterexample_text": "",
-      "lean_error_excerpt": "",
-      "lean_error_fingerprint": "statement_formalization",
-      "new_problems": []
-    },
-    {
-      "result": "proof",
-      "verify_success": false,
-      "proof_sketch": "Reuse the verified derived theorem `thm_double_reft_top_iff_godel_fixpoint_000001`, which states the same equivalence in the opposite direction, and apply `Iff.symm`.",
-      "proof_text": "intro α _ _ _ _ _\nsimpa using (thm_double_reft_top_iff_godel_fixpoint_000001 (α := α)).symm",
-      "counterexample_text": "",
-      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:8:15: error(lean.unknownIdentifier): Unknown identifier `thm_double_reft_top_iff_godel_fixpoint_000001`",
-      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:8:15: error(lean.unknownIdentifier): Unknown identifier `thm_double_reft_top_iff_godel_fixpoint_000001`",
-      "new_problems": []
-    },
-    {
-      "result": "proof",
-      "verify_success": true,
-      "proof_sketch": "Prove the forward direction from the existing theory lemmas: install the Gödel-fixpoint witness as a local `Nonempty` instance, use `ACR.reft_reft_top_le_reft_top` for one inequality, and use antitonicity of `⊠` plus `ACR.le_top` for the reverse inequality. For the backward direction, construct the fixpoint witness `⊠⊤` directly from the equivalence.",
-      "proof_text": "intro α _ _ _ _ _\nconstructor\n· intro hg\n  letI : Nonempty (ACR.GödelFixpoint α) := hg\n  constructor\n  · simpa using (ACR.reft_reft_top_le_reft_top (α := α))\n  · exact ACR.reft_anti_mono (ACR.le_top (x := ⊠(⊤ : α)))\n· intro h\n  exact ⟨⟨⊠(⊤ : α), ⟨h.2, h.1⟩⟩⟩",
-      "counterexample_text": "",
-      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:8:15: error(lean.unknownIdentifier): Unknown identifier `thm_double_reft_top_iff_godel_fixpoint_000001`",
-      "lean_error_fingerprint": "no_diagnostics",
-      "new_problems": []
-    }
-  ],
-  "op_000017": [
-    {
-      "stage": "statement_formalization",
-      "source_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], ACR.Inconsistent α ↔ ∀ x : α, ⊬ x",
-      "formalized_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], ACR.Inconsistent α ↔ ∀ x : α, ⊬ x",
-      "statement_formalization_notes": "The statement is already a valid Lean proposition and uses the repository's `⊬` notation.",
-      "result": "ok",
-      "verify_success": true,
-      "proof_sketch": "",
-      "proof_text": "",
-      "counterexample_text": "",
-      "lean_error_excerpt": "",
-      "lean_error_fingerprint": "statement_formalization",
-      "new_problems": []
-    },
-    {
-      "result": "proof",
-      "verify_success": false,
-      "proof_sketch": "Unfold inconsistency as top below bottom. Forward, any x satisfies x ≤ top by C5, so transitivity gives x ≤ bottom. Reverse, instantiate the universal refutability hypothesis at top.",
-      "proof_text": "intro α _ _ _ _ _\nconstructor\n· intro h x\n  exact le_trans le_top h\n· intro h\n  simpa [ACR.Inconsistent] using h (⊤ : α)",
-      "counterexample_text": "",
-      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:10:19: error(lean.unknownIdentifier): Unknown identifier `le_top`",
-      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:10:19: error(lean.unknownIdentifier): Unknown identifier `le_top`",
-      "new_problems": []
-    },
-    {
-      "result": "proof",
-      "verify_success": true,
-      "proof_sketch": "The previous argument was correct; the failure was only that `le_top` is not available unqualified in this file. Use `ACR.le_top` to derive `x ≤ ⊤`, then compose with inconsistency `⊤ ≤ ⊥`. For the converse, instantiate the universal refutability hypothesis at `⊤` and unfold `ACR.Inconsistent`.",
-      "proof_text": "intro α _ _ _ _ _\nconstructor\n· intro h x\n  exact le_trans (ACR.le_top (x := x)) h\n· intro h\n  simpa [ACR.Inconsistent] using h (⊤ : α)",
-      "counterexample_text": "",
-      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:10:19: error(lean.unknownIdentifier): Unknown identifier `le_top`",
-      "lean_error_fingerprint": "no_diagnostics",
-      "new_problems": []
-    }
-  ],
-  "op_000018": [
-    {
-      "stage": "statement_formalization",
-      "source_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], Nonempty (ACR.GödelFixpoint α) → (ACR.Consistent α ↔ ∀ g : ACR.GödelFixpoint α, ¬ (⊬ g.1))",
-      "formalized_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], Nonempty (ACR.GödelFixpoint α) → (ACR.Consistent α ↔ ∀ g : ACR.GödelFixpoint α, ¬ (⊬ g.1))",
-      "statement_formalization_notes": "Direct formalization of the given statement using the repository's existing `⊬` notation and `ACR.GödelFixpoint` abbreviation.",
-      "result": "ok",
-      "verify_success": true,
-      "proof_sketch": "",
-      "proof_text": "",
-      "counterexample_text": "",
-      "lean_error_excerpt": "",
-      "lean_error_fingerprint": "statement_formalization",
-      "new_problems": []
-    },
-    {
-      "result": "proof",
-      "verify_success": true,
-      "proof_sketch": "Use the available fixpoint facts directly. For the forward direction, install the `Nonempty` hypothesis as a local instance; then for any Godel fixpoint `g`, `gf_equiv_reft_top` gives `⊠⊤ ≤ g.1`, so any refutation of `g.1` would refute `⊠⊤`, contradicting `irrefutable_reft_top`. For the reverse direction, pick a Godel fixpoint from `Nonempty`; if the system were inconsistent, then `g.1 ≤ ⊥` follows from `g.1 ≤ ⊤` and transitivity, contradicting the assumed universal irrefutability.",
-      "proof_text": "intro α _ _ _ _ _ hg\nconstructor\n· intro hCons\n  letI : Nonempty (ACR.GödelFixpoint α) := hg\n  intro g hgBot\n  have htop : (⊠ ((⊤ : α))) ≤ g.1 := (ACR.gf_equiv_reft_top (α := α) (g := g)).2\n  exact ACR.irrefutable_reft_top (α := α) hCons (le_trans htop hgBot)\n· intro hAll\n  intro hIncon\n  obtain ⟨g⟩ := hg\n  have htop : g.1 ≤ (⊤ : α) := ACR.le_top\n  have hbot : g.1 ≤ (⊥ : α) := le_trans htop hIncon\n  exact hAll g hbot",
-      "counterexample_text": "",
-      "lean_error_excerpt": "",
-      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:14:4: warning: Try this: intro hAll hIncon",
-      "new_problems": []
-    }
-  ],
-  "op_000019": [
-    {
-      "stage": "statement_formalization",
-      "source_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α], ACR.Consistent α → ∀ {x : α}, (∃ g : ACR.GödelFixpoint α, x ≐ g.1) → ¬ (⊬ x)",
-      "formalized_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α], ACR.Consistent α → ∀ {x : α}, (∃ g : ACR.GödelFixpoint α, x ≐ g.1) → ¬ (⊬ x)",
-      "statement_formalization_notes": "The input statement is already a valid Lean proposition and uses the repository's existing notation.",
-      "result": "ok",
-      "verify_success": true,
-      "proof_sketch": "",
-      "proof_text": "",
-      "counterexample_text": "",
-      "lean_error_excerpt": "",
-      "lean_error_fingerprint": "statement_formalization",
-      "new_problems": []
-    },
-    {
-      "result": "proof",
-      "verify_success": true,
-      "proof_sketch": "Take a witness ⟨g, hxg⟩ with hxg : x ≐ g.1. If x is refutable, then g.1 is refutable by transitivity using hxg.2 : g.1 ≤ x. From g.1 ≤ ⊥, antitonicity of reft gives ⊠⊥ ≤ ⊠g.1, hence ⊠⊥ ≤ g.1 via the fixpoint law g.2.2. Combining ⊤ ≤ ⊠⊥ with g.1 ≤ ⊥ yields inconsistency, contradicting Consistent α.",
-      "proof_text": "intro α _ _ _ _ hCons x hx hxbot\nrcases hx with ⟨g, hxg⟩\napply hCons\nchange (⊤ : α) ≤ ⊥\nhave h1 : g.1 ≤ (⊥ : α) := le_trans hxg.2 hxbot\nhave h2 : ⊠(⊥ : α) ≤ ⊠g.1 := ACR.reft_anti_mono h1\nhave h3 : ⊠(⊥ : α) ≤ g.1 := le_trans h2 g.2.2\ncalc\n  (⊤ : α) ≤ ⊠(⊥ : α) := ACR.top_le_reft_bot\n  _ ≤ g.1 := h3\n  _ ≤ (⊥ : α) := h1",
-      "counterexample_text": "",
-      "lean_error_excerpt": "",
-      "lean_error_fingerprint": "no_diagnostics",
-      "new_problems": []
-    }
-  ],
-  "op_000020": [
-    {
-      "stage": "statement_formalization",
-      "source_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], ACR.Consistent α → Nonempty (ACR.GödelFixpoint α) → ∀ n : Nat, ¬ (⊬ ((Nat.iterate (fun x : α => □x) n) (⊠(⊤ : α))))",
-      "formalized_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], ACR.Consistent α → Nonempty (ACR.GödelFixpoint α) → ∀ n : Nat, ¬ (⊬ (Nat.iterate (fun x : α => □x) n (⊠ (⊤ : α))))",
-      "statement_formalization_notes": "Formalized the claim using `Nat.iterate` on `□` starting from `⊠ (⊤ : α)`.",
-      "result": "ok",
-      "verify_success": true,
-      "proof_sketch": "",
-      "proof_text": "",
-      "counterexample_text": "",
-      "lean_error_excerpt": "",
-      "lean_error_fingerprint": "statement_formalization",
-      "new_problems": []
-    },
-    {
-      "result": "proof",
-      "verify_success": true,
-      "proof_sketch": "Split on `n`. For `n = 0`, use `ACR.irrefutable_reft_top`. For `n + 1`, choose a Gödel fixpoint `g` from the `Nonempty` hypothesis. By `gf_equiv_reft_top`, iterated `□` on `g.1` maps below the same iterate on `⊠⊤`. Also `g.1 ≤ □g.1`, so monotonicity of `□` yields `□g.1 ≤ □^(n+1) g.1`. Any refutation of `□^(n+1) (⊠⊤)` would therefore refute `□g.1`, contradicting `thm_godel_fixpoint_box_irrefutable_000003`.",
-      "proof_text": "intro α _ _ _ _ _ hCons hg n\nlet f : α → α := fun x => □x\ncases n with\n| zero =>\n    letI : Nonempty (ACR.GödelFixpoint α) := hg\n    simpa [f, Nat.iterate] using (ACR.irrefutable_reft_top (α := α) hCons)\n| succ n =>\n    obtain ⟨g⟩ := hg\n    have hg_eq : g.1 ≐ ⊠(⊤ : α) := ACR.gf_equiv_reft_top (α := α) (g := g)\n    have hg_le_boxg : g.1 ≤ □g.1 := by\n      exact le_trans g.2.1 (ACR.reft_gf_le_box_gf (g := g))\n    have hiter_mono : ∀ m : Nat, ∀ {x y : α}, x ≤ y → Nat.iterate f m x ≤ Nat.iterate f m y := by\n      intro m\n      induction m with\n      | zero =>\n          intro x y hxy\n          simpa [Nat.iterate]\n      | succ m ih =>\n          intro x y hxy\n          simpa [f, Nat.iterate] using ih (x := □x) (y := □y) (ACR.prov_mono hxy)\n    have hboxg_chain : ∀ m : Nat, □g.1 ≤ Nat.iterate f m (□g.1) := by\n      intro m\n      induction m with\n      | zero =>\n          simp [Nat.iterate]\n      | succ m ih =>\n          calc\n            □g.1 ≤ Nat.iterate f m (□g.1) := ih\n            _ ≤ Nat.iterate f m (□□g.1) := hiter_mono m (ACR.prov_mono hg_le_boxg)\n            _ = Nat.iterate f (Nat.succ m) (□g.1) := by\n              simp [f, Nat.iterate]\n    intro hIter\n    have hboxg_le_iterg : □g.1 ≤ Nat.iterate f (Nat.succ n) g.1 := by\n      simpa [f, Nat.iterate] using hboxg_chain n\n    have hiterg_le_itertop : Nat.iterate f (Nat.succ n) g.1 ≤ Nat.iterate f (Nat.succ n) (⊠(⊤ : α)) :=\n      hiter_mono (Nat.succ n) hg_eq.1\n    exact\n      (AutomatedTheoryConstruction.thm_godel_fixpoint_box_irrefutable_000003 (α := α) hCons g)\n        (le_trans hboxg_le_iterg (le_trans hiterg_le_itertop hIter))",
-      "counterexample_text": "",
-      "lean_error_excerpt": "",
-      "lean_error_fingerprint": "no_diagnostics",
-      "new_problems": []
-    }
-  ],
-  "op_000021": [
-    {
-      "stage": "statement_formalization",
-      "source_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], ACR.Consistent α → Nonempty (ACR.GödelFixpoint α) → ¬ ((□(⊠(⊤ : α))) ≤ ⊥ ∧ (⊠(⊤ : α)) ≤ ⊥)",
-      "formalized_statement": "",
-      "statement_formalization_notes": "Used the existing shorthand `⊬ x` for `x ≤ ⊥` per the theory notation; otherwise the statement matches the given target directly. alpha-equivalent to existing theorem/lemma: Derived.lean::AutomatedTheoryConstruction.thm_not_both_box_reft_top_refutable_000021",
-      "result": "stuck",
-      "verify_success": false,
-      "proof_sketch": "",
-      "proof_text": "",
-      "counterexample_text": "",
-      "lean_error_excerpt": "",
-      "lean_error_fingerprint": "statement_formalization",
-      "new_problems": []
-    },
-    {
-      "stage": "",
-      "source_statement": "",
-      "formalized_statement": "",
-      "statement_formalization_notes": "",
-      "result": "stuck",
-      "verify_success": false,
-      "proof_sketch": "Used the existing shorthand `⊬ x` for `x ≤ ⊥` per the theory notation; otherwise the statement matches the given target directly. alpha-equivalent to existing theorem/lemma: Derived.lean::AutomatedTheoryConstruction.thm_not_both_box_reft_top_refutable_000021",
-      "proof_text": "",
-      "counterexample_text": "",
-      "lean_error_excerpt": "",
-      "lean_error_fingerprint": "non_formalized_result",
-      "new_problems": []
-    },
-    {
-      "stage": "statement_formalization",
-      "source_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], ACR.Consistent α → Nonempty (ACR.GödelFixpoint α) → ¬ ((□(⊠(⊤ : α))) ≤ ⊥ ∧ (⊠(⊤ : α)) ≤ ⊥)",
-      "formalized_statement": "",
-      "statement_formalization_notes": "Formalized the conjunction using the repository shorthand `⊬` for refutability. alpha-equivalent to existing theorem/lemma: Derived.lean::AutomatedTheoryConstruction.thm_not_both_box_reft_top_refutable_000021",
-      "result": "stuck",
-      "verify_success": false,
-      "proof_sketch": "",
-      "proof_text": "",
-      "counterexample_text": "",
-      "lean_error_excerpt": "",
-      "lean_error_fingerprint": "statement_formalization",
-      "new_problems": []
-    },
-    {
-      "result": "stuck",
-      "verify_success": false,
-      "proof_sketch": "Formalized the conjunction using the repository shorthand `⊬` for refutability. alpha-equivalent to existing theorem/lemma: Derived.lean::AutomatedTheoryConstruction.thm_not_both_box_reft_top_refutable_000021",
-      "proof_text": "",
-      "counterexample_text": "",
-      "lean_error_excerpt": "",
-      "lean_error_fingerprint": "non_formalized_result",
-      "new_problems": []
-    }
-  ],
-  "op_000022": [
-    {
-      "stage": "statement_formalization",
-      "source_statement": "There exists a type `α` with instances `ACR α`, `ACR.Prov α`, `ACR.Reft α`, and `ACR.APS α`, and elements `x y : α`, such that `x ≤ □x` and `x ≤ ⊠x` both hold but `x ≤ ⊠y` does not hold.",
-      "formalized_statement": "",
-      "statement_formalization_notes": "Formalized as an existential counterexample over a type with the required ACR structure and witnesses x y. statement elaboration failed before proof search: statement elaboration failed: /Users/milano/Automated_Theory_Construction/AutomatedTheoryConstruction/StatementElabCheck.p9cz43c8.lean:7:36: error: unexpected token '['; expected ','",
-      "result": "stuck",
-      "verify_success": false,
-      "proof_sketch": "",
-      "proof_text": "",
-      "counterexample_text": "",
-      "lean_error_excerpt": "",
-      "lean_error_fingerprint": "statement_formalization",
-      "new_problems": []
-    },
-    {
-      "stage": "",
-      "source_statement": "",
-      "formalized_statement": "",
-      "statement_formalization_notes": "",
-      "result": "stuck",
-      "verify_success": false,
-      "proof_sketch": "Formalized as an existential counterexample over a type with the required ACR structure and witnesses x y. statement elaboration failed before proof search: statement elaboration failed: /Users/milano/Automated_Theory_Construction/AutomatedTheoryConstruction/StatementElabCheck.p9cz43c8.lean:7:36: error: unexpected token '['; expected ','",
-      "proof_text": "",
-      "counterexample_text": "",
-      "lean_error_excerpt": "",
-      "lean_error_fingerprint": "non_formalized_result",
-      "new_problems": []
-    },
-    {
-      "stage": "statement_formalization",
-      "source_statement": "There exists a type `α` with instances `ACR α`, `ACR.Prov α`, `ACR.Reft α`, and `ACR.APS α`, and elements `x y : α`, such that `x ≤ □x` and `x ≤ ⊠x` both hold but `x ≤ ⊠y` does not hold.",
-      "formalized_statement": "∃ (α : Type _), ∃ (_ : ACR α), ∃ (_ : ACR.Prov α), ∃ (_ : ACR.Reft α), ∃ (_ : ACR.APS α), ∃ (x y : α), x ≤ □x ∧ x ≤ ⊠x ∧ ¬ (x ≤ ⊠y)",
-      "statement_formalization_notes": "Formalized as an explicit existential package over the type, its instances, and witnesses x y, using the repository's □ and ⊠ notation.",
-      "result": "ok",
-      "verify_success": true,
-      "proof_sketch": "",
-      "proof_text": "",
-      "counterexample_text": "",
-      "lean_error_excerpt": "",
-      "lean_error_fingerprint": "statement_formalization",
-      "new_problems": []
-    },
-    {
-      "stage": "statement_formalization",
-      "source_statement": "There exists a type `α` with instances `ACR α`, `ACR.Prov α`, `ACR.Reft α`, and `ACR.APS α`, and elements `x y : α`, such that `x ≤ □x` and `x ≤ ⊠x` both hold but `x ≤ ⊠y` does not hold.",
-      "formalized_statement": "∃ (α : Type _), ∃ (_ : ACR α), ∃ (_ : ACR.Prov α), ∃ (_ : ACR.Reft α), ∃ (_ : ACR.APS α), ∃ (x y : α), x ≤ □x ∧ x ≤ ⊠x ∧ ¬ (x ≤ ⊠y)",
-      "statement_formalization_notes": "Formalized as an existential package over the type, its structure instances, and witnesses x y.",
-      "result": "ok",
-      "verify_success": true,
-      "proof_sketch": "",
-      "proof_text": "",
-      "counterexample_text": "",
-      "lean_error_excerpt": "",
-      "lean_error_fingerprint": "statement_formalization",
-      "new_problems": []
-    },
-    {
-      "result": "stuck",
-      "verify_success": false,
-      "proof_sketch": "A direct existential construction looks promising. Take a three-point type with the discrete preorder `x ≤ y ↔ x = y`, so monotonicity and antitonicity obligations are mostly trivial Mathlib-style equality proofs. Choose distinguished elements `top = a`, `bot = b`, let `□` be the identity, and define `⊠a = c`, `⊠b = a`, `⊠c = c`. Then `top_le_reft_bot` is `a = ⊠b`, `reft_le_prov_reft` is immediate because `□ = id`, and `le_reft_top_of_le_prov_of_le_reft` holds because its premises force `x = y = ⊠y`, so `y` must be the unique fixed point `c`, and `⊠top = c`. With witnesses `x = c` and `y = b`, we get `x ≤ □x` and `x ≤ ⊠x` by reflexivity, but `¬ (x ≤ ⊠y)` since `⊠y = a` and `c ≠ a` in the discrete order.",
-      "proof_text": "",
-      "counterexample_text": "",
-      "lean_error_excerpt": "formalize worker timeout: Worker returned error: Command '['codex', 'exec', '-', '--sandbox', 'read-only', '--skip-git-repo-check', '--output-last-message', '/var/folders/2_/c2t72bmn00j3z7cnkfvqvyj80000gn/T/tmpavaryri2']' timed out after 390 seconds (task_type=formalize)",
-      "lean_error_fingerprint": "formalizer_timeout",
-      "new_problems": []
-    }
-  ],
-  "op_000023": [
-    {
-      "stage": "statement_formalization",
-      "source_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], Nonempty (ACR.GödelFixpoint α) → ∀ {x : α}, x ≤ □x → x ≤ ⊠x → ∀ g : ACR.GödelFixpoint α, x ≤ g.1",
-      "formalized_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], Nonempty (ACR.GödelFixpoint α) → ∀ {x : α}, x ≤ □x → x ≤ ⊠x → ∀ g : ACR.GödelFixpoint α, x ≤ g.1",
-      "statement_formalization_notes": "The input statement is already a valid Lean proposition and matches the repository notation.",
-      "result": "ok",
-      "verify_success": true,
-      "proof_sketch": "",
-      "proof_text": "",
-      "counterexample_text": "",
-      "lean_error_excerpt": "",
-      "lean_error_fingerprint": "statement_formalization",
-      "new_problems": []
-    },
-    {
-      "result": "proof",
-      "verify_success": true,
-      "proof_sketch": "Use the derived theorem `thm_le_any_reft_of_self_bounds_000010` with `y := g.1` to get `x ≤ ⊠g.1` from the hypotheses `x ≤ □x` and `x ≤ ⊠x`. Since `g : ACR.GödelFixpoint α`, we have `⊠g.1 ≤ g.1` from `g.2.2`. Compose these inequalities. The `Nonempty (ACR.GödelFixpoint α)` assumption is unused.",
-      "proof_text": "intro α _ _ _ _ _ _ x hxBox hxReft g\nexact le_trans (thm_le_any_reft_of_self_bounds_000010 (x := x) (y := g.1) hxBox hxReft) g.2.2",
-      "counterexample_text": "",
-      "lean_error_excerpt": "",
-      "lean_error_fingerprint": "no_diagnostics",
-      "new_problems": []
-    }
-  ],
-  "op_000024": [
-    {
-      "stage": "statement_formalization",
-      "source_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], Nonempty (ACR.GödelFixpoint α) → (ACR.Consistent α ↔ ∀ x : α, ¬ (⊬ (⊠ x)))",
-      "formalized_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], Nonempty (ACR.GödelFixpoint α) → (ACR.Consistent α ↔ ∀ x : α, ¬ (⊬ (⊠ x)))",
-      "statement_formalization_notes": "Directly formalized from stmt using repository notation `⊬` and `⊠`.",
-      "result": "ok",
-      "verify_success": true,
-      "proof_sketch": "",
-      "proof_text": "",
-      "counterexample_text": "",
-      "lean_error_excerpt": "",
-      "lean_error_fingerprint": "statement_formalization",
-      "new_problems": []
-    },
-    {
-      "result": "proof",
-      "verify_success": true,
-      "proof_sketch": "Install the Gödel-fixpoint witness as a local instance. For the forward direction, reduce any refutation of ⊠x to a refutation of ⊠⊤ using antitonicity of ⊠ and x ≤ ⊤, then apply irrefutable_reft_top. For the reverse direction, instantiate the assumed universal irrefutability at x = ⊤; if the system were inconsistent, then ⊠⊤ ≤ ⊤ ≤ ⊥, giving the required contradiction.",
-      "proof_text": "intro α _ _ _ _ _ hgf\nletI : Nonempty (ACR.GödelFixpoint α) := hgf\nconstructor\n· intro hCons x hx\n  apply ACR.irrefutable_reft_top (α := α) hCons\n  exact le_trans (ACR.reft_anti_mono (ACR.le_top (x := x))) hx\n· intro hall hIncon\n  exact (hall ⊤) (le_trans (ACR.le_top (x := ⊠ (⊤ : α))) hIncon)",
-      "counterexample_text": "",
-      "lean_error_excerpt": "",
-      "lean_error_fingerprint": "no_diagnostics",
-      "new_problems": []
-    }
-  ],
-  "op_000025": [
-    {
-      "stage": "statement_formalization",
-      "source_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], ACR.Consistent α → Nonempty (ACR.GödelFixpoint α) → ∀ x : α, ∀ n : Nat, ¬ (⊬ ((Nat.iterate (fun y : α => □ y) n) (⊠ x)))",
-      "formalized_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], ACR.Consistent α → Nonempty (ACR.GödelFixpoint α) → ∀ x : α, ∀ n : Nat, ¬ (⊬ (Nat.iterate (fun y : α => □ y) n (⊠ x)))",
-      "statement_formalization_notes": "The input statement is already a valid Lean proposition; I normalized the iterate application to standard Lean syntax.",
-      "result": "ok",
-      "verify_success": true,
-      "proof_sketch": "",
-      "proof_text": "",
-      "counterexample_text": "",
-      "lean_error_excerpt": "",
-      "lean_error_fingerprint": "statement_formalization",
-      "new_problems": []
-    },
-    {
-      "result": "proof",
-      "verify_success": true,
-      "proof_sketch": "Apply theorem `thm_iterate_box_reft_top_irrefutable_000020` to `⊠⊤`. Since `x ≤ ⊤`, antitonicity of `⊠` gives `⊠⊤ ≤ ⊠x`. Lift this through `Nat.iterate (fun y => □ y)` by induction using `prov_mono`, then compose with the assumed refutability of the iterate at `⊠x`.",
-      "proof_text": "intro α _ _ _ _ _ hCons hg x n hRef\nhave htop : ⊠(⊤ : α) ≤ ⊠x := by\n  exact ACR.reft_anti_mono (ACR.le_top (x := x))\nhave hiter_mono :\n    ∀ m : Nat, ∀ {a b : α}, a ≤ b →\n      Nat.iterate (fun y : α => □ y) m a ≤ Nat.iterate (fun y : α => □ y) m b := by\n  intro m\n  induction m with\n  | zero =>\n      intro a b hab\n      simpa [Nat.iterate] using hab\n  | succ m ih =>\n      intro a b hab\n      simpa [Nat.iterate] using ih (a := □a) (b := □b) (ACR.prov_mono hab)\nhave hiter :\n    Nat.iterate (fun y : α => □ y) n (⊠(⊤ : α)) ≤\n      Nat.iterate (fun y : α => □ y) n (⊠x) :=\n  hiter_mono n htop\nexact\n  (AutomatedTheoryConstruction.thm_iterate_box_reft_top_irrefutable_000020\n    (α := α) hCons hg n)\n    (le_trans hiter hRef)",
-      "counterexample_text": "",
-      "lean_error_excerpt": "",
-      "lean_error_fingerprint": "no_diagnostics",
-      "new_problems": []
-    }
-  ],
-  "op_000026": [
-    {
-      "stage": "statement_formalization",
-      "source_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], ⊠⊠(⊤ : α) ≐ ⊠(⊤ : α) → ∀ n : Nat, (Nat.iterate (fun y : α => ⊠ y) (n + 1) (⊤ : α)) ≐ ⊠(⊤ : α)",
-      "formalized_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], ⊠⊠(⊤ : α) ≐ ⊠(⊤ : α) → ∀ n : Nat, (Nat.iterate (fun y : α => ⊠ y) (n + 1) (⊤ : α)) ≐ ⊠(⊤ : α)",
-      "statement_formalization_notes": "Direct formalization of the given statement using the repo's existing ≐ and ⊠ notation.",
-      "result": "ok",
-      "verify_success": true,
-      "proof_sketch": "",
-      "proof_text": "",
-      "counterexample_text": "",
-      "lean_error_excerpt": "",
-      "lean_error_fingerprint": "statement_formalization",
-      "new_problems": []
-    },
-    {
-      "result": "proof",
-      "verify_success": true,
-      "proof_sketch": "Let f := fun y => ⊠ y. First show that if x ≐ y, then f x ≐ f y, so Nat.iterate f preserves equivalence by induction on the iterate count. Then, using the hypothesis ⊠⊠⊤ ≐ ⊠⊤, prove by induction on m that Nat.iterate f m (⊠⊤) ≐ ⊠⊤ for all m. Finally, unfold one iterate to rewrite the original (n + 1)-fold iterate of ⊤ as the n-fold iterate of ⊠⊤.",
-      "proof_text": "intro α _ _ _ _ _ h n\nlet f : α → α := fun y => ⊠ y\nhave hmap : ∀ {x y : α}, x ≐ y → f x ≐ f y := by\n  intro x y hxy\n  exact ⟨ACR.reft_anti_mono hxy.2, ACR.reft_anti_mono hxy.1⟩\nhave hiter_map : ∀ m : Nat, ∀ {x y : α}, x ≐ y → Nat.iterate f m x ≐ Nat.iterate f m y := by\n  intro m\n  induction m with\n  | zero =>\n      intro x y hxy\n      simpa [Nat.iterate] using hxy\n  | succ m ihm =>\n      intro x y hxy\n      simpa [f, Nat.iterate] using ihm (x := f x) (y := f y) (hmap hxy)\nhave hstable : ∀ m : Nat, Nat.iterate f m (⊠(⊤ : α)) ≐ ⊠(⊤ : α) := by\n  intro m\n  induction m with\n  | zero =>\n      exact ⟨le_rfl, le_rfl⟩\n  | succ m ihm =>\n      have hstep : Nat.iterate f m (⊠⊠(⊤ : α)) ≐ Nat.iterate f m (⊠(⊤ : α)) :=\n        hiter_map m (x := ⊠⊠(⊤ : α)) (y := ⊠(⊤ : α)) h\n      constructor\n      · exact le_trans hstep.1 ihm.1\n      · exact le_trans ihm.2 hstep.2\nsimpa [f, Nat.iterate] using hstable n",
-      "counterexample_text": "",
-      "lean_error_excerpt": "",
-      "lean_error_fingerprint": "no_diagnostics",
-      "new_problems": []
-    }
-  ],
-  "op_000027": [
-    {
-      "stage": "statement_formalization",
-      "source_statement": "There exists a type `α` with instances `ACR α`, `ACR.Prov α`, `ACR.Reft α`, `ACR.APS α`, and `ACR.C5 α` such that `ACR.Consistent α` holds and `¬ ((⊠⊠(⊤ : α)) ≐ ⊠(⊤ : α))`.",
-      "formalized_statement": "∃ (α : Type _), ∃ (hA : ACR α), ∃ (hP : @ACR.Prov α hA), ∃ (hR : @ACR.Reft α hA), ∃ (hAPS : @ACR.APS α hA hP hR), ∃ (hC5 : @ACR.C5 α hA hP hR hAPS), letI : ACR α := hA; letI : ACR.Prov α := hP; letI : ACR.Reft α := hR; letI : ACR.APS α := hAPS; letI : ACR.C5 α := hC5; ACR.Consistent α ∧ ¬ ((⊠⊠(⊤ : α)) ≐ ⊠(⊤ : α))",
-      "statement_formalization_notes": "Packaged the existential class witnesses explicitly, then reintroduced them with letI so the repository notation ⊠ and ≐ can be used in the proposition.",
-      "result": "ok",
-      "verify_success": true,
-      "proof_sketch": "",
-      "proof_text": "",
-      "counterexample_text": "",
-      "lean_error_excerpt": "",
-      "lean_error_fingerprint": "statement_formalization",
-      "new_problems": []
-    },
-    {
-      "result": "stuck",
-      "verify_success": false,
-      "proof_sketch": "A promising witness is the two-element chain `α = {⊥ < ⊤}` with `□x := x` and `⊠x` the order-reversing involution swapping `⊥` and `⊤`. Then `prov_mono` is immediate, `reft_anti_mono` holds because `⊠` reverses the chain, `top_le_reft_bot` is `⊤ ≤ ⊤`, `reft_le_prov_reft` is trivial since `□ = id`, and `le_reft_top_of_le_prov_of_le_reft` holds because `x ≤ y` and `x ≤ ⊠y` force `x = ⊥ = ⊠⊤`. The model is consistent since `⊤ ≤ ⊥` is false. Finally, `⊠⊤ = ⊥` while `⊠⊠⊤ = ⊤`, so `((⊠⊠⊤) ≐ (⊠⊤))` fails. Equivalently, by `thm_double_reft_top_iff_godel_fixpoint_000001`, this is a consistent `C5` model with no Gödel fixpoint.",
-      "proof_text": "",
-      "counterexample_text": "",
-      "lean_error_excerpt": "formalize worker timeout: Worker returned error: Command '['codex', 'exec', '-', '--sandbox', 'read-only', '--skip-git-repo-check', '--output-last-message', '/var/folders/2_/c2t72bmn00j3z7cnkfvqvyj80000gn/T/tmpb7und2pq']' timed out after 390 seconds (task_type=formalize)",
-      "lean_error_fingerprint": "formalizer_timeout",
-      "new_problems": []
-    }
-  ],
-  "op_000028": [
-    {
-      "stage": "statement_formalization",
-      "source_statement": "There exists a type `α` with instances `ACR α`, `ACR.Prov α`, `ACR.Reft α`, `ACR.APS α`, and `ACR.C5 α` such that `ACR.Consistent α` holds, `((⊠⊠(⊤ : α)) ≐ ⊠(⊤ : α))` holds, and `¬ ((⊠(⊤ : α)) ≐ □(⊠(⊤ : α)))`.",
-      "formalized_statement": "∃ (α : Type _), ∃ (_ : ACR α), ∃ (_ : ACR.Prov α), ∃ (_ : ACR.Reft α), ∃ (_ : ACR.APS α), ∃ (_ : ACR.C5 α), ACR.Consistent α ∧ (⊠⊠(⊤ : α) ≐ ⊠(⊤ : α)) ∧ ¬ (⊠(⊤ : α) ≐ □(⊠(⊤ : α)))",
-      "statement_formalization_notes": "Formalized as an existential package over the carrier and all required instances, using the repository notation `≐`, `⊠`, and `□`.",
-      "result": "ok",
-      "verify_success": true,
-      "proof_sketch": "",
-      "proof_text": "",
-      "counterexample_text": "",
-      "lean_error_excerpt": "",
-      "lean_error_fingerprint": "statement_formalization",
-      "new_problems": []
-    },
-    {
-      "result": "proof",
-      "verify_success": false,
-      "proof_sketch": "Use the concrete finite model α = Fin 3 with the usual order, ⊥ = 0, ⊤ = 2, □x = if x = 0 then 1 else 2, and ⊠x = if x = 0 then 2 else 1. The ACR, APS, and C5 axioms are all closed finite checks, so they are discharged by `decide`. In this model, consistency is immediate, `⊠⊠⊤` and `⊠⊤` both compute to 1, while `□(⊠⊤)` computes to 2, so `⊠⊤ ≐ □(⊠⊤)` fails.",
-      "proof_text": "let acr : ACR (Fin 3) := {\n  toTop := inferInstance\n  toBot := inferInstance\n  toPreorder := inferInstance\n}\nletI : ACR (Fin 3) := acr\nlet prov : ACR.Prov (Fin 3) := ⟨fun x => if x = 0 then 1 else 2⟩\nlet reft : ACR.Reft (Fin 3) := ⟨fun x => if x = 0 then 2 else 1⟩\nletI : ACR.Prov (Fin 3) := prov\nletI : ACR.Reft (Fin 3) := reft\nlet aps : ACR.APS (Fin 3) := {\n  prov_mono := by decide\n  reft_anti_mono := by decide\n  top_le_reft_bot := by decide\n  le_reft_top_of_le_prov_of_le_reft := by decide\n  reft_le_prov_reft := by decide\n}\nletI : ACR.APS (Fin 3) := aps\nlet c5 : ACR.C5 (Fin 3) := {\n  le_top := by decide\n}\nrefine ⟨Fin 3, acr, prov, reft, aps, c5, ?_⟩\nconstructor\n· decide\nconstructor\n· constructor <;> decide\n· decide",
-      "counterexample_text": "",
-      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:8:13: error(lean.synthInstanceFailed): failed to synthesize instance of type class",
-      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:8:13: error(lean.synthInstanceFailed): failed to synthesize instance of type class | Top (Fin 3) | Hint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command.",
-      "new_problems": []
-    },
-    {
-      "result": "proof",
-      "verify_success": false,
-      "proof_sketch": "Instantiate `α` as `Fin 3` with a manually supplied 3-point preorder, top `2`, bottom `0`, `□0 = 1` and `□x = 2` otherwise, and `⊠0 = 2` and `⊠x = 1` otherwise. The previous failure came from missing `Top`/`Bot`/`Preorder` instances for `Fin 3`, so those are built locally first; then all `ACR`, `APS`, and `C5` axioms are finite checks solved by `decide`. In this model, consistency is `¬ (2 ≤ 0)`, `⊠⊠⊤` and `⊠⊤` both compute to `1`, while `□(⊠⊤)` computes to `2`, so the final equivalence fails.",
-      "proof_text": "let α : Type := Fin 3\nletI : Top α := ⟨2⟩\nletI : Bot α := ⟨0⟩\nletI : Preorder α := {\n  le := fun x y => x.1 ≤ y.1\n  le_refl := by\n    intro x\n    exact Nat.le_refl x.1\n  le_trans := by\n    intro a b c hab hbc\n    exact Nat.le_trans hab hbc\n}\nlet acr : ACR α := {\n  toTop := inferInstance\n  toBot := inferInstance\n  toPreorder := inferInstance\n}\nletI : ACR α := acr\nlet prov : ACR.Prov α := ⟨fun x => if x = 0 then 1 else 2⟩\nlet reft : ACR.Reft α := ⟨fun x => if x = 0 then 2 else 1⟩\nletI : ACR.Prov α := prov\nletI : ACR.Reft α := reft\nlet aps : ACR.APS α := {\n  prov_mono := by decide\n  reft_anti_mono := by decide\n  top_le_reft_bot := by decide\n  le_reft_top_of_le_prov_of_le_reft := by decide\n  reft_le_prov_reft := by decide\n}\nletI : ACR.APS α := aps\nlet c5 : ACR.C5 α := {\n  le_top := by decide\n}\nrefine ⟨α, acr, prov, reft, aps, c5, ?_⟩\nconstructor\n· decide\nconstructor\n· constructor <;> decide\n· decide",
-      "counterexample_text": "",
-      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:10:23: error: could not synthesize default value for field 'lt_iff_le_not_ge' of 'Preorder' using tactics",
-      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:10:23: error: could not synthesize default value for field 'lt_iff_le_not_ge' of 'Preorder' using tactics | AutomatedTheoryConstruction/Scratch.lean:10:23: error: Tactic `rfl` failed: The left-hand side | a✝ < b✝",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:94:6: warning: Try `simp at h12` instead of `simpa using h12` | Note: This linter can be disabled with `set_option linter.unnecessarySimpa false`",
       "new_problems": []
     }
   ],
   "op_000029": [
     {
       "stage": "statement_formalization",
-      "source_statement": "There exists a type `α` with instances `ACR α`, `ACR.Prov α`, `ACR.Reft α`, `ACR.APS α`, and `ACR.C5 α`, and an element `x : α`, such that `x ≐ ⊠(⊤ : α)` holds but `¬ (x ≐ ⊠x)` holds.",
-      "formalized_statement": "∃ (α : Type _), ∃ (_ : ACR α), ∃ (_ : ACR.Prov α), ∃ (_ : ACR.Reft α), ∃ (_ : ACR.APS α), ∃ (_ : ACR.C5 α), ∃ (x : α), x ≐ ⊠(⊤ : α) ∧ ¬ (x ≐ ⊠x)",
-      "statement_formalization_notes": "Packaged the ambient typeclass structure and witness element with explicit nested existential binders, using the repository notation `≐` and `⊠`.",
-      "result": "ok",
-      "verify_success": true,
-      "proof_sketch": "",
-      "proof_text": "",
-      "counterexample_text": "",
-      "lean_error_excerpt": "",
-      "lean_error_fingerprint": "statement_formalization",
-      "new_problems": []
-    },
-    {
-      "result": "stuck",
-      "verify_success": false,
-      "proof_sketch": "A direct existence proof looks promising by building a tiny finite preorder model. Take a three-element chain `0 ≤ 1 ≤ 2`, with `⊥ = 0`, `⊤ = 2`, `□x := 2` for all `x`, and `⊠x := if x = 0 then 2 else 1`. Then `⊠` is antitone, `top_le_reft_bot` becomes `2 ≤ ⊠0 = 2`, and `reft_le_prov_reft` is trivial because `□⊠x = 2`. The key APS axiom `x ≤ □y → x ≤ ⊠y → x ≤ ⊠⊤` also holds since `□y = 2`, so it reduces to `x ≤ ⊠y → x ≤ 1`, and for all `y` one has `⊠y ≥ 1` only when `⊠⊤ = 1`, making the implication valid. With `x := 1`, we get `x ≐ ⊠⊤` because `⊠⊤ = 1`, but `⊠x = 1`'s image can be arranged to differ from `x` in the preorder-equivalence sense; in this concrete choice, checking `x ≐ ⊠x` is the only remaining verification step, and the model shape strongly suggests the existential target is satisfiable. This depends only on standard finite-instance construction, not on any deep derived theorem.",
-      "proof_text": "",
-      "counterexample_text": "",
-      "lean_error_excerpt": "formalize worker timeout: Worker returned error: Command '['codex', 'exec', '-', '--sandbox', 'read-only', '--skip-git-repo-check', '--output-last-message', '/var/folders/2_/c2t72bmn00j3z7cnkfvqvyj80000gn/T/tmp_f28l85q']' timed out after 390 seconds (task_type=formalize)",
-      "lean_error_fingerprint": "formalizer_timeout",
-      "new_problems": []
-    }
-  ],
-  "op_000030": [
-    {
-      "stage": "statement_formalization",
-      "source_statement": "There exists a type `α` with instances `ACR α`, `ACR.Prov α`, `ACR.Reft α`, `ACR.APS α`, and `ACR.C5 α` such that `¬ Nonempty (ACR.GödelFixpoint α)` and `∃ x : α, x ≐ ⊠(⊤ : α)` both hold.",
-      "formalized_statement": "∃ (α : Type _), ∃ (hA : ACR α), ∃ (hP : @ACR.Prov α hA), ∃ (hR : @ACR.Reft α hA), ∃ (hAPS : @ACR.APS α hA hP hR), ∃ (hC5 : @ACR.C5 α hA hP hR hAPS), let _ : ACR α := hA; let _ : ACR.Prov α := hP; let _ : ACR.Reft α := hR; let _ : ACR.APS α := hAPS; let _ : ACR.C5 α := hC5; ¬ Nonempty (ACR.GödelFixpoint α) ∧ ∃ x : α, x ≐ ⊠(⊤ : α)",
-      "statement_formalization_notes": "The statement is formalized as an explicit existential package of the type and structure witnesses, then those witnesses are reintroduced as local instances in the body to use the repository notations `≐` and `⊠`.",
-      "result": "ok",
-      "verify_success": true,
-      "proof_sketch": "",
-      "proof_text": "",
-      "counterexample_text": "",
-      "lean_error_excerpt": "",
-      "lean_error_fingerprint": "statement_formalization",
-      "new_problems": []
-    },
-    {
-      "stage": "statement_formalization",
-      "source_statement": "There exists a type `α` with instances `ACR α`, `ACR.Prov α`, `ACR.Reft α`, `ACR.APS α`, and `ACR.C5 α` such that `¬ Nonempty (ACR.GödelFixpoint α)` and `∃ x : α, x ≐ ⊠(⊤ : α)` both hold.",
-      "formalized_statement": "∃ (α : Type _), ∃ (_ : ACR α), ∃ (_ : ACR.Prov α), ∃ (_ : ACR.Reft α), ∃ (_ : ACR.APS α), ∃ (_ : ACR.C5 α), ¬ Nonempty (ACR.GödelFixpoint α) ∧ ∃ x : α, x ≐ ⊠(⊤ : α)",
-      "statement_formalization_notes": "Formalized as an explicit existential package of the type, required instances, and the two requested properties.",
-      "result": "ok",
-      "verify_success": true,
-      "proof_sketch": "",
-      "proof_text": "",
-      "counterexample_text": "",
-      "lean_error_excerpt": "",
-      "lean_error_fingerprint": "statement_formalization",
-      "new_problems": []
-    },
-    {
-      "result": "stuck",
-      "verify_success": false,
-      "proof_sketch": "A promising proof direction is an explicit finite model. Take `α = Bool` with the usual preorder `false ≤ true`, `⊥ = false`, and `⊤ = true`; let `□` be the identity map and let `⊠` be Boolean negation (`⊠ false = true`, `⊠ true = false`). Then `C5.le_top` is immediate, `prov_mono` and `reft_anti_mono` are easy case checks, `top_le_reft_bot` is `true ≤ true`, and `reft_le_prov_reft` is trivial because `□ = id`; the remaining APS axiom also reduces to a short case split. In this model, `ACR.GödelFixpoint α` is empty because neither `false ≐ true` nor `true ≐ false` holds, so `¬ Nonempty (ACR.GödelFixpoint α)`. Finally, `⊠(⊤ : α) = false`, so choosing `x = false` gives `x ≐ ⊠(⊤ : α)` by reflexivity.",
-      "proof_text": "",
-      "counterexample_text": "",
-      "lean_error_excerpt": "formalize worker timeout: Worker returned error: Command '['codex', 'exec', '-', '--sandbox', 'read-only', '--skip-git-repo-check', '--output-last-message', '/var/folders/2_/c2t72bmn00j3z7cnkfvqvyj80000gn/T/tmprkwlg_f0']' timed out after 390 seconds (task_type=formalize)",
-      "lean_error_fingerprint": "formalizer_timeout",
-      "new_problems": []
-    }
-  ],
-  "op_000031": [
-    {
-      "stage": "statement_formalization",
-      "source_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], Nonempty (ACR.GödelFixpoint α) → ∀ x : α, ⊠⊠x ≤ ⊠x",
-      "formalized_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], Nonempty (ACR.GödelFixpoint α) → ∀ x : α, ⊠⊠x ≤ ⊠x",
-      "statement_formalization_notes": "The input stmt is already a valid Lean proposition and already uses the repository's notation.",
+      "source_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], Nonempty (ACR.GödelFixpoint α) → ((∀ {x : α}, x ≐ ⊠x → x ≐ □x) ↔ (□(⊠(⊤ : α)) ≤ ⊠(⊤ : α)))",
+      "formalized_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], Nonempty (ACR.GödelFixpoint α) → ((∀ {x : α}, x ≐ ⊠x → x ≐ □x) ↔ (□(⊠(⊤ : α)) ≤ ⊠(⊤ : α)))",
+      "statement_formalization_notes": "The input statement is already a valid Lean proposition and uses the repository's preferred notation `≐`, `□`, and `⊠`.",
       "result": "ok",
       "verify_success": true,
       "proof_sketch": "",
@@ -1091,8 +634,34 @@
     {
       "result": "proof",
       "verify_success": true,
-      "proof_sketch": "Install the given nonempty Godel-fixpoint assumption as an instance, use C5 to get x ≤ ⊤, apply anti-monotonicity of ⊠ twice to obtain ⊠⊠x ≤ ⊠⊠⊤ and ⊠⊤ ≤ ⊠x, then compose with ACR.reft_reft_top_le_reft_top.",
-      "proof_text": "intro α _ _ _ _ _ hG x\nletI : Nonempty (ACR.GödelFixpoint α) := hG\nhave hx_top : x ≤ (⊤ : α) := ACR.le_top\nhave htop : ⊠(⊤ : α) ≤ ⊠x := ACR.reft_anti_mono hx_top\nhave hxx : ⊠⊠x ≤ ⊠⊠(⊤ : α) := ACR.reft_anti_mono htop\nexact le_trans hxx (le_trans (ACR.reft_reft_top_le_reft_top (α := α)) htop)",
+      "proof_sketch": "Use the Gödel-fixpoint assumption as a local instance. For the forward direction, show that `⊠⊤` is itself reft-fixed from `ACR.reft_reft_top_le_reft_top` and anti-monotonicity, then apply the hypothesis at `x := ⊠⊤` and extract the needed inequality. For the reverse direction, any reft-fixed `x` satisfies `x ≐ ⊠⊤` by `ACR.gf_equiv_reft_top`; then `x ≤ □x` follows from `reft_le_prov_reft` and monotonicity, while `□x ≤ x` follows from monotonicity together with the assumed `□(⊠⊤) ≤ ⊠⊤`.",
+      "proof_text": "intro α _ _ _ _ _ hg\nletI : Nonempty (ACR.GödelFixpoint α) := hg\nconstructor\n· intro h\n  have hfix : (⊠(⊤ : α)) ≐ ⊠(⊠(⊤ : α)) := by\n    constructor\n    · simpa using (ACR.reft_anti_mono (ACR.le_top (x := ⊠(⊤ : α))))\n    · simpa using (ACR.reft_reft_top_le_reft_top (α := α))\n  have hbox : (⊠(⊤ : α)) ≐ □(⊠(⊤ : α)) := h hfix\n  simpa using hbox.2\n· intro h x hx\n  have hxTop : x ≐ ⊠(⊤ : α) := ACR.gf_equiv_reft_top (g := ⟨x, hx⟩)\n  constructor\n  · calc\n      x ≤ ⊠x := hx.1\n      _ ≤ □⊠x := ACR.reft_le_prov_reft\n      _ ≤ □x := ACR.prov_mono hx.2\n  · calc\n      □x ≤ □(⊠(⊤ : α)) := ACR.prov_mono hxTop.1\n      _ ≤ ⊠(⊤ : α) := h\n      _ ≤ x := hxTop.2",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "no_diagnostics",
+      "new_problems": []
+    }
+  ],
+  "op_000031": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∃ (α : Type _), ∃ (hA : ACR α), ∃ (hP : @ACR.Prov α hA), ∃ (hR : @ACR.Reft α hA), ∃ (hAPS : @ACR.APS α hA hP hR), letI : ACR α := hA; letI : ACR.Prov α := hP; letI : ACR.Reft α := hR; letI : ACR.APS α := hAPS; ACR.Consistent α ∧ Nonempty (ACR.GödelFixpoint α) ∧ Nonempty (ACR.HenkinFixpoint α) ∧ ¬ ∃ x : α, x ≐ ⊠x ∧ x ≐ □x",
+      "formalized_statement": "∃ (α : Type _), ∃ (hA : ACR α), ∃ (hP : @ACR.Prov α hA), ∃ (hR : @ACR.Reft α hA), ∃ (hAPS : @ACR.APS α hA hP hR), letI : ACR α := hA; letI : ACR.Prov α := hP; letI : ACR.Reft α := hR; letI : ACR.APS α := hAPS; ACR.Consistent α ∧ Nonempty (ACR.GödelFixpoint α) ∧ Nonempty (ACR.HenkinFixpoint α) ∧ ¬ ∃ x : α, x ≐ ⊠x ∧ x ≐ □x",
+      "statement_formalization_notes": "The input statement is already a valid Lean proposition and uses the repository notation `≐`, `□`, and `⊠` with explicit existential packaging.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "Use the same concrete `ULift Nat` ACR model as in the existing consistent Gödel-fixpoint witness: `top = 2`, `bot = 0`, `x ≤ y` iff `x = 0` or `x = y` or `y = 3`, `□x = 3`, and `⊠x = 1` for `x = 1,3` and `⊠x = 3` otherwise. In this model, `1` is a Gödel fixpoint, `3` is a Henkin fixpoint, consistency is immediate since `2 ≤ 0` fails, and any common `⊠`/`□` fixpoint would have to be equivalent to `3` from `x ≐ □x`, but then `x ≤ ⊠x` becomes `3 ≤ 1`, impossible.",
+      "proof_text": "let rel : ULift Nat → ULift Nat → Prop := fun x y => x.down = 0 ∨ x = y ∨ y.down = 3\nlet provFn : ULift Nat → ULift Nat := fun _ => ⟨3⟩\nlet reftFn : ULift Nat → ULift Nat := fun x => if x.down = 1 ∨ x.down = 3 then ⟨1⟩ else ⟨3⟩\nlet hA : ACR (ULift Nat) :=\n  { top := ⟨2⟩\n    bot := ⟨0⟩\n    le := rel\n    lt := fun a b => rel a b ∧ ¬ rel b a\n    le_refl := by\n      intro x\n      exact Or.inr <| Or.inl rfl\n    le_trans := by\n      intro x y z hxy hyz\n      rcases hxy with hx0 | hxy | hy3\n      · exact Or.inl hx0\n      · cases hxy\n        exact hyz\n      · cases y with\n        | up n =>\n            simp at hy3\n            subst hy3\n            rcases hyz with hy0 | hyEq | hz3\n            · simp at hy0\n            · cases hyEq\n              exact Or.inr <| Or.inr rfl\n            · exact Or.inr <| Or.inr hz3\n    lt_iff_le_not_ge := by\n      intro a b\n      rfl }\nlet hP : @ACR.Prov (ULift Nat) hA :=\n  { prov := provFn }\nlet hR : @ACR.Reft (ULift Nat) hA :=\n  { reft := reftFn }\nletI : ACR (ULift Nat) := hA\nletI : ACR.Prov (ULift Nat) := hP\nletI : ACR.Reft (ULift Nat) := hR\nlet hAPS : @ACR.APS (ULift Nat) hA hP hR :=\n  { prov_mono := by\n      intro x y hxy\n      change rel (provFn x) (provFn y)\n      simp [rel, provFn]\n    reft_anti_mono := by\n      intro x y hxy\n      change rel (reftFn y) (reftFn x)\n      rcases hxy with hx0 | hxy | hy3\n      · cases x with\n        | up n =>\n            simp at hx0\n            subst hx0\n            simp [rel, reftFn]\n      · cases hxy\n        simp [rel]\n      · cases y with\n        | up n =>\n            simp at hy3\n            subst hy3\n            by_cases hx : x.down = 1 ∨ x.down = 3\n            · simp [rel, reftFn, hx]\n            · simp [rel, reftFn, hx]\n    top_le_reft_bot := by\n      change rel ⟨2⟩ (reftFn ⟨0⟩)\n      simp [rel, reftFn]\n    le_reft_top_of_le_prov_of_le_reft := by\n      intro x y hxy hxry\n      change rel x (reftFn ⟨2⟩)\n      simp [rel, reftFn]\n    reft_le_prov_reft := by\n      intro x\n      change rel (reftFn x) (provFn (reftFn x))\n      simp [rel, provFn] }\nletI : ACR.APS (ULift Nat) := hAPS\nrefine ⟨ULift Nat, hA, hP, hR, hAPS, ?_⟩\nrefine ⟨?_, ?_, ?_, ?_⟩\n· change ¬ rel ⟨2⟩ ⟨0⟩\n  simp [rel]\n· refine ⟨⟨⟨1⟩, ?_⟩⟩\n  constructor\n  · change rel ⟨1⟩ (reftFn ⟨1⟩)\n    simp [rel, reftFn]\n  · change rel (reftFn ⟨1⟩) ⟨1⟩\n    simp [rel, reftFn]\n· refine ⟨⟨⟨3⟩, ?_⟩⟩\n  constructor\n  · change rel ⟨3⟩ (provFn ⟨3⟩)\n    simp [rel, provFn]\n  · change rel (provFn ⟨3⟩) ⟨3⟩\n    simp [rel, provFn]\n· rintro ⟨x, hx, hbox⟩\n  rcases hx with ⟨hx1, hx2⟩\n  rcases hbox with ⟨hbox1, hbox2⟩\n  cases x with\n  | up n =>\n      have h3 : rel (provFn ⟨n⟩) ⟨n⟩ := by\n        simpa using hbox2\n      simp [rel, provFn] at h3\n      have hn : n = 3 := by\n        rcases h3 with h | h\n        · exact h.symm\n        · exact h\n      subst n\n      have h31 : rel ⟨3⟩ (reftFn ⟨3⟩) := by\n        simpa using hx1\n      simp [rel, reftFn] at h31",
       "counterexample_text": "",
       "lean_error_excerpt": "",
       "lean_error_fingerprint": "no_diagnostics",
@@ -1102,10 +671,9 @@
   "op_000032": [
     {
       "stage": "statement_formalization",
-      "source_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], Nonempty (ACR.GödelFixpoint α) → ((⊠(⊤ : α)) ≐ □(⊠(⊤ : α))) → ∀ {x : α}, x ≐ ⊠x → ∀ n : Nat, (Nat.iterate (fun y : α => □ y) n) x ≐ x",
-      "formalized_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], Nonempty (ACR.GödelFixpoint α) → ((⊠(⊤ : α)) ≐ □(⊠(⊤ : α))) → ∀ {x : α}, x ≐ ⊠x → ∀ n : Nat, (Nat.iterate (fun y : α => □ y) n) x ≐ x",
-      "theorem_name_stem": "iterate_box_eq_of_reft_fixpoint",
-      "statement_formalization_notes": "Direct formalization of the given statement, reusing the repository notation `≐`, `□`, and `⊠`.",
+      "source_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α], Nonempty (ACR.GödelFixpoint α) → ((⊠⊠(⊤ : α) ≐ ⊠(⊤ : α)) ↔ ∀ {x : α}, x ≐ ⊠x → x ≐ ⊠(⊤ : α))",
+      "formalized_statement": "∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α], Nonempty (ACR.GödelFixpoint α) → ((⊠⊠(⊤ : α) ≐ ⊠(⊤ : α)) ↔ ∀ {x : α}, x ≐ ⊠x → x ≐ ⊠(⊤ : α))",
+      "statement_formalization_notes": "The input statement is already a valid Lean proposition and uses the repository's preferred notation `≐`, `⊠`, and `ACR.GödelFixpoint`.",
       "result": "ok",
       "verify_success": true,
       "proof_sketch": "",
@@ -1113,6 +681,52 @@
       "counterexample_text": "",
       "lean_error_excerpt": "",
       "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": false,
+      "proof_sketch": "For the forward direction, a reft-fixed point x satisfies x ≤ □x by thm_reft_fixedpoint_le_box_000022, so APS gives x ≤ ⊠⊤; then anti-monotonicity plus the assumed equivalence ⊠⊠⊤ ≐ ⊠⊤ yields ⊠⊤ ≤ x. For the backward direction, install the given Nonempty Gödel-fixpoint instance, use ACR.reft_reft_top_le_reft_top for one inequality, and pick a Gödel fixpoint g; the hypothesis gives g ≐ ⊠⊤, and chaining ⊠⊤ ≤ g ≤ ⊠g ≤ ⊠⊠⊤ gives the reverse inequality.",
+      "proof_text": "intro α _ _ _ _ hg\nconstructor\n· intro h x hx\n  have hxTop : x ≤ ⊠(⊤ : α) := by\n    exact ACR.le_reft_top_of_le_prov_of_le_reft\n      (AutomatedTheoryConstruction.thm_reft_fixedpoint_le_box_000022 hx) hx.1\n  constructor\n  · exact hxTop\n  · calc\n      ⊠(⊤ : α) ≤ ⊠⊠(⊤ : α) := h.2\n      _ ≤ ⊠x := ACR.reft_anti_mono hxTop\n      _ ≤ x := hx.2\n· intro h\n  letI : Nonempty (ACR.GödelFixpoint α) := hg\n  constructor\n  · simpa using (ACR.reft_reft_top_le_reft_top (α := α))\n  · obtain ⟨g⟩ := hg\n    have hgTop : g.1 ≐ ⊠(⊤ : α) := h g.2\n    calc\n      ⊠(⊤ : α) ≤ g.1 := hgTop.2\n      _ ≤ ⊠g.1 := g.2.1\n      _ ≤ ⊠⊠(⊤ : α) := ACR.reft_anti_mono hgTop.2",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:12:9: error(lean.unknownIdentifier): Unknown identifier `AutomatedTheoryConstruction.thm_reft_fixedpoint_le_box_000022`",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:12:9: error(lean.unknownIdentifier): Unknown identifier `AutomatedTheoryConstruction.thm_reft_fixedpoint_le_box_000022`",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "For the forward implication, any reft-fixed point x satisfies x ≤ □x by chaining x ≤ ⊠x, ⊠x ≤ □⊠x, and monotonicity of □; then the APS axiom gives x ≤ ⊠⊤. Using the assumed equivalence ⊠⊠⊤ ≐ ⊠⊤ and anti-monotonicity of ⊠, we derive ⊠⊤ ≤ x, hence x ≐ ⊠⊤. For the reverse implication, install the given Nonempty Gödel-fixpoint hypothesis as an instance to get ACR.reft_reft_top_le_reft_top for one inequality, then choose a Gödel fixpoint g, use the hypothesis to get g ≐ ⊠⊤, and chain ⊠⊤ ≤ g ≤ ⊠g ≤ ⊠⊠⊤ for the other inequality.",
+      "proof_text": "intro α _ _ _ _ hg\nconstructor\n· intro h x hx\n  have hxBox : x ≤ □x := by\n    calc\n      x ≤ ⊠x := hx.1\n      _ ≤ □⊠x := ACR.reft_le_prov_reft\n      _ ≤ □x := ACR.prov_mono hx.2\n  have hxTop : x ≤ ⊠(⊤ : α) := by\n    exact ACR.le_reft_top_of_le_prov_of_le_reft hxBox hx.1\n  constructor\n  · exact hxTop\n  · calc\n      ⊠(⊤ : α) ≤ ⊠⊠(⊤ : α) := h.2\n      _ ≤ ⊠x := ACR.reft_anti_mono hxTop\n      _ ≤ x := hx.2\n· intro h\n  letI : Nonempty (ACR.GödelFixpoint α) := hg\n  constructor\n  · simpa using (ACR.reft_reft_top_le_reft_top (α := α))\n  · obtain ⟨g⟩ := hg\n    have hgTop : g.1 ≐ ⊠(⊤ : α) := h g.2\n    calc\n      ⊠(⊤ : α) ≤ g.1 := hgTop.2\n      _ ≤ ⊠g.1 := g.2.1\n      _ ≤ ⊠⊠(⊤ : α) := ACR.reft_anti_mono hgTop.2",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:12:9: error(lean.unknownIdentifier): Unknown identifier `AutomatedTheoryConstruction.thm_reft_fixedpoint_le_box_000022`",
+      "lean_error_fingerprint": "no_diagnostics",
+      "new_problems": []
+    }
+  ],
+  "op_000016": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∃ (α : Type _), ∃ (hA : ACR α), ∃ (hP : @ACR.Prov α hA), ∃ (hR : @ACR.Reft α hA), ∃ (hAPS : @ACR.APS α hA hP hR), letI : ACR α := hA; letI : ACR.Prov α := hP; letI : ACR.Reft α := hR; letI : ACR.APS α := hAPS; ∃ g : ACR.GödelFixpoint α, ¬ (g.1 ≐ □g.1)",
+      "formalized_statement": "∃ (α : Type _), ∃ (hA : ACR α), ∃ (hP : @ACR.Prov α hA), ∃ (hR : @ACR.Reft α hA), ∃ (hAPS : @ACR.APS α hA hP hR), letI : ACR α := hA; letI : ACR.Prov α := hP; letI : ACR.Reft α := hR; letI : ACR.APS α := hAPS; ∃ g : ACR.GödelFixpoint α, ¬ (g.1 ≐ □g.1)",
+      "statement_formalization_notes": "Used the statement's explicit existential packaging and local instance bindings; preserved repository notation `≐` and `□`.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "Use the same concrete `ULift Nat` ACR model as in the existing reft-fixpoint witness: order by the usual `Nat` order, set `⊤ = 0`, `⊥ = 2`, define `□x = 2`, and `⊠x = 2 - x`. Then `1` satisfies `1 ≐ ⊠1`, so it gives a Gödel fixpoint, but `□1 = 2`, and `1 ≐ 2` would force `2 ≤ 1`, impossible.",
+      "proof_text": "let hA : ACR (ULift Nat) :=\n  { top := ⟨0⟩\n    bot := ⟨2⟩\n    le := fun x y => x.down ≤ y.down\n    lt := fun x y => x.down ≤ y.down ∧ ¬ y.down ≤ x.down\n    le_refl := by\n      intro x\n      exact Nat.le_refl x.down\n    le_trans := by\n      intro x y z hxy hyz\n      exact Nat.le_trans hxy hyz }\nlet hP : @ACR.Prov (ULift Nat) hA :=\n  { prov := fun _ => ⟨2⟩ }\nlet hR : @ACR.Reft (ULift Nat) hA :=\n  { reft := fun x => ⟨2 - x.down⟩ }\nletI : ACR (ULift Nat) := hA\nletI : ACR.Prov (ULift Nat) := hP\nletI : ACR.Reft (ULift Nat) := hR\nlet hAPS : ACR.APS (ULift Nat) :=\n  { prov_mono := by\n      intro x y hxy\n      exact Nat.le_refl 2\n    reft_anti_mono := by\n      intro x y hxy\n      show 2 - y.down ≤ 2 - x.down\n      exact Nat.sub_le_sub_left hxy 2\n    top_le_reft_bot := by\n      show 0 ≤ (2 - 2)\n      decide\n    le_reft_top_of_le_prov_of_le_reft := by\n      intro x y hxy hxry\n      show x.down ≤ 2\n      simpa using hxy\n    reft_le_prov_reft := by\n      intro x\n      show 2 - x.down ≤ 2\n      exact Nat.sub_le _ _ }\nletI : ACR.APS (ULift Nat) := hAPS\nrefine ⟨ULift Nat, hA, hP, hR, hAPS, ?_⟩\nrefine ⟨⟨⟨1⟩, ?_⟩, ?_⟩\n· constructor\n  · show 1 ≤ 1\n    exact Nat.le_refl 1\n  · show 1 ≤ 1\n    exact Nat.le_refl 1\n· intro h\n  have h21 : 2 ≤ 1 := by\n    change ((⟨2⟩ : ULift Nat) ≤ ⟨1⟩)\n    exact h.2\n  have h' : ¬ 2 ≤ 1 := by\n    decide\n  exact h' h21",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "no_diagnostics",
       "new_problems": []
     }
   ]

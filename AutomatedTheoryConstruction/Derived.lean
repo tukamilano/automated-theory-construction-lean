@@ -1,4 +1,3 @@
-import Mathlib.Logic.Function.Iterate
 import AutomatedTheoryConstruction.Theory
 
 namespace AutomatedTheoryConstruction
@@ -7,366 +6,661 @@ namespace AutomatedTheoryConstruction
 -- Keep any short theorem docstrings/comments here instead of a separate metadata index.
 
 
+/-- `⊠⊠⊤ ≐ ⊠⊤` holds exactly when the theory has a Gödel fixpoint. -/
 theorem thm_double_reft_top_iff_godel_fixpoint_000001 : ∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], (⊠⊠(⊤ : α) ≐ ⊠(⊤ : α)) ↔ Nonempty (ACR.GödelFixpoint α) := by
   intro α _ _ _ _ _
   constructor
   · intro h
-    exact ⟨⟨⊠(⊤ : α), ⟨h.2, h.1⟩⟩⟩
+    refine ⟨⟨⊠(⊤ : α), ?_⟩⟩
+    exact ⟨h.2, h.1⟩
   · intro hg
-    constructor
-    · letI : Nonempty (ACR.GödelFixpoint α) := hg
-      simpa using (ACR.reft_reft_top_le_reft_top (α := α))
-    · exact ACR.reft_anti_mono (ACR.le_top (x := ⊠(⊤ : α)))
-
-
-theorem thm_equiv_reft_top_implies_reft_fixpoint_000002 : ∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α] {x : α}, Nonempty (ACR.GödelFixpoint α) → x ≐ ⊠(⊤ : α) → x ≐ ⊠x := by
-  intro α _ _ _ _ _ x hg hx
-  change x ≤ ⊠x ∧ ⊠x ≤ x
-  change x ≤ ⊠(⊤ : α) ∧ ⊠(⊤ : α) ≤ x at hx
-  rcases hx with ⟨hxt, htx⟩
-  constructor
-  · have htop : x ≤ (⊤ : α) := ACR.le_top (α := α) (x := x)
-    exact le_trans hxt (ACR.reft_anti_mono htop)
-  · have hxx : ⊠x ≤ ⊠(⊠(⊤ : α)) := ACR.reft_anti_mono htx
     letI : Nonempty (ACR.GödelFixpoint α) := hg
-    have htop : ⊠(⊠(⊤ : α)) ≤ ⊠(⊤ : α) := ACR.reft_reft_top_le_reft_top (α := α)
-    exact le_trans hxx (le_trans htop htx)
+    constructor
+    · simpa using (ACR.reft_reft_top_le_reft_top (α := α))
+    · simpa using (ACR.reft_anti_mono (ACR.le_top (x := ⊠(⊤ : α))))
 
 
-theorem thm_godel_fixpoint_box_irrefutable_000003 : ∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α], ACR.Consistent α → ∀ g : ACR.GödelFixpoint α, ¬ (⊬ (□g.1)) := by
-  intro α _ _ _ _ hCons g hbox
-  apply hCons
-  change (⊤ : α) ≤ ⊥
-  have hg_bot : g.1 ≤ (⊥ : α) := by
+/-- Assuming a Gödel fixpoint exists, `x` is reft-fixed exactly when `x ≐ ⊠⊤`. -/
+theorem thm_reft_fixedpoint_iff_reft_top_000005 : ∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], Nonempty (ACR.GödelFixpoint α) → ∀ {x : α}, (x ≐ ⊠x) ↔ x ≐ ⊠(⊤ : α) := by
+  intro α _ _ _ _ _ hg x
+  constructor
+  · intro hx
+    simpa using (ACR.gf_equiv_reft_top (g := ⟨x, hx⟩))
+  · intro hx
+    letI : Nonempty (ACR.GödelFixpoint α) := hg
+    have htop : ⊠⊠(⊤ : α) ≐ ⊠(⊤ : α) := by
+      constructor
+      · simpa using (ACR.reft_reft_top_le_reft_top (α := α))
+      · simpa using (ACR.reft_anti_mono (ACR.le_top (x := ⊠(⊤ : α))))
+    constructor
+    · calc
+        x ≤ ⊠(⊤ : α) := hx.1
+        _ ≤ ⊠⊠(⊤ : α) := htop.2
+        _ ≤ ⊠x := ACR.reft_anti_mono hx.1
+    · calc
+        ⊠x ≤ ⊠⊠(⊤ : α) := ACR.reft_anti_mono hx.2
+        _ ≤ ⊠(⊤ : α) := htop.1
+        _ ≤ x := hx.2
+
+
+/-- In a consistent theory, the box of any Gödel fixpoint is irrefutable. -/
+theorem thm_consistent_godel_box_irrefutable_000003 : ∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α], ACR.Consistent α → ∀ g : ACR.GödelFixpoint α, ¬ (⊬ □g.1) := by
+  intro α _ _ _ _ hcons g hbox
+  have h1 : g.1 ≤ (⊥ : α) :=
+    le_trans (le_trans g.2.1 (ACR.reft_gf_le_box_gf (g := g))) hbox
+  have h2 : ⊠(⊥ : α) ≤ ⊠g.1 := ACR.reft_anti_mono h1
+  have h3 : ⊠(⊥ : α) ≤ g.1 := le_trans h2 g.2.2
+  exact hcons <|
     calc
-      g.1 ≤ ⊠g.1 := g.2.1
-      _ ≤ □g.1 := ACR.reft_gf_le_box_gf (g := g)
-      _ ≤ ⊥ := hbox
-  have hreft_bot : ⊠(⊥ : α) ≤ g.1 := by
-    calc
-      ⊠(⊥ : α) ≤ ⊠g.1 := ACR.reft_anti_mono hg_bot
-      _ ≤ g.1 := g.2.2
-  calc
-    (⊤ : α) ≤ ⊠⊥ := ACR.top_le_reft_bot
-    _ ≤ g.1 := hreft_bot
-    _ ≤ ⊥ := hg_bot
+      (⊤ : α) ≤ ⊠(⊥ : α) := ACR.top_le_reft_bot
+      _ ≤ g.1 := h3
+      _ ≤ ⊥ := h1
 
 
-theorem thm_henkin_fixpoint_le_reft_top_000004 : ∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] {h : ACR.HenkinFixpoint α}, h.1 ≤ ⊠h.1 → h.1 ≤ ⊠(⊤ : α) := by
-  intro α _ _ _ _ h hh
-  exact ACR.le_reft_top_of_le_prov_of_le_reft h.2.1 hh
-
-
-theorem thm_reft_fixpoints_equivalent_000006 : ∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α] {x y : α}, x ≐ ⊠x → y ≐ ⊠y → x ≐ y := by
+/-- Any two reft-fixed points are equivalent. -/
+theorem thm_reft_fixpoints_equivalent_000007 : ∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α] {x y : α}, x ≐ ⊠x → y ≐ ⊠y → x ≐ y := by
   intro α _ _ _ _ _ x y hx hy
-  let gx : ACR.GödelFixpoint α := ⟨x, hx⟩
-  let gy : ACR.GödelFixpoint α := ⟨y, hy⟩
-  have hx' : x ≐ ⊠(⊤ : α) := ACR.gf_equiv_reft_top (g := gx)
-  have hy' : y ≐ ⊠(⊤ : α) := ACR.gf_equiv_reft_top (g := gy)
+  have hx' : x ≐ ⊠(⊤ : α) := by
+    simpa using (ACR.gf_equiv_reft_top (g := ⟨x, hx⟩))
+  have hy' : y ≐ ⊠(⊤ : α) := by
+    simpa using (ACR.gf_equiv_reft_top (g := ⟨y, hy⟩))
   constructor
   · exact le_trans hx'.1 hy'.2
   · exact le_trans hy'.1 hx'.2
 
 
-theorem thm_equiv_reft_top_irrefutable_000007 : ∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α] {x : α}, ACR.Consistent α → Nonempty (ACR.GödelFixpoint α) → x ≐ ⊠(⊤ : α) → ¬ (⊬ x) := by
-  intro α _ _ _ _ _ x hC hg hx
-  letI : Nonempty (ACR.GödelFixpoint α) := hg
-  intro hxr
-  exact ACR.irrefutable_reft_top (α := α) hC (le_trans hx.2 hxr)
+/-- There exists an ACR model with a reft-fixed point that is not equivalent to `⊠⊤`. -/
+theorem thm_exists_reft_fixpoint_not_reft_top_000008 : ∃ (α : Type _), ∃ (hA : ACR α), ∃ (hP : @ACR.Prov α hA), ∃ (hR : @ACR.Reft α hA), ∃ (hAPS : @ACR.APS α hA hP hR), letI : ACR α := hA; letI : ACR.Prov α := hP; letI : ACR.Reft α := hR; letI : ACR.APS α := hAPS; ∃ x : α, Nonempty (ACR.GödelFixpoint α) ∧ x ≐ ⊠x ∧ ¬ (x ≐ ⊠(⊤ : α)) := by
+  let hA : ACR (ULift Nat) :=
+    { top := ⟨0⟩
+      bot := ⟨2⟩
+      le := fun x y => x.down ≤ y.down
+      lt := fun x y => x.down ≤ y.down ∧ ¬ y.down ≤ x.down
+      le_refl := by
+        intro x
+        exact Nat.le_refl x.down
+      le_trans := by
+        intro x y z hxy hyz
+        exact Nat.le_trans hxy hyz }
+  let hP : @ACR.Prov (ULift Nat) hA :=
+    { prov := fun _ => ⟨2⟩ }
+  let hR : @ACR.Reft (ULift Nat) hA :=
+    { reft := fun x => ⟨2 - x.down⟩ }
+  letI : ACR (ULift Nat) := hA
+  letI : ACR.Prov (ULift Nat) := hP
+  letI : ACR.Reft (ULift Nat) := hR
+  let hAPS : ACR.APS (ULift Nat) :=
+    { prov_mono := by
+        intro x y hxy
+        exact Nat.le_refl 2
+      reft_anti_mono := by
+        intro x y hxy
+        show 2 - y.down ≤ 2 - x.down
+        exact Nat.sub_le_sub_left hxy 2
+      top_le_reft_bot := by
+        show 0 ≤ (2 - 2)
+        decide
+      le_reft_top_of_le_prov_of_le_reft := by
+        intro x y hxy hxry
+        show x.down ≤ 2
+        simpa using hxy
+      reft_le_prov_reft := by
+        intro x
+        show 2 - x.down ≤ 2
+        exact Nat.sub_le _ _ }
+  letI : ACR.APS (ULift Nat) := hAPS
+  refine ⟨ULift Nat, hA, hP, hR, hAPS, ?_⟩
+  refine ⟨⟨1⟩, ?_⟩
+  refine ⟨?_, ?_, ?_⟩
+  · refine ⟨⟨⟨1⟩, ?_⟩⟩
+    constructor
+    · show 1 ≤ 1
+      exact Nat.le_refl 1
+    · show 1 ≤ 1
+      exact Nat.le_refl 1
+  · constructor
+    · show 1 ≤ 1
+      exact Nat.le_refl 1
+    · show 1 ≤ 1
+      exact Nat.le_refl 1
+  · intro hx
+    have h21 : 2 ≤ 1 := by
+      change ((⟨2⟩ : ULift Nat) ≤ ⟨1⟩)
+      exact hx.2
+    have h : ¬ 2 ≤ 1 := by decide
+    exact h h21
 
 
-theorem thm_godel_fixpoint_irrefutable_000008 : ∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α], ACR.Consistent α → ∀ g : ACR.GödelFixpoint α, ¬ (⊬ g.1) := by
+/-- In a consistent theory, every Gödel fixpoint is irrefutable. -/
+theorem thm_consistent_godel_irrefutable_000009 : ∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α], ACR.Consistent α → ∀ g : ACR.GödelFixpoint α, ¬ (⊬ g.1) := by
   intro α _ _ _ _ hC g hg
-  apply hC
-  change (⊤ : α) ≤ ⊥
-  have h₁ : ⊠(⊥ : α) ≤ ⊠g.1 := ACR.reft_anti_mono hg
-  have h₂ : ⊠(⊥ : α) ≤ g.1 := le_trans h₁ g.2.2
-  calc
-    (⊤ : α) ≤ ⊠⊥ := ACR.top_le_reft_bot
-    _ ≤ g.1 := h₂
-    _ ≤ ⊥ := hg
-
-
-theorem thm_box_reft_top_irrefutable_000009 : ∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], ACR.Consistent α → Nonempty (ACR.GödelFixpoint α) → ¬ (⊬ (□(⊠(⊤ : α)))) := by
-  intro α _ _ _ _ _ hC hg hbox
-  letI : Nonempty (ACR.GödelFixpoint α) := hg
-  have hreft_top : ¬ (⊬ (⊠(⊤ : α))) := ACR.irrefutable_reft_top (α := α) hC
-  apply hreft_top
-  exact le_trans (ACR.reft_le_prov_reft (x := (⊤ : α))) hbox
-
-
-theorem thm_le_any_reft_of_self_bounds_000010 : ∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α] {x y : α}, x ≤ □x → x ≤ ⊠x → x ≤ ⊠y := by
-  intro α _ _ _ _ _ x y hxbox hxreft
-  have htop : x ≤ ⊠(⊤ : α) := by
-    exact ACR.le_reft_top_of_le_prov_of_le_reft hxbox hxreft
-  have hmono : ⊠(⊤ : α) ≤ ⊠y := by
-    exact ACR.reft_anti_mono (ACR.le_top (x := y))
-  exact le_trans htop hmono
-
-
-theorem thm_all_reft_irrefutable_000011 : ∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], ACR.Consistent α → Nonempty (ACR.GödelFixpoint α) → ∀ x : α, ¬ (⊬ (⊠ x)) := by
-  intro α _ _ _ _ _ h hg x hx
-  letI : Nonempty (ACR.GödelFixpoint α) := hg
-  exact ACR.irrefutable_reft_top h (le_trans (ACR.reft_anti_mono (ACR.le_top (x := x))) hx)
-
-
-theorem thm_reft_fixpoint_iff_double_reft_top_000012 : ∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α] {x : α}, x ≐ ⊠(⊤ : α) → (x ≐ ⊠x ↔ ⊠⊠(⊤ : α) ≐ ⊠(⊤ : α)) := by
-  intro α _ _ _ _ _ x hx
-  constructor
-  · intro hfix
-    letI : Nonempty (ACR.GödelFixpoint α) := ⟨⟨x, hfix⟩⟩
-    change ⊠⊠(⊤ : α) ≤ ⊠(⊤ : α) ∧ ⊠(⊤ : α) ≤ ⊠⊠(⊤ : α)
-    constructor
-    · simpa using (ACR.reft_reft_top_le_reft_top (α := α))
-    · exact ACR.reft_anti_mono (ACR.le_top (α := α) (x := ⊠(⊤ : α)))
-  · intro hdd
-    change x ≤ ⊠x ∧ ⊠x ≤ x
-    change x ≤ ⊠(⊤ : α) ∧ ⊠(⊤ : α) ≤ x at hx
-    rcases hx with ⟨hxt, htx⟩
-    change ⊠⊠(⊤ : α) ≤ ⊠(⊤ : α) ∧ ⊠(⊤ : α) ≤ ⊠⊠(⊤ : α) at hdd
-    constructor
-    · have htop : x ≤ (⊤ : α) := ACR.le_top (α := α) (x := x)
-      exact le_trans hxt (ACR.reft_anti_mono htop)
-    · have hxx : ⊠x ≤ ⊠⊠(⊤ : α) := ACR.reft_anti_mono htx
-      exact le_trans hxx (le_trans hdd.1 htx)
-
-
-theorem thm_all_reft_fixpoints_iff_double_reft_top_000013 : ∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], (∀ {x : α}, x ≐ ⊠x ↔ x ≐ ⊠(⊤ : α)) ↔ (⊠⊠(⊤ : α) ≐ ⊠(⊤ : α)) := by
-  intro α _ _ _ _ _
-  constructor
-  · intro h
-    have h' : (⊠(⊤ : α)) ≐ ⊠⊠(⊤ : α) :=
-      (h (x := ⊠(⊤ : α))).2 ⟨le_rfl, le_rfl⟩
-    exact ⟨h'.2, h'.1⟩
-  · intro hfix
-    intro x
-    constructor
-    · intro hx
-      simpa using (ACR.gf_equiv_reft_top (α := α) (g := (⟨x, hx⟩ : ACR.GödelFixpoint α)))
-    · intro hx
-      rcases hx with ⟨hxt, htx⟩
-      constructor
-      · have htop : x ≤ (⊤ : α) := ACR.le_top (α := α) (x := x)
-        exact le_trans hxt (ACR.reft_anti_mono htop)
-      · have hxx : ⊠x ≤ ⊠⊠(⊤ : α) := ACR.reft_anti_mono htx
-        exact le_trans hxx (le_trans hfix.1 htx)
-
-
-theorem thm_reft_fixpoint_iff_reft_top_000014 : ∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], Nonempty (ACR.GödelFixpoint α) → ∀ {x : α}, x ≐ ⊠x ↔ x ≐ ⊠(⊤ : α) := by
-  intro α _ _ _ _ _ hg x
-  constructor
-  · intro hx
-    simpa using (ACR.gf_equiv_reft_top (α := α) (g := (⟨x, hx⟩ : ACR.GödelFixpoint α)))
-  · intro hx
-    rcases hx with ⟨hxt, htx⟩
-    constructor
-    · have htop : x ≤ (⊤ : α) := ACR.le_top (α := α) (x := x)
-      exact le_trans hxt (ACR.reft_anti_mono htop)
-    · have hxx : ⊠x ≤ ⊠⊠(⊤ : α) := ACR.reft_anti_mono htx
-      letI : Nonempty (ACR.GödelFixpoint α) := hg
-      exact le_trans hxx (le_trans (ACR.reft_reft_top_le_reft_top (α := α)) htx)
-
-
-theorem thm_reft_top_box_iff_all_reft_fixpoints_000015 : ∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], Nonempty (ACR.GödelFixpoint α) → ((⊠(⊤ : α)) ≐ □(⊠(⊤ : α))) ↔ ∀ {x : α}, x ≐ ⊠x → x ≐ □x := by
-  intro α _ _ _ _ _
-  constructor
-  · intro h x hx
-    have hg : Nonempty (ACR.GödelFixpoint α) := ⟨⟨x, hx⟩⟩
-    have htop : ⊠(⊤ : α) ≐ □(⊠(⊤ : α)) := h hg
-    have hxtop : x ≐ ⊠(⊤ : α) := by
-      simpa using (ACR.gf_equiv_reft_top (α := α) (g := (⟨x, hx⟩ : ACR.GödelFixpoint α)))
-    constructor
-    · calc
-        x ≤ ⊠(⊤ : α) := hxtop.1
-        _ ≤ □(⊠(⊤ : α)) := htop.1
-        _ ≤ □x := ACR.prov_mono hxtop.2
-    · calc
-        □x ≤ □(⊠(⊤ : α)) := ACR.prov_mono hxtop.1
-        _ ≤ ⊠(⊤ : α) := htop.2
-        _ ≤ x := hxtop.2
-  · intro hall hg
-    letI : Nonempty (ACR.GödelFixpoint α) := hg
-    have hfix : (⊠(⊤ : α)) ≐ ⊠⊠(⊤ : α) := by
-      constructor
-      · exact ACR.reft_anti_mono (ACR.le_top (x := ⊠(⊤ : α)))
-      · simpa using (ACR.reft_reft_top_le_reft_top (α := α))
-    exact hall (x := ⊠(⊤ : α)) hfix
-
-
-theorem thm_godel_fixpoint_iff_double_reft_top_000016 : ∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], Nonempty (ACR.GödelFixpoint α) ↔ (⊠⊠(⊤ : α) ≐ ⊠(⊤ : α)) := by
-  intro α _ _ _ _ _
-  constructor
-  · intro hg
-    letI : Nonempty (ACR.GödelFixpoint α) := hg
-    constructor
-    · simpa using (ACR.reft_reft_top_le_reft_top (α := α))
-    · exact ACR.reft_anti_mono (ACR.le_top (x := ⊠(⊤ : α)))
-  · intro h
-    exact ⟨⟨⊠(⊤ : α), ⟨h.2, h.1⟩⟩⟩
-
-
-theorem thm_inconsistent_iff_all_refutable_000017 : ∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], ACR.Inconsistent α ↔ ∀ x : α, ⊬ x := by
-  intro α _ _ _ _ _
-  constructor
-  · intro h x
-    exact le_trans (ACR.le_top (x := x)) h
-  · intro h
-    simpa [ACR.Inconsistent] using h (⊤ : α)
-
-
-theorem thm_consistent_iff_all_godel_irrefutable_000018 : ∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], Nonempty (ACR.GödelFixpoint α) → (ACR.Consistent α ↔ ∀ g : ACR.GödelFixpoint α, ¬ (⊬ g.1)) := by
-  intro α _ _ _ _ _ hg
-  constructor
-  · intro hCons
-    letI : Nonempty (ACR.GödelFixpoint α) := hg
-    intro g hgBot
-    have htop : (⊠ ((⊤ : α))) ≤ g.1 := (ACR.gf_equiv_reft_top (α := α) (g := g)).2
-    exact ACR.irrefutable_reft_top (α := α) hCons (le_trans htop hgBot)
-  · intro hAll
-    intro hIncon
-    obtain ⟨g⟩ := hg
-    have htop : g.1 ≤ (⊤ : α) := ACR.le_top
-    have hbot : g.1 ≤ (⊥ : α) := le_trans htop hIncon
-    exact hAll g hbot
-
-
-theorem thm_godel_fixpoint_equiv_irrefutable_000019 : ∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α], ACR.Consistent α → ∀ {x : α}, (∃ g : ACR.GödelFixpoint α, x ≐ g.1) → ¬ (⊬ x) := by
-  intro α _ _ _ _ hCons x hx hxbot
-  rcases hx with ⟨g, hxg⟩
-  apply hCons
-  change (⊤ : α) ≤ ⊥
-  have h1 : g.1 ≤ (⊥ : α) := le_trans hxg.2 hxbot
+  have h1 : g.1 ≤ (⊥ : α) := hg
   have h2 : ⊠(⊥ : α) ≤ ⊠g.1 := ACR.reft_anti_mono h1
   have h3 : ⊠(⊥ : α) ≤ g.1 := le_trans h2 g.2.2
+  exact hC <|
+    calc
+      (⊤ : α) ≤ ⊠(⊥ : α) := ACR.top_le_reft_bot
+      _ ≤ g.1 := h3
+      _ ≤ ⊥ := h1
+
+
+/-- ∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] {x : α}, x ≐ ⊠x → x ≤ □x (auto-generated from op_000022) -/
+theorem thm_reft_fixedpoint_le_box_000022 : ∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] {x : α}, x ≐ ⊠x → x ≤ □x := by
+  intro α _ _ _ _ x h
   calc
-    (⊤ : α) ≤ ⊠(⊥ : α) := ACR.top_le_reft_bot
-    _ ≤ g.1 := h3
-    _ ≤ (⊥ : α) := h1
+    x ≤ ⊠x := h.1
+    _ ≤ □⊠x := ACR.reft_le_prov_reft
+    _ ≤ □x := ACR.prov_mono h.2
 
 
-theorem thm_iterate_box_reft_top_irrefutable_000020 : ∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], ACR.Consistent α → Nonempty (ACR.GödelFixpoint α) → ∀ n : Nat, ¬ (⊬ (Nat.iterate (fun x : α => □x) n (⊠ (⊤ : α)))) := by
-  intro α _ _ _ _ _ hCons hg n
-  let f : α → α := fun x => □x
-  cases n with
-  | zero =>
-      letI : Nonempty (ACR.GödelFixpoint α) := hg
-      simpa [f, Nat.iterate] using (ACR.irrefutable_reft_top (α := α) hCons)
-  | succ n =>
-      obtain ⟨g⟩ := hg
-      have hg_eq : g.1 ≐ ⊠(⊤ : α) := ACR.gf_equiv_reft_top (α := α) (g := g)
-      have hg_le_boxg : g.1 ≤ □g.1 := by
-        exact le_trans g.2.1 (ACR.reft_gf_le_box_gf (g := g))
-      have hiter_mono : ∀ m : Nat, ∀ {x y : α}, x ≤ y → Nat.iterate f m x ≤ Nat.iterate f m y := by
-        intro m
-        induction m with
-        | zero =>
-            intro x y hxy
-            simpa [Nat.iterate]
-        | succ m ih =>
-            intro x y hxy
-            simpa [f, Nat.iterate] using ih (x := □x) (y := □y) (ACR.prov_mono hxy)
-      have hboxg_chain : ∀ m : Nat, □g.1 ≤ Nat.iterate f m (□g.1) := by
-        intro m
-        induction m with
-        | zero =>
-            simp [Nat.iterate]
-        | succ m ih =>
-            calc
-              □g.1 ≤ Nat.iterate f m (□g.1) := ih
-              _ ≤ Nat.iterate f m (□□g.1) := hiter_mono m (ACR.prov_mono hg_le_boxg)
-              _ = Nat.iterate f (Nat.succ m) (□g.1) := by
-                simp [f, Nat.iterate]
-      intro hIter
-      have hboxg_le_iterg : □g.1 ≤ Nat.iterate f (Nat.succ n) g.1 := by
-        simpa [f, Nat.iterate] using hboxg_chain n
-      have hiterg_le_itertop : Nat.iterate f (Nat.succ n) g.1 ≤ Nat.iterate f (Nat.succ n) (⊠(⊤ : α)) :=
-        hiter_mono (Nat.succ n) hg_eq.1
-      exact
-        (AutomatedTheoryConstruction.thm_godel_fixpoint_box_irrefutable_000003 (α := α) hCons g)
-          (le_trans hboxg_le_iterg (le_trans hiterg_le_itertop hIter))
+/-- ∃ (α : Type _), ∃ (hA : ACR α), ∃ (hP : @ACR.Prov α hA), ∃ (hR : @ACR.Reft α hA), ∃ (hAPS : @ACR.APS α hA hP hR), letI : ACR α := hA; letI : ACR.Prov α := hP; letI : ACR.Reft α := hR; letI : ACR.APS α := hAPS; ACR.Consistent α ∧ Nonempty... -/
+theorem thm_exists_consistent_fixpoint_not_reft_top_000018 : ∃ (α : Type _), ∃ (hA : ACR α), ∃ (hP : @ACR.Prov α hA), ∃ (hR : @ACR.Reft α hA), ∃ (hAPS : @ACR.APS α hA hP hR), letI : ACR α := hA; letI : ACR.Prov α := hP; letI : ACR.Reft α := hR; letI : ACR.APS α := hAPS; ACR.Consistent α ∧ Nonempty (ACR.GödelFixpoint α) ∧ ∃ x : α, x ≐ ⊠x ∧ ¬ (x ≐ ⊠(⊤ : α)) := by
+  let rel : ULift Nat → ULift Nat → Prop := fun x y => x.down = 0 ∨ x = y ∨ y.down = 3
+  let provFn : ULift Nat → ULift Nat := fun _ => ⟨3⟩
+  let reftFn : ULift Nat → ULift Nat := fun x => if x.down = 1 ∨ x.down = 3 then ⟨1⟩ else ⟨3⟩
+  let hA : ACR (ULift Nat) :=
+    { top := ⟨2⟩
+      bot := ⟨0⟩
+      le := rel
+      lt := fun a b => rel a b ∧ ¬ rel b a
+      le_refl := by
+        intro x
+        exact Or.inr <| Or.inl rfl
+      le_trans := by
+        intro x y z hxy hyz
+        rcases hxy with hx0 | hxy | hy3
+        · exact Or.inl hx0
+        · cases hxy
+          exact hyz
+        · cases y with
+          | up n =>
+              simp at hy3
+              subst hy3
+              rcases hyz with hy0 | hyEq | hz3
+              · simp at hy0
+              · cases hyEq
+                exact Or.inr <| Or.inr rfl
+              · exact Or.inr <| Or.inr hz3
+      lt_iff_le_not_ge := by
+        intro a b
+        rfl }
+  let hP : @ACR.Prov (ULift Nat) hA :=
+    { prov := provFn }
+  let hR : @ACR.Reft (ULift Nat) hA :=
+    { reft := reftFn }
+  letI : ACR (ULift Nat) := hA
+  letI : ACR.Prov (ULift Nat) := hP
+  letI : ACR.Reft (ULift Nat) := hR
+  let hAPS : @ACR.APS (ULift Nat) hA hP hR :=
+    { prov_mono := by
+        intro x y hxy
+        change rel (provFn x) (provFn y)
+        simp [rel, provFn]
+      reft_anti_mono := by
+        intro x y hxy
+        change rel (reftFn y) (reftFn x)
+        rcases hxy with hx0 | hxy | hy3
+        · cases x with
+          | up n =>
+              simp at hx0
+              subst hx0
+              simp [rel, reftFn]
+        · cases hxy
+          simp [rel]
+        · cases y with
+          | up n =>
+              simp at hy3
+              subst hy3
+              by_cases hx : x.down = 1 ∨ x.down = 3
+              · simp [rel, reftFn, hx]
+              · simp [rel, reftFn, hx]
+      top_le_reft_bot := by
+        change rel ⟨2⟩ (reftFn ⟨0⟩)
+        simp [rel, reftFn]
+      le_reft_top_of_le_prov_of_le_reft := by
+        intro x y hxy hxry
+        change rel x (reftFn ⟨2⟩)
+        simp [rel, reftFn]
+      reft_le_prov_reft := by
+        intro x
+        change rel (reftFn x) (provFn (reftFn x))
+        simp [rel, provFn] }
+  letI : ACR.APS (ULift Nat) := hAPS
+  refine ⟨ULift Nat, hA, hP, hR, hAPS, ?_⟩
+  refine ⟨?_, ?_, ?_⟩
+  · change ¬ rel ⟨2⟩ ⟨0⟩
+    simp [rel]
+  · refine ⟨⟨⟨1⟩, ?_⟩⟩
+    constructor
+    · change rel ⟨1⟩ (reftFn ⟨1⟩)
+      simp [rel, reftFn]
+    · change rel (reftFn ⟨1⟩) ⟨1⟩
+      simp [rel, reftFn]
+  · refine ⟨⟨1⟩, ?_⟩
+    constructor
+    · constructor
+      · change rel ⟨1⟩ (reftFn ⟨1⟩)
+        simp [rel, reftFn]
+      · change rel (reftFn ⟨1⟩) ⟨1⟩
+        simp [rel, reftFn]
+    · intro h
+      have h31 := h.2
+      change rel (reftFn ⟨2⟩) ⟨1⟩ at h31
+      simp [rel, reftFn] at h31
 
-theorem thm_not_both_box_reft_top_refutable_000021 : ∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], ACR.Consistent α → Nonempty (ACR.GödelFixpoint α) → ¬ (⊬ □(⊠(⊤ : α)) ∧ ⊬ ⊠(⊤ : α)) := by
-  intro α _ _ _ _ _ hCons hGodel h
-  letI : Nonempty (ACR.GödelFixpoint α) := hGodel
-  exact (ACR.irrefutable_reft_top (α := α) hCons) h.2
+
+/-- ∃ (α : Type _), ∃ (hA : ACR α), ∃ (hP : @ACR.Prov α hA), ∃ (hR : @ACR.Reft α hA), ∃ (hAPS : @ACR.APS α hA hP hR), letI : ACR α := hA; letI : ACR.Prov α := hP; letI : ACR.Reft α := hR; letI : ACR.APS α := hAPS; ACR.Consistent α ∧ Nonempty... -/
+theorem thm_reft_fixedpoint_not_above_reft_top_000019 : ∃ (α : Type _), ∃ (hA : ACR α), ∃ (hP : @ACR.Prov α hA), ∃ (hR : @ACR.Reft α hA), ∃ (hAPS : @ACR.APS α hA hP hR), letI : ACR α := hA; letI : ACR.Prov α := hP; letI : ACR.Reft α := hR; letI : ACR.APS α := hAPS; ACR.Consistent α ∧ Nonempty (ACR.GödelFixpoint α) ∧ ∃ x : α, x ≐ ⊠x ∧ ¬ (⊠(⊤ : α) ≤ x) := by
+  let rel : ULift Nat → ULift Nat → Prop := fun x y => x.down = 0 ∨ x = y ∨ y.down = 3
+  let provFn : ULift Nat → ULift Nat := fun _ => ⟨3⟩
+  let reftFn : ULift Nat → ULift Nat := fun x => if x.down = 1 ∨ x.down = 3 then ⟨1⟩ else ⟨3⟩
+  let hA : ACR (ULift Nat) :=
+    { top := ⟨2⟩
+      bot := ⟨0⟩
+      le := rel
+      lt := fun a b => rel a b ∧ ¬ rel b a
+      le_refl := by
+        intro x
+        exact Or.inr <| Or.inl rfl
+      le_trans := by
+        intro x y z hxy hyz
+        rcases hxy with hx0 | hxy | hy3
+        · exact Or.inl hx0
+        · cases hxy
+          exact hyz
+        · cases y with
+          | up n =>
+              simp at hy3
+              subst hy3
+              rcases hyz with hy0 | hyEq | hz3
+              · simp at hy0
+              · cases hyEq
+                exact Or.inr <| Or.inr rfl
+              · exact Or.inr <| Or.inr hz3
+      lt_iff_le_not_ge := by
+        intro a b
+        rfl }
+  let hP : @ACR.Prov (ULift Nat) hA :=
+    { prov := provFn }
+  let hR : @ACR.Reft (ULift Nat) hA :=
+    { reft := reftFn }
+  letI : ACR (ULift Nat) := hA
+  letI : ACR.Prov (ULift Nat) := hP
+  letI : ACR.Reft (ULift Nat) := hR
+  let hAPS : @ACR.APS (ULift Nat) hA hP hR :=
+    { prov_mono := by
+        intro x y hxy
+        change rel (provFn x) (provFn y)
+        simp [rel, provFn]
+      reft_anti_mono := by
+        intro x y hxy
+        change rel (reftFn y) (reftFn x)
+        rcases hxy with hx0 | hxy | hy3
+        · cases x with
+          | up n =>
+              simp at hx0
+              subst hx0
+              simp [rel, reftFn]
+        · cases hxy
+          simp [rel]
+        · cases y with
+          | up n =>
+              simp at hy3
+              subst hy3
+              by_cases hx : x.down = 1 ∨ x.down = 3
+              · simp [rel, reftFn, hx]
+              · simp [rel, reftFn, hx]
+      top_le_reft_bot := by
+        change rel ⟨2⟩ (reftFn ⟨0⟩)
+        simp [rel, reftFn]
+      le_reft_top_of_le_prov_of_le_reft := by
+        intro x y hxy hxry
+        change rel x (reftFn ⟨2⟩)
+        simp [rel, reftFn]
+      reft_le_prov_reft := by
+        intro x
+        change rel (reftFn x) (provFn (reftFn x))
+        simp [rel, provFn] }
+  letI : ACR.APS (ULift Nat) := hAPS
+  refine ⟨ULift Nat, hA, hP, hR, hAPS, ?_⟩
+  refine ⟨?_, ?_, ?_⟩
+  · change ¬ rel ⟨2⟩ ⟨0⟩
+    simp [rel]
+  · refine ⟨⟨⟨1⟩, ?_⟩⟩
+    constructor
+    · change rel ⟨1⟩ (reftFn ⟨1⟩)
+      simp [rel, reftFn]
+    · change rel (reftFn ⟨1⟩) ⟨1⟩
+      simp [rel, reftFn]
+  · refine ⟨⟨1⟩, ?_⟩
+    constructor
+    · constructor
+      · change rel ⟨1⟩ (reftFn ⟨1⟩)
+        simp [rel, reftFn]
+      · change rel (reftFn ⟨1⟩) ⟨1⟩
+        simp [rel, reftFn]
+    · intro h
+      change rel (reftFn ⟨2⟩) ⟨1⟩ at h
+      simp [rel, reftFn] at h
 
 
-theorem thm_le_godel_fixpoint_of_self_bounds_000023 : ∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], Nonempty (ACR.GödelFixpoint α) → ∀ {x : α}, x ≤ □x → x ≤ ⊠x → ∀ g : ACR.GödelFixpoint α, x ≤ g.1 := by
-  intro α _ _ _ _ _ _ x hxBox hxReft g
-  exact le_trans (thm_le_any_reft_of_self_bounds_000010 (x := x) (y := g.1) hxBox hxReft) g.2.2
-
-
-theorem thm_consistent_iff_all_reft_irrefutable_000024 : ∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], Nonempty (ACR.GödelFixpoint α) → (ACR.Consistent α ↔ ∀ x : α, ¬ (⊬ (⊠ x))) := by
-  intro α _ _ _ _ _ hgf
-  letI : Nonempty (ACR.GödelFixpoint α) := hgf
+/-- ∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α] {h : ACR.HenkinFixpoint α}, h.1 ≤ ⊠h.1 ↔ h.1 ≤ ⊠(⊤ : α) (auto-generated from op_000006) -/
+theorem thm_henkin_le_reft_self_iff_top_000006 : ∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α] {h : ACR.HenkinFixpoint α}, h.1 ≤ ⊠h.1 ↔ h.1 ≤ ⊠(⊤ : α) := by
+  intro α _ _ _ _ _ h
   constructor
-  · intro hCons x hx
-    apply ACR.irrefutable_reft_top (α := α) hCons
-    exact le_trans (ACR.reft_anti_mono (ACR.le_top (x := x))) hx
-  · intro hall hIncon
-    exact (hall ⊤) (le_trans (ACR.le_top (x := ⊠ (⊤ : α))) hIncon)
+  · intro hh
+    exact ACR.le_reft_top_of_le_prov_of_le_reft h.2.1 hh
+  · intro hh
+    exact le_trans hh (ACR.reft_anti_mono (ACR.le_top (x := h.1)))
 
 
-theorem thm_iterate_box_reft_irrefutable_000025 : ∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], ACR.Consistent α → Nonempty (ACR.GödelFixpoint α) → ∀ x : α, ∀ n : Nat, ¬ (⊬ (Nat.iterate (fun y : α => □ y) n (⊠ x))) := by
-  intro α _ _ _ _ _ hCons hg x n hRef
-  have htop : ⊠(⊤ : α) ≤ ⊠x := by
-    exact ACR.reft_anti_mono (ACR.le_top (x := x))
-  have hiter_mono :
-      ∀ m : Nat, ∀ {a b : α}, a ≤ b →
-        Nat.iterate (fun y : α => □ y) m a ≤ Nat.iterate (fun y : α => □ y) m b := by
-    intro m
-    induction m with
-    | zero =>
-        intro a b hab
-        simpa [Nat.iterate] using hab
-    | succ m ih =>
-        intro a b hab
-        simpa [Nat.iterate] using ih (a := □a) (b := □b) (ACR.prov_mono hab)
-  have hiter :
-      Nat.iterate (fun y : α => □ y) n (⊠(⊤ : α)) ≤
-        Nat.iterate (fun y : α => □ y) n (⊠x) :=
-    hiter_mono n htop
-  exact
-    (AutomatedTheoryConstruction.thm_iterate_box_reft_top_irrefutable_000020
-      (α := α) hCons hg n)
-      (le_trans hiter hRef)
-
-
-theorem thm_reft_iterate_top_equiv_000026 : ∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], ⊠⊠(⊤ : α) ≐ ⊠(⊤ : α) → ∀ n : Nat, (Nat.iterate (fun y : α => ⊠ y) (n + 1) (⊤ : α)) ≐ ⊠(⊤ : α) := by
-  intro α _ _ _ _ _ h n
-  let f : α → α := fun y => ⊠ y
-  have hmap : ∀ {x y : α}, x ≐ y → f x ≐ f y := by
-    intro x y hxy
-    exact ⟨ACR.reft_anti_mono hxy.2, ACR.reft_anti_mono hxy.1⟩
-  have hiter_map : ∀ m : Nat, ∀ {x y : α}, x ≐ y → Nat.iterate f m x ≐ Nat.iterate f m y := by
-    intro m
-    induction m with
-    | zero =>
+/-- ∃ (α : Type _), ∃ (hA : ACR α), ∃ (hP : @ACR.Prov α hA), ∃ (hR : @ACR.Reft α hA), ∃ (hAPS : @ACR.APS α hA hP hR), letI : ACR α := hA; letI : ACR.Prov α := hP; letI : ACR.Reft α := hR; letI : ACR.APS α := hAPS; ∃ (x y : α), x ≐ ⊠x ∧ y ≐ ⊠... -/
+theorem thm_distinct_reft_fixpoints_exist_000011 : ∃ (α : Type _), ∃ (hA : ACR α), ∃ (hP : @ACR.Prov α hA), ∃ (hR : @ACR.Reft α hA), ∃ (hAPS : @ACR.APS α hA hP hR), letI : ACR α := hA; letI : ACR.Prov α := hP; letI : ACR.Reft α := hR; letI : ACR.APS α := hAPS; ∃ (x y : α), x ≐ ⊠x ∧ y ≐ ⊠y ∧ ¬ (x ≐ y) := by
+  let rel : ULift Nat → ULift Nat → Prop := fun x y => x.down = 0 ∨ x = y ∨ y.down = 3
+  let provFn : ULift Nat → ULift Nat := fun _ => ⟨3⟩
+  let reftFn : ULift Nat → ULift Nat := fun x =>
+    if x.down = 0 then ⟨3⟩ else if x.down = 3 then ⟨0⟩ else x
+  let hA : ACR (ULift Nat) :=
+    { top := ⟨0⟩
+      bot := ⟨0⟩
+      le := rel
+      lt := fun a b => rel a b ∧ ¬ rel b a
+      le_refl := by
+        intro x
+        exact Or.inr <| Or.inl rfl
+      le_trans := by
+        intro x y z hxy hyz
+        rcases hxy with hx0 | hxy | hy3
+        · exact Or.inl hx0
+        · cases hxy
+          exact hyz
+        · cases y with
+          | up n =>
+              simp at hy3
+              subst hy3
+              rcases hyz with hy0 | hyEq | hz3
+              · simp at hy0
+              · cases hyEq
+                exact Or.inr <| Or.inr rfl
+              · exact Or.inr <| Or.inr hz3
+      lt_iff_le_not_ge := by
+        intro a b
+        rfl }
+  let hP : @ACR.Prov (ULift Nat) hA :=
+    { prov := provFn }
+  let hR : @ACR.Reft (ULift Nat) hA :=
+    { reft := reftFn }
+  letI : ACR (ULift Nat) := hA
+  letI : ACR.Prov (ULift Nat) := hP
+  letI : ACR.Reft (ULift Nat) := hR
+  let hAPS : @ACR.APS (ULift Nat) hA hP hR :=
+    { prov_mono := by
         intro x y hxy
-        simpa [Nat.iterate] using hxy
-    | succ m ihm =>
+        change rel (provFn x) (provFn y)
+        simp [rel, provFn]
+      reft_anti_mono := by
         intro x y hxy
-        simpa [f, Nat.iterate] using ihm (x := f x) (y := f y) (hmap hxy)
-  have hstable : ∀ m : Nat, Nat.iterate f m (⊠(⊤ : α)) ≐ ⊠(⊤ : α) := by
-    intro m
-    induction m with
-    | zero =>
-        exact ⟨le_rfl, le_rfl⟩
-    | succ m ihm =>
-        have hstep : Nat.iterate f m (⊠⊠(⊤ : α)) ≐ Nat.iterate f m (⊠(⊤ : α)) :=
-          hiter_map m (x := ⊠⊠(⊤ : α)) (y := ⊠(⊤ : α)) h
-        constructor
-        · exact le_trans hstep.1 ihm.1
-        · exact le_trans ihm.2 hstep.2
-  simpa [f, Nat.iterate] using hstable n
+        change rel (reftFn y) (reftFn x)
+        rcases hxy with hx0 | hxy | hy3
+        · cases x with
+          | up n =>
+              simp at hx0
+              subst hx0
+              simp [rel, reftFn]
+        · cases hxy
+          simp [rel]
+        · cases y with
+          | up n =>
+              simp at hy3
+              subst hy3
+              simp [rel, reftFn]
+      top_le_reft_bot := by
+        change rel ⟨0⟩ (reftFn ⟨0⟩)
+        simp [rel, reftFn]
+      le_reft_top_of_le_prov_of_le_reft := by
+        intro x y hxy hxry
+        change rel x (reftFn ⟨0⟩)
+        simpa [provFn, reftFn] using hxy
+      reft_le_prov_reft := by
+        intro x
+        change rel (reftFn x) (provFn (reftFn x))
+        simp [rel, provFn] }
+  letI : ACR.APS (ULift Nat) := hAPS
+  refine ⟨ULift Nat, hA, hP, hR, hAPS, ?_⟩
+  refine ⟨⟨1⟩, ⟨2⟩, ?_⟩
+  constructor
+  · constructor
+    · change rel ⟨1⟩ (reftFn ⟨1⟩)
+      simp [rel, reftFn]
+    · change rel (reftFn ⟨1⟩) ⟨1⟩
+      simp [rel, reftFn]
+  · constructor
+    · constructor
+      · change rel ⟨2⟩ (reftFn ⟨2⟩)
+        simp [rel, reftFn]
+      · change rel (reftFn ⟨2⟩) ⟨2⟩
+        simp [rel, reftFn]
+    · intro h
+      have h12 := h.1
+      change rel ⟨1⟩ ⟨2⟩ at h12
+      simpa [rel] using h12
 
 
-theorem thm_double_reft_below_reft_000031 : ∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], Nonempty (ACR.GödelFixpoint α) → ∀ x : α, ⊠⊠x ≤ ⊠x := by
-  intro α _ _ _ _ _ hG x
-  letI : Nonempty (ACR.GödelFixpoint α) := hG
-  have hx_top : x ≤ (⊤ : α) := ACR.le_top
-  have htop : ⊠(⊤ : α) ≤ ⊠x := ACR.reft_anti_mono hx_top
-  have hxx : ⊠⊠x ≤ ⊠⊠(⊤ : α) := ACR.reft_anti_mono htop
-  exact le_trans hxx (le_trans (ACR.reft_reft_top_le_reft_top (α := α)) htop)
+/-- ∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], Nonempty (ACR.GödelFixpoint α) → ((∀ {x : α}, x ≐ ⊠x → x ≐ □x) ↔ (□(⊠(⊤ : α)) ≤ ⊠(⊤ : α))) (auto-generated from op_000029) -/
+theorem thm_reft_fixedpoints_henkin_criterion_000029 : ∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], Nonempty (ACR.GödelFixpoint α) → ((∀ {x : α}, x ≐ ⊠x → x ≐ □x) ↔ (□(⊠(⊤ : α)) ≤ ⊠(⊤ : α))) := by
+  intro α _ _ _ _ _ hg
+  letI : Nonempty (ACR.GödelFixpoint α) := hg
+  constructor
+  · intro h
+    have hfix : (⊠(⊤ : α)) ≐ ⊠(⊠(⊤ : α)) := by
+      constructor
+      · simpa using (ACR.reft_anti_mono (ACR.le_top (x := ⊠(⊤ : α))))
+      · simpa using (ACR.reft_reft_top_le_reft_top (α := α))
+    have hbox : (⊠(⊤ : α)) ≐ □(⊠(⊤ : α)) := h hfix
+    simpa using hbox.2
+  · intro h x hx
+    have hxTop : x ≐ ⊠(⊤ : α) := ACR.gf_equiv_reft_top (g := ⟨x, hx⟩)
+    constructor
+    · calc
+        x ≤ ⊠x := hx.1
+        _ ≤ □⊠x := ACR.reft_le_prov_reft
+        _ ≤ □x := ACR.prov_mono hx.2
+    · calc
+        □x ≤ □(⊠(⊤ : α)) := ACR.prov_mono hxTop.1
+        _ ≤ ⊠(⊤ : α) := h
+        _ ≤ x := hxTop.2
+
+
+/-- ∃ (α : Type _), ∃ (hA : ACR α), ∃ (hP : @ACR.Prov α hA), ∃ (hR : @ACR.Reft α hA), ∃ (hAPS : @ACR.APS α hA hP hR), letI : ACR α := hA; letI : ACR.Prov α := hP; letI : ACR.Reft α := hR; letI : ACR.APS α := hAPS; ACR.Consistent α ∧ Nonempty... -/
+theorem thm_exists_consistent_model_without_joint_fixpoint_000031 : ∃ (α : Type _), ∃ (hA : ACR α), ∃ (hP : @ACR.Prov α hA), ∃ (hR : @ACR.Reft α hA), ∃ (hAPS : @ACR.APS α hA hP hR), letI : ACR α := hA; letI : ACR.Prov α := hP; letI : ACR.Reft α := hR; letI : ACR.APS α := hAPS; ACR.Consistent α ∧ Nonempty (ACR.GödelFixpoint α) ∧ Nonempty (ACR.HenkinFixpoint α) ∧ ¬ ∃ x : α, x ≐ ⊠x ∧ x ≐ □x := by
+  let rel : ULift Nat → ULift Nat → Prop := fun x y => x.down = 0 ∨ x = y ∨ y.down = 3
+  let provFn : ULift Nat → ULift Nat := fun _ => ⟨3⟩
+  let reftFn : ULift Nat → ULift Nat := fun x => if x.down = 1 ∨ x.down = 3 then ⟨1⟩ else ⟨3⟩
+  let hA : ACR (ULift Nat) :=
+    { top := ⟨2⟩
+      bot := ⟨0⟩
+      le := rel
+      lt := fun a b => rel a b ∧ ¬ rel b a
+      le_refl := by
+        intro x
+        exact Or.inr <| Or.inl rfl
+      le_trans := by
+        intro x y z hxy hyz
+        rcases hxy with hx0 | hxy | hy3
+        · exact Or.inl hx0
+        · cases hxy
+          exact hyz
+        · cases y with
+          | up n =>
+              simp at hy3
+              subst hy3
+              rcases hyz with hy0 | hyEq | hz3
+              · simp at hy0
+              · cases hyEq
+                exact Or.inr <| Or.inr rfl
+              · exact Or.inr <| Or.inr hz3
+      lt_iff_le_not_ge := by
+        intro a b
+        rfl }
+  let hP : @ACR.Prov (ULift Nat) hA :=
+    { prov := provFn }
+  let hR : @ACR.Reft (ULift Nat) hA :=
+    { reft := reftFn }
+  letI : ACR (ULift Nat) := hA
+  letI : ACR.Prov (ULift Nat) := hP
+  letI : ACR.Reft (ULift Nat) := hR
+  let hAPS : @ACR.APS (ULift Nat) hA hP hR :=
+    { prov_mono := by
+        intro x y hxy
+        change rel (provFn x) (provFn y)
+        simp [rel, provFn]
+      reft_anti_mono := by
+        intro x y hxy
+        change rel (reftFn y) (reftFn x)
+        rcases hxy with hx0 | hxy | hy3
+        · cases x with
+          | up n =>
+              simp at hx0
+              subst hx0
+              simp [rel, reftFn]
+        · cases hxy
+          simp [rel]
+        · cases y with
+          | up n =>
+              simp at hy3
+              subst hy3
+              by_cases hx : x.down = 1 ∨ x.down = 3
+              · simp [rel, reftFn, hx]
+              · simp [rel, reftFn, hx]
+      top_le_reft_bot := by
+        change rel ⟨2⟩ (reftFn ⟨0⟩)
+        simp [rel, reftFn]
+      le_reft_top_of_le_prov_of_le_reft := by
+        intro x y hxy hxry
+        change rel x (reftFn ⟨2⟩)
+        simp [rel, reftFn]
+      reft_le_prov_reft := by
+        intro x
+        change rel (reftFn x) (provFn (reftFn x))
+        simp [rel, provFn] }
+  letI : ACR.APS (ULift Nat) := hAPS
+  refine ⟨ULift Nat, hA, hP, hR, hAPS, ?_⟩
+  refine ⟨?_, ?_, ?_, ?_⟩
+  · change ¬ rel ⟨2⟩ ⟨0⟩
+    simp [rel]
+  · refine ⟨⟨⟨1⟩, ?_⟩⟩
+    constructor
+    · change rel ⟨1⟩ (reftFn ⟨1⟩)
+      simp [rel, reftFn]
+    · change rel (reftFn ⟨1⟩) ⟨1⟩
+      simp [rel, reftFn]
+  · refine ⟨⟨⟨3⟩, ?_⟩⟩
+    constructor
+    · change rel ⟨3⟩ (provFn ⟨3⟩)
+      simp [rel, provFn]
+    · change rel (provFn ⟨3⟩) ⟨3⟩
+      simp [rel, provFn]
+  · rintro ⟨x, hx, hbox⟩
+    rcases hx with ⟨hx1, hx2⟩
+    rcases hbox with ⟨hbox1, hbox2⟩
+    cases x with
+    | up n =>
+        have h3 : rel (provFn ⟨n⟩) ⟨n⟩ := by
+          simpa using hbox2
+        simp [rel, provFn] at h3
+        have hn : n = 3 := by
+          rcases h3 with h | h
+          · exact h.symm
+          · exact h
+        subst n
+        have h31 : rel ⟨3⟩ (reftFn ⟨3⟩) := by
+          simpa using hx1
+        simp [rel, reftFn] at h31
+
+
+/-- ∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α], Nonempty (ACR.GödelFixpoint α) → ((⊠⊠(⊤ : α) ≐ ⊠(⊤ : α)) ↔ ∀ {x : α}, x ≐ ⊠x → x ≐ ⊠(⊤ : α)) (auto-generated from op_000032) -/
+theorem thm_double_reft_top_iff_all_fixpoints_reft_top_000032 : ∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α], Nonempty (ACR.GödelFixpoint α) → ((⊠⊠(⊤ : α) ≐ ⊠(⊤ : α)) ↔ ∀ {x : α}, x ≐ ⊠x → x ≐ ⊠(⊤ : α)) := by
+  intro α _ _ _ _ hg
+  constructor
+  · intro h x hx
+    have hxBox : x ≤ □x := by
+      calc
+        x ≤ ⊠x := hx.1
+        _ ≤ □⊠x := ACR.reft_le_prov_reft
+        _ ≤ □x := ACR.prov_mono hx.2
+    have hxTop : x ≤ ⊠(⊤ : α) := by
+      exact ACR.le_reft_top_of_le_prov_of_le_reft hxBox hx.1
+    constructor
+    · exact hxTop
+    · calc
+        ⊠(⊤ : α) ≤ ⊠⊠(⊤ : α) := h.2
+        _ ≤ ⊠x := ACR.reft_anti_mono hxTop
+        _ ≤ x := hx.2
+  · intro h
+    letI : Nonempty (ACR.GödelFixpoint α) := hg
+    constructor
+    · simpa using (ACR.reft_reft_top_le_reft_top (α := α))
+    · obtain ⟨g⟩ := hg
+      have hgTop : g.1 ≐ ⊠(⊤ : α) := h g.2
+      calc
+        ⊠(⊤ : α) ≤ g.1 := hgTop.2
+        _ ≤ ⊠g.1 := g.2.1
+        _ ≤ ⊠⊠(⊤ : α) := ACR.reft_anti_mono hgTop.2
+
+
+/-- ∃ (α : Type _), ∃ (hA : ACR α), ∃ (hP : @ACR.Prov α hA), ∃ (hR : @ACR.Reft α hA), ∃ (hAPS : @ACR.APS α hA hP hR), letI : ACR α := hA; letI : ACR.Prov α := hP; letI : ACR.Reft α := hR; letI : ACR.APS α := hAPS; ∃ g : ACR.GödelFixpoint α, ... -/
+theorem thm_exists_godel_not_henkin_fixpoint_000016 : ∃ (α : Type _), ∃ (hA : ACR α), ∃ (hP : @ACR.Prov α hA), ∃ (hR : @ACR.Reft α hA), ∃ (hAPS : @ACR.APS α hA hP hR), letI : ACR α := hA; letI : ACR.Prov α := hP; letI : ACR.Reft α := hR; letI : ACR.APS α := hAPS; ∃ g : ACR.GödelFixpoint α, ¬ (g.1 ≐ □g.1) := by
+  let hA : ACR (ULift Nat) :=
+    { top := ⟨0⟩
+      bot := ⟨2⟩
+      le := fun x y => x.down ≤ y.down
+      lt := fun x y => x.down ≤ y.down ∧ ¬ y.down ≤ x.down
+      le_refl := by
+        intro x
+        exact Nat.le_refl x.down
+      le_trans := by
+        intro x y z hxy hyz
+        exact Nat.le_trans hxy hyz }
+  let hP : @ACR.Prov (ULift Nat) hA :=
+    { prov := fun _ => ⟨2⟩ }
+  let hR : @ACR.Reft (ULift Nat) hA :=
+    { reft := fun x => ⟨2 - x.down⟩ }
+  letI : ACR (ULift Nat) := hA
+  letI : ACR.Prov (ULift Nat) := hP
+  letI : ACR.Reft (ULift Nat) := hR
+  let hAPS : ACR.APS (ULift Nat) :=
+    { prov_mono := by
+        intro x y hxy
+        exact Nat.le_refl 2
+      reft_anti_mono := by
+        intro x y hxy
+        show 2 - y.down ≤ 2 - x.down
+        exact Nat.sub_le_sub_left hxy 2
+      top_le_reft_bot := by
+        show 0 ≤ (2 - 2)
+        decide
+      le_reft_top_of_le_prov_of_le_reft := by
+        intro x y hxy hxry
+        show x.down ≤ 2
+        simpa using hxy
+      reft_le_prov_reft := by
+        intro x
+        show 2 - x.down ≤ 2
+        exact Nat.sub_le _ _ }
+  letI : ACR.APS (ULift Nat) := hAPS
+  refine ⟨ULift Nat, hA, hP, hR, hAPS, ?_⟩
+  refine ⟨⟨⟨1⟩, ?_⟩, ?_⟩
+  · constructor
+    · show 1 ≤ 1
+      exact Nat.le_refl 1
+    · show 1 ≤ 1
+      exact Nat.le_refl 1
+  · intro h
+    have h21 : 2 ≤ 1 := by
+      change ((⟨2⟩ : ULift Nat) ≤ ⟨1⟩)
+      exact h.2
+    have h' : ¬ 2 ≤ 1 := by
+      decide
+    exact h' h21
 
 end AutomatedTheoryConstruction

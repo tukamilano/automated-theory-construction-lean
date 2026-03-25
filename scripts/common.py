@@ -9,6 +9,7 @@ from typing import Any
 
 
 ID_PATTERN = re.compile(r"^op_(\d+)$")
+OPEN_PROBLEM_PRIORITY_LABELS = {"high", "medium", "low", "unknown"}
 
 
 def read_jsonl(path: Path) -> list[dict[str, Any]]:
@@ -50,3 +51,44 @@ def next_problem_id(all_ids: list[str]) -> str:
         if idx is not None and idx > max_index:
             max_index = idx
     return f"op_{max_index + 1:06d}"
+
+
+def _coerce_nonnegative_int(value: Any, default: int) -> int:
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return default
+    return parsed if parsed >= 0 else default
+
+
+def normalize_open_problem_priority(value: Any) -> str:
+    raw = str(value or "").strip().lower()
+    if raw in OPEN_PROBLEM_PRIORITY_LABELS:
+        return raw
+    try:
+        parsed = int(raw)
+    except (TypeError, ValueError):
+        return "unknown"
+    if parsed >= 3:
+        return "high"
+    if parsed == 2:
+        return "medium"
+    if parsed == 1:
+        return "low"
+    return "unknown"
+
+
+def normalize_open_problem_row(row: dict[str, Any]) -> dict[str, Any]:
+    normalized = dict(row)
+    normalized.pop("n", None)
+
+    src = str(normalized.get("src", "generated") or "generated").strip() or "generated"
+    normalized["src"] = src
+    normalized["priority"] = normalize_open_problem_priority(normalized.get("priority"))
+    normalized["priority_rationale"] = str(normalized.get("priority_rationale", "") or "").strip()
+    normalized["failure_count"] = _coerce_nonnegative_int(normalized.get("failure_count"), 0)
+    normalized.pop("priority_refreshed_at_theorem_count", None)
+    normalized.pop("attempt_count", None)
+    normalized.pop("last_attempt_iteration", None)
+    normalized.pop("last_result", None)
+    return normalized
