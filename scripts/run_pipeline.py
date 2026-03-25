@@ -90,6 +90,11 @@ def build_loop_command(args: argparse.Namespace) -> list[str]:
     append_optional_flag(cmd, "--formalize-worker-timeout", args.formalize_worker_timeout)
     append_optional_flag(cmd, "--repair-worker-command", args.repair_worker_command)
     append_optional_flag(cmd, "--repair-worker-timeout", args.repair_worker_timeout)
+    append_optional_flag(cmd, "--prioritize-open-problems-worker-command", args.prioritize_open_problems_worker_command)
+    append_optional_flag(cmd, "--prioritize-open-problems-worker-timeout", args.prioritize_open_problems_worker_timeout)
+    append_optional_flag(cmd, "--priority-refresh-theorem-interval", args.priority_refresh_theorem_interval)
+    append_optional_flag(cmd, "--open-problem-prune-threshold", args.open_problem_prune_threshold)
+    append_optional_flag(cmd, "--open-problem-failure-prune-threshold", args.open_problem_failure_prune_threshold)
     return cmd
 
 
@@ -172,6 +177,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--formalize-worker-timeout", type=int)
     parser.add_argument("--repair-worker-command")
     parser.add_argument("--repair-worker-timeout", type=int)
+    parser.add_argument("--prioritize-open-problems-worker-command")
+    parser.add_argument("--prioritize-open-problems-worker-timeout", type=int)
+    parser.add_argument("--priority-refresh-theorem-interval", type=int)
+    parser.add_argument("--open-problem-prune-threshold", type=int)
+    parser.add_argument("--open-problem-failure-prune-threshold", type=int)
     parser.add_argument("--refactor-worker-command")
     parser.add_argument("--refactor-worker-timeout", type=int)
     parser.add_argument("--refactor-verify-timeout", type=int)

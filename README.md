@@ -242,6 +242,8 @@ Task-specific overrides:
 - `ATC_FORMALIZE_WORKER_TIMEOUT`
 - `ATC_REPAIR_WORKER_COMMAND`
 - `ATC_REPAIR_WORKER_TIMEOUT`
+- `ATC_PRIORITIZE_OPEN_PROBLEMS_WORKER_COMMAND`
+- `ATC_PRIORITIZE_OPEN_PROBLEMS_WORKER_TIMEOUT`
 
 Useful Codex worker settings:
 
@@ -264,12 +266,40 @@ You can also override the same settings through CLI flags such as:
 - `--formalize-worker-timeout`
 - `--repair-worker-command`
 - `--repair-worker-timeout`
+- `--prioritize-open-problems-worker-command`
+- `--prioritize-open-problems-worker-timeout`
+- `--open-problem-prune-threshold`
+- `--open-problem-failure-prune-threshold`
+- `--priority-refresh-theorem-interval`
+
+## Open Problem Queue Pruning
+
+To keep `data/open_problems.jsonl` from growing without bound, `scripts/run_loop.py` now tracks
+per-problem queue metadata:
+
+- `priority`
+- `priority_rationale`
+- `attempt_count`
+- `failure_count`
+- `last_attempt_iteration`
+- `last_result`
+
+Open problem priorities are refreshed by a dedicated worker prompt after `Derived.lean` has gained
+enough new theorems (default every `5` additional verified theorems). The queue is then sorted in
+priority order: `high`, then `medium`, then unevaluated `unknown`, then `low`.
+
+When the open queue exceeds the prune threshold (default `30`), the loop removes every problem
+whose priority is `low` or whose `failure_count` is at least the failure prune threshold (default
+`2`). Pruned rows are removed from `open_problems.jsonl` and appended to
+`data/pruned_open_problems.jsonl` for auditability.
 
 ## Runtime Artifacts
 
 The loop stores its state in `data/`:
 
 - `data/open_problems.jsonl`
+- `data/pruned_open_problems.jsonl`
+- `data/open_problem_priority_state.json`
 - `data/solved_problems.jsonl`
 - `data/counterexamples.jsonl`
 - `data/formalization_memory.json`

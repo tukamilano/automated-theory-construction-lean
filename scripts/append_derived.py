@@ -11,6 +11,7 @@ THEOREM_NAME_PATTERN = re.compile(r"\btheorem\s+([A-Za-z0-9_']+)\b")
 THEOREM_HEADER_PATTERN = re.compile(r"\btheorem\s+([A-Za-z0-9_']+)\s*:\s*(.+?)\s*:=", re.DOTALL)
 LEAN_DECL_NAME_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_']*$")
 LEAN_IMPORT_PATTERN = re.compile(r"^import\s+([A-Za-z0-9_.']+)\s*$", re.MULTILINE)
+DOCSTRING_MAX_CHARS = 240
 
 
 def normalize_statement_text(statement: str) -> str:
@@ -33,6 +34,22 @@ def validate_theorem_name(theorem_name: str) -> str:
     if not LEAN_DECL_NAME_PATTERN.fullmatch(cleaned):
         raise ValueError("theorem_name must match ^[A-Za-z_][A-Za-z0-9_']*$")
     return cleaned
+
+
+def normalize_docstring_text(text: str, max_chars: int = DOCSTRING_MAX_CHARS) -> str:
+    cleaned = " ".join(text.replace("```", " ").replace("/-", "/ -").replace("-/", "- /").split())
+    if not cleaned:
+        return ""
+    if len(cleaned) <= max_chars:
+        return cleaned
+    return cleaned[: max_chars - 3] + "..."
+
+
+def render_docstring(text: str) -> str:
+    cleaned = normalize_docstring_text(text)
+    if not cleaned:
+        return ""
+    return f"/-- {cleaned} -/\n"
 
 
 def iter_theorem_headers(derived_file: Path, max_theorems: int | None = None) -> list[tuple[str, str]]:
@@ -88,6 +105,7 @@ def append_theorem(
     derived_file: Path,
     theorem_code: str,
     theorem_name: str | None = None,
+    docstring: str | None = None,
 ) -> bool:
     derived_file.parent.mkdir(parents=True, exist_ok=True)
     required_imports = infer_minimal_imports(theorem_code)
@@ -110,7 +128,8 @@ def append_theorem(
     blocks_to_add: list[str] = []
 
     if not re.search(rf"\btheorem\s+{re.escape(theorem_name)}\b", content):
-        blocks_to_add.append(theorem_code.strip())
+        rendered_docstring = render_docstring(docstring or "")
+        blocks_to_add.append(rendered_docstring + theorem_code.strip())
     if not blocks_to_add:
         return False
 
@@ -130,13 +149,14 @@ def main() -> None:
     parser.add_argument("--derived-file", default="AutomatedTheoryConstruction/Derived.lean")
     parser.add_argument("--theorem-name")
     parser.add_argument("--theorem-code-file")
+    parser.add_argument("--docstring")
     args = parser.parse_args()
 
     derived_file = Path(args.derived_file)
     if not args.theorem_code_file:
         raise ValueError("--theorem-code-file is required")
     theorem_code = Path(args.theorem_code_file).read_text(encoding="utf-8")
-    appended = append_theorem(derived_file, theorem_code, args.theorem_name)
+    appended = append_theorem(derived_file, theorem_code, args.theorem_name, args.docstring)
     print({"appended": appended})
 
 
