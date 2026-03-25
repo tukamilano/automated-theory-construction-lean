@@ -6,6 +6,8 @@ For more details and generation examples, please see here.
 - [Blog post: Growing Theories with LLMs and Lean](https://tukamilano.github.io/automated-theory-construction-lean/research/lean/llm/2026/03/23/automated-theory-construction-with-llms.html)
 - [Application to provability logic](https://gist.github.com/tukamilano/4fdcbc3c8d3836654ae9e7d27a73e3de) (update 3.25)
 
+As the developer is not an expert for these theories, any feedback, suggestions, or contributions are very welcome. Please open an issue or a pull request.
+
 ## Quick Mental Model
 
 ```text
@@ -207,12 +209,13 @@ By default, `scripts/run_loop.py` starts with `--initialize-on-start`, which mea
 - overwrite `data/open_problems.jsonl` from `AutomatedTheoryConstruction/seeds.jsonl`
 - reset `data/solved_problems.jsonl`
 - reset `data/counterexamples.jsonl`
+- reset `data/pruned_open_problems.jsonl`
 - reset `data/formalization_memory.json`
 - reset `AutomatedTheoryConstruction/Scratch.lean`
 - reset `AutomatedTheoryConstruction/Derived.lean`
 - delete `AutomatedTheoryConstruction/Derived.refactored.preview.lean` if present
 - delete `AutomatedTheoryConstruction/Derived.refactored.reviewed.lean` if present
-- run `lake build`
+- run `lake build` for `AutomatedTheoryConstruction.Theory` and `AutomatedTheoryConstruction.Derived`
 
 If you want to continue from the current runtime state and keep accumulated theorems in `Derived.lean`, use:
 
@@ -272,26 +275,26 @@ You can also override the same settings through CLI flags such as:
 - `--open-problem-failure-prune-threshold`
 - `--priority-refresh-theorem-interval`
 
-## Open Problem Queue Pruning
+## Open Problem Queue
 
 To keep `data/open_problems.jsonl` from growing without bound, `scripts/run_loop.py` now tracks
 per-problem queue metadata:
 
 - `priority`
 - `priority_rationale`
-- `attempt_count`
 - `failure_count`
-- `last_attempt_iteration`
-- `last_result`
 
-Open problem priorities are refreshed by a dedicated worker prompt after `Derived.lean` has gained
-enough new theorems (default every `5` additional verified theorems). The queue is then sorted in
-priority order: `high`, then `medium`, then unevaluated `unknown`, then `low`.
+Open problem priorities are refreshed by a dedicated worker prompt whenever unevaluated `unknown`
+problems exist, and otherwise after `Derived.lean` has gained enough new theorems during the
+current run (default every `5` additional verified theorems). The queue is then sorted in priority
+order: `high`, then `medium`, then unevaluated `unknown`, then `low`. Problems whose
+`failure_count` reaches the failure threshold (default `2`) are kept in the queue but moved to the
+end.
 
 When the open queue exceeds the prune threshold (default `30`), the loop removes every problem
-whose priority is `low` or whose `failure_count` is at least the failure prune threshold (default
-`2`). Pruned rows are removed from `open_problems.jsonl` and appended to
-`data/pruned_open_problems.jsonl` for auditability.
+whose priority is `low` or whose `failure_count` is at least the failure threshold. Pruned rows are
+removed from `open_problems.jsonl` and appended to `data/pruned_open_problems.jsonl` for
+auditability.
 
 ## Runtime Artifacts
 
@@ -299,7 +302,6 @@ The loop stores its state in `data/`:
 
 - `data/open_problems.jsonl`
 - `data/pruned_open_problems.jsonl`
-- `data/open_problem_priority_state.json`
 - `data/solved_problems.jsonl`
 - `data/counterexamples.jsonl`
 - `data/formalization_memory.json`
@@ -321,7 +323,7 @@ lake env lean AutomatedTheoryConstruction/Scratch.lean
 ## Notes
 
 - `scripts/run_loop.py` currently assumes the semigroup-like seed file path and fixed module layout.
-- `example/CCG`, `example/Equational_theory`, and `example/provability` are examples only; they are not selected by a runtime flag today.
+- `example/CCG`, `example/Equational_theory`, and `example/provability` are examples only; they are not selected by a runtime flag today. Aristotle is used to generate Theory.lean.
 - `expand` suggestions are deduplicated before state update.
 - `formalize` and `repair` are separate task types, even if they use the same prompt file by default.
 
@@ -333,6 +335,8 @@ This repository is licensed under the MIT License. See `LICENSE`.
 
 - Xin et al. (2025). *BFS-Prover-V2*.
 - Lev Beklemishev and Daniyar Shamkanov. *Some abstract versions of Gödel's second incompleteness theorem based on non-classical logics*. arXiv:1602.05728.
+- Elliott H. Lieb and Jakob Yngvason. *The physics and mathematics of the second law of thermodynamics*. Physics Reports, 310(1):1–96, 1999.
+- Antonius J.C. Hurkens. *A simplification of Girard's paradox*. *In Proceedings of the Typed Lambda Calculi and Applications.*Mariangiola Dezani-Ciancaglini and Gordon Plotkin (Eds.), Springer, Berlin, 266–278.
 
 ## Acknowledgements
 

@@ -86,15 +86,9 @@ def normalize_open_problem_row(row: dict[str, Any]) -> dict[str, Any]:
     normalized["src"] = src
     normalized["priority"] = normalize_open_problem_priority(normalized.get("priority"))
     normalized["priority_rationale"] = str(normalized.get("priority_rationale", "") or "").strip()
-    normalized["priority_refreshed_at_theorem_count"] = _coerce_nonnegative_int(
-        normalized.get("priority_refreshed_at_theorem_count"),
-        0,
-    )
-    normalized["attempt_count"] = _coerce_nonnegative_int(normalized.get("attempt_count"), 0)
     normalized["failure_count"] = _coerce_nonnegative_int(normalized.get("failure_count"), 0)
-    normalized["last_attempt_iteration"] = _coerce_nonnegative_int(
-        normalized.get("last_attempt_iteration"),
-        0,
-    )
-    normalized["last_result"] = str(normalized.get("last_result", "") or "").strip()
+    normalized.pop("priority_refreshed_at_theorem_count", None)
+    normalized.pop("attempt_count", None)
+    normalized.pop("last_attempt_iteration", None)
+    normalized.pop("last_result", None)
     return normalized

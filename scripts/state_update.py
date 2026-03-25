@@ -79,10 +79,7 @@ def apply_state_update(
         counter_rows.append({"id": target["id"], "stmt": target["stmt"]})
         moved_to = "counterexample"
     else:
-        target["attempt_count"] = int(target.get("attempt_count", 0) or 0) + 1
         target["failure_count"] = int(target.get("failure_count", 0) or 0) + 1
-        target["last_attempt_iteration"] = max(0, int(current_iteration))
-        target["last_result"] = result
         remaining_open.append(target)
 
     write_jsonl_atomic(open_path, remaining_open)

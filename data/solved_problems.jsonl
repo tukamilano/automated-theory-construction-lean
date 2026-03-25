@@ -1,0 +1,7 @@
+{"id":"op_000001","stmt":"∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], (⊠⊠(⊤ : α) ≐ ⊠(⊤ : α)) ↔ Nonempty (ACR.GödelFixpoint α)","thm":"thm_double_reft_top_iff_godel_fixpoint_000001"}
+{"id":"op_000005","stmt":"∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], Nonempty (ACR.GödelFixpoint α) → ∀ {x : α}, (x ≐ ⊠x) ↔ x ≐ ⊠(⊤ : α)","thm":"thm_reft_fixedpoint_iff_reft_top_000005"}
+{"id":"op_000003","stmt":"∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α], ACR.Consistent α → ∀ g : ACR.GödelFixpoint α, ¬ (⊬ □g.1)","thm":"thm_consistent_godel_box_irrefutable_000003"}
+{"id":"op_000007","stmt":"For every type α with instances [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], any two elements x y : α that satisfy x ≐ ⊠x and y ≐ ⊠y are equivalent: x ≐ y.","thm":"thm_reft_fixpoints_equivalent_000007"}
+{"id":"op_000008","stmt":"There exists a type α with instances [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] and an element x : α such that Nonempty (ACR.GödelFixpoint α) and x ≐ ⊠x both hold, but x ≐ ⊠(⊤ : α) does not hold.","thm":"thm_exists_reft_fixpoint_not_reft_top_000008"}
+{"id":"op_000009","stmt":"∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α], ACR.Consistent α → ∀ g : ACR.GödelFixpoint α, ¬ (⊬ g.1)","thm":"thm_consistent_godel_irrefutable_000009"}
+{"id":"op_000022","stmt":"∀ {α : Type _} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] {x : α}, x ≐ ⊠x → x ≤ □x","thm":"thm_reft_fixedpoint_le_box_000022"}

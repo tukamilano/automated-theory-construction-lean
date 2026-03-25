@@ -69,26 +69,32 @@ def open_problem_priority_label(row: dict[str, Any]) -> str:
     return normalize_open_problem_priority(row.get("priority"))
 
 
-def open_problem_sort_key(row: dict[str, Any]) -> tuple[int, int, int, int, int]:
+def open_problem_sort_key(
+    row: dict[str, Any],
+    *,
+    failure_defer_threshold: int,
+) -> tuple[int, int, int]:
     priority_order = OPEN_PROBLEM_PRIORITY_ORDER.get(open_problem_priority_label(row), OPEN_PROBLEM_PRIORITY_ORDER["unknown"])
     failure_count = int(row.get("failure_count", 0) or 0)
-    attempt_count = int(row.get("attempt_count", 0) or 0)
-    last_attempt_iteration = int(row.get("last_attempt_iteration", 0) or 0)
-    problem_index = parse_problem_index(str(row.get("id", ""))) or 0
-    normalized_last_attempt = last_attempt_iteration if last_attempt_iteration > 0 else -1
-    return (priority_order, failure_count, attempt_count, normalized_last_attempt, problem_index)
+    deferred = 1 if failure_defer_threshold > 0 and failure_count >= failure_defer_threshold else 0
+    return (deferred, priority_order, failure_count)
 
 
-def sort_open_problem_queue(open_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def sort_open_problem_queue(
+    open_rows: list[dict[str, Any]],
+    *,
+    failure_defer_threshold: int,
+) -> list[dict[str, Any]]:
     normalized_rows = [normalize_open_problem_row(row) for row in open_rows]
-    return sorted(normalized_rows, key=open_problem_sort_key)
+    return sorted(
+        normalized_rows,
+        key=lambda row: open_problem_sort_key(row, failure_defer_threshold=failure_defer_threshold),
+    )
 
 
 def apply_open_problem_priorities(
     open_rows: list[dict[str, Any]],
     priority_updates: list[dict[str, str]],
-    *,
-    derived_theorem_count: int,
 ) -> list[dict[str, Any]]:
     updates_by_id = {item["problem_id"]: item for item in priority_updates}
     updated_rows: list[dict[str, Any]] = []
@@ -98,31 +104,8 @@ def apply_open_problem_priorities(
         if update is not None:
             normalized["priority"] = update["priority"]
             normalized["priority_rationale"] = update["rationale"]
-            normalized["priority_refreshed_at_theorem_count"] = max(0, derived_theorem_count)
         updated_rows.append(normalized)
     return updated_rows
-
-
-def load_priority_refresh_state(path: Path) -> dict[str, int]:
-    if not path.exists():
-        return {"last_refresh_theorem_count": 0}
-    try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except Exception:
-        return {"last_refresh_theorem_count": 0}
-    if not isinstance(payload, dict):
-        return {"last_refresh_theorem_count": 0}
-    return {
-        "last_refresh_theorem_count": max(0, int(payload.get("last_refresh_theorem_count", 0) or 0)),
-    }
-
-
-def save_priority_refresh_state(path: Path, *, theorem_count: int) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
-        json.dumps({"last_refresh_theorem_count": max(0, theorem_count)}, ensure_ascii=False) + "\n",
-        encoding="utf-8",
-    )
 
 
 def should_refresh_open_problem_priorities(
@@ -144,7 +127,7 @@ def prune_open_problem_queue(
     *,
     current_iteration: int,
     prune_threshold: int,
-    failure_prune_threshold: int,
+    failure_defer_threshold: int,
     pruned_path: Path,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     normalized_rows = [normalize_open_problem_row(row) for row in open_rows]
@@ -156,7 +139,7 @@ def prune_open_problem_queue(
     for row in normalized_rows:
         should_prune = (
             open_problem_priority_label(row) == "low"
-            or int(row.get("failure_count", 0) or 0) >= failure_prune_threshold
+            or int(row.get("failure_count", 0) or 0) >= failure_defer_threshold
         )
         if should_prune:
             pruned_rows.append(row)
@@ -173,12 +156,12 @@ def prune_open_problem_queue(
         reasons: list[str] = []
         if open_problem_priority_label(row) == "low":
             reasons.append("priority=low")
-        if int(row.get("failure_count", 0) or 0) >= failure_prune_threshold:
-            reasons.append(f"failure_count>={failure_prune_threshold}")
+        if int(row.get("failure_count", 0) or 0) >= failure_defer_threshold:
+            reasons.append(f"failure_count>={failure_defer_threshold}")
         annotated["pruned_reason"] = ", ".join(reasons) or "queue_prune"
         annotated_pruned.append(annotated)
     write_jsonl_atomic(pruned_path, existing_pruned + annotated_pruned)
-    return sort_open_problem_queue(kept_rows), annotated_pruned
+    return sort_open_problem_queue(kept_rows, failure_defer_threshold=failure_defer_threshold), annotated_pruned
 
 
 def normalize_docstring_summary(text: str, max_chars: int = 240) -> str:
@@ -193,12 +176,11 @@ def normalize_docstring_summary(text: str, max_chars: int = 240) -> str:
 def build_theorem_docstring(
     *,
     problem_id: str,
+    statement: str,
     proof_sketch: str,
     statement_formalization_notes: str,
 ) -> str:
-    summary = normalize_docstring_summary(proof_sketch)
-    if not summary:
-        summary = normalize_docstring_summary(statement_formalization_notes)
+    summary = normalize_docstring_summary(statement)
     if not summary:
         return f"Auto-generated theorem for {problem_id}."
     return f"{summary} (auto-generated from {problem_id})"
@@ -1332,9 +1314,7 @@ def request_open_problem_priorities(
                 "problem_id": str(row.get("id", "")),
                 "stmt": str(row.get("stmt", "")),
                 "src": str(row.get("src", "")),
-                "attempt_count": int(row.get("attempt_count", 0) or 0),
                 "failure_count": int(row.get("failure_count", 0) or 0),
-                "last_result": str(row.get("last_result", "")),
             }
             for row in open_rows
         ],
@@ -1674,7 +1654,6 @@ def initialize_runtime_state(
     formalization_memory_file: Path,
     reset_formalization_memory: bool,
     pruned_problems_file: Path,
-    priority_state_file: Path,
 ) -> None:
     seed_rows = [normalize_open_problem_row(row) for row in read_jsonl(seeds_file)]
     if not seed_rows:
@@ -1685,7 +1664,6 @@ def initialize_runtime_state(
     write_jsonl_atomic(data_dir / "solved_problems.jsonl", [])
     write_jsonl_atomic(data_dir / "counterexamples.jsonl", [])
     write_jsonl_atomic(pruned_problems_file, [])
-    save_priority_refresh_state(priority_state_file, theorem_count=0)
 
     if reset_scratch:
         scratch_file.parent.mkdir(parents=True, exist_ok=True)
@@ -1776,7 +1754,6 @@ def main() -> None:
     args.formalization_retry_budget_sec = 300
     args.formalization_memory_file = "data/formalization_memory.json"
     args.pruned_problems_file = "data/pruned_open_problems.jsonl"
-    args.priority_state_file = "data/open_problem_priority_state.json"
     args.reset_formalization_memory_on_start = True
     args.mock_result = "stuck"
     args.mock_proof_text = ""
@@ -1787,7 +1764,6 @@ def main() -> None:
     scratch_file = Path(args.scratch_file)
     memory_path = Path(args.formalization_memory_file)
     pruned_problems_path = Path(args.pruned_problems_file)
-    priority_state_path = Path(args.priority_state_file)
 
     if args.initialize_on_start:
         initialize_runtime_state(
@@ -1804,7 +1780,6 @@ def main() -> None:
             formalization_memory_file=memory_path,
             reset_formalization_memory=args.reset_formalization_memory_on_start,
             pruned_problems_file=pruned_problems_path,
-            priority_state_file=priority_state_path,
         )
         debug_log("Running lake build during initialization")
         prebuild_lean_project()
@@ -1857,6 +1832,7 @@ def main() -> None:
             timeout_override=args.prioritize_open_problems_worker_timeout,
         )
     completed_iterations = 0
+    last_priority_refresh_theorem_count = 0
     while True:
         if not open_path.exists():
             print({"status": "open_problems_missing", "iterations_completed": completed_iterations})
@@ -1867,13 +1843,15 @@ def main() -> None:
             print({"status": "no_open_problems", "iterations_completed": completed_iterations})
             return
 
+        if completed_iterations == 0 and not any(open_problem_priority_label(row) == "unknown" for row in open_rows):
+            last_priority_refresh_theorem_count = len(derived_entries)
+
         if args.max_iterations is not None and completed_iterations >= args.max_iterations:
             print({"status": "max_iterations_reached", "iterations_completed": completed_iterations})
             return
 
         iteration_num = completed_iterations + 1
         derived_theorem_count = len(derived_entries)
-        priority_refresh_state = load_priority_refresh_state(priority_state_path)
         priority_refresh_ran = False
         priority_refresh_error = ""
         priority_refresh_worker_meta: dict[str, Any] = {}
@@ -1883,7 +1861,7 @@ def main() -> None:
             and should_refresh_open_problem_priorities(
                 open_rows,
                 derived_theorem_count=derived_theorem_count,
-                last_refresh_theorem_count=priority_refresh_state.get("last_refresh_theorem_count", 0),
+                last_refresh_theorem_count=last_priority_refresh_theorem_count,
                 refresh_interval=args.priority_refresh_theorem_interval,
             )
         ):
@@ -1906,9 +1884,8 @@ def main() -> None:
                 open_rows = apply_open_problem_priorities(
                     open_rows,
                     priority_updates,
-                    derived_theorem_count=derived_theorem_count,
                 )
-                save_priority_refresh_state(priority_state_path, theorem_count=derived_theorem_count)
+                last_priority_refresh_theorem_count = derived_theorem_count
                 priority_refresh_ran = True
             except (RuntimeError, ValueError) as exc:
                 priority_refresh_error = str(exc)
@@ -1920,7 +1897,10 @@ def main() -> None:
                     error=str(exc),
                 )
 
-        sorted_open_rows = sort_open_problem_queue(open_rows)
+        sorted_open_rows = sort_open_problem_queue(
+            open_rows,
+            failure_defer_threshold=args.open_problem_failure_prune_threshold,
+        )
         queue_changed = sorted_open_rows != open_rows
         open_rows = sorted_open_rows
 
@@ -1928,7 +1908,7 @@ def main() -> None:
             open_rows,
             current_iteration=iteration_num,
             prune_threshold=args.open_problem_prune_threshold,
-            failure_prune_threshold=args.open_problem_failure_prune_threshold,
+            failure_defer_threshold=args.open_problem_failure_prune_threshold,
             pruned_path=pruned_problems_path,
         )
         if pruned_rows:
@@ -2119,6 +2099,7 @@ def main() -> None:
                     None,
                     build_theorem_docstring(
                         problem_id=problem_id,
+                        statement=target_stmt,
                         proof_sketch=proof_sketch,
                         statement_formalization_notes=statement_formalization_notes,
                     ),
