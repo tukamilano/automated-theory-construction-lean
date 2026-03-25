@@ -336,7 +336,7 @@ This repository is licensed under the MIT License. See `LICENSE`.
 - Xin et al. (2025). *BFS-Prover-V2*.
 - Lev Beklemishev and Daniyar Shamkanov. *Some abstract versions of Gödel's second incompleteness theorem based on non-classical logics*. arXiv:1602.05728.
 - Elliott H. Lieb and Jakob Yngvason. *The physics and mathematics of the second law of thermodynamics*. Physics Reports, 310(1):1–96, 1999.
-- Antonius J.C. Hurkens. *A simplification of Girard's paradox*. *In Proceedings of the Typed Lambda Calculi and Applications.*Mariangiola Dezani-Ciancaglini and Gordon Plotkin (Eds.), Springer, Berlin, 266–278.
+- Antonius J.C. Hurkens. *A simplification of Girard's paradox*. In Proceedings of the Typed Lambda Calculi and Applications.Mariangiola Dezani-Ciancaglini and Gordon Plotkin (Eds.), Springer, Berlin, 266–278.
 
 ## Acknowledgements
 
