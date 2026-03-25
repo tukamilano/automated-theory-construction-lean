@@ -3,87 +3,58 @@ import AutomatedTheoryConstruction.Derived
 
 namespace AutomatedTheoryConstruction
 
-theorem thm_exists_consistent_fixpoint_not_reft_top_000018 : ∃ (α : Type _), ∃ (hA : ACR α), ∃ (hP : @ACR.Prov α hA), ∃ (hR : @ACR.Reft α hA), ∃ (hAPS : @ACR.APS α hA hP hR), letI : ACR α := hA; letI : ACR.Prov α := hP; letI : ACR.Reft α := hR; letI : ACR.APS α := hAPS; ACR.Consistent α ∧ Nonempty (ACR.GödelFixpoint α) ∧ ∃ x : α, x ≐ ⊠x ∧ ¬ (x ≐ ⊠(⊤ : α)) := by
-  let rel : Fin 4 → Fin 4 → Prop := fun x y => x = 0 ∨ x = y ∨ y = 3
-  let provFn : Fin 4 → Fin 4 := fun _ => 3
-  let reftFn : Fin 4 → Fin 4 := fun x => if x = 1 ∨ x = 3 then 1 else 3
-  let hA : ACR (Fin 4) :=
-    { top := 2
-      bot := 0
-      le := rel
+theorem thm_exists_godel_not_henkin_fixpoint_000016 : ∃ (α : Type _), ∃ (hA : ACR α), ∃ (hP : @ACR.Prov α hA), ∃ (hR : @ACR.Reft α hA), ∃ (hAPS : @ACR.APS α hA hP hR), letI : ACR α := hA; letI : ACR.Prov α := hP; letI : ACR.Reft α := hR; letI : ACR.APS α := hAPS; ∃ g : ACR.GödelFixpoint α, ¬ (g.1 ≐ □g.1) := by
+  let hA : ACR (ULift Nat) :=
+    { top := ⟨0⟩
+      bot := ⟨2⟩
+      le := fun x y => x.down ≤ y.down
+      lt := fun x y => x.down ≤ y.down ∧ ¬ y.down ≤ x.down
       le_refl := by
         intro x
-        exact Or.inr <| Or.inl rfl
+        exact Nat.le_refl x.down
       le_trans := by
         intro x y z hxy hyz
-        rcases hxy with h0 | hxy | hy3
-        · subst h0
-          exact Or.inl rfl
-        · subst hxy
-          exact hyz
-        · subst hy3
-          have hz : z = 3 := by
-            simpa [rel] using hyz
-          subst hz
-          exact Or.inr <| Or.inr rfl }
-  let hP : @ACR.Prov (Fin 4) hA :=
-    { prov := provFn }
-  let hR : @ACR.Reft (Fin 4) hA :=
-    { reft := reftFn }
-  letI : ACR (Fin 4) := hA
-  letI : ACR.Prov (Fin 4) := hP
-  letI : ACR.Reft (Fin 4) := hR
-  let hAPS : @ACR.APS (Fin 4) hA hP hR :=
+        exact Nat.le_trans hxy hyz }
+  let hP : @ACR.Prov (ULift Nat) hA :=
+    { prov := fun _ => ⟨2⟩ }
+  let hR : @ACR.Reft (ULift Nat) hA :=
+    { reft := fun x => ⟨2 - x.down⟩ }
+  letI : ACR (ULift Nat) := hA
+  letI : ACR.Prov (ULift Nat) := hP
+  letI : ACR.Reft (ULift Nat) := hR
+  let hAPS : ACR.APS (ULift Nat) :=
     { prov_mono := by
         intro x y hxy
-        change rel (provFn x) (provFn y)
-        simp [rel, provFn]
+        exact Nat.le_refl 2
       reft_anti_mono := by
         intro x y hxy
-        rcases hxy with h0 | hxy | hy3
-        · subst h0
-          change rel (reftFn y) (reftFn 0)
-          simp [rel, reftFn]
-        · subst hxy
-          change rel (reftFn y) (reftFn y)
-          simp [rel]
-        · subst hy3
-          change rel (reftFn 3) (reftFn x)
-          by_cases hx : x = 1 ∨ x = 3
-          · simp [rel, reftFn, hx]
-          · simp [rel, reftFn, hx]
+        show 2 - y.down ≤ 2 - x.down
+        exact Nat.sub_le_sub_left hxy 2
       top_le_reft_bot := by
-        change rel 2 (reftFn 0)
-        simp [rel, reftFn]
+        show 0 ≤ (2 - 2)
+        decide
       le_reft_top_of_le_prov_of_le_reft := by
         intro x y hxy hxry
-        change rel x (reftFn 2)
-        simpa [rel, provFn, reftFn] using hxy
+        show x.down ≤ 2
+        simpa using hxy
       reft_le_prov_reft := by
         intro x
-        change rel (reftFn x) (provFn (reftFn x))
-        simp [rel, provFn] }
-  letI : ACR.APS (Fin 4) := hAPS
-  refine ⟨Fin 4, hA, hP, hR, hAPS, ?_⟩
-  refine ⟨?_, ?_, ?_⟩
-  · change ¬ rel 2 0
-    simp [rel]
-  · refine ⟨⟨1, ?_⟩⟩
-    constructor
-    · change rel 1 (reftFn 1)
-      simp [rel, reftFn]
-    · change rel (reftFn 1) 1
-      simp [rel, reftFn]
-  · refine ⟨1, ?_⟩
-    constructor
-    · constructor
-      · change rel 1 (reftFn 1)
-        simp [rel, reftFn]
-      · change rel (reftFn 1) 1
-        simp [rel, reftFn]
-    · intro h
-      have h' : False := by
-        simpa [rel, reftFn] using h.2
-      exact h'
+        show 2 - x.down ≤ 2
+        exact Nat.sub_le _ _ }
+  letI : ACR.APS (ULift Nat) := hAPS
+  refine ⟨ULift Nat, hA, hP, hR, hAPS, ?_⟩
+  refine ⟨⟨⟨1⟩, ?_⟩, ?_⟩
+  · constructor
+    · show 1 ≤ 1
+      exact Nat.le_refl 1
+    · show 1 ≤ 1
+      exact Nat.le_refl 1
+  · intro h
+    have h21 : 2 ≤ 1 := by
+      change ((⟨2⟩ : ULift Nat) ≤ ⟨1⟩)
+      exact h.2
+    have h' : ¬ 2 ≤ 1 := by
+      decide
+    exact h' h21
 
 end AutomatedTheoryConstruction
