@@ -41,6 +41,7 @@ When the current problem is solved and verified (`verify_success = true` and `re
 - It is good to return at least one candidate that meaningfully broadens, reinterprets, or reuses the verified result beyond the immediate local target.
 - Prefer candidates whose resolution would teach something non-obvious about the theory or its models, rather than merely restating the solved fact in slightly altered form.
 - If a more informative structural or threshold-style follow-up is available, prefer it over a nearby local rewrite.
+- Also favor follow-up problems that vary the assumptions or structure of the theory to reveal robustness, thresholds, or failure modes.
 - When appropriate, it is also good to propose a follow-up that analyzes the theory's internal language or expressive structure, provided the statement remains anchored to the active theory.
 
 Quality checklist for every returned candidate:

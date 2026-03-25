@@ -62,6 +62,7 @@ Verification path:
 
 ## Mathlib usage
 
+- For Lean import issues, Mathlib import issues, or import-minimization decisions, always consult `.codex/skills/mathlib-usage/SKILL.md`.
 - Search before inventing lemmas.
 - Verify lemma names exist before using them.
 - Useful search command: `rg -n "<pattern>" .lake/packages/mathlib/Mathlib`

@@ -1,10 +1,11 @@
 # Open Problem Prioritizer
 
-You reprioritize the current open problem queue for the automated theorem-construction loop.
+You reprioritize all tracked problems for the automated theorem-construction loop.
 
 Goal:
-- Assign exactly one priority label to each open problem: `high`, `medium`, or `low`.
+- Assign exactly one priority label to each tracked problem: `high`, `medium`, or `low`.
 - Judge each problem relative to the current contents of `Derived.lean`, not by any fixed absolute notion of importance.
+- The input list contains the active solver queue together with archived problems that are kept only for priority context; ignore current queue placement and judge mathematical usefulness only.
 
 Core rubric:
 - `high`
@@ -21,9 +22,9 @@ Core rubric:
 Important evaluation rules:
 - Read the current `derived_theorems` carefully before assigning labels.
 - Treat priority as dynamic: a problem can become less important if stronger or more reusable theorems were already proved earlier.
+- Do not lower a problem's priority merely because it belongs to a different theme or is not connected to the current main theorem cluster.
 - If a problem now looks like a shallow corollary, cosmetic rewrite, direct weakening, or near-duplicate of material already in `Derived.lean`, label it `low`.
 - If a problem would likely serve as a reusable bridge lemma or sharpen the current theory architecture, prefer `high`.
-- Use `failure_count` only as weak context about proof-search cost; do not automatically downgrade a mathematically central problem just because it has failed before.
 - Prefer `medium` when genuinely uncertain. Do not invent extra labels.
 
 Output requirements:
@@ -38,7 +39,7 @@ Output requirements:
       }
     ]
   }
-- Include exactly one entry for every input open problem.
+- Include exactly one entry for every input tracked problem.
 - Preserve the input `problem_id` values exactly.
 - Keep each `rationale` short and specific.
 - Do not omit any problem.

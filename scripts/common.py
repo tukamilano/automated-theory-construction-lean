@@ -10,6 +10,9 @@ from typing import Any
 
 ID_PATTERN = re.compile(r"^op_(\d+)$")
 OPEN_PROBLEM_PRIORITY_LABELS = {"high", "medium", "low", "unknown"}
+ARCHIVED_PROBLEMS_FILENAME = "archived_problems.jsonl"
+LEGACY_DEFERRED_PROBLEMS_FILENAME = "deferred_problems.jsonl"
+LEGACY_PRUNED_OPEN_PROBLEMS_FILENAME = "pruned_open_problems.jsonl"
 
 
 def read_jsonl(path: Path) -> list[dict[str, Any]]:
@@ -91,4 +94,57 @@ def normalize_open_problem_row(row: dict[str, Any]) -> dict[str, Any]:
     normalized.pop("attempt_count", None)
     normalized.pop("last_attempt_iteration", None)
     normalized.pop("last_result", None)
+    normalized.pop("pruned_at_iteration", None)
+    normalized.pop("pruned_reason", None)
     return normalized
+
+
+def dedupe_problem_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    deduped: list[dict[str, Any]] = []
+    seen_ids: set[str] = set()
+    for row in rows:
+        normalized = normalize_open_problem_row(row)
+        problem_id = str(normalized.get("id", "")).strip()
+        if not problem_id or problem_id in seen_ids:
+            continue
+        seen_ids.add(problem_id)
+        deduped.append(normalized)
+    return deduped
+
+
+def read_archived_problem_rows(data_dir: Path) -> list[dict[str, Any]]:
+    paths = [
+        data_dir / ARCHIVED_PROBLEMS_FILENAME,
+        data_dir / LEGACY_DEFERRED_PROBLEMS_FILENAME,
+        data_dir / LEGACY_PRUNED_OPEN_PROBLEMS_FILENAME,
+    ]
+    combined_rows: list[dict[str, Any]] = []
+    for path in paths:
+        combined_rows.extend(read_jsonl(path))
+    return dedupe_problem_rows(combined_rows)
+
+
+def is_active_open_problem(row: dict[str, Any], *, failure_threshold: int) -> bool:
+    normalized = normalize_open_problem_row(row)
+    if normalize_open_problem_priority(normalized.get("priority")) == "low":
+        return False
+    failure_count = int(normalized.get("failure_count", 0) or 0)
+    if failure_threshold > 0 and failure_count >= failure_threshold:
+        return False
+    return True
+
+
+def partition_open_problem_rows(
+    rows: list[dict[str, Any]],
+    *,
+    failure_threshold: int,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    active_rows: list[dict[str, Any]] = []
+    archived_rows: list[dict[str, Any]] = []
+    for row in rows:
+        normalized = normalize_open_problem_row(row)
+        if is_active_open_problem(normalized, failure_threshold=failure_threshold):
+            active_rows.append(normalized)
+        else:
+            archived_rows.append(normalized)
+    return active_rows, archived_rows

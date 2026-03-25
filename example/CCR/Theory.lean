@@ -1,10 +1,8 @@
-module
-
-public import Mathlib.Algebra.CharP.Basic
-public import Mathlib.Algebra.Lie.OfAssociative
-public import Mathlib.Algebra.Polynomial.AlgebraMap
-public import Mathlib.Algebra.Polynomial.Derivative
-public import Mathlib.Analysis.CStarAlgebra.Classes
+import Mathlib.Algebra.CharP.Basic
+import Mathlib.Algebra.Lie.OfAssociative
+import Mathlib.Algebra.Polynomial.AlgebraMap
+import Mathlib.Algebra.Polynomial.Derivative
+import Mathlib.Analysis.CStarAlgebra.Classes
 /-!
 # CCR Formalization
 This file formalizes a minimal axiom system around creation/annihilation operators
