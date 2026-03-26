@@ -27,6 +27,8 @@ venv/
 # Editors and temp
 .vscode/
 .idea/
+.env
+.env.local
 *.swp
 *.swo
 

@@ -12,6 +12,18 @@ For more details and generation examples, please see here.
 
 As the developer is not an expert for these theories, any feedback, suggestions, or contributions are very welcome. Please open an issue or a pull request.
 
+## Fastest Local Check
+
+If you only want to confirm that the repository is wired correctly on your machine, run:
+
+```bash
+make build
+make verify-scratch
+make mock-loop MAX_ITERATIONS=1
+```
+
+This path does not call Codex. It only checks that Lean builds, `Scratch.lean` verifies, and the main loop can execute one mock-worker iteration locally.
+
 ## Quick Mental Model
 
 ```text
@@ -115,9 +127,10 @@ Open problems may be either Lean-formal statements or semi-formal research promp
 
 - Lean toolchain from `lean-toolchain`
 - Lake + Mathlib dependencies
-- Python
+- Python 3
 - `uv`
 - Codex CLI if you want to use `scripts/codex_worker.py`
+- `make` for the convenience targets in the repository root
 
 For interactive Lean work with Codex, `lean-lsp-mcp` is also useful, but it is not part of the runtime loop itself.
 
@@ -135,12 +148,24 @@ Smoke-check the verification path:
 lake env lean AutomatedTheoryConstruction/Scratch.lean
 ```
 
+Optional local defaults:
+
+- The repository root now contains a `Makefile` with common entry points such as `make help`, `make mock-loop`, and `make codex-loop`.
+- `.env.example` documents the most common variables. If you place the same keys in a local `.env`, the `Makefile` will load them automatically.
+
+Important reset behavior:
+
+- `scripts/generate_seeds_from_theory.py` resets runtime state by default before generating fresh seeds.
+- `scripts/run_loop.py` also resets runtime state by default unless you pass `--no-initialize-on-start`.
+- That reset overwrites `data/*`, `AutomatedTheoryConstruction/Scratch.lean`, and `AutomatedTheoryConstruction/Derived.lean`.
+
 ## Quick Start
 
-Edit the active theory entry module and seed queue:
+The shortest path for a first-time contributor is:
 
-- `AutomatedTheoryConstruction/Theory.lean`
-- `AutomatedTheoryConstruction/seeds.jsonl`
+1. Run `make help` to see the supported entry points.
+2. Run `make mock-loop MAX_ITERATIONS=1` to confirm the local runtime works without Codex.
+3. Edit `AutomatedTheoryConstruction/Theory.lean` and `AutomatedTheoryConstruction/seeds.jsonl`.
 
 If the theory grows, split it behind the same entry module:
 
@@ -158,7 +183,7 @@ The runtime scripts still target `AutomatedTheoryConstruction/Theory.lean`, and 
 include adjacent `Theory/**/*.lean` files as part of the active theory context.
 
 You can also place background material under `docs/` and feed it into seed generation.
-Typical examples are paper drafts, notes, article exports, or hand-written context files.
+Typical examples are paper drafts, notes, article exports, or hand-written context files. The repository does not currently ship a `docs/` directory, so treat the paths below as placeholders for your own files.
 
 ### Seed Generation Only
 
@@ -166,7 +191,7 @@ To regenerate `AutomatedTheoryConstruction/seeds.jsonl` without running the full
 
 ```bash
 uv run python scripts/generate_seeds_from_theory.py \
-  --context-file docs/context.tex \
+  --context-file path/to/context-file.tex \
   --seed-count 4
 ```
 
@@ -186,10 +211,10 @@ To generate `seeds.jsonl` from the active theory entry module and optional theor
 ```bash
 ATC_CODEX_TIMEOUT=390 \
 uv run python scripts/run_pipeline.py \
-  --article-file docs/context.tex \
+  --article-file path/to/context-file.tex \
   --worker-command "uv run python scripts/codex_worker.py" \
   --worker-timeout 420 \
-  --max-iteration 40
+  --max-iterations 40
 ```
 
 - Repeat `--article-file` when you want multiple context files.

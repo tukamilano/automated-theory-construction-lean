@@ -12,6 +12,7 @@ def _read_request() -> dict[str, Any]:
         raise ValueError("request must be a JSON object")
     return payload
 
+
 def _prover_result(payload: dict[str, Any]) -> dict[str, Any]:
     problem_id = str(payload.get("problem_id", ""))
     return {
@@ -31,6 +32,7 @@ def _prover_statement_result(payload: dict[str, Any]) -> dict[str, Any]:
         "result": "ok" if stmt else "stuck",
         "lean_statement": stmt,
         "theorem_name_stem": "statement_target" if stmt else "",
+        "docstring_summary": "Mock theorem statement" if stmt else "",
         "notes": "mock_worker: echoed input statement" if stmt else "mock_worker: no statement provided",
     }
 
@@ -73,6 +75,26 @@ def _expand_result(payload: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _prioritize_open_problems_result(payload: dict[str, Any]) -> dict[str, Any]:
+    tracked = payload.get("tracked_problems", [])
+    priorities: list[dict[str, str]] = []
+    if isinstance(tracked, list):
+        for item in tracked:
+            if not isinstance(item, dict):
+                continue
+            problem_id = str(item.get("problem_id", "")).strip()
+            if not problem_id:
+                continue
+            priorities.append(
+                {
+                    "problem_id": problem_id,
+                    "priority": "medium",
+                    "rationale": "mock_worker: default medium priority",
+                }
+            )
+    return {"priorities": priorities}
+
+
 def _refactor_derived_result(payload: dict[str, Any]) -> dict[str, Any]:
     derived_code = str(payload.get("derived_code", "")).strip()
     return {
@@ -101,6 +123,8 @@ def main() -> None:
             result_payload = _repair_result(payload)
         elif task_type == "expand":
             result_payload = _expand_result(payload)
+        elif task_type == "prioritize_open_problems":
+            result_payload = _prioritize_open_problems_result(payload)
         elif task_type == "refactor_derived":
             result_payload = _refactor_derived_result(payload)
         else:
