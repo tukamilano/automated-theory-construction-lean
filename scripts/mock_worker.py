@@ -31,6 +31,7 @@ def _prover_statement_result(payload: dict[str, Any]) -> dict[str, Any]:
         "result": "ok" if stmt else "stuck",
         "lean_statement": stmt,
         "theorem_name_stem": "statement_target" if stmt else "",
+        "docstring_summary": "Mock echoed statement." if stmt else "",
         "notes": "mock_worker: echoed input statement" if stmt else "mock_worker: no statement provided",
     }
 
@@ -73,6 +74,41 @@ def _expand_result(payload: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _main_theorem_suggest_result(payload: dict[str, Any]) -> dict[str, Any]:
+    candidate_id = str(payload.get("candidate_id", ""))
+    return {
+        "candidate_id": candidate_id,
+        "result": "stuck",
+        "statement": "",
+        "theorem_name_stem": "",
+        "docstring_summary": "",
+        "rationale": "mock_worker: no main theorem suggestion",
+        "supporting_theorems": [],
+        "missing_lemmas": [],
+    }
+
+
+def _main_theorem_plan_result(payload: dict[str, Any]) -> dict[str, Any]:
+    candidate_id = str(payload.get("candidate_id", ""))
+    return {
+        "candidate_id": candidate_id,
+        "result": "stuck",
+        "plan_summary": "mock_worker: no plan generated",
+        "proof_sketch": "",
+        "supporting_theorems": [],
+        "intermediate_lemmas": [],
+        "notes": "mock_worker: no main theorem proof plan",
+    }
+
+
+def _post_theorem_expand_result(payload: dict[str, Any]) -> dict[str, Any]:
+    problem_id = str(payload.get("problem_id", ""))
+    return {
+        "problem_id": problem_id,
+        "candidates": [],
+    }
+
+
 def _refactor_derived_result(payload: dict[str, Any]) -> dict[str, Any]:
     derived_code = str(payload.get("derived_code", "")).strip()
     return {
@@ -101,6 +137,12 @@ def main() -> None:
             result_payload = _repair_result(payload)
         elif task_type == "expand":
             result_payload = _expand_result(payload)
+        elif task_type == "main_theorem_suggest":
+            result_payload = _main_theorem_suggest_result(payload)
+        elif task_type == "main_theorem_plan":
+            result_payload = _main_theorem_plan_result(payload)
+        elif task_type == "post_theorem_expand":
+            result_payload = _post_theorem_expand_result(payload)
         elif task_type == "refactor_derived":
             result_payload = _refactor_derived_result(payload)
         else:

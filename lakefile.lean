@@ -12,6 +12,3 @@ require mathlib from git
 lean_lib «AutomatedTheoryConstruction» {
   -- add any library configuration options here
 }
-
-lean_lib «AxiomaticThermoDynamics» where
-  srcDir := "example"
