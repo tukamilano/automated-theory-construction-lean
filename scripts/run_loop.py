@@ -63,6 +63,7 @@ DERIVED_TEMPLATE = (
 THEOREM_NAME_STEM_PATTERN = re.compile(r"^[a-z][a-z0-9_]*$")
 THEOREM_NAME_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_']*$")
 DERIVED_THEOREM_HEADER_PATTERN = re.compile(r"\btheorem\s+([A-Za-z0-9_']+)\s*:\s*(.+?)\s*:=", re.DOTALL)
+UNUSED_VARIABLE_WARNING_PATTERN = re.compile(r"unused variable\s+`([^`]+)`", re.IGNORECASE)
 OPEN_PROBLEM_PRIORITY_ORDER = {
     "high": 0,
     "medium": 1,
@@ -967,6 +968,127 @@ def analyze_lean_failure(stderr: str, stdout: str) -> dict[str, Any]:
     }
 
 
+def extract_unused_variable_names(stderr: str, stdout: str) -> list[str]:
+    text = (stderr or "") + "\n" + (stdout or "")
+    names: list[str] = []
+    seen: set[str] = set()
+    for match in UNUSED_VARIABLE_WARNING_PATTERN.finditer(text):
+        name = str(match.group(1)).strip()
+        if not name or name in seen:
+            continue
+        seen.add(name)
+        names.append(name)
+    return names
+
+
+def _find_matching_delimiter(text: str, start: int) -> int:
+    pairs = {"(": ")", "{": "}", "[": "]"}
+    closing_to_opening = {value: key for key, value in pairs.items()}
+    opening = text[start]
+    if opening not in pairs:
+        return -1
+    stack = [opening]
+    idx = start + 1
+    while idx < len(text):
+        ch = text[idx]
+        if ch in pairs:
+            stack.append(ch)
+        elif ch in closing_to_opening:
+            if not stack or stack[-1] != closing_to_opening[ch]:
+                return -1
+            stack.pop()
+            if not stack:
+                return idx
+        idx += 1
+    return -1
+
+
+def _find_top_level_colon(text: str) -> int:
+    depth_paren = 0
+    depth_brace = 0
+    depth_bracket = 0
+    for idx, ch in enumerate(text):
+        if ch == "(":
+            depth_paren += 1
+        elif ch == ")":
+            depth_paren = max(0, depth_paren - 1)
+        elif ch == "{":
+            depth_brace += 1
+        elif ch == "}":
+            depth_brace = max(0, depth_brace - 1)
+        elif ch == "[":
+            depth_bracket += 1
+        elif ch == "]":
+            depth_bracket = max(0, depth_bracket - 1)
+        elif ch == ":" and depth_paren == 0 and depth_brace == 0 and depth_bracket == 0:
+            return idx
+    return -1
+
+
+def prune_unused_binders_from_statement(stmt: str, unused_names: list[str]) -> str:
+    if not unused_names:
+        return stmt
+
+    stripped = stmt.lstrip()
+    if not stripped.startswith("∀"):
+        return stmt
+
+    idx = 1
+    binders: list[str] = []
+    while idx < len(stripped):
+        while idx < len(stripped) and stripped[idx].isspace():
+            idx += 1
+        if idx >= len(stripped):
+            return stmt
+        if stripped[idx] == ",":
+            body = stripped[idx + 1 :].strip()
+            break
+        if stripped[idx] not in "({[":
+            return stmt
+        end_idx = _find_matching_delimiter(stripped, idx)
+        if end_idx < 0:
+            return stmt
+        binders.append(stripped[idx : end_idx + 1])
+        idx = end_idx + 1
+    else:
+        return stmt
+
+    unused_set = set(unused_names)
+    kept_binders: list[str] = []
+    changed = False
+
+    for binder in binders:
+        opener = binder[0]
+        closer = binder[-1]
+        if opener == "[":
+            kept_binders.append(binder)
+            continue
+        inner = binder[1:-1].strip()
+        colon_idx = _find_top_level_colon(inner)
+        if colon_idx < 0:
+            kept_binders.append(binder)
+            continue
+        names_part = inner[:colon_idx].strip()
+        type_part = inner[colon_idx + 1 :].strip()
+        names = [token for token in names_part.split() if token]
+        if not names:
+            kept_binders.append(binder)
+            continue
+        kept_names = [name for name in names if name not in unused_set]
+        if len(kept_names) == len(names):
+            kept_binders.append(binder)
+            continue
+        changed = True
+        if kept_names:
+            kept_binders.append(f"{opener}{' '.join(kept_names)} : {type_part}{closer}")
+
+    if not changed:
+        return stmt
+    if not kept_binders:
+        return body
+    return f"∀ {' '.join(kept_binders)}, {body}"
+
+
 def load_formalization_memory(memory_path: Path, problem_id: str) -> list[dict[str, Any]]:
     if not memory_path.exists():
         return []
@@ -1413,12 +1535,15 @@ def attempt_formalization_until_timeout(
     current_iteration_full_logs: list[dict[str, Any]],
     initial_proof_text: str = "",
     phase_logger: Callable[..., None] | None = None,
-) -> tuple[bool, str | None, str, str, str, list[str], str]:
+) -> tuple[bool, str | None, str, str, str, list[str], str, str]:
     verify_success = False
     current_theorem_name = validate_theorem_name(theorem_name)
+    current_stmt = stmt
     verify_error_excerpt = ""
     retained_new_problems = list(new_problems)
     proof_text = initial_proof_text
+    attempted_strengthened_statements = {normalize_stmt_text(current_stmt)}
+    best_verified_candidate: dict[str, Any] | None = None
 
     if result not in {"proof", "counterexample"}:
         # Preserve stuck/counterexample exploration history so future timeout handling
@@ -1437,7 +1562,7 @@ def attempt_formalization_until_timeout(
             }
         )
         save_formalization_memory(memory_path, problem_id, persisted_history)
-        return verify_success, current_theorem_name, result, proof_text, counterexample_text, new_problems, verify_error_excerpt
+        return verify_success, current_theorem_name, result, proof_text, counterexample_text, new_problems, verify_error_excerpt, current_stmt
 
     if not proof_text.strip():
         if formalize_worker_settings is None:
@@ -1455,7 +1580,7 @@ def attempt_formalization_until_timeout(
                 }
             )
             save_formalization_memory(memory_path, problem_id, persisted_history)
-            return verify_success, current_theorem_name, "stuck", proof_text, counterexample_text, new_problems, verify_error_excerpt
+            return verify_success, current_theorem_name, "stuck", proof_text, counterexample_text, new_problems, verify_error_excerpt, current_stmt
 
         try:
             same_problem_history_tail = load_formalization_memory(memory_path, problem_id)[-8:]
@@ -1463,7 +1588,7 @@ def attempt_formalization_until_timeout(
                 formalize_worker_settings=formalize_worker_settings,
                 formalizer_prompt=formalizer_prompt,
                 problem_id=problem_id,
-                stmt=stmt,
+                stmt=current_stmt,
                 result=result,
                 proof_sketch=proof_sketch,
                 counterexample_text=counterexample_text,
@@ -1489,7 +1614,7 @@ def attempt_formalization_until_timeout(
                     }
                 )
                 save_formalization_memory(memory_path, problem_id, persisted_history)
-                return verify_success, current_theorem_name, "stuck", proof_text, counterexample_text, new_problems, verify_error_excerpt
+                return verify_success, current_theorem_name, "stuck", proof_text, counterexample_text, new_problems, verify_error_excerpt, current_stmt
             raise
         if result not in {"proof", "counterexample"}:
             persisted_history = load_formalization_memory(memory_path, problem_id)
@@ -1506,7 +1631,7 @@ def attempt_formalization_until_timeout(
                 }
             )
             save_formalization_memory(memory_path, problem_id, persisted_history)
-            return verify_success, current_theorem_name, result, proof_text, counterexample_text, new_problems, verify_error_excerpt
+            return verify_success, current_theorem_name, result, proof_text, counterexample_text, new_problems, verify_error_excerpt, current_stmt
 
     deadline = time.monotonic() + max(1, formalization_retry_budget_sec)
     persisted_history = load_formalization_memory(memory_path, problem_id)
@@ -1524,13 +1649,15 @@ def attempt_formalization_until_timeout(
             )
         theorem_name, scratch_code = formalize_to_scratch(
             theorem_name=current_theorem_name,
-            stmt=stmt,
+            stmt=current_stmt,
             mode=result,
             proof_text=proof_text,
             counterexample_text=counterexample_text,
         )
 
         lean_diagnostics = ""
+        verify_stderr_text = ""
+        verify_stdout_text = ""
         scratch_file.write_text(scratch_code, encoding="utf-8")
         if skip_verify:
             verify_success = True
@@ -1543,18 +1670,18 @@ def attempt_formalization_until_timeout(
         else:
             verify_result = verify_scratch(problem_id, result, scratch_file, timeout_sec=verify_timeout_sec)
             verify_success = bool(verify_result.get("success", False))
-            lean_diagnostics = (
-                str(verify_result.get("stderr", "")) + "\n" + str(verify_result.get("stdout", ""))
-            ).strip()
+            verify_stderr_text = str(verify_result.get("stderr", ""))
+            verify_stdout_text = str(verify_result.get("stdout", ""))
+            lean_diagnostics = (verify_stderr_text + "\n" + verify_stdout_text).strip()
             if not verify_success:
-                verify_stderr = str(verify_result.get("stderr", "")).strip()
-                verify_stdout = str(verify_result.get("stdout", "")).strip()
+                verify_stderr = verify_stderr_text.strip()
+                verify_stdout = verify_stdout_text.strip()
                 verify_error_excerpt = (verify_stderr or verify_stdout).splitlines()[0] if (verify_stderr or verify_stdout) else "Lean verification failed"
             else:
                 verify_error_excerpt = ""
             verify_error_analysis = analyze_lean_failure(
-                str(verify_result.get("stderr", "")),
-                str(verify_result.get("stdout", "")),
+                verify_stderr_text,
+                verify_stdout_text,
             )
 
         if phase_logger is not None:
@@ -1568,6 +1695,29 @@ def attempt_formalization_until_timeout(
             )
 
         if verify_success:
+            best_verified_candidate = {
+                "stmt": current_stmt,
+                "result": result,
+                "proof_text": proof_text,
+                "counterexample_text": counterexample_text,
+                "new_problems": list(retained_new_problems),
+                "verify_error_excerpt": verify_error_excerpt,
+            }
+            unused_names = extract_unused_variable_names(verify_stderr_text, verify_stdout_text)
+            strengthened_stmt = (
+                prune_unused_binders_from_statement(current_stmt, unused_names)
+                if result == "proof" and not skip_verify
+                else current_stmt
+            )
+            strengthened_norm = normalize_stmt_text(strengthened_stmt)
+            if (
+                result == "proof"
+                and strengthened_stmt != current_stmt
+                and strengthened_norm not in attempted_strengthened_statements
+            ):
+                attempted_strengthened_statements.add(strengthened_norm)
+                current_stmt = strengthened_stmt
+                continue
             success_fingerprint = str(verify_error_analysis.get("fingerprint", "verified"))
             repair_history.append(
                 {
@@ -1592,10 +1742,22 @@ def attempt_formalization_until_timeout(
                 counterexample_text,
                 retained_new_problems,
                 verify_error_excerpt,
+                current_stmt,
             )
 
         if repair_worker_settings is None or time.monotonic() >= deadline:
             save_formalization_memory(memory_path, problem_id, repair_history)
+            if best_verified_candidate is not None:
+                return (
+                    True,
+                    current_theorem_name,
+                    str(best_verified_candidate["result"]),
+                    str(best_verified_candidate["proof_text"]),
+                    str(best_verified_candidate["counterexample_text"]),
+                    list(best_verified_candidate["new_problems"]),
+                    str(best_verified_candidate["verify_error_excerpt"]),
+                    str(best_verified_candidate["stmt"]),
+                )
             return (
                 verify_success,
                 current_theorem_name,
@@ -1604,9 +1766,24 @@ def attempt_formalization_until_timeout(
                 counterexample_text,
                 retained_new_problems,
                 verify_error_excerpt,
+                current_stmt,
             )
 
         error_fingerprint = str(verify_error_analysis.get("fingerprint", "no_diagnostics"))
+        error_categories = verify_error_analysis.get("categories", [])
+        lean_error_top_lines = verify_error_analysis.get("top_lines", [])
+        if best_verified_candidate is not None and normalize_stmt_text(current_stmt) != normalize_stmt_text(str(best_verified_candidate["stmt"])):
+            retry_instruction = (
+                "The previous theorem already verified. A stronger candidate statement was formed by removing unused binders "
+                "from `stmt`. Try to prove this stronger `stmt`; if the old proof no longer fits, revise `proof_text` minimally "
+                "so it proves the new statement. proof_text must be Lean tactic code only."
+            )
+        else:
+            retry_instruction = (
+                "Previous proof/counterexample failed Lean formalization or verification. "
+                "Read the Lean diagnostics carefully. Revise proof_sketch if the strategy was wrong, "
+                "then fix proof_text to match. proof_text must be Lean tactic code only."
+            )
 
         repair_history.append(
             {
@@ -1634,7 +1811,7 @@ def attempt_formalization_until_timeout(
             )
         repair_payload: dict[str, Any] = {
             "problem_id": problem_id,
-            "stmt": stmt,
+            "stmt": current_stmt,
             "theory_context": theory_context,
             "new_problem_generation_policy": {
                 "prefer_subgoals_when_stuck": True,
@@ -1644,13 +1821,9 @@ def attempt_formalization_until_timeout(
                 "avoid_variable_renaming_only": True,
                 "target_novelty": "medium_or_high",
             },
-            "retry_instruction": (
-                "Previous proof/counterexample failed Lean formalization or verification. "
-                "Read the Lean diagnostics carefully. Revise proof_sketch if the strategy was wrong, "
-                "then fix proof_text to match. proof_text must be Lean tactic code only."
-            ),
+            "retry_instruction": retry_instruction,
             "error_fingerprint": error_fingerprint,
-            "error_categories": verify_error_analysis.get("categories", []),
+            "error_categories": error_categories,
             "previous_result": result,
             "previous_proof_sketch": proof_sketch,
             "previous_proof_text": proof_text,
@@ -1658,7 +1831,7 @@ def attempt_formalization_until_timeout(
             "previous_new_problems": new_problems,
             "repair_history_tail": repair_history[-8:],
             "lean_error_excerpt": verify_error_excerpt,
-            "lean_error_top_lines": verify_error_analysis.get("top_lines", []),
+            "lean_error_top_lines": lean_error_top_lines,
             "lean_diagnostics": "\n".join(lean_diagnostics.splitlines()[:60]),
             "current_scratch_code": scratch_code or "",
             "mathlib_import_in_scratch": True,
@@ -1682,6 +1855,17 @@ def attempt_formalization_until_timeout(
             if is_worker_timeout_error(exc):
                 verify_error_excerpt = f"repair worker timeout: {exc}"
                 save_formalization_memory(memory_path, problem_id, repair_history)
+                if best_verified_candidate is not None:
+                    return (
+                        True,
+                        current_theorem_name,
+                        str(best_verified_candidate["result"]),
+                        str(best_verified_candidate["proof_text"]),
+                        str(best_verified_candidate["counterexample_text"]),
+                        list(best_verified_candidate["new_problems"]),
+                        str(best_verified_candidate["verify_error_excerpt"]),
+                        str(best_verified_candidate["stmt"]),
+                    )
                 return (
                     verify_success,
                     theorem_name,
@@ -1690,6 +1874,7 @@ def attempt_formalization_until_timeout(
                     counterexample_text,
                     retained_new_problems,
                     verify_error_excerpt,
+                    current_stmt,
                 )
             raise
         try:
@@ -1697,6 +1882,29 @@ def attempt_formalization_until_timeout(
         except ValueError as exc:
             verify_error_excerpt = f"repair output invalid: {exc}"
             continue
+        if result not in {"proof", "counterexample"}:
+            save_formalization_memory(memory_path, problem_id, repair_history)
+            if best_verified_candidate is not None:
+                return (
+                    True,
+                    current_theorem_name,
+                    str(best_verified_candidate["result"]),
+                    str(best_verified_candidate["proof_text"]),
+                    str(best_verified_candidate["counterexample_text"]),
+                    list(best_verified_candidate["new_problems"]),
+                    str(best_verified_candidate["verify_error_excerpt"]),
+                    str(best_verified_candidate["stmt"]),
+                )
+            return (
+                False,
+                current_theorem_name,
+                result,
+                proof_text,
+                counterexample_text,
+                retained_new_problems,
+                verify_error_excerpt,
+                current_stmt,
+            )
 
 def initialize_runtime_state(
     data_dir: Path,
@@ -2119,6 +2327,7 @@ def main() -> None:
             counterexample_text,
             new_problems,
             verify_error_excerpt,
+            target_stmt,
         ) = attempt_formalization_until_timeout(
             problem_id=problem_id,
             theorem_name=theorem_name or build_theorem_name(problem_id, "statement_target"),
@@ -2239,7 +2448,7 @@ def main() -> None:
         report["verify_success"] = verify_success
         report["verify_error_excerpt"] = verify_error_excerpt
         report["original_stmt"] = original_stmt
-        report["formalized_stmt"] = solver_stmt
+        report["formalized_stmt"] = target_stmt if solver_stmt else ""
         report["prover_statement_result"] = statement_formalization_result
         report["prover_statement_theorem_name_stem"] = theorem_name_stem
         report["prover_statement_docstring_summary"] = docstring_summary
