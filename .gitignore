@@ -1,6 +1,14 @@
-/build
-/.lake
-/lake-packages/*
+# Lean / Lake
+/.lake/
+/build/
+/lake-packages/
+*.olean
+*.ilean
+*.trace
+
+# Generated review artifacts
+/AutomatedTheoryConstruction/Derived.refactored.preview.lean
+/AutomatedTheoryConstruction/Derived.refactored.reviewed.lean
 
 # Python
 __pycache__/
@@ -10,10 +18,11 @@ __pycache__/
 .installed.cfg
 .Python
 .venv/
-
-# macOS
-.DS_Store
-.AppleDouble
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
 
 # Editors and temp
 .vscode/
@@ -21,9 +30,6 @@ __pycache__/
 *.swp
 *.swo
 
-AutomatedTheoryConstruction/
-!AutomatedTheoryConstruction/
-AutomatedTheoryConstruction/*
-!AutomatedTheoryConstruction/seeds.jsonl
-data/*
-docs/*
+# macOS
+.DS_Store
+.AppleDouble

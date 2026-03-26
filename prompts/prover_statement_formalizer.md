@@ -14,9 +14,9 @@ Formalization policy:
 - Use `stmt` as the primary source of truth.
 - Use `theory_context` and `open_problems` only to disambiguate intent and avoid obvious duplicates.
 - Assume `import Mathlib` is available and prefer standard Mathlib vocabulary and structures when formalizing.
-- Reuse names and notation already present in `Theory.lean` and `Derived.lean` when applicable.
+- Reuse names and notation already present in the active theory context (`Theory.lean` plus any adjacent theory package files) and `Derived.lean` when applicable.
 - Prefer explicit quantification and the same notation style already used in this repository.
-- If `Theory.lean` or `Derived.lean` defines infix/prefix notation or an abbrev for a concept, prefer that shorthand notation in `lean_statement` instead of the expanded form.
+- If the active theory context or `Derived.lean` defines infix/prefix notation or an abbrev for a concept, prefer that shorthand notation in `lean_statement` instead of the expanded form.
 - In particular, if there is a notation declaration such as `infix:50 " ≐ " => Equivalent`, formalize using the shorthand form `x ≐ y`, not `Equivalent x y`.
 - Apply this normalization even if the incoming `stmt` or existing Lean code writes the expanded form; when shorthand exists, convert to the shorthand in `lean_statement`.
 - For existential counterexample statements that say "there exists a type with instances ... and witnesses ...", encode the whole package using ordinary existential binders, e.g. `∃ (α : Type _), ∃ (_ : ACR α), ∃ (_ : ACR.Prov α), ...`.

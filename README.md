@@ -2,6 +2,8 @@
 
 It implements an automated theory-construction loop on top of Lean 4 + Mathlib. Given a base theory, the system proposes candidate statements, attempts to formalize and prove them in Lean, verifies successful results, and accumulates the verified theorems into the derived theory.
 
+Runtime behavior is defined by the repository scripts and prompts. The `.codex/` directory contains Codex-specific execution guidance and is optional for other assistants.
+
 For more details and generation examples, please see here.
 - [Progress](https://tukamilano.github.io/automated-theory-construction-lean/notes/draft/2026/03/25/progress.html)
 - [Application to provability logic](https://gist.github.com/tukamilano/ba2c5719e0c5e2e1093b5b4dd174c182) (update 3.25)
@@ -13,7 +15,7 @@ As the developer is not an expert for these theories, any feedback, suggestions,
 ## Quick Mental Model
 
 ```text
-[Theory.lean] + [docs/articles / notes / paper]
+[Theory.lean + optional Theory/*.lean] + [docs/articles / notes / paper]
         ↓
 [scripts/generate_seeds_from_theory.py]
   generate initial open problems
@@ -22,7 +24,9 @@ As the developer is not an expert for these theories, any feedback, suggestions,
         ↓
 +-------------------------------------------+
 | [Theory.lean]                             |
-|   base symbols + axioms                   |
+|   theory entry module                     |
+| [Theory/*.lean]                           |
+|   optional theory package modules         |
 |         ↓                                 |
 | [scripts/run_loop.py]                     |
 |   generate / formalize / prove / repair   |
@@ -47,7 +51,8 @@ As the developer is not an expert for these theories, any feedback, suggestions,
 
 For a first-time reader, the core idea is:
 
-- `AutomatedTheoryConstruction/Theory.lean` defines the starting symbols and axioms
+- `AutomatedTheoryConstruction/Theory.lean` is the canonical entry module for the active theory
+- `AutomatedTheoryConstruction/Theory/*.lean` is an optional package layout for splitting the theory behind that entry module
 - `AutomatedTheoryConstruction/Scratch.lean` is the temporary file used for Lean verification
 - `AutomatedTheoryConstruction/Derived.lean` stores the verified theorems discovered so far
 - `scripts/run_loop.py` orchestrates the full loop
@@ -63,7 +68,8 @@ The current design is a single runtime pipeline with:
 
 The main loop is `scripts/run_loop.py`. Its runtime paths are currently fixed in code:
 
-- theory: `AutomatedTheoryConstruction/Theory.lean`
+- theory entry module: `AutomatedTheoryConstruction/Theory.lean`
+- optional adjacent theory package: `AutomatedTheoryConstruction/Theory/*.lean`
 - accumulated theorems: `AutomatedTheoryConstruction/Derived.lean`
 - temporary verification file: `AutomatedTheoryConstruction/Scratch.lean`
 - initial seeds: `AutomatedTheoryConstruction/seeds.jsonl`
@@ -86,7 +92,8 @@ Open problems may be either Lean-formal statements or semi-formal research promp
 
 ## Repository Layout
 
-- `AutomatedTheoryConstruction/Theory.lean`: base theory, symbols, and axioms
+- `AutomatedTheoryConstruction/Theory.lean`: active theory entry module
+- `AutomatedTheoryConstruction/Theory/*.lean`: optional package modules imported by `Theory.lean`
 - `AutomatedTheoryConstruction/Derived.lean`: verified theorem accumulation target
 - `AutomatedTheoryConstruction/Scratch.lean`: temporary verification artifact
 - `scripts/run_loop.py`: main orchestrator
@@ -130,10 +137,25 @@ lake env lean AutomatedTheoryConstruction/Scratch.lean
 
 ## Quick Start
 
-Edit the active theory:
+Edit the active theory entry module and seed queue:
 
 - `AutomatedTheoryConstruction/Theory.lean`
 - `AutomatedTheoryConstruction/seeds.jsonl`
+
+If the theory grows, split it behind the same entry module:
+
+```text
+AutomatedTheoryConstruction/
+  Theory.lean
+  Theory/
+    Core.lean
+    Axioms.lean
+    Notation.lean
+```
+
+In that layout, keep `Theory.lean` as a thin facade that imports the files under `Theory/`.
+The runtime scripts still target `AutomatedTheoryConstruction/Theory.lean`, and they automatically
+include adjacent `Theory/**/*.lean` files as part of the active theory context.
 
 You can also place background material under `docs/` and feed it into seed generation.
 Typical examples are paper drafts, notes, article exports, or hand-written context files.
@@ -151,6 +173,7 @@ uv run python scripts/generate_seeds_from_theory.py \
 - Repeat `--context-file` to provide multiple files.
 - The output path defaults to `AutomatedTheoryConstruction/seeds.jsonl`.
 - `docs/` is just a convenient place to keep these materials in the repo; any file path works.
+- The generator reads `AutomatedTheoryConstruction/Theory.lean` as the theory entry module and, when present, also reads adjacent `AutomatedTheoryConstruction/Theory/**/*.lean` files as part of the same theory package.
 - By default, this command first resets the active runtime state, clears archived/solved/counterexample state, resets `Scratch.lean` and `Derived.lean`, rebuilds the stable Lean targets, and then generates fresh seeds against that reset state.
 - As part of that reset, the previous `AutomatedTheoryConstruction/seeds.jsonl` is removed before new seeds are generated.
 - After seed generation finishes, the new `AutomatedTheoryConstruction/seeds.jsonl` is copied into `data/open_problems.jsonl`.
@@ -158,7 +181,7 @@ uv run python scripts/generate_seeds_from_theory.py \
 
 ### One-Shot Pipeline
 
-To generate `seeds.jsonl` from `Theory.lean` plus article/context files, run `run_loop.py`, and then run the two-stage refactor in one go:
+To generate `seeds.jsonl` from the active theory entry module and optional theory package plus article/context files, run `run_loop.py`, and then run the two-stage refactor in one go:
 
 ```bash
 ATC_CODEX_TIMEOUT=390 \
@@ -171,7 +194,7 @@ uv run python scripts/run_pipeline.py \
 
 - Repeat `--article-file` when you want multiple context files.
 - `--dry-run` prints the underlying commands without executing them.
-- The wrapper uses the fixed active runtime files: `AutomatedTheoryConstruction/Theory.lean`, `AutomatedTheoryConstruction/seeds.jsonl`, and `AutomatedTheoryConstruction/Derived.lean`.
+- The wrapper uses the fixed active runtime files: `AutomatedTheoryConstruction/Theory.lean`, the optional adjacent `AutomatedTheoryConstruction/Theory/**/*.lean` package, `AutomatedTheoryConstruction/seeds.jsonl`, and `AutomatedTheoryConstruction/Derived.lean`.
 
 Then choose a worker mode.
 
@@ -343,7 +366,8 @@ The loop stores its state in `data/`:
 
 ## Lean Module Contract
 
-- `Theory.lean` defines the base objects and axioms.
+- `Theory.lean` is the canonical entry module for the active theory.
+- An adjacent `Theory/` directory is treated as part of the same active theory package when present.
 - `Derived.lean` contains only verified theorems that have passed Lean checking.
 - `Scratch.lean` is the temporary file used for each verification attempt.
 
@@ -356,6 +380,7 @@ lake env lean AutomatedTheoryConstruction/Scratch.lean
 ## Notes
 
 - `scripts/run_loop.py` currently assumes the semigroup-like seed file path and fixed module layout.
+- The public runtime contract remains a single `--theory-file` entry module; adjacent `Theory/**/*.lean` files are included automatically as additional theory context.
 - `example/CCG`, `example/Equational_theory`, and `example/provability` are examples only; they are not selected by a runtime flag today. Aristotle is used to generate Theory.lean.
 - `expand` suggestions are deduplicated before state update.
 - `formalize` and `repair` are separate task types, even if they use the same prompt file by default.

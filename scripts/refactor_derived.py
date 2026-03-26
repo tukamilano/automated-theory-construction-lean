@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from append_derived import build_derived_entries_from_file
+from theory_context import load_theory_context_bundle
 from worker_client import invoke_worker_json, load_task_worker_settings, load_worker_settings
 
 DEFAULT_PREVIEW_OUTPUT = Path("AutomatedTheoryConstruction/Derived.refactored.preview.lean")
@@ -236,7 +237,7 @@ def main() -> None:
 
     prompt_text = load_text(prompt_file)
     derived_code = load_text(derived_file)
-    theory_context = load_text(theory_file)
+    theory_context = load_theory_context_bundle(theory_file)
     theorem_inventory = build_derived_entries_from_file(derived_file)
     duplicate_groups = build_exact_duplicate_statement_groups(theorem_inventory)
 

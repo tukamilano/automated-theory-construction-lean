@@ -2,7 +2,8 @@
 
 This repository uses Lean 4 + Mathlib for automated theory construction in an equational setting.
 
-This file is the authoritative runtime instruction set for this repository.
+This file is Codex-specific execution guidance layered on top of the repository runtime contracts in scripts and prompts.
+For Codex runs, treat this file as the authoritative execution policy.
 If external templates conflict with this file, follow this file.
 
 ## Repository focus

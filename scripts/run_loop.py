@@ -30,6 +30,7 @@ from common import (
 from import_inference import infer_minimal_imports, render_import_block
 from lean_verify import verify_scratch
 from state_update import apply_state_update
+from theory_context import load_optional_theory_context_bundle
 from worker_client import invoke_worker_json, load_task_worker_settings, load_worker_settings
 
 
@@ -411,13 +412,6 @@ def load_prompt_text(prompt_file: str) -> str:
     path = Path(prompt_file)
     if not path.exists():
         raise ValueError(f"Prompt file not found: {prompt_file}")
-    return path.read_text(encoding="utf-8")
-
-
-def load_optional_text(file_path: str) -> str:
-    path = Path(file_path)
-    if not path.exists():
-        return ""
     return path.read_text(encoding="utf-8")
 
 
@@ -2053,7 +2047,7 @@ def main() -> None:
         prebuild_lean_project()
         debug_log("Initialization build completed")
 
-    base_theory_context = load_optional_text(args.theory_file)
+    base_theory_context = load_optional_theory_context_bundle(Path(args.theory_file))
     derived_path = Path(args.derived_file)
     derived_entries = extract_derived_theorem_entries(derived_path)
     open_path = data_dir / "open_problems.jsonl"

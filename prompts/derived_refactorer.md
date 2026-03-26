@@ -13,7 +13,7 @@ Hard constraints:
 - If you cannot confidently produce a valid replacement file, return `stuck`.
 
 Refactoring policy:
-- Treat `derived_code` as the current source of truth and `theory_context` as the ambient base theory.
+- Treat `derived_code` as the current source of truth and `theory_context` as the ambient base theory context (`Theory.lean` plus any adjacent theory package files).
 - Prefer one canonical theorem per mathematical fact.
 - Merge exact duplicates and near-duplicates when one theorem clearly subsumes the others.
 - Reduce one-line closure lemmas and mechanical restatements when they do not add reusable theory content.

@@ -15,6 +15,7 @@ from common import (
     write_jsonl_atomic,
 )
 from run_loop import DERIVED_TEMPLATE, SCRATCH_TEMPLATE, prebuild_lean_project
+from theory_context import collect_theory_context_files
 
 
 DEFAULT_THEORY = Path("AutomatedTheoryConstruction/Theory.lean")
@@ -136,12 +137,13 @@ def _extract_json_object(text: str) -> dict[str, Any]:
 def build_prompt(
     *,
     theory_file: Path,
+    theory_context_files: list[Path],
     derived_file: Path | None,
     context_files: list[Path],
     seed_count: int,
     extra_instruction: str,
 ) -> str:
-    read_lines = [f"- {theory_file.resolve()}"]
+    read_lines = [f"- {path.resolve()}" for path in theory_context_files]
     if derived_file is not None:
         read_lines.append(f"- {derived_file.resolve()}")
     for path in context_files:
@@ -159,9 +161,9 @@ def build_prompt(
 
 Task:
 - Generate {seed_count} initial open problems for the automated theory-construction loop.
-- Base every candidate on the actual definitions, notation, classes, axioms, and proved lemmas visible in the files above.
+- Base every candidate on the actual definitions, notation, classes, axioms, and proved lemmas visible in the theory entry module, any adjacent theory package files, and the other files above.
 - Stay faithful to the mathematics already described in those files.
-- Generate statements that remain within the concepts and proof-relevant structure that `Theory.lean` can actually express and manipulate.
+- Generate statements that remain within the concepts and proof-relevant structure that the active theory entry module and adjacent theory package can actually express and manipulate.
 - Each candidate must be one standalone Lean proposition string suitable for the `stmt` field in `seeds.jsonl`.
 
 Mathematical scope:
@@ -173,7 +175,7 @@ Mathematical scope:
 - Keep assumptions minimal but sufficient.
 
 Quality filter:
-- Do not restate declarations already proved in `{theory_file.resolve()}`.
+- Do not restate declarations already proved in the theory entry module `{theory_file.resolve()}` or any adjacent theory package files listed above.
 {derived_rule}- Do not propose a theorem that is already present in the read files up to cosmetic rewrites, alpha-renaming, trivial reassociation of binders, or other shallow reformulations.
 - Do not propose propositions that are vacuous, purely definitional unfoldings, or trivial preorder facts.
 - Avoid seeds that differ only by notation changes, variable renaming, or tiny local rewrites.
@@ -287,7 +289,7 @@ def run_codex(
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Generate seeds.jsonl from Theory.lean using `codex exec`."
+        description="Generate seeds.jsonl from the active theory entry module and optional adjacent theory package using `codex exec`."
     )
     parser.add_argument("--theory-file", default=str(DEFAULT_THEORY))
     parser.add_argument("--derived-file", default=str(DEFAULT_DERIVED))
@@ -318,6 +320,7 @@ def main() -> int:
 
     if not theory_file.exists():
         raise SystemExit(f"Theory file not found: {theory_file}")
+    theory_context_files = collect_theory_context_files(theory_file)
     for path in context_files:
         if not path.exists():
             raise SystemExit(f"Context file not found: {path}")
@@ -344,6 +347,7 @@ def main() -> int:
 
     prompt = build_prompt(
         theory_file=theory_file,
+        theory_context_files=theory_context_files,
         derived_file=effective_derived,
         context_files=context_files,
         seed_count=args.seed_count,
