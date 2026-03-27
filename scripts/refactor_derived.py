@@ -9,6 +9,10 @@ from pathlib import Path
 from typing import Any
 
 from append_derived import build_derived_entries_from_file
+from theorem_reuse_memory import (
+    load_theorem_reuse_memory,
+    summarize_supporting_theorem_frequency,
+)
 from worker_client import invoke_worker_json, load_task_worker_settings, load_worker_settings
 
 DEFAULT_PREVIEW_OUTPUT = Path("AutomatedTheoryConstruction/Derived.refactored.preview.lean")
@@ -149,6 +153,8 @@ def build_payload(
     lean_diagnostics: str,
     last_error_excerpt: str,
     refactor_history_tail: list[dict[str, Any]],
+    theorem_reuse_memory: list[dict[str, Any]],
+    supporting_theorem_frequency: list[dict[str, Any]],
 ) -> dict[str, Any]:
     return {
         "derived_file": str(derived_file),
@@ -180,6 +186,8 @@ def build_payload(
         "lean_diagnostics": "\n".join(lean_diagnostics.splitlines()[:120]),
         "last_error_excerpt": last_error_excerpt,
         "refactor_history_tail": refactor_history_tail[-4:],
+        "theorem_reuse_memory": theorem_reuse_memory[-12:],
+        "supporting_theorem_frequency": supporting_theorem_frequency[:20],
     }
 
 
@@ -221,11 +229,13 @@ def main() -> None:
     parser.add_argument("--output-file")
     parser.add_argument("--apply", action="store_true")
     parser.add_argument("--backup-file")
+    parser.add_argument("--theorem-reuse-memory-file", default="data/theorem_reuse_memory.json")
     args = parser.parse_args()
 
     derived_file = Path(args.derived_file)
     theory_file = Path(args.theory_file)
     prompt_file = Path(args.prompt_file)
+    theorem_reuse_memory_file = Path(args.theorem_reuse_memory_file)
     if args.output_file:
         output_file = Path(args.output_file)
     elif args.apply:
@@ -239,6 +249,8 @@ def main() -> None:
     theory_context = load_text(theory_file)
     theorem_inventory = build_derived_entries_from_file(derived_file)
     duplicate_groups = build_exact_duplicate_statement_groups(theorem_inventory)
+    theorem_reuse_memory = load_theorem_reuse_memory(theorem_reuse_memory_file)
+    supporting_theorem_frequency = summarize_supporting_theorem_frequency(theorem_reuse_memory)
 
     base_worker_settings = load_worker_settings(
         command_override=args.worker_command,
@@ -261,6 +273,10 @@ def main() -> None:
     )
     debug_log(
         f"Loaded theorem inventory: entries={len(theorem_inventory)} duplicate_statement_groups={len(duplicate_groups)}"
+    )
+    debug_log(
+        "Loaded theorem reuse memory: "
+        f"entries={len(theorem_reuse_memory)} supporting_theorem_hints={len(supporting_theorem_frequency)}"
     )
 
     previous_refactored_code = ""
@@ -286,6 +302,8 @@ def main() -> None:
             lean_diagnostics=lean_diagnostics,
             last_error_excerpt=last_error_excerpt,
             refactor_history_tail=refactor_history,
+            theorem_reuse_memory=theorem_reuse_memory,
+            supporting_theorem_frequency=supporting_theorem_frequency,
         )
         try:
             raw_result, worker_meta = invoke_worker_json(

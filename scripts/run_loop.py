@@ -30,6 +30,7 @@ from common import (
 from import_inference import infer_minimal_imports, render_import_block
 from lean_verify import verify_scratch
 from state_update import apply_state_update, enqueue_new_problems
+from theorem_reuse_memory import append_theorem_reuse_memory_entry
 from worker_client import invoke_worker_json, load_task_worker_settings, load_worker_settings
 
 
@@ -2647,6 +2648,29 @@ def process_manual_main_theorem(
         candidate_id=candidate_id,
         theorem_name=theorem_name,
         appended=bool(theorem_code),
+    )
+    known_theorem_names = {
+        str(entry.get("name", "")).strip()
+        for entry in derived_entries
+        if str(entry.get("name", "")).strip()
+    }
+    append_theorem_reuse_memory_entry(
+        data_dir / "theorem_reuse_memory.json",
+        {
+            "candidate_id": candidate_id,
+            "theorem_name": theorem_name,
+            "statement": final_stmt.strip() or statement,
+            "docstring_summary": docstring_summary,
+            "rationale": rationale,
+            "plan_summary": plan_summary,
+            "supporting_theorems": [
+                theorem for theorem in supporting_theorems
+                if theorem in known_theorem_names
+            ],
+            "intermediate_lemmas": intermediate_lemmas,
+            "iteration": current_iteration,
+            "appended_to_derived": bool(theorem_code),
+        },
     )
 
     post_new_problems: list[str] = []
