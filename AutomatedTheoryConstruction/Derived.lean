@@ -728,4 +728,139 @@ theorem thm_annihilated_polynomial_state_is_constant_000122 : ∀ {V : Type*} [A
     simpa using hz
   exact ⟨p.coeff 0, Polynomial.eq_C_of_derivative_eq_zero hdp⟩
 
+
+/-- A nonzero nilpotent eigenvector of the number operator has a unique natural level. -/
+theorem thm_nilpotent_number_eigenvector_level_000132 : ∀ {V : Type*} [AddCommGroup V] [Module ℂ V] (bc : BosonCore V) (v : V) (μ : ℂ), bc.number v = μ • v → v ≠ 0 → (∃ m : ℕ, (bc.a ^ m) v = 0) → ∃! n : ℕ, μ = (n : ℂ) ∧ (bc.a ^ (n + 1)) v = 0 ∧ (bc.a ^ n) v ≠ 0 := by
+  intro V _ _ bc v μ hμ hv hnil
+  classical
+  let k : ℕ := Nat.find hnil
+  have hk : (bc.a ^ k) v = 0 := Nat.find_spec hnil
+  have hk_ne : k ≠ 0 := by
+    intro hk0
+    apply hv
+    simpa [k, hk0] using hk
+  let n : ℕ := Nat.pred k
+  have hk_eq : k = n + 1 := by
+    dsimp [n]
+    simpa [Nat.succ_eq_add_one] using
+      (Nat.succ_pred_eq_of_pos (Nat.pos_of_ne_zero hk_ne)).symm
+  have hkill : (bc.a ^ (n + 1)) v = 0 := by
+    simpa [hk_eq] using hk
+  have hprev : (bc.a ^ n) v ≠ 0 := by
+    intro hnzero
+    have hk_le : k ≤ n := Nat.find_min' hnil hnzero
+    have : n + 1 ≤ n := by
+      simpa [hk_eq] using hk_le
+    exact Nat.not_succ_le_self n this
+  have hμn : μ = (n : ℂ) := by
+    exact AutomatedTheoryConstruction.thm_eigenvalue_from_annihilation_length_000034
+      (bc := bc) (v := v) (μ := μ) n hμ hkill hprev
+  refine ⟨n, ?_, ?_⟩
+  · exact ⟨hμn, hkill, hprev⟩
+  · intro n' hn'
+    rcases hn' with ⟨hμ', _, _⟩
+    apply Nat.cast_injective (R := ℂ)
+    exact hμ'.symm.trans hμn
+
+
+/-- Every nonzero vector in the ket span descends to a nonzero vacuum multiple. -/
+theorem thm_nonzero_ket_span_descends_to_vacuum_000140 : ∀ {V : Type*} [AddCommGroup V] [Module ℂ V] (bc : BosonCore V) {v : V}, bc.vacuum ≠ 0 → v ∈ Submodule.span ℂ (Set.range bc.ket) → v ≠ 0 → ∃ m : ℕ, ∃ c : ℂ, c ≠ 0 ∧ (bc.a ^ m) v = c • bc.vacuum := by
+  intro V _instG _instM bc v hvac hvspan hv
+  rcases (AutomatedTheoryConstruction.thm_mem_ket_span_iff_exists_aeval_000075 (bc := bc) v).mp hvspan with ⟨p, rfl⟩
+  have hp : p ≠ 0 := by
+    intro hp0
+    apply hv
+    rw [hp0]
+    simp
+  have hcoeff : p.coeff p.natDegree ≠ 0 := by
+    exact Polynomial.mem_support_iff.mp (Polynomial.natDegree_mem_support_of_nonzero hp)
+  have hfact : (((p.natDegree).factorial : ℕ) : ℂ) ≠ 0 := by
+    exact_mod_cast Nat.factorial_ne_zero p.natDegree
+  refine ⟨p.natDegree, p.coeff p.natDegree * (((p.natDegree).factorial : ℕ) : ℂ), mul_ne_zero hcoeff hfact, ?_⟩
+  rw [AutomatedTheoryConstruction.thm_aeval_a_dagger_vacuum_support_sum_000060 (bc := bc) p,
+    Polynomial.sum_over_range (p := p) (f := fun n z => z • bc.ket n) (by intro n; simp)]
+  have hsum :
+      (∑ a ∈ Finset.range (p.natDegree + 1), p.coeff a • (bc.a ^ p.natDegree) (bc.ket a)) =
+        p.coeff p.natDegree • (bc.a ^ p.natDegree) (bc.ket p.natDegree) := by
+    rw [Finset.sum_eq_single_of_mem p.natDegree (Finset.mem_range.mpr (Nat.lt_succ_self _))]
+    intro n hn hne
+    have hlt : n < p.natDegree := by
+      exact lt_of_le_of_ne (Nat.le_of_lt_succ (Finset.mem_range.mp hn)) hne
+    rw [AutomatedTheoryConstruction.thm_a_pow_ket_eq_zero_of_lt_000043 (bc := bc) (m := p.natDegree) (n := n) hlt, smul_zero]
+  calc
+    (bc.a ^ p.natDegree) (∑ a ∈ Finset.range (p.natDegree + 1), p.coeff a • bc.ket a)
+        = ∑ a ∈ Finset.range (p.natDegree + 1), p.coeff a • (bc.a ^ p.natDegree) (bc.ket a) := by
+            simp_rw [map_sum, map_smul]
+    _ = p.coeff p.natDegree • (bc.a ^ p.natDegree) (bc.ket p.natDegree) := hsum
+    _ = p.coeff p.natDegree • ((((p.natDegree).factorial : ℕ) : ℂ) • bc.vacuum) := by
+            rw [AutomatedTheoryConstruction.thm_a_pow_ket_self_factorial_000037]
+    _ = (p.coeff p.natDegree * (((p.natDegree).factorial : ℕ) : ℂ)) • bc.vacuum := by
+            simpa [smul_smul]
+
+
+/-- Applying a natDegree times extracts the leading coefficient onto the vacuum. -/
+theorem thm_nat_degree_annihilation_extracts_leading_coeff_000094 : ∀ {V : Type*} [AddCommGroup V] [Module ℂ V] (bc : BosonCore V) (p : Polynomial ℂ), (bc.a ^ p.natDegree) ((Polynomial.aeval bc.aDagger p) bc.vacuum) = ((((p.natDegree.factorial : ℕ) : ℂ) * p.coeff p.natDegree) : ℂ) • bc.vacuum := by
+  intro V _ _ bc p
+  rw [AutomatedTheoryConstruction.thm_aeval_a_dagger_vacuum_support_sum_000060 (bc := bc) p,
+    Polynomial.sum_over_range (p := p) (f := fun n z => z • bc.ket n) (by
+      intro n
+      simp)]
+  have hsum :
+      (∑ a ∈ Finset.range (p.natDegree + 1), p.coeff a • (bc.a ^ p.natDegree) (bc.ket a)) =
+        p.coeff p.natDegree • (bc.a ^ p.natDegree) (bc.ket p.natDegree) := by
+    rw [Finset.sum_eq_single_of_mem p.natDegree (Finset.mem_range.mpr (Nat.lt_succ_self _))]
+    intro n hn hne
+    have hlt : n < p.natDegree := by
+      exact lt_of_le_of_ne (Nat.le_of_lt_succ (Finset.mem_range.mp hn)) hne
+    rw [AutomatedTheoryConstruction.thm_a_pow_ket_eq_zero_of_lt_000043 (bc := bc) (m := p.natDegree) (n := n) hlt, smul_zero]
+  calc
+    (bc.a ^ p.natDegree) (∑ a ∈ Finset.range (p.natDegree + 1), p.coeff a • bc.ket a)
+        = ∑ a ∈ Finset.range (p.natDegree + 1), p.coeff a • (bc.a ^ p.natDegree) (bc.ket a) := by
+            simp_rw [map_sum, map_smul]
+    _ = p.coeff p.natDegree • (bc.a ^ p.natDegree) (bc.ket p.natDegree) := hsum
+    _ = p.coeff p.natDegree • ((((p.natDegree).factorial : ℕ) : ℂ) • bc.vacuum) := by
+            rw [AutomatedTheoryConstruction.thm_a_pow_ket_self_factorial_000037]
+    _ = (p.coeff p.natDegree * (((p.natDegree).factorial : ℕ) : ℂ)) • bc.vacuum := by
+            simpa [smul_smul]
+    _ = ((((p.natDegree.factorial : ℕ) : ℂ) * p.coeff p.natDegree) : ℂ) • bc.vacuum := by
+            rw [mul_comm]
+
+
+/-- The vacuum-state polynomial kernel is closed under multiplication and differentiation. -/
+theorem thm_aeval_vacuum_kernel_mul_derivative_stable_000102 : ∀ {V : Type*} [AddCommGroup V] [Module ℂ V] (bc : BosonCore V), let Phi : Polynomial ℂ →ₗ[ℂ] V := (LinearMap.applyₗ (R := ℂ) bc.vacuum).comp (Polynomial.aeval bc.aDagger).toLinearMap; (∀ p q : Polynomial ℂ, Phi p = 0 → Phi (q * p) = 0) ∧ (∀ p : Polynomial ℂ, Phi p = 0 → Phi (Polynomial.derivative p) = 0) := by
+  intro V _ _ bc
+  let Phi : Polynomial ℂ →ₗ[ℂ] V :=
+    (LinearMap.applyₗ (R := ℂ) bc.vacuum).comp (Polynomial.aeval bc.aDagger).toLinearMap
+  change
+    (∀ p q : Polynomial ℂ, Phi p = 0 → Phi (q * p) = 0) ∧
+      (∀ p : Polynomial ℂ, Phi p = 0 → Phi (Polynomial.derivative p) = 0)
+  constructor
+  · intro p q hp
+    change (Polynomial.aeval bc.aDagger p) bc.vacuum = 0 at hp
+    change (Polynomial.aeval bc.aDagger (q * p)) bc.vacuum = 0
+    rw [Polynomial.aeval_mul]
+    simp [hp]
+  · intro p hp
+    change (Polynomial.aeval bc.aDagger p) bc.vacuum = 0 at hp
+    have hderiv :
+        ∀ q : Polynomial ℂ,
+          bc.a ((Polynomial.aeval bc.aDagger q) bc.vacuum) =
+            (Polynomial.aeval bc.aDagger (Polynomial.derivative q)) bc.vacuum := by
+      intro q
+      induction q using Polynomial.induction_on' with
+      | add q r hq hr =>
+          simp [Polynomial.derivative_add, hq, hr]
+      | monomial n c =>
+          cases n with
+          | zero =>
+              simp [AutomatedTheoryConstruction.thm_aeval_a_dagger_vacuum_support_sum_000060,
+                bc.vacuum_annihilate]
+          | succ n =>
+              rw [AutomatedTheoryConstruction.thm_aeval_a_dagger_vacuum_support_sum_000060,
+                Polynomial.derivative_monomial_succ,
+                AutomatedTheoryConstruction.thm_aeval_a_dagger_vacuum_support_sum_000060]
+              simp [bc.a_ket_succ, smul_smul, mul_comm, mul_left_comm, mul_assoc]
+    change (Polynomial.aeval bc.aDagger (Polynomial.derivative p)) bc.vacuum = 0
+    simpa [hderiv p] using congrArg bc.a hp
+
 end AutomatedTheoryConstruction

@@ -2415,8 +2415,6 @@ def run_manual_main_theorem_check(
         iteration=current_iteration,
         candidate_id=candidate_id,
         status=result,
-        supporting_theorem_count=len(supporting_theorems),
-        missing_lemma_count=len(missing_lemmas),
     )
     if result != "ok":
         return {
@@ -2562,7 +2560,6 @@ def process_manual_main_theorem(
                 iteration=current_iteration,
                 candidate_id=candidate_id,
                 status=plan_result,
-                intermediate_lemma_count=len(intermediate_lemmas),
             )
         except (RuntimeError, ValueError) as exc:
             plan_notes = f"main theorem plan failed: {exc}"
@@ -2791,6 +2788,8 @@ def main() -> None:
     parser.add_argument("--skip-verify", action="store_true")
     parser.add_argument("--open-problem-failure-threshold", type=int, default=2)
     parser.add_argument("--main-theorem-interval", type=int, default=0)
+    parser.add_argument("--main-theorem-formalize-worker-timeout", type=int)
+    parser.add_argument("--main-theorem-repair-worker-timeout", type=int)
     parser.add_argument("--main-theorem-verify-timeout", type=int, default=600)
     parser.add_argument("--main-theorem-formalization-retry-budget-sec", type=int, default=3600)
     parser.add_argument(
@@ -2807,6 +2806,10 @@ def main() -> None:
         raise ValueError("--open-problem-failure-threshold must be >= 0")
     if args.main_theorem_interval < 0:
         raise ValueError("--main-theorem-interval must be >= 0")
+    if args.main_theorem_formalize_worker_timeout is not None and args.main_theorem_formalize_worker_timeout < 0:
+        raise ValueError("--main-theorem-formalize-worker-timeout must be >= 0")
+    if args.main_theorem_repair_worker_timeout is not None and args.main_theorem_repair_worker_timeout < 0:
+        raise ValueError("--main-theorem-repair-worker-timeout must be >= 0")
     if args.main_theorem_verify_timeout < 0:
         raise ValueError("--main-theorem-verify-timeout must be >= 0")
     if args.main_theorem_formalization_retry_budget_sec < 0:
@@ -2880,6 +2883,8 @@ def main() -> None:
     prover_statement_worker_settings = None
     formalize_worker_settings = None
     repair_worker_settings = None
+    main_theorem_formalize_worker_settings = None
+    main_theorem_repair_worker_settings = None
     prioritize_open_problems_worker_settings = None
     if args.enable_worker:
         worker_settings = load_worker_settings(
@@ -2901,6 +2906,16 @@ def main() -> None:
         repair_worker_settings = load_task_worker_settings(
             task_name="repair",
             base_settings=worker_settings,
+        )
+        main_theorem_formalize_worker_settings = load_task_worker_settings(
+            task_name="formalize",
+            base_settings=worker_settings,
+            timeout_override=args.main_theorem_formalize_worker_timeout,
+        )
+        main_theorem_repair_worker_settings = load_task_worker_settings(
+            task_name="repair",
+            base_settings=worker_settings,
+            timeout_override=args.main_theorem_repair_worker_timeout,
         )
         prioritize_open_problems_worker_settings = load_task_worker_settings(
             task_name="prioritize_open_problems",
@@ -3306,8 +3321,8 @@ def main() -> None:
                 data_dir=data_dir,
                 base_theory_context=base_theory_context,
                 formalization_memory_path=memory_path,
-                formalize_worker_settings=formalize_worker_settings,
-                repair_worker_settings=repair_worker_settings,
+                formalize_worker_settings=main_theorem_formalize_worker_settings,
+                repair_worker_settings=main_theorem_repair_worker_settings,
                 formalizer_prompt_file=args.formalizer_prompt_file,
                 repair_prompt_file=repair_prompt_file,
                 suggest_prompt_file=args.main_theorem_suggest_prompt_file,

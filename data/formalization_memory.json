@@ -1573,12 +1573,40 @@
       "new_problems": []
     },
     {
+      "stage": "",
+      "source_statement": "",
+      "formalized_statement": "",
+      "statement_formalization_notes": "",
       "result": "stuck",
       "verify_success": false,
       "proof_sketch": "This has a standard proof pattern: first reduce to monomials, because both sides are ℂ-linear in the polynomial `p`. For `p = X^n`, the left side is the commutator `[bc.number, bc.aDagger ^ n]`, which should be exactly the existing derived power-commutator theorem `thm_comm_number_a_dagger_pow_000002`. The right side becomes `aeval bc.aDagger (X * derivative (X^n)) = aeval bc.aDagger ((n : ℂ) • X^n)`, and by the polynomial derivative formula this is `(n : ℂ) • bc.aDagger ^ n`. So the target should follow by matching the monomial case and extending by linearity of `Polynomial.aeval` and of the commutator expression.",
       "proof_text": "",
       "counterexample_text": "",
       "lean_error_excerpt": "formalize worker timeout: Worker returned error: Command '['codex', 'exec', '-', '--sandbox', 'read-only', '--skip-git-repo-check', '--output-last-message', '/var/folders/2_/c2t72bmn00j3z7cnkfvqvyj80000gn/T/tmphyps8rdv']' timed out after 390 seconds (task_type=formalize)",
+      "lean_error_fingerprint": "formalizer_timeout",
+      "new_problems": []
+    },
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∀ {V : Type*} [AddCommGroup V] [Module ℂ V] (bc : BosonCore V) (p : Polynomial ℂ), bc.number * (Polynomial.aeval bc.aDagger p) - (Polynomial.aeval bc.aDagger p) * bc.number = Polynomial.aeval bc.aDagger (Polynomial.X * Polynomial.derivative p)",
+      "formalized_statement": "∀ {V : Type*} [AddCommGroup V] [Module ℂ V] (bc : BosonCore V) (p : Polynomial ℂ), bc.number * (Polynomial.aeval bc.aDagger p) - (Polynomial.aeval bc.aDagger p) * bc.number = Polynomial.aeval bc.aDagger (Polynomial.X * Polynomial.derivative p)",
+      "statement_formalization_notes": "The input statement is already a valid Lean proposition using existing BosonCore and Polynomial.aeval notation.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "stuck",
+      "verify_success": false,
+      "proof_sketch": "This looks like a standard polynomial-functional-calculus commutator statement, and the monomial basis gives a clean proof. For `p = X^n`, `Polynomial.aeval bc.aDagger p = bc.aDagger ^ n`, so the left side is exactly `[bc.number, bc.aDagger ^ n]`, which matches the derived power-commutator theorem `thm_comm_number_a_dagger_pow_000002` and yields `(n : ℂ) • bc.aDagger ^ n`. On the right, the standard derivative formula gives `X * derivative (X^n) = (n : ℂ) • X^n`, hence `Polynomial.aeval bc.aDagger (X * derivative (X^n)) = (n : ℂ) • bc.aDagger ^ n`. Since both sides are `ℂ`-linear in `p` and polynomials are spanned by monomials, the general statement should follow by linearity and `simpa` on the monomial case. So the target has a promising proof direction using the existing derived theorem rather than redoing the commutator induction from scratch.",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "formalize worker timeout: Worker returned error: Command '['codex', 'exec', '-', '--sandbox', 'read-only', '--skip-git-repo-check', '--output-last-message', '/var/folders/2_/c2t72bmn00j3z7cnkfvqvyj80000gn/T/tmph1j92deh']' timed out after 390 seconds (task_type=formalize)",
       "lean_error_fingerprint": "formalizer_timeout",
       "new_problems": []
     }
@@ -2011,6 +2039,10 @@
       "new_problems": []
     },
     {
+      "stage": "",
+      "source_statement": "",
+      "formalized_statement": "",
+      "statement_formalization_notes": "",
       "result": "proof",
       "verify_success": false,
       "proof_sketch": "Define the map by polynomial evaluation at `bc.aDagger` on the vacuum, then codrestrict its image to the ket span using the verified support-sum theorem. The `1`, `X^n`, and `X * p` identities are direct `aeval` computations. The derivative identity is proved by expanding `aeval` on the vacuum as a finite ket sum and applying `bc.a_ket_succ` termwise.",
@@ -2018,6 +2050,30 @@
       "counterexample_text": "",
       "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:39:37: error: Tactic `rewrite` failed: Did not find an occurrence of the pattern",
       "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:39:37: error: Tactic `rewrite` failed: Did not find an occurrence of the pattern | ?g (∑ x ∈ ?s, ?f x) | in the target expression",
+      "new_problems": []
+    },
+    {
+      "stage": "statement_formalization",
+      "source_statement": "For every complex vector space `V` and bosonic core `bc : BosonCore V` with `bc.vacuum ≠ 0`, there exists a `ℂ`-linear map `Φ : Polynomial ℂ → Submodule.span ℂ (Set.range bc.ket)` such that `Φ 1` is `bc.vacuum` viewed in the ket span, `Φ (Polynomial.X ^ n)` is `bc.ket n` viewed in the ket span for every `n : ℕ`, and for every polynomial `p`, `Φ (Polynomial.X * p)` is the restricted creation operator applied to `Φ p` while `Φ (Polynomial.derivative p)` is the restricted annihilation operator applied to `Φ p`.",
+      "formalized_statement": "",
+      "statement_formalization_notes": "Kept the nonzero-vacuum hypothesis from the statement and expressed the restricted-operator clauses via coercions from the ket-span subtype back to V.\nLean statement validation failed before proof search: /var/folders/2_/c2t72bmn00j3z7cnkfvqvyj80000gn/T/stmt_check_op_000093_o564a1j6.lean:9:178: error: expected ';' or line break",
+      "result": "stuck",
+      "verify_success": false,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "stuck",
+      "verify_success": false,
+      "proof_sketch": "Kept the nonzero-vacuum hypothesis from the statement and expressed the restricted-operator clauses via coercions from the ket-span subtype back to V.\nLean statement validation failed before proof search: /var/folders/2_/c2t72bmn00j3z7cnkfvqvyj80000gn/T/stmt_check_op_000093_o564a1j6.lean:9:178: error: expected ';' or line break",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "non_formalized_result",
       "new_problems": []
     }
   ],
@@ -2257,6 +2313,10 @@
       "new_problems": []
     },
     {
+      "stage": "",
+      "source_statement": "",
+      "formalized_statement": "",
+      "statement_formalization_notes": "",
       "result": "proof",
       "verify_success": false,
       "proof_sketch": "Expand the polynomial state with `Polynomial.aeval_eq_sum_range`, prove by induction that `(bc.a ^ m) (bc.ket m) = (m! : ℂ) • bc.vacuum`, and separately that `(bc.a ^ m) (bc.ket i) = 0` for `i < m`. Then for `m = p.natDegree`, every lower term in the sum vanishes and only the top coefficient survives.",
@@ -2267,6 +2327,10 @@
       "new_problems": []
     },
     {
+      "stage": "",
+      "source_statement": "",
+      "formalized_statement": "",
+      "statement_formalization_notes": "",
       "result": "proof",
       "verify_success": false,
       "proof_sketch": "Introduce the quantified variables first, then rewrite the vacuum state using the existing support-sum theorem for `Polynomial.aeval`. Push `(bc.a ^ p.natDegree)` through the finite sum by linearity, use `Finset.sum_eq_single` to isolate the `natDegree` term, kill every other support term via `thm_a_pow_ket_eq_zero_of_lt_000043`, and evaluate the surviving top term with `thm_a_pow_ket_self_factorial_000037`.",
@@ -2274,6 +2338,30 @@
       "counterexample_text": "",
       "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:29:20: error(lean.unknownIdentifier): Unknown identifier `AutomatedTheoryConstruction.thm_a_pow_ket_eq_zero_of_lt_000043`",
       "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:29:20: error(lean.unknownIdentifier): Unknown identifier `AutomatedTheoryConstruction.thm_a_pow_ket_eq_zero_of_lt_000043` | AutomatedTheoryConstruction/Scratch.lean:35:18: error(lean.unknownIdentifier): Unknown identifier `AutomatedTheoryConstruction.thm_a_pow_ket_self_factorial_000037` | AutomatedTheoryConstruction/Scratch.lean:34:85: error: unsolved goals",
+      "new_problems": []
+    },
+    {
+      "stage": "statement_formalization",
+      "source_statement": "For every complex vector space `V`, bosonic core `bc : BosonCore V`, and polynomial `p : Polynomial ℂ`, applying `bc.a` exactly `p.natDegree` times to `(Polynomial.aeval bc.aDagger p) bc.vacuum` yields `(((p.natDegree.factorial : ℕ) : ℂ) * p.coeff p.natDegree) • bc.vacuum`.",
+      "formalized_statement": "∀ {V : Type*} [AddCommGroup V] [Module ℂ V] (bc : BosonCore V) (p : Polynomial ℂ), (bc.a ^ p.natDegree) ((Polynomial.aeval bc.aDagger p) bc.vacuum) = ((((p.natDegree.factorial : ℕ) : ℂ) * p.coeff p.natDegree) : ℂ) • bc.vacuum",
+      "statement_formalization_notes": "Formalized with the repository's existing `Polynomial.aeval bc.aDagger` and operator-power notation.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "Expand the polynomial vacuum state as a finite support sum, push `(bc.a ^ p.natDegree)` through the sum by linearity, isolate the unique top-degree term in `Finset.range (p.natDegree + 1)`, kill all lower terms with `thm_a_pow_ket_eq_zero_of_lt_000043`, and evaluate the surviving top ket with `thm_a_pow_ket_self_factorial_000037`.",
+      "proof_text": "intro V _ _ bc p\nrw [AutomatedTheoryConstruction.thm_aeval_a_dagger_vacuum_support_sum_000060 (bc := bc) p,\n  Polynomial.sum_over_range (p := p) (f := fun n z => z • bc.ket n) (by\n    intro n\n    simp)]\nhave hsum :\n    (∑ a ∈ Finset.range (p.natDegree + 1), p.coeff a • (bc.a ^ p.natDegree) (bc.ket a)) =\n      p.coeff p.natDegree • (bc.a ^ p.natDegree) (bc.ket p.natDegree) := by\n  rw [Finset.sum_eq_single_of_mem p.natDegree (Finset.mem_range.mpr (Nat.lt_succ_self _))]\n  intro n hn hne\n  have hlt : n < p.natDegree := by\n    exact lt_of_le_of_ne (Nat.le_of_lt_succ (Finset.mem_range.mp hn)) hne\n  rw [AutomatedTheoryConstruction.thm_a_pow_ket_eq_zero_of_lt_000043 (bc := bc) (m := p.natDegree) (n := n) hlt, smul_zero]\ncalc\n  (bc.a ^ p.natDegree) (∑ a ∈ Finset.range (p.natDegree + 1), p.coeff a • bc.ket a)\n      = ∑ a ∈ Finset.range (p.natDegree + 1), p.coeff a • (bc.a ^ p.natDegree) (bc.ket a) := by\n          simp_rw [map_sum, map_smul]\n  _ = p.coeff p.natDegree • (bc.a ^ p.natDegree) (bc.ket p.natDegree) := hsum\n  _ = p.coeff p.natDegree • ((((p.natDegree).factorial : ℕ) : ℂ) • bc.vacuum) := by\n          rw [AutomatedTheoryConstruction.thm_a_pow_ket_self_factorial_000037]\n  _ = (p.coeff p.natDegree * (((p.natDegree).factorial : ℕ) : ℂ)) • bc.vacuum := by\n          simpa [smul_smul]\n  _ = ((((p.natDegree.factorial : ℕ) : ℂ) * p.coeff p.natDegree) : ℂ) • bc.vacuum := by\n          rw [mul_comm]",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:31:12: warning: try 'simp' instead of 'simpa' | Note: This linter can be disabled with `set_option linter.unnecessarySimpa false`",
       "new_problems": []
     }
   ],
@@ -2319,6 +2407,10 @@
       "new_problems": []
     },
     {
+      "stage": "",
+      "source_statement": "",
+      "formalized_statement": "",
+      "statement_formalization_notes": "",
       "result": "stuck",
       "verify_success": false,
       "proof_sketch": "The first conjunct is straightforward: `Polynomial.aeval` is an algebra hom, so `(Polynomial.aeval bc.aDagger (q * p)) = (Polynomial.aeval bc.aDagger q) * (Polynomial.aeval bc.aDagger p)`. Applying both sides to `bc.vacuum`, the hypothesis `(Polynomial.aeval bc.aDagger p) bc.vacuum = 0` immediately gives `(Polynomial.aeval bc.aDagger (q * p)) bc.vacuum = 0`. For the derivative conjunct, the standard CCR pattern should apply: from `[bc.a, bc.aDagger] = 1`, one proves by polynomial induction the commutator identity `bc.a * Polynomial.aeval bc.aDagger p - Polynomial.aeval bc.aDagger p * bc.a = Polynomial.aeval bc.aDagger (Polynomial.derivative p)`. Evaluating this at `bc.vacuum` and using `bc.vacuum_annihilate : bc.a bc.vacuum = 0` yields `bc.a ((Polynomial.aeval bc.aDagger p) bc.vacuum) = (Polynomial.aeval bc.aDagger (Polynomial.derivative p)) bc.vacuum`. Hence the hypothesis forces the derivative term to be `0` as well. So this target has a clear proof direction and matches a standard Mathlib/CCR commutator-with-polynomial pattern.",
@@ -2326,6 +2418,40 @@
       "counterexample_text": "",
       "lean_error_excerpt": "formalize worker timeout: Worker returned error: Command '['codex', 'exec', '-', '--sandbox', 'read-only', '--skip-git-repo-check', '--output-last-message', '/var/folders/2_/c2t72bmn00j3z7cnkfvqvyj80000gn/T/tmpjypbx49x']' timed out after 390 seconds (task_type=formalize)",
       "lean_error_fingerprint": "formalizer_timeout",
+      "new_problems": []
+    },
+    {
+      "stage": "statement_formalization",
+      "source_statement": "For every complex vector space `V` and bosonic core `bc : BosonCore V`, let `Φ : Polynomial ℂ →ₗ[ℂ] V` be defined by `Φ(p) = (Polynomial.aeval bc.aDagger p) bc.vacuum`. Then `LinearMap.ker Φ` is an ideal of `Polynomial ℂ` that is stable under `Polynomial.derivative`; equivalently, if `Φ(p) = 0`, then `Φ(q * p) = 0` for every polynomial `q`, and `Φ(Polynomial.derivative p) = 0`.",
+      "formalized_statement": "∀ {V : Type*} [AddCommGroup V] [Module ℂ V] (bc : BosonCore V), let Phi : Polynomial ℂ →ₗ[ℂ] V := (LinearMap.applyₗ (R := ℂ) bc.vacuum).comp (Polynomial.aeval bc.aDagger).toLinearMap; (∀ p q : Polynomial ℂ, Phi p = 0 → Phi (q * p) = 0) ∧ (∀ p : Polynomial ℂ, Phi p = 0 → Phi (Polynomial.derivative p) = 0)",
+      "statement_formalization_notes": "Formalized the stated equivalence directly as kernel closure under polynomial multiplication and derivative, avoiding an explicit Ideal coercion.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": false,
+      "proof_sketch": "Unfold Phi. For ideal closure, use `aeval_mul` so `Phi (q * p)` is `(Polynomial.aeval bc.aDagger q)` applied to `Phi p`, hence zero when `Phi p = 0`. For derivative stability, reuse the standard vacuum derivative identity proved by polynomial induction: `bc.a ((Polynomial.aeval bc.aDagger q) bc.vacuum) = (Polynomial.aeval bc.aDagger (Polynomial.derivative q)) bc.vacuum`. Applying `bc.a` to the hypothesis `Phi p = 0` gives the derivative claim.",
+      "proof_text": "intro V _ _ bc\n dsimp\n constructor\n · intro p q hp\n   change (Polynomial.aeval bc.aDagger (q * p)) bc.vacuum = 0\n   rw [aeval_mul]\n   simp [hp]\n · intro p hp\n   have hderiv :\n       ∀ q : Polynomial ℂ,\n         bc.a ((Polynomial.aeval bc.aDagger q) bc.vacuum) =\n           (Polynomial.aeval bc.aDagger (Polynomial.derivative q)) bc.vacuum := by\n     intro q\n     induction q using Polynomial.induction_on' with\n     | add q r hq hr =>\n         simp [Polynomial.derivative_add, hq, hr]\n     | monomial n c =>\n         cases n with\n         | zero =>\n             simp [AutomatedTheoryConstruction.thm_aeval_a_dagger_vacuum_support_sum_000060,\n               bc.vacuum_annihilate]\n         | succ n =>\n             rw [AutomatedTheoryConstruction.thm_aeval_a_dagger_vacuum_support_sum_000060,\n               Polynomial.derivative_monomial_succ,\n               AutomatedTheoryConstruction.thm_aeval_a_dagger_vacuum_support_sum_000060]\n             simp [bc.a_ket_succ, smul_smul, mul_comm, mul_left_comm, mul_assoc]\n   simpa [hderiv p] using congrArg bc.a hp",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:12:3: error: Tactic `introN` failed: There are no additional binders or `let` bindings in the goal to introduce",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:12:3: error: Tactic `introN` failed: There are no additional binders or `let` bindings in the goal to introduce | V : Type u_1 | inst✝¹ : AddCommGroup V",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "Introduce the local map `Phi` exactly as in the statement. For the multiplication clause, unfold `Phi` and use `Polynomial.aeval_mul`. For the derivative clause, use the same polynomial-induction identity appearing inside `thm_annihilated_polynomial_state_is_constant_000122`: `bc.a ((Polynomial.aeval bc.aDagger q) bc.vacuum) = (Polynomial.aeval bc.aDagger (Polynomial.derivative q)) bc.vacuum`. Applying `congrArg bc.a` to the hypothesis then gives the desired vanishing of the derivative state.",
+      "proof_text": "intro V _ _ bc\nlet Phi : Polynomial ℂ →ₗ[ℂ] V :=\n  (LinearMap.applyₗ (R := ℂ) bc.vacuum).comp (Polynomial.aeval bc.aDagger).toLinearMap\nchange\n  (∀ p q : Polynomial ℂ, Phi p = 0 → Phi (q * p) = 0) ∧\n    (∀ p : Polynomial ℂ, Phi p = 0 → Phi (Polynomial.derivative p) = 0)\nconstructor\n· intro p q hp\n  change (Polynomial.aeval bc.aDagger p) bc.vacuum = 0 at hp\n  change (Polynomial.aeval bc.aDagger (q * p)) bc.vacuum = 0\n  rw [Polynomial.aeval_mul]\n  simp [hp]\n· intro p hp\n  change (Polynomial.aeval bc.aDagger p) bc.vacuum = 0 at hp\n  have hderiv :\n      ∀ q : Polynomial ℂ,\n        bc.a ((Polynomial.aeval bc.aDagger q) bc.vacuum) =\n          (Polynomial.aeval bc.aDagger (Polynomial.derivative q)) bc.vacuum := by\n    intro q\n    induction q using Polynomial.induction_on' with\n    | add q r hq hr =>\n        simp [Polynomial.derivative_add, hq, hr]\n    | monomial n c =>\n        cases n with\n        | zero =>\n            simp [AutomatedTheoryConstruction.thm_aeval_a_dagger_vacuum_support_sum_000060,\n              bc.vacuum_annihilate]\n        | succ n =>\n            rw [AutomatedTheoryConstruction.thm_aeval_a_dagger_vacuum_support_sum_000060,\n              Polynomial.derivative_monomial_succ,\n              AutomatedTheoryConstruction.thm_aeval_a_dagger_vacuum_support_sum_000060]\n            simp [bc.a_ket_succ, smul_smul, mul_comm, mul_left_comm, mul_assoc]\n  change (Polynomial.aeval bc.aDagger (Polynomial.derivative p)) bc.vacuum = 0\n  simpa [hderiv p] using congrArg bc.a hp",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:35:20: warning: This simp argument is unused: | AutomatedTheoryConstruction.thm_aeval_a_dagger_vacuum_support_sum_000060 | Hint: Omit it from the simp argument list.",
       "new_problems": []
     }
   ],
@@ -2371,6 +2497,10 @@
       "new_problems": []
     },
     {
+      "stage": "",
+      "source_statement": "",
+      "formalized_statement": "",
+      "statement_formalization_notes": "",
       "result": "stuck",
       "verify_success": false,
       "proof_sketch": "This target has a standard quotient-by-kernel proof direction. Let `Φ` be the displayed polynomial-to-`V` map and `S := Submodule.span ℂ (Set.range bc.ket)`; by `aDagger_ket` and `a_ket_succ`, both `bc.aDagger` and `bc.a` preserve `S`, so the witnesses `hSad` and `hSa` are straightforward. The crucial identities are `Φ (BosonCore.polyMulX p) = bc.aDagger (Φ p)` and `Φ (BosonCore.polyDeriv p) = bc.a (Φ p)`; the second is checked on monomials using `a_ket_succ` and then extended by linearity. Therefore `ker Φ` is invariant under `polyMulX` and `polyDeriv`, so these induce endomorphisms `Adag, A : Module.End ℂ Q` with the required `mkQ` commutation formulas; surjectivity of `mkQ` then lets `BosonCore.poly_ccr` and `poly_vacuum` descend to `A * Adag - Adag * A = 1` and `A ((mkQ) 1) = 0`. For the equivalence, `range Φ = S` because every `Φ p` is a linear combination of kets and every ket is `Φ (X^n)`; `thm_mem_ket_span_iff_exists_aeval_000075` should package this image description cleanly. Then compose `LinearMap.quotKerEquivRange` with the identification `LinearMap.range Φ = S` to obtain `Ψ`, and the intertwining equations follow from the same two identities above.",
@@ -2378,6 +2508,30 @@
       "counterexample_text": "",
       "lean_error_excerpt": "formalize worker timeout: Worker returned error: Command '['codex', 'exec', '-', '--sandbox', 'read-only', '--skip-git-repo-check', '--output-last-message', '/var/folders/2_/c2t72bmn00j3z7cnkfvqvyj80000gn/T/tmpo7u7bc6m']' timed out after 390 seconds (task_type=formalize)",
       "lean_error_fingerprint": "formalizer_timeout",
+      "new_problems": []
+    },
+    {
+      "stage": "statement_formalization",
+      "source_statement": "For every complex vector space `V` and bosonic core `bc : BosonCore V`, let `Phi : Polynomial ℂ →ₗ[ℂ] V` be defined by `Phi(p) = (Polynomial.aeval bc.aDagger p) bc.vacuum`, and let `Q := Polynomial ℂ ⧸ LinearMap.ker Phi`. Then there exist `ℂ`-linear endomorphisms `A, A† : Module.End ℂ Q`, induced respectively by `Polynomial.derivative` and multiplication by `Polynomial.X`, such that `A * A† - A† * A = 1`, `A` annihilates the class of `1`, and there exists a `ℂ`-linear equivalence `Ψ : Q ≃ₗ[ℂ] Submodule.span ℂ (Set.range bc.ket)` that intertwines `A` and `A†` with the restrictions of `bc.a` and `bc.aDagger` to `Submodule.span ℂ (Set.range bc.ket)`.",
+      "formalized_statement": "∀ {V : Type*} [AddCommGroup V] [Module ℂ V] (bc : BosonCore V), let Phi : Polynomial ℂ →ₗ[ℂ] V := (LinearMap.applyₗ (R := ℂ) bc.vacuum).comp (Polynomial.aeval bc.aDagger).toLinearMap; let Q := Polynomial ℂ ⧸ LinearMap.ker Phi; let S : Submodule ℂ V := Submodule.span ℂ (Set.range bc.ket); ∃ (A ADagger : Module.End ℂ Q), A.comp (LinearMap.ker Phi).mkQ = (LinearMap.ker Phi).mkQ.comp BosonCore.polyDeriv ∧ ADagger.comp (LinearMap.ker Phi).mkQ = (LinearMap.ker Phi).mkQ.comp BosonCore.polyMulX ∧ A * ADagger - ADagger * A = 1 ∧ A ((LinearMap.ker Phi).mkQ (1 : Polynomial ℂ)) = 0 ∧ ∃ bcS : BosonCore S, (bcS.vacuum : V) = bc.vacuum ∧ (∀ s : S, (bcS.a s : V) = bc.a (s : V)) ∧ (∀ s : S, (bcS.aDagger s : V) = bc.aDagger (s : V)) ∧ ∃ Ψ : Q ≃ₗ[ℂ] S, Ψ.toLinearMap.comp A = bcS.a.comp Ψ.toLinearMap ∧ Ψ.toLinearMap.comp ADagger = bcS.aDagger.comp Ψ.toLinearMap",
+      "statement_formalization_notes": "Formalized induced quotient operators via commutation with `mkQ`, and encoded restrictions on the ket span using a bosonic core on that submodule.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "stuck",
+      "verify_success": false,
+      "proof_sketch": "The proof direction is still plausible. The repository already contains the main ingredients: `thm_aeval_vacuum_kernel_mul_derivative_stable_000102` for kernel stability under multiplication and derivative, `thm_invariant_submodule_inherits_boson_core_000051` for the induced boson core on `S := Submodule.span ℂ (Set.range bc.ket)`, and `thm_polynomial_quotient_equiv_ket_span_000081` for the quotient-to-ket-span equivalence. The remaining formalization gap is the exact Lean assembly of the quotient endomorphisms via `Submodule.mapQ` together with a canonical `Ψ := LinearMap.quotKerEquivRange Phi` transported along `range Phi = S`, and then proving the final intertwining equalities with `bcS.a` and `bcS.aDagger` in the precise bundled form required by the statement. I do not have a sufficiently reliable tactic script for those final `mapQ`/`quotKerEquivRange` compatibility steps without speculative lemma usage.",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "formalizer_returned_stuck",
       "new_problems": []
     }
   ],
@@ -2397,6 +2551,10 @@
       "new_problems": []
     },
     {
+      "stage": "",
+      "source_statement": "",
+      "formalized_statement": "",
+      "statement_formalization_notes": "",
       "result": "proof",
       "verify_success": false,
       "proof_sketch": "Use linearity of `((Polynomial.aeval bc.number) p)` over `Finsupp.linearCombination`, then prove each `bc.ket n` is sent to `(p.eval (n : ℂ)) • bc.ket n` by combining the derived eigenvalue theorem for `bc.number` on kets with Mathlib's `aeval_apply_of_hasEigenvector`. The hypothesis `bc.vacuum ≠ 0` is used only to obtain `bc.ket n ≠ 0` via linear independence of the ket family.",
@@ -2404,6 +2562,44 @@
       "counterexample_text": "",
       "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:14:76: error: unsolved goals",
       "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:14:76: error: unsolved goals | V : Type u_1 | inst✝¹ : AddCommGroup V",
+      "new_problems": []
+    },
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∀ {V : Type*} [AddCommGroup V] [Module ℂ V] (bc : BosonCore V) (l : ℕ →₀ ℂ) (p : Polynomial ℂ), bc.vacuum ≠ 0 → (Polynomial.aeval bc.number p) (Finsupp.linearCombination ℂ (fun n : ℕ => bc.ket n) l) = l.sum (fun n c => (p.eval (n : ℂ) * c) • bc.ket n)",
+      "formalized_statement": "∀ {V : Type*} [AddCommGroup V] [Module ℂ V] (bc : BosonCore V) (l : ℕ →₀ ℂ) (p : Polynomial ℂ), bc.vacuum ≠ 0 → (Polynomial.aeval bc.number p) (Finsupp.linearCombination ℂ (fun n : ℕ => bc.ket n) l) = l.sum (fun n c => (p.eval (n : ℂ) * c) • bc.ket n)",
+      "statement_formalization_notes": "Direct formalization of the given statement, preserving the explicit nonzero-vacuum hypothesis and Finsupp linear-combination form.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∀ {V : Type*} [AddCommGroup V] [Module ℂ V] (bc : BosonCore V) (l : ℕ →₀ ℂ) (p : Polynomial ℂ), bc.vacuum ≠ 0 → (Polynomial.aeval bc.number p) (Finsupp.linearCombination ℂ (fun n : ℕ => bc.ket n) l) = l.sum (fun n c => (p.eval (n : ℂ) * c) • bc.ket n)",
+      "formalized_statement": "∀ {V : Type*} [AddCommGroup V] [Module ℂ V] (bc : BosonCore V) (l : ℕ →₀ ℂ) (p : Polynomial ℂ), bc.vacuum ≠ 0 → (Polynomial.aeval bc.number p) (Finsupp.linearCombination ℂ (fun n : ℕ => bc.ket n) l) = l.sum (fun n c => (p.eval (n : ℂ) * c) • bc.ket n)",
+      "statement_formalization_notes": "Direct formalization of the given statement using existing BosonCore, Finsupp.linearCombination, and Polynomial.aeval notation.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "stuck",
+      "verify_success": false,
+      "proof_sketch": "This target has a standard diagonalization proof. First use linearity of `((Polynomial.aeval bc.number) p)` to push it through `Finsupp.linearCombination`, reducing to the action on each basis vector `bc.ket n`. For each `n`, reuse `thm_number_ket_eigenvalue_000001` to get `bc.number (bc.ket n) = (n : ℂ) • bc.ket n`, and combine it with `thm_ket_linear_independent_of_vacuum_ne_zero_000006` plus `bc.vacuum ≠ 0` to obtain `bc.ket n ≠ 0`, so `bc.ket n` is a `HasEigenvector` for eigenvalue `n`. Then Mathlib’s eigenvector polynomial-evaluation lemma (`aeval_apply_of_hasEigenvector`) gives `((Polynomial.aeval bc.number) p) (bc.ket n) = (p.eval (n : ℂ)) • bc.ket n`, and the remaining step is the routine `Finsupp` rewrite turning the resulting linear combination into `l.sum (fun n c => (p.eval (n : ℂ) * c) • bc.ket n)`.",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "formalize worker timeout: Worker returned error: Command '['codex', 'exec', '-', '--sandbox', 'read-only', '--skip-git-repo-check', '--output-last-message', '/var/folders/2_/c2t72bmn00j3z7cnkfvqvyj80000gn/T/tmp_w12nxeh']' timed out after 390 seconds (task_type=formalize)",
+      "lean_error_fingerprint": "formalizer_timeout",
       "new_problems": []
     }
   ],
@@ -2500,8 +2696,6 @@
       "stage": "statement_formalization",
       "source_statement": "∀ {V : Type*} [AddCommGroup V] [Module ℂ V] (bc : BosonCore V) (q : Polynomial ℂ) (n : ℕ), bc.vacuum ≠ 0 → n ∈ q.support → ∃ p : Polynomial ℂ, (Polynomial.aeval bc.number p) ((Polynomial.aeval bc.aDagger q) bc.vacuum) = q.coeff n • bc.ket n",
       "formalized_statement": "∀ {V : Type*} [AddCommGroup V] [Module ℂ V] (bc : BosonCore V) (q : Polynomial ℂ) (n : ℕ), bc.vacuum ≠ 0 → n ∈ q.support → ∃ p : Polynomial ℂ, (Polynomial.aeval bc.number p) ((Polynomial.aeval bc.aDagger q) bc.vacuum) = q.coeff n • bc.ket n",
-      "theorem_name_stem": "number_polynomial_isolates_support_level",
-      "docstring_summary": "A polynomial in the number operator isolates any supported ket coefficient.",
       "statement_formalization_notes": "Used the repository's existing `BosonCore.number`, `bc.ket`, and `Polynomial.aeval` notation; this proposition elaborates successfully.",
       "result": "ok",
       "verify_success": true,
@@ -2510,6 +2704,374 @@
       "counterexample_text": "",
       "lean_error_excerpt": "",
       "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": false,
+      "proof_sketch": "Choose a Lagrange interpolation polynomial on q.support that is 1 at n and 0 at every other support index. Using the derived theorem that each ket is a number-eigenvector, Mathlib's aeval_apply_of_hasEigenvector shows p(number) acts diagonally on each ket. Expanding the polynomial state as the support sum over kets, all terms except n vanish.",
+      "proof_text": "intro V _ _ bc q n hvac hqn\nclassical\nlet p : Polynomial ℂ :=\n  Lagrange.interpolate q.support (fun m : ℕ => (m : ℂ))\n    (fun m => if m = n then (1 : ℂ) else 0)\nhave hcast_inj : Set.InjOn (fun m : ℕ => (m : ℂ)) q.support := by\n  intro i hi j hj hij\n  exact Nat.cast_injective hij\nhave heval : ∀ m ∈ q.support, p.eval (m : ℂ) = if m = n then 1 else 0 := by\n  intro m hm\n  simp [p, Lagrange.eval_interpolate_at_node, hcast_inj, hm]\nhave hli : LinearIndependent ℂ (fun m : ℕ => bc.ket m) :=\n  AutomatedTheoryConstruction.thm_ket_linear_independent_of_vacuum_ne_zero_000006\n    (bc := bc) hvac\nhave hket_ne : ∀ m : ℕ, bc.ket m ≠ 0 := by\n  intro m\n  exact hli.ne_zero m\nhave heig : ∀ m : ℕ, bc.number.HasEigenvector (m : ℂ) (bc.ket m) := by\n  intro m\n  refine ⟨?_, hket_ne m⟩\n  rw [Module.End.mem_eigenspace_iff]\n  simpa using\n    AutomatedTheoryConstruction.thm_number_ket_eigenvalue_000001 (bc := bc) m\nhave hdiag : ∀ r : Polynomial ℂ, ∀ m : ℕ,\n    (Polynomial.aeval bc.number r) (bc.ket m) = r.eval (m : ℂ) • bc.ket m := by\n  intro r m\n  simpa using (Module.End.aeval_apply_of_hasEigenvector (p := r) (h := heig m))\nrefine ⟨p, ?_⟩\ncalc\n  (Polynomial.aeval bc.number p) ((Polynomial.aeval bc.aDagger q) bc.vacuum)\n      = (Polynomial.aeval bc.number p) (q.sum (fun m z => z • bc.ket m)) := by\n          rw [AutomatedTheoryConstruction.thm_aeval_a_dagger_vacuum_support_sum_000060\n            (bc := bc) q]\n  _ = (Polynomial.aeval bc.number p) (∑ m in q.support, q.coeff m • bc.ket m) := by\n        rw [Polynomial.sum_def]\n  _ = ∑ m in q.support, q.coeff m • (Polynomial.aeval bc.number p) (bc.ket m) := by\n        simp [map_sum]\n  _ = ∑ m in q.support, (q.coeff m * p.eval (m : ℂ)) • bc.ket m := by\n        refine Finset.sum_congr rfl ?_\n        intro m hm\n        rw [hdiag p m]\n        simp [smul_smul, mul_comm, mul_left_comm, mul_assoc]\n  _ = ∑ m in q.support, (if m = n then q.coeff m else 0) • bc.ket m := by\n        refine Finset.sum_congr rfl ?_\n        intro m hm\n        rw [heval m hm]\n        split_ifs <;> simp [mul_comm, mul_left_comm, mul_assoc]\n  _ = q.coeff n • bc.ket n := by\n        rw [Finset.sum_eq_single_of_mem n hqn]\n        intro m hm hmn\n        simp [hmn]",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:43:43: error: unexpected token 'in'; expected ','",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:43:43: error: unexpected token 'in'; expected ',' | AutomatedTheoryConstruction/Scratch.lean:18:75: error: unsolved goals | V : Type u_1",
+      "new_problems": []
+    }
+  ],
+  "op_000132": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "For every complex vector space `V`, bosonic core `bc : BosonCore V`, vector `v : V`, and scalar `μ : ℂ`, if `bc.number v = μ • v`, `v ≠ 0`, and there exists a natural number `m` such that `(bc.a ^ m) v = 0`, then there exists a unique natural number `n` such that `μ = (n : ℂ)`, `(bc.a ^ (n + 1)) v = 0`, and `(bc.a ^ n) v ≠ 0`.",
+      "formalized_statement": "∀ {V : Type*} [AddCommGroup V] [Module ℂ V] (bc : BosonCore V) (v : V) (μ : ℂ), bc.number v = μ • v → v ≠ 0 → (∃ m : ℕ, (bc.a ^ m) v = 0) → ∃! n : ℕ, μ = (n : ℂ) ∧ (bc.a ^ (n + 1)) v = 0 ∧ (bc.a ^ n) v ≠ 0",
+      "statement_formalization_notes": "Formalized the claim with explicit universal quantifiers and a unique existential over the level n.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "Take the least k such that (bc.a ^ k) v = 0. Since v ≠ 0, one has k > 0, so write k = n + 1 with n = Nat.pred k. Minimality gives (bc.a ^ n) v ≠ 0, and the verified theorem `thm_eigenvalue_from_annihilation_length_000034` then forces μ = n. Uniqueness follows from the equality μ = (n : ℂ) and injectivity of Nat.cast into ℂ.",
+      "proof_text": "intro V _ _ bc v μ hμ hv hnil\nclassical\nlet k : ℕ := Nat.find hnil\nhave hk : (bc.a ^ k) v = 0 := Nat.find_spec hnil\nhave hk_ne : k ≠ 0 := by\n  intro hk0\n  apply hv\n  simpa [k, hk0] using hk\nlet n : ℕ := Nat.pred k\nhave hk_eq : k = n + 1 := by\n  dsimp [n]\n  simpa [Nat.succ_eq_add_one] using\n    (Nat.succ_pred_eq_of_pos (Nat.pos_of_ne_zero hk_ne)).symm\nhave hkill : (bc.a ^ (n + 1)) v = 0 := by\n  simpa [hk_eq] using hk\nhave hprev : (bc.a ^ n) v ≠ 0 := by\n  intro hnzero\n  have hk_le : k ≤ n := Nat.find_min' hnil hnzero\n  have : n + 1 ≤ n := by\n    simpa [hk_eq] using hk_le\n  exact Nat.not_succ_le_self n this\nhave hμn : μ = (n : ℂ) := by\n  exact AutomatedTheoryConstruction.thm_eigenvalue_from_annihilation_length_000034\n    (bc := bc) (v := v) (μ := μ) n hμ hkill hprev\nrefine ⟨n, ?_, ?_⟩\n· exact ⟨hμn, hkill, hprev⟩\n· intro n' hn'\n  rcases hn' with ⟨hμ', _, _⟩\n  apply Nat.cast_injective (R := ℂ)\n  exact hμ'.symm.trans hμn",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:29:6: warning: Try `simp at hk_le` instead of `simpa using hk_le` | Note: This linter can be disabled with `set_option linter.unnecessarySimpa false`",
+      "new_problems": []
+    }
+  ],
+  "mt_manual": [
+    {
+      "result": "stuck",
+      "verify_success": false,
+      "proof_sketch": "Fix `bc` and `hvac`, and obtain `Φ` from `main_thm_fock_span_linear_equiv_polynomial bc hvac`. Rewrite all three target identities using the theorem’s pointwise formula for `Φ`. For `Φ 1 = vacuum`, simplify `Polynomial.aeval bc.aDagger 1`. For the creation intertwining, rewrite `Polynomial.aeval bc.aDagger (Polynomial.X * p)` using `aeval_mul` and `aeval_X`; this gives exactly `bc.aDagger ((Polynomial.aeval bc.aDagger p) bc.vacuum)`. For annihilation, prove the helper lemma `bc.a ((Polynomial.aeval bc.aDagger p) bc.vacuum) = (Polynomial.aeval bc.aDagger (Polynomial.derivative p)) bc.vacuum`; the clean route is to check it on monomials using the ladder action on Fock states, then sum over the polynomial support using `thm_aeval_a_dagger_vacuum_support_sum_000060`, and finally substitute back through the defining formula of `Φ`.",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "formalize worker timeout: Worker returned error: Command '['codex', 'exec', '-', '--sandbox', 'read-only', '--skip-git-repo-check', '--output-last-message', '/var/folders/2_/c2t72bmn00j3z7cnkfvqvyj80000gn/T/tmpxcfzmhis']' timed out after 390 seconds (task_type=formalize)",
+      "lean_error_fingerprint": "formalizer_timeout",
+      "new_problems": []
+    }
+  ],
+  "op_000133": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∀ {V : Type*} [AddCommGroup V] [Module ℂ V] (bc : BosonCore V) (m n : ℕ), (bc.a ^ m) (bc.ket n) = if m ≤ n then (((n.factorial / (n - m).factorial : ℕ) : ℂ)) • bc.ket (n - m) else 0",
+      "formalized_statement": "∀ {V : Type*} [AddCommGroup V] [Module ℂ V] (bc : BosonCore V) (m n : ℕ), (bc.a ^ m) (bc.ket n) = if m ≤ n then (((n.factorial / (n - m).factorial : ℕ) : ℂ)) • bc.ket (n - m) else (0 : V)",
+      "statement_formalization_notes": "Direct formalization of the stated closed formula, using the existing `BosonCore.ket` notation.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∀ {V : Type*} [AddCommGroup V] [Module ℂ V] (bc : BosonCore V) (m n : ℕ), (bc.a ^ m) (bc.ket n) = if m ≤ n then (((n.factorial / (n - m).factorial : ℕ) : ℂ)) • bc.ket (n - m) else 0",
+      "formalized_statement": "∀ {V : Type*} [AddCommGroup V] [Module ℂ V] (bc : BosonCore V) (m n : ℕ), (bc.a ^ m) (bc.ket n) = if m ≤ n then (((n.factorial / (n - m).factorial : ℕ) : ℂ)) • bc.ket (n - m) else 0",
+      "statement_formalization_notes": "This matches the given statement directly and uses the repository's existing `BosonCore`, `ket`, and power notation.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": false,
+      "proof_sketch": "Induct on m. The base case is simp. In the step, split on m.succ ≤ n. In the lowering case, apply the induction hypothesis, then use `a_ket_succ` on `ket (n - m)`, and convert the scalar with `Nat.descFactorial_eq_div` plus `Nat.descFactorial_succ`. In the vanishing case, the induction hypothesis already gives zero, so one more application of `a` stays zero.",
+      "proof_text": "intro V _ _ bc m\ninduction m generalizing n with\n| zero =>\n    intro n\n    simp\n| succ m ih =>\n    intro n\n    by_cases hmn : m.succ ≤ n\n    · have hm : m ≤ n := Nat.le_trans (Nat.le_succ m) hmn\n      have hsub : n - m = (n - m.succ) + 1 := by\n        omega\n      have hcoef : (n.factorial / (n - m).factorial) * (n - m) =\n          n.factorial / (n - m.succ).factorial := by\n        rw [← Nat.descFactorial_eq_div hm, ← Nat.descFactorial_eq_div hmn,\n          Nat.descFactorial_succ, Nat.mul_comm]\n      rw [pow_succ', ih n, if_pos hm, map_smul, hsub, bc.a_ket_succ, if_pos hmn, smul_smul]\n      have hsub' : (n - m.succ) + 1 = n - m := by\n        omega\n      congr 1\n      rw [hsub']\n      exact_mod_cast hcoef\n    · have hmnot : ¬ m ≤ n := by\n        omega\n      rw [pow_succ', ih n, if_neg hmnot]\n      simp [if_neg hmn]",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:11:27: error(lean.unknownIdentifier): Unknown identifier `n`",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:11:27: error(lean.unknownIdentifier): Unknown identifier `n`",
+      "new_problems": []
+    }
+  ],
+  "op_000134": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "For every complex vector space `V`, bosonic core `bc : BosonCore V`, and natural numbers `m n`, the operator product `bc.a ^ m * bc.aDagger ^ n` is equal to `∑ k = 0..min m n, (((k.factorial * Nat.choose m k * Nat.choose n k : ℕ) : ℂ)) • (bc.aDagger ^ (n - k) * bc.a ^ (m - k))`.",
+      "formalized_statement": "",
+      "statement_formalization_notes": "Formalized the inclusive sum from 0 to min m n as a Finset.range sum of length Nat.min m n + 1.\nLean statement validation failed before proof search: /var/folders/2_/c2t72bmn00j3z7cnkfvqvyj80000gn/T/stmt_check_op_000134_t6itizla.lean:9:164: error: unexpected token 'in'; expected ','",
+      "result": "stuck",
+      "verify_success": false,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "stuck",
+      "verify_success": false,
+      "proof_sketch": "Formalized the inclusive sum from 0 to min m n as a Finset.range sum of length Nat.min m n + 1.\nLean statement validation failed before proof search: /var/folders/2_/c2t72bmn00j3z7cnkfvqvyj80000gn/T/stmt_check_op_000134_t6itizla.lean:9:164: error: unexpected token 'in'; expected ','",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "non_formalized_result",
+      "new_problems": []
+    }
+  ],
+  "op_000135": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "For every complex vector space `V` and bosonic core `bc : BosonCore V` with `bc.vacuum ≠ 0`, let `S := Submodule.span ℂ (Set.range bc.ket)`. Then for every natural number `m` and every `s : S`, one has `((bc.a ^ m) (s : V) = 0)` if and only if `s` lies in the `ℂ`-span of the vectors `bc.ket n` with `n < m`.",
+      "formalized_statement": "∀ {V : Type*} [AddCommGroup V] [Module ℂ V] (bc : BosonCore V), bc.vacuum ≠ 0 → let S : Submodule ℂ V := Submodule.span ℂ (Set.range bc.ket); ∀ (m : ℕ) (s : S), (bc.a ^ m) (s : V) = 0 ↔ (s : V) ∈ Submodule.span ℂ (Set.range fun n : Fin m => bc.ket (n : ℕ))",
+      "statement_formalization_notes": "Formalized the vectors with n < m as Set.range over Fin m to avoid set-comprehension ambiguity.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "stuck",
+      "verify_success": false,
+      "proof_sketch": "The statement still looks plausible, but the current repo only gives the one-step annihilation identity for polynomial states and the basis/Finsupp equivalence of the ket span. A clean Lean proof of the reverse implication needs an exported theorem describing `(bc.a ^ m)` on arbitrary ket-span coordinates or on polynomial states via iterated derivatives/support truncation. Those ingredients are not yet available as reusable lemmas, and reconstructing them locally would require substantial new intermediate infrastructure rather than a direct formalization of the supplied sketch.",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "formalizer_returned_stuck",
+      "new_problems": []
+    }
+  ],
+  "op_000136": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "For every complex vector space `V` and bosonic core `bc : BosonCore V` with `bc.vacuum ≠ 0`, let `S := Submodule.span ℂ (Set.range bc.ket)`. If `W` is a nonzero `ℂ`-submodule of `S` that is invariant under the restrictions of `bc.a` and `bc.aDagger`, then `W = S`.",
+      "formalized_statement": "∀ {V : Type*} [AddCommGroup V] [Module ℂ V] (bc : BosonCore V) (W : Submodule ℂ V), bc.vacuum ≠ 0 → W ≤ Submodule.span ℂ (Set.range bc.ket) → W ≠ ⊥ → (∀ v : V, v ∈ W → bc.a v ∈ W) → (∀ v : V, v ∈ W → bc.aDagger v ∈ W) → W = Submodule.span ℂ (Set.range bc.ket)",
+      "statement_formalization_notes": "Formalized the submodule of S conservatively as an ambient submodule W of V with W ≤ Submodule.span ℂ (Set.range bc.ket), matching existing repository practice for restricted-operator invariance.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "stuck",
+      "verify_success": false,
+      "proof_sketch": "The proof direction is plausible, but I cannot produce defensible Lean tactic code from the available context alone. The sketch needs at least one established bridge lemma of the form: every nonzero vector in `Submodule.span ℂ (Set.range bc.ket)` descends under some power of `bc.a` to a nonzero scalar multiple of `bc.vacuum`, or equivalently a proved highest-support extraction lemma for finite ket combinations. The provided context only clearly exposes `a_ket_succ`, `aDagger_ket`, and ket linear independence; formalizing the maximal-index argument from raw `span` membership would require substantial additional decomposition/support machinery that is not explicitly available here.",
+      "proof_text": "",
+      "counterexample_text": "No counterexample is suggested. The obstacle is formalization: the irreducibility argument needs a previously proved descent-to-vacuum lemma (such as the open problems `op_000115`/`op_000140`) or an explicit finite-support normal form theorem for span elements.",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "formalizer_returned_stuck",
+      "new_problems": []
+    }
+  ],
+  "op_000078": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∀ {V : Type*} [AddCommGroup V] [Module ℂ V] (bc : BosonCore V) (p : Polynomial ℂ), bc.a * Polynomial.aeval bc.aDagger p - Polynomial.aeval bc.aDagger p * bc.a = Polynomial.aeval bc.aDagger (Polynomial.derivative p)",
+      "formalized_statement": "∀ {V : Type*} [AddCommGroup V] [Module ℂ V] (bc : BosonCore V) (p : Polynomial ℂ), bc.a * Polynomial.aeval bc.aDagger p - Polynomial.aeval bc.aDagger p * bc.a = Polynomial.aeval bc.aDagger (Polynomial.derivative p)",
+      "statement_formalization_notes": "Formalized directly as the operator commutator identity for polynomial evaluation at `aDagger`.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "stuck",
+      "verify_success": false,
+      "proof_sketch": "This target is a standard CCR-to-polynomial-commutator statement: from `bc.ccr`, one first proves the power case `[bc.a, bc.aDagger^(n+1)] = (n+1) • bc.aDagger^n`, which is essentially already available as `a_mul_aDagger_pow_succ`. Then expand `Polynomial.aeval bc.aDagger p` termwise using the usual `aeval`/linearity lemmas, so the commutator with `bc.a` reduces to the sum of the commutators of each monomial. The constant term vanishes because scalar multiples of `1` commute with every endomorphism, and the monomial term matches the derivative coefficient `(n+1)` exactly. So the promising Lean route is polynomial induction or `p` expanded into monomials, reusing `a_mul_aDagger_pow_succ` together with standard Mathlib facts about `Polynomial.aeval`, `Polynomial.derivative`, and linearity.",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "formalize worker timeout: Worker returned error: Command '['codex', 'exec', '-', '--sandbox', 'read-only', '--skip-git-repo-check', '--output-last-message', '/var/folders/2_/c2t72bmn00j3z7cnkfvqvyj80000gn/T/tmp0ulnozp9']' timed out after 390 seconds (task_type=formalize)",
+      "lean_error_fingerprint": "formalizer_timeout",
+      "new_problems": []
+    }
+  ],
+  "op_000115": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "For every complex vector space `V`, bosonic core `bc : BosonCore V`, submodule `W : Submodule ℂ V`, and vector `w : V`, if `bc.vacuum ≠ 0`, `w ∈ W`, `w ≠ 0`, `w ∈ Submodule.span ℂ (Set.range bc.ket)`, and `∀ v : V, v ∈ W → bc.a v ∈ W`, then `bc.vacuum ∈ W`.",
+      "formalized_statement": "∀ {V : Type*} [AddCommGroup V] [Module ℂ V] (bc : BosonCore V) (W : Submodule ℂ V) (w : V), bc.vacuum ≠ 0 → w ∈ W → w ≠ 0 → w ∈ Submodule.span ℂ (Set.range bc.ket) → (∀ v : V, v ∈ W → bc.a v ∈ W) → bc.vacuum ∈ W",
+      "statement_formalization_notes": "Formalized directly from the statement using the existing `bc.ket` notation and an ambient submodule `W : Submodule ℂ V`.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "stuck",
+      "verify_success": false,
+      "proof_sketch": "The intended proof direction is mathematically plausible, but I cannot give reliable Lean tactic code from the current context alone. The key missing formal step is a proved lemma that any nonzero vector in `Submodule.span ℂ (Set.range bc.ket)` descends under some iterate of `bc.a` to a nonzero scalar multiple of `bc.vacuum`. I confirmed a standard span-expansion tool is available (`Finsupp.mem_span_range_iff_exists_finsupp`), but the necessary follow-up formalization still needs substantial intermediate lemmas about repeated annihilation on finite ket combinations or the promised ket-span/Finsupp equivalence theorem, which is not present in the workspace.",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "formalizer_returned_stuck",
+      "new_problems": []
+    }
+  ],
+  "op_000140": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∀ {V : Type*} [AddCommGroup V] [Module ℂ V] (bc : BosonCore V) {v : V}, bc.vacuum ≠ 0 → v ∈ Submodule.span ℂ (Set.range bc.ket) → v ≠ 0 → ∃ m : ℕ, ∃ c : ℂ, c ≠ 0 ∧ (bc.a ^ m) v = c • bc.vacuum",
+      "formalized_statement": "∀ {V : Type*} [AddCommGroup V] [Module ℂ V] (bc : BosonCore V) {v : V}, bc.vacuum ≠ 0 → v ∈ Submodule.span ℂ (Set.range bc.ket) → v ≠ 0 → ∃ m : ℕ, ∃ c : ℂ, c ≠ 0 ∧ (bc.a ^ m) v = c • bc.vacuum",
+      "statement_formalization_notes": "The input statement is already a valid Lean proposition using the BosonCore definitions from Theory.lean.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": false,
+      "proof_sketch": "Express v as a polynomial state on the vacuum, take m = p.natDegree for the nonzero polynomial p, expand over the ket basis, note that a^m kills every lower ket and sends ket m to m! times the vacuum, and use the nonzero top coefficient.",
+      "proof_text": "intro hvac hvspan hv\nrcases (AutomatedTheoryConstruction.thm_mem_ket_span_iff_exists_aeval_000075 (bc := bc) v).mp hvspan with ⟨p, rfl⟩\nhave hp : p ≠ 0 := by\n  intro hp0\n  apply hv\n  rw [hp0]\n  simp\nhave hcoeff : p.coeff p.natDegree ≠ 0 := by\n  exact Polynomial.mem_support_iff.mp (Polynomial.natDegree_mem_support_of_nonzero hp)\nhave hfact : (((p.natDegree).factorial : ℕ) : ℂ) ≠ 0 := by\n  exact_mod_cast Nat.factorial_ne_zero p.natDegree\nrefine ⟨p.natDegree, p.coeff p.natDegree * (((p.natDegree).factorial : ℕ) : ℂ), mul_ne_zero hcoeff hfact, ?_⟩\nrw [AutomatedTheoryConstruction.thm_aeval_a_dagger_vacuum_support_sum_000060 (bc := bc) p,\n  Polynomial.sum_over_range (p := p) (f := fun n z => z • bc.ket n) (by intro n; simp)]\nhave hsum :\n    (∑ a ∈ Finset.range (p.natDegree + 1), p.coeff a • (bc.a ^ p.natDegree) (bc.ket a)) =\n      p.coeff p.natDegree • (bc.a ^ p.natDegree) (bc.ket p.natDegree) := by\n  rw [Finset.sum_eq_single_of_mem p.natDegree (Finset.mem_range.mpr (Nat.lt_succ_self _))]\n  intro n hn hne\n  have hlt : n < p.natDegree := by\n    omega\n  rw [AutomatedTheoryConstruction.thm_a_pow_ket_eq_zero_of_lt_000043 (bc := bc) (m := p.natDegree) (n := n) hlt, smul_zero]\ncalc\n  (bc.a ^ p.natDegree) (∑ a ∈ Finset.range (p.natDegree + 1), p.coeff a • bc.ket a)\n      = ∑ a ∈ Finset.range (p.natDegree + 1), p.coeff a • (bc.a ^ p.natDegree) (bc.ket a) := by\n          simp_rw [map_sum, map_smul]\n  _ = p.coeff p.natDegree • (bc.a ^ p.natDegree) (bc.ket p.natDegree) := hsum\n  _ = p.coeff p.natDegree • ((((p.natDegree).factorial : ℕ) : ℂ) • bc.vacuum) := by\n          rw [AutomatedTheoryConstruction.thm_a_pow_ket_self_factorial_000037]\n  _ = (p.coeff p.natDegree * (((p.natDegree).factorial : ℕ) : ℂ)) • bc.vacuum := by\n          simp [smul_smul, mul_comm, mul_left_comm, mul_assoc]",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:11:86: error(lean.unknownIdentifier): Unknown identifier `bc`",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:11:86: error(lean.unknownIdentifier): Unknown identifier `bc` | AutomatedTheoryConstruction/Scratch.lean:11:90: error(lean.unknownIdentifier): Unknown identifier `v`",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": false,
+      "proof_sketch": "Introduce the implicit parameters first, express the nonzero vector in the ket span as a polynomial creation state, then take the top degree. Applying the matching power of `a` kills all lower ket terms and sends the top ket to a nonzero factorial multiple of the vacuum.",
+      "proof_text": "intro V _instG _instM bc v hvac hvspan hv\nrcases (AutomatedTheoryConstruction.thm_mem_ket_span_iff_exists_aeval_000075 (bc := bc) v).mp hvspan with ⟨p, rfl⟩\nhave hp : p ≠ 0 := by\n  intro hp0\n  apply hv\n  rw [hp0]\n  simp\nhave hcoeff : p.coeff p.natDegree ≠ 0 := by\n  exact Polynomial.mem_support_iff.mp (Polynomial.natDegree_mem_support_of_nonzero hp)\nhave hfact : (((p.natDegree).factorial : ℕ) : ℂ) ≠ 0 := by\n  exact_mod_cast Nat.factorial_ne_zero p.natDegree\nrefine ⟨p.natDegree, p.coeff p.natDegree * (((p.natDegree).factorial : ℕ) : ℂ), mul_ne_zero hcoeff hfact, ?_⟩\nrw [AutomatedTheoryConstruction.thm_aeval_a_dagger_vacuum_support_sum_000060 (bc := bc) p,\n  Polynomial.sum_over_range (p := p) (f := fun n z => z • bc.ket n) (by intro n; simp)]\nhave hsum :\n    (∑ a ∈ Finset.range (p.natDegree + 1), p.coeff a • (bc.a ^ p.natDegree) (bc.ket a)) =\n      p.coeff p.natDegree • (bc.a ^ p.natDegree) (bc.ket p.natDegree) := by\n  rw [Finset.sum_eq_single_of_mem p.natDegree (Finset.mem_range.mpr (Nat.lt_succ_self _))]\n  intro n hn hne\n  have hlt : n < p.natDegree := by\n    omega\n  rw [AutomatedTheoryConstruction.thm_a_pow_ket_eq_zero_of_lt_000043 (bc := bc) (m := p.natDegree) (n := n) hlt, smul_zero]\ncalc\n  (bc.a ^ p.natDegree) (∑ a ∈ Finset.range (p.natDegree + 1), p.coeff a • bc.ket a)\n      = ∑ a ∈ Finset.range (p.natDegree + 1), p.coeff a • (bc.a ^ p.natDegree) (bc.ket a) := by\n          simp_rw [map_sum, map_smul]\n  _ = p.coeff p.natDegree • (bc.a ^ p.natDegree) (bc.ket p.natDegree) := hsum\n  _ = p.coeff p.natDegree • ((((p.natDegree).factorial : ℕ) : ℂ) • bc.vacuum) := by\n          rw [AutomatedTheoryConstruction.thm_a_pow_ket_self_factorial_000037]\n  _ = (p.coeff p.natDegree * (((p.natDegree).factorial : ℕ) : ℂ)) • bc.vacuum := by\n          simp [smul_smul, mul_comm, mul_left_comm, mul_assoc]",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:30:6: error: omega could not prove the goal:",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:30:6: error: omega could not prove the goal: | a possible counterexample may satisfy the constraints | b ≥ 0",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "Write the nonzero vector in the ket span as a polynomial in the creation operator applied to the vacuum. Take the polynomial's top degree m. Then a^m kills every lower ket term, sends ket m to m! times the vacuum, and the top coefficient times m! is nonzero.",
+      "proof_text": "intro V _instG _instM bc v hvac hvspan hv\nrcases (AutomatedTheoryConstruction.thm_mem_ket_span_iff_exists_aeval_000075 (bc := bc) v).mp hvspan with ⟨p, rfl⟩\nhave hp : p ≠ 0 := by\n  intro hp0\n  apply hv\n  rw [hp0]\n  simp\nhave hcoeff : p.coeff p.natDegree ≠ 0 := by\n  exact Polynomial.mem_support_iff.mp (Polynomial.natDegree_mem_support_of_nonzero hp)\nhave hfact : (((p.natDegree).factorial : ℕ) : ℂ) ≠ 0 := by\n  exact_mod_cast Nat.factorial_ne_zero p.natDegree\nrefine ⟨p.natDegree, p.coeff p.natDegree * (((p.natDegree).factorial : ℕ) : ℂ), mul_ne_zero hcoeff hfact, ?_⟩\nrw [AutomatedTheoryConstruction.thm_aeval_a_dagger_vacuum_support_sum_000060 (bc := bc) p,\n  Polynomial.sum_over_range (p := p) (f := fun n z => z • bc.ket n) (by intro n; simp)]\nhave hsum :\n    (∑ a ∈ Finset.range (p.natDegree + 1), p.coeff a • (bc.a ^ p.natDegree) (bc.ket a)) =\n      p.coeff p.natDegree • (bc.a ^ p.natDegree) (bc.ket p.natDegree) := by\n  rw [Finset.sum_eq_single_of_mem p.natDegree (Finset.mem_range.mpr (Nat.lt_succ_self _))]\n  intro n hn hne\n  have hlt : n < p.natDegree := by\n    exact lt_of_le_of_ne (Nat.le_of_lt_succ (Finset.mem_range.mp hn)) hne\n  rw [AutomatedTheoryConstruction.thm_a_pow_ket_eq_zero_of_lt_000043 (bc := bc) (m := p.natDegree) (n := n) hlt, smul_zero]\ncalc\n  (bc.a ^ p.natDegree) (∑ a ∈ Finset.range (p.natDegree + 1), p.coeff a • bc.ket a)\n      = ∑ a ∈ Finset.range (p.natDegree + 1), p.coeff a • (bc.a ^ p.natDegree) (bc.ket a) := by\n          simp_rw [map_sum, map_smul]\n  _ = p.coeff p.natDegree • (bc.a ^ p.natDegree) (bc.ket p.natDegree) := hsum\n  _ = p.coeff p.natDegree • ((((p.natDegree).factorial : ℕ) : ℂ) • bc.vacuum) := by\n          rw [AutomatedTheoryConstruction.thm_a_pow_ket_self_factorial_000037]\n  _ = (p.coeff p.natDegree * (((p.natDegree).factorial : ℕ) : ℂ)) • bc.vacuum := by\n          simpa [smul_smul]",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:40:12: warning: try 'simp' instead of 'simpa' | Note: This linter can be disabled with `set_option linter.unnecessarySimpa false`",
+      "new_problems": []
+    }
+  ],
+  "op_000147": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "For every complex vector space `V` and bosonic core `bc : BosonCore V` with `bc.vacuum ≠ 0`, let `S := Submodule.span ℂ (Set.range bc.ket)`. Then there exists a `ℂ`-linear equivalence `Φ : S ≃ₗ[ℂ] (ℕ →₀ ℂ)` such that `Φ ⟨bc.ket n, Submodule.subset_span (Set.mem_range_self n)⟩ = Finsupp.single n (1 : ℂ)` for every `n : ℕ`, and under this equivalence the induced operators of `bc.aDagger` and `bc.a` on `S` are exactly the standard creation and annihilation operators on finitely supported sequences: `A†(l) = l.sum (fun n c => Finsupp.single (n + 1) c)` and `A(l) = l.sum (fun n c => if n = 0 then 0 else Finsupp.single (n - 1) (((n : ℂ) * c)))`.",
+      "formalized_statement": "∀ {V : Type*} [AddCommGroup V] [Module ℂ V] (bc : BosonCore V), bc.vacuum ≠ 0 → let S : Submodule ℂ V := Submodule.span ℂ (Set.range bc.ket); ∃ (Φ : S ≃ₗ[ℂ] (ℕ →₀ ℂ)) (ADagger A : Module.End ℂ S), (∀ s : S, ((ADagger s : S) : V) = bc.aDagger (s : V)) ∧ (∀ s : S, ((A s : S) : V) = bc.a (s : V)) ∧ (∀ n : ℕ, Φ ⟨bc.ket n, Submodule.subset_span (Set.mem_range_self n)⟩ = Finsupp.single n (1 : ℂ)) ∧ (∀ l : ℕ →₀ ℂ, Φ (ADagger (Φ.symm l)) = l.sum (fun n c => Finsupp.single (n + 1) c)) ∧ (∀ l : ℕ →₀ ℂ, Φ (A (Φ.symm l)) = l.sum (fun n c => if n = 0 then 0 else Finsupp.single (n - 1) ((n : ℂ) * c)))",
+      "statement_formalization_notes": "Formalized the induced operators on the ket span by existentially quantifying restricted endomorphisms, since no canonical restriction name is present in Theory.lean.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": false,
+      "proof_sketch": "Use the canonical ket-span/Finsupp equivalence coming from linear independence of the ket family. Define the standard creation and annihilation operators on `ℕ →₀ ℂ` by `Finsupp.lsum`, transport them back along `Φ`, and verify on the `Finsupp.single n c` basis that the transported operators agree with `bc.aDagger` and `bc.a` on the ket basis. Then evaluate the transported operators on arbitrary `l` by construction.",
+      "proof_text": "intro V _ _ bc hvac\n dsimp\n let S : Submodule ℂ V := Submodule.span ℂ (Set.range bc.ket)\n change\n   ∃ (Φ : S ≃ₗ[ℂ] (ℕ →₀ ℂ)) (ADagger A : Module.End ℂ S),\n     (∀ s : S, ((ADagger s : S) : V) = bc.aDagger (s : V)) ∧\n       (∀ s : S, ((A s : S) : V) = bc.a (s : V)) ∧\n         (∀ n : ℕ,\n           Φ ⟨bc.ket n, Submodule.subset_span (Set.mem_range_self n)⟩ =\n             Finsupp.single n (1 : ℂ)) ∧\n           (∀ l : ℕ →₀ ℂ,\n             Φ (ADagger (Φ.symm l)) = l.sum (fun n c => Finsupp.single (n + 1) c)) ∧\n             ∀ l : ℕ →₀ ℂ,\n               Φ (A (Φ.symm l)) =\n                 l.sum\n                   (fun n c => if n = 0 then 0 else Finsupp.single (n - 1) ((n : ℂ) * c))\n let ketS : ℕ → S := fun n =>\n   ⟨bc.ket n, by\n     simpa [S] using\n       (Submodule.subset_span (Set.mem_range_self n) :\n         bc.ket n ∈ Submodule.span ℂ (Set.range bc.ket))⟩\n have hli : LinearIndependent ℂ (fun n : ℕ => bc.ket n) :=\n   AutomatedTheoryConstruction.thm_ket_linear_independent_of_vacuum_ne_zero_000006\n     (bc := bc) hvac\n let Φ : S ≃ₗ[ℂ] (ℕ →₀ ℂ) := hli.linearCombinationEquiv.symm\n have hΦket : ∀ n : ℕ, Φ (ketS n) = Finsupp.single n (1 : ℂ) := by\n   intro n\n   simpa [Φ, ketS, LinearIndependent.repr] using hli.repr_eq_single n (ketS n) rfl\n have hΦsymm_single_one : ∀ n : ℕ, Φ.symm (Finsupp.single n (1 : ℂ)) = ketS n := by\n   intro n\n   apply Φ.injective\n   simpa [hΦket n]\n have hΦsymm_single : ∀ n : ℕ, ∀ c : ℂ, Φ.symm (Finsupp.single n c) = c • ketS n := by\n   intro n c\n   calc\n     Φ.symm (Finsupp.single n c) = Φ.symm (c • Finsupp.single n (1 : ℂ)) := by simp\n     _ = c • Φ.symm (Finsupp.single n (1 : ℂ)) := by simp\n     _ = c • ketS n := by rw [hΦsymm_single_one n]\n let SDagger : Module.End ℂ (ℕ →₀ ℂ) :=\n   Finsupp.lsum ℂ (fun n => Finsupp.lsingle (R := ℂ) (M := ℂ) (n + 1))\n let SA : Module.End ℂ (ℕ →₀ ℂ) :=\n   Finsupp.lsum ℂ fun n =>\n     if n = 0 then 0 else (n : ℂ) • Finsupp.lsingle (R := ℂ) (M := ℂ) (n - 1)\n let ADagger : Module.End ℂ S :=\n   (Φ.symm : (ℕ →₀ ℂ) →ₗ[ℂ] S).comp (SDagger.comp (Φ : S →ₗ[ℂ] (ℕ →₀ ℂ)))\n let A : Module.End ℂ S :=\n   (Φ.symm : (ℕ →₀ ℂ) →ₗ[ℂ] S).comp (SA.comp (Φ : S →ₗ[ℂ] (ℕ →₀ ℂ)))\n have hADagger_map :\n     (((Submodule.subtype S).comp ADagger).comp (Φ.symm : (ℕ →₀ ℂ) →ₗ[ℂ] S)) =\n       (bc.aDagger.comp ((Submodule.subtype S).comp (Φ.symm : (ℕ →₀ ℂ) →ₗ[ℂ] S))) := by\n   ext n c\n   rw [Finsupp.lsingle_apply]\n   simp [ADagger, SDagger, hΦsymm_single, ketS, bc.aDagger_ket, map_smul]\n have hA_map :\n     (((Submodule.subtype S).comp A).comp (Φ.symm : (ℕ →₀ ℂ) →ₗ[ℂ] S)) =\n       (bc.a.comp ((Submodule.subtype S).comp (Φ.symm : (ℕ →₀ ℂ) →ₗ[ℂ] S))) := by\n   ext n c\n   rw [Finsupp.lsingle_apply]\n   cases n with\n   | zero =>\n       simp [A, SA, hΦsymm_single, ketS, bc.ket_zero, bc.vacuum_annihilate, map_smul]\n   | succ n =>\n       simp [A, SA, hΦsymm_single, ketS, bc.a_ket_succ, map_smul, smul_smul,\n         mul_comm, mul_left_comm, mul_assoc]\n have hADagger_eq :\n     (Submodule.subtype S).comp ADagger = bc.aDagger.comp (Submodule.subtype S) := by\n   ext s\n   have hs := LinearMap.congr_fun hADagger_map (Φ s)\n   simpa using hs\n have hA_eq : (Submodule.subtype S).comp A = bc.a.comp (Submodule.subtype S) := by\n   ext s\n   have hs := LinearMap.congr_fun hA_map (Φ s)\n   simpa using hs\n refine ⟨Φ, ADagger, A, ?_⟩\n constructor\n · intro s\n   simpa using LinearMap.congr_fun hADagger_eq s\n constructor\n · intro s\n   simpa using LinearMap.congr_fun hA_eq s\n constructor\n · intro n\n   simpa [S, ketS] using hΦket n\n constructor\n · intro l\n   simpa [ADagger, SDagger]\n · intro l\n   simpa [A, SA]",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:9:643: error: unsolved goals",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:9:643: error: unsolved goals | V : Type u_1 | inst✝¹ : AddCommGroup V",
+      "new_problems": []
+    }
+  ],
+  "op_000148": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "For every complex vector space `V` and bosonic core `bc : BosonCore V` with `bc.vacuum ≠ 0`, let `S := Submodule.span ℂ (Set.range bc.ket)` and let `N_S : Module.End ℂ S` be the endomorphism induced by `bc.number`. Then for every `λ : ℂ`, the eigenspace `LinearMap.eigenspace N_S λ` is zero unless `λ = (n : ℂ)` for some `n : ℕ`, and in that case `LinearMap.eigenspace N_S (n : ℂ)` is exactly the one-dimensional submodule spanned by `⟨bc.ket n, Submodule.subset_span (Set.mem_range_self n)⟩`.",
+      "formalized_statement": "",
+      "statement_formalization_notes": "Formalized the induced operator existentially on the ket span to avoid committing to a specific restriction API name.\nLean statement validation failed before proof search: /var/folders/2_/c2t72bmn00j3z7cnkfvqvyj80000gn/T/stmt_check_op_000148_n3botk6e.lean:9:284: error: unexpected token 'λ'; expected '(', '[', '_', '{', '⦃' or identifier",
+      "result": "stuck",
+      "verify_success": false,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "stuck",
+      "verify_success": false,
+      "proof_sketch": "Formalized the induced operator existentially on the ket span to avoid committing to a specific restriction API name.\nLean statement validation failed before proof search: /var/folders/2_/c2t72bmn00j3z7cnkfvqvyj80000gn/T/stmt_check_op_000148_n3botk6e.lean:9:284: error: unexpected token 'λ'; expected '(', '[', '_', '{', '⦃' or identifier",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "non_formalized_result",
+      "new_problems": []
+    }
+  ],
+  "op_000149": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "For every complex vector space `V`, bosonic core `bc : BosonCore V`, polynomial `p : Polynomial ℂ`, and natural number `m`, if `bc.vacuum ≠ 0`, then `(bc.a ^ m) ((Polynomial.aeval bc.aDagger p) bc.vacuum) = 0` if and only if every `n ∈ p.support` satisfies `n < m`.",
+      "formalized_statement": "∀ {V : Type*} [AddCommGroup V] [Module ℂ V] (bc : BosonCore V) (p : Polynomial ℂ) (m : ℕ), bc.vacuum ≠ 0 → ((bc.a ^ m) ((Polynomial.aeval bc.aDagger p) bc.vacuum) = 0 ↔ ∀ n ∈ p.support, n < m)",
+      "statement_formalization_notes": "Formalized directly with polynomial support membership over natural exponents.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": false,
+      "proof_sketch": "Reduce repeated annihilation on a polynomial vacuum state to repeated polynomial differentiation, then use injectivity of vacuum evaluation under `bc.vacuum ≠ 0`. The remaining polynomial fact is exactly that `derivative^[m] p = 0` iff every exponent in `p.support` is `< m`, proved via `iterate_derivative_eq_zero` in one direction and `coeff_iterate_derivative` plus nonvanishing descending factorials in the other.",
+      "proof_text": "intro V _ _ bc p m hvac\nhave hderiv :\n    ∀ q : Polynomial ℂ,\n      bc.a ((Polynomial.aeval bc.aDagger q) bc.vacuum) =\n        (Polynomial.aeval bc.aDagger (Polynomial.derivative q)) bc.vacuum := by\n  intro q\n  induction q using Polynomial.induction_on' with\n  | add q r hq hr =>\n      simp [Polynomial.derivative_add, hq, hr]\n  | monomial n c =>\n      cases n with\n      | zero =>\n          simp [AutomatedTheoryConstruction.thm_aeval_a_dagger_vacuum_support_sum_000060,\n            bc.vacuum_annihilate]\n      | succ n =>\n          rw [AutomatedTheoryConstruction.thm_aeval_a_dagger_vacuum_support_sum_000060,\n            Polynomial.derivative_monomial_succ,\n            AutomatedTheoryConstruction.thm_aeval_a_dagger_vacuum_support_sum_000060]\n          simp [bc.a_ket_succ, smul_smul, mul_comm, mul_left_comm, mul_assoc]\nhave hiter :\n    ∀ k : ℕ, ∀ q : Polynomial ℂ,\n      (bc.a ^ k) ((Polynomial.aeval bc.aDagger q) bc.vacuum) =\n        (Polynomial.aeval bc.aDagger (Polynomial.derivative^[k] q)) bc.vacuum := by\n  intro k\n  induction k with\n  | zero =>\n      intro q\n      simp\n  | succ k ih =>\n      intro q\n      rw [pow_succ']\n      change bc.a ((bc.a ^ k) ((Polynomial.aeval bc.aDagger q) bc.vacuum)) =\n        (Polynomial.aeval bc.aDagger (Polynomial.derivative^[k + 1] q)) bc.vacuum\n      rw [ih, hderiv]\n      rw [Function.iterate_succ_apply']\nhave hpoly :\n    Polynomial.derivative^[m] p = 0 ↔ ∀ n ∈ p.support, n < m := by\n  constructor\n  · intro hz n hn\n    by_contra hnm\n    have hmn : m ≤ n := Nat.not_lt.mp hnm\n    have hcoeff0 : (Polynomial.derivative^[m] p).coeff (n - m) = 0 := by\n      simpa [hz]\n    rw [Polynomial.coeff_iterate_derivative (k := m) p (n - m), Nat.sub_add_cancel hmn] at hcoeff0\n    have hdesc : ((Nat.descFactorial n m : ℕ) : ℂ) ≠ 0 := by\n      exact Nat.cast_ne_zero.mpr (by\n        rw [Nat.descFactorial_eq_zero_iff_lt]\n        exact hnm)\n    have hpn : p.coeff n ≠ 0 := Polynomial.mem_support_iff.mp hn\n    exact (smul_eq_zero.mp hcoeff0).elim hdesc hpn\n  · intro hs\n    by_cases hp : p = 0\n    · simpa [hp]\n    · exact Polynomial.iterate_derivative_eq_zero (hs _ (Polynomial.natDegree_mem_support_of_nonzero hp))\nrw [hiter m p]\nconstructor\n· intro hz\n  have hz' : Polynomial.derivative^[m] p = 0 :=\n    (AutomatedTheoryConstruction.thm_aeval_vacuum_injective_of_vacuum_ne_zero_000017\n      (bc := bc) hvac) (by simpa using hz)\n  exact hpoly.mp hz'\n· intro hs\n  have hz : Polynomial.derivative^[m] p = 0 := hpoly.mpr hs\n  simpa [hz]",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:52:8: warning: try 'simp' instead of 'simpa'",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:52:8: warning: try 'simp' instead of 'simpa' | Note: This linter can be disabled with `set_option linter.unnecessarySimpa false` | AutomatedTheoryConstruction/Scratch.lean:56:14: error: Tactic `rewrite` failed: Did not find an occurrence of the pattern",
+      "new_problems": []
+    }
+  ],
+  "op_000150": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "For every complex vector space `V`, bosonic core `bc : BosonCore V`, polynomial `p : Polynomial ℂ`, and scalar `μ : ℂ`, if `bc.vacuum ≠ 0`, `p ≠ 0`, and `bc.number ((Polynomial.aeval bc.aDagger p) bc.vacuum) = μ • ((Polynomial.aeval bc.aDagger p) bc.vacuum)`, then there exist `n : ℕ` and `c : ℂ` such that `c ≠ 0`, `μ = (n : ℂ)`, and `p = Polynomial.C c * Polynomial.X ^ n`.",
+      "formalized_statement": "∀ {V : Type*} [AddCommGroup V] [Module ℂ V] (bc : BosonCore V) (p : Polynomial ℂ) (μ : ℂ), bc.vacuum ≠ 0 → p ≠ 0 → bc.number ((Polynomial.aeval bc.aDagger p) bc.vacuum) = μ • ((Polynomial.aeval bc.aDagger p) bc.vacuum) → ∃ (n : ℕ) (c : ℂ), c ≠ 0 ∧ μ = (n : ℂ) ∧ p = Polynomial.C c * Polynomial.X ^ n",
+      "statement_formalization_notes": "Formalized directly using the existing `BosonCore.number` and `Polynomial.aeval bc.aDagger` notation.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "stuck",
+      "verify_success": false,
+      "proof_sketch": "This looks like a standard diagonalization argument in the Fock basis, so there is a plausible proof direction. First prove by induction that `bc.number (bc.ket n) = (n : C) • bc.ket n`, using `comm_number_aDagger`, `number_vacuum`, and `aDagger_ket`; this is the usual ladder-operator eigenvalue computation. Next expand `(Polynomial.aeval bc.aDagger p) bc.vacuum` as the finite sum of polynomial coefficients against the kets `bc.ket n`, since only powers of `aDagger` act on the vacuum. Then use the existing ket-basis result (`thm_ket_span_linear_equiv_finsupp_000067`, or equivalently the polynomial/Fock equivalence) to get linear independence of the `bc.ket n`. Comparing coefficients in `sum n, (n * a_n) |n> = mu * sum n, a_n |n>` forces `(n - mu) * a_n = 0` for every degree, so all nonzero coefficients occur in a single degree `n`, and necessarily `mu = n`. Since `p != 0`, that surviving coefficient `c` is nonzero, yielding `p = Polynomial.C c * Polynomial.X ^ n`.",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "formalize worker timeout: Worker returned error: Command '['codex', 'exec', '-', '--sandbox', 'read-only', '--skip-git-repo-check', '--output-last-message', '/var/folders/2_/c2t72bmn00j3z7cnkfvqvyj80000gn/T/tmpl3d1sx9f']' timed out after 390 seconds (task_type=formalize)",
+      "lean_error_fingerprint": "formalizer_timeout",
       "new_problems": []
     }
   ]

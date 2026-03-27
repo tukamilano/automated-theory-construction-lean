@@ -11,7 +11,7 @@ Current non-claim:
 - it does not yet claim benchmarked superiority over simpler conjecture-generation or theorem-proving baselines
 
 For more details and generation examples, please see here.
-- [Progress](https://tukamilano.github.io/automated-theory-construction-lean/notes/draft/2026/03/25/progress.html)
+- [Progress](https://tukamilano.github.io/automated-theory-construction-lean/notes/draft/2026/03/27/progress.html) (update 3.27)
 - [Application to provability logic](https://gist.github.com/tukamilano/ba2c5719e0c5e2e1093b5b4dd174c182) (update 3.25)
 - [Application to Pure Type System λU⁻](https://gist.github.com/tukamilano/cc1f22efd19a7553c9b9883f30e119af)
 - [Application to canonical commutation relations in quantum mechanics](https://gist.github.com/tukamilano/311759e88a5ec11647aa2b83f42ce8a1)
@@ -277,13 +277,17 @@ ATC_CODEX_TIMEOUT=390 \
 uv run scripts/run_loop.py \
   --enable-worker \
   --no-initialize-on-start \
-  --main-theorem-interval 10
+  --main-theorem-interval 10 \
+  --main-theorem-formalize-worker-timeout 900 \
+  --main-theorem-repair-worker-timeout 600
 ```
 
 The auto main-theorem path uses the same worker stack and supports separate limits through
-`--main-theorem-verify-timeout` and `--main-theorem-formalization-retry-budget-sec`.
+`--main-theorem-formalize-worker-timeout`, `--main-theorem-repair-worker-timeout`,
+`--main-theorem-verify-timeout`, and `--main-theorem-formalization-retry-budget-sec`.
 The current defaults are `600` seconds per Lean verification and `3600` seconds for the overall
-main-theorem formalize/repair budget.
+main-theorem formalize/repair budget. A reasonable starting point for the worker-side limits is
+`--main-theorem-formalize-worker-timeout 900` and `--main-theorem-repair-worker-timeout 600`.
 
 This reset behavior is important: the current loop treats initialization as "start a fresh run from seeds".
 
