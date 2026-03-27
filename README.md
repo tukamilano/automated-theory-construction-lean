@@ -6,7 +6,7 @@ This repository implements an automated theory-construction loop on top of Lean 
 
 One of the clearest results of the project so far is a Lean development of the canonical commutation relations (CCR) in quantum mechanics that derives substantial Fock-space structure from a minimal abstract axiom system. Starting from creation/annihilation operators together with a vacuum axiom, the resulting development reaches verified ladder formulas, number-operator eigenvalue laws, linear independence of the generated ket family, a finite-dimensional impossibility theorem, and structural representation results for the generated ket span. The resulting development is available here:
 
-<https://gist.github.com/tukamilano/311759e88a5ec11647aa2b83f42ce8a1>
+[Application to canonical commutation relations in quantum mechanics](https://gist.github.com/tukamilano/311759e88a5ec11647aa2b83f42ce8a1)
 
 ## 3-Minute Quick Start
 
