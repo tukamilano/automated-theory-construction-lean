@@ -42,7 +42,7 @@ Current non-claim:
 - it does not yet claim benchmarked superiority over simpler conjecture-generation or theorem-proving baselines
 
 For more details and generation examples, please see here.
-- [Progress]([https://tukamilano.github.io/automated-theory-construction-lean/notes/draft/2026/03/27/progress.html](https://tukamilano.github.io/automated-theory-construction-lean/notes/progress/draft/2026/03/27/progress-update.html)) (update 3.27)
+- [Progress](https://tukamilano.github.io/automated-theory-construction-lean/notes/progress/draft/2026/03/27/progress-update.html) (update 3.27)
 - [Application to provability logic](https://gist.github.com/tukamilano/ba2c5719e0c5e2e1093b5b4dd174c182) (update 3.25)
 - [Application to Pure Type System λU⁻](https://gist.github.com/tukamilano/cc1f22efd19a7553c9b9883f30e119af)
 - [Application to canonical commutation relations in quantum mechanics](https://gist.github.com/tukamilano/311759e88a5ec11647aa2b83f42ce8a1)
