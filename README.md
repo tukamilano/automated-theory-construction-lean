@@ -2,6 +2,37 @@
 
 This repository implements an automated theory-construction loop on top of Lean 4 + Mathlib. Given a base theory, the system proposes candidate statements, attempts to formalize and prove them in Lean, verifies successful results, and accumulates the verified theorems into the derived theory.
 
+## 3-Minute Quick Start
+
+If you want the fastest possible first run, use the bundled example theory and the mock worker.
+This path does not require Codex CLI.
+
+Requirements:
+
+- Lean toolchain from `lean-toolchain`
+- Lake + Mathlib dependencies
+- Python
+- `uv`
+
+Run:
+
+```bash
+make build
+make check-scratch
+WORKER_COMMAND="uv run scripts/mock_worker.py" make loop LOOP_ARGS="--max-iterations 1"
+```
+
+What this does:
+
+- builds the project
+- checks that `AutomatedTheoryConstruction/Scratch.lean` verifies
+- runs one loop iteration against the current theory and seed state
+
+Notes:
+
+- `make loop` resets the runtime state by default. Use `make loop-continue` if you want to keep the current `Derived.lean` and queue state.
+- If you want a real LLM-backed run instead of the mock worker, see [Run With Codex Worker](#run-with-codex-worker).
+
 Current claim:
 - the repository demonstrates an end-to-end loop for theory-relative problem generation, Lean verification, verified theorem accumulation, and occasional main-theorem attempts
 - the repository is intended as a research prototype for automated theory construction in Lean, not yet as a validated measure of mathematical interestingness or novelty
@@ -17,6 +48,47 @@ For more details and generation examples, please see here.
 - [Application to canonical commutation relations in quantum mechanics](https://gist.github.com/tukamilano/311759e88a5ec11647aa2b83f42ce8a1)
 
 As the developer is not an expert for these theories, any feedback, suggestions, or contributions are very welcome. Please open an issue or a pull request.
+
+## Use Your Own Theory
+
+To switch from the bundled example to your own theory, edit:
+
+- `AutomatedTheoryConstruction/Theory.lean`
+- `AutomatedTheoryConstruction/Theory/*.lean` as needed for local theory submodules
+- `AutomatedTheoryConstruction/seeds.jsonl` if you want to provide your own initial problems
+
+`Theory.lean` remains the public entry point. If your theory grows beyond one file, keep the imports there and move detailed definitions or helper lemmas under `AutomatedTheoryConstruction/Theory/`.
+
+If you want to regenerate seeds from the current theory plus context files:
+
+```bash
+make seed SEED_ARGS="--context-file path/to/context.tex --seed-count 4"
+```
+
+That command refreshes `AutomatedTheoryConstruction/seeds.jsonl` and resets the active runtime state unless you pass the corresponding no-initialize flag directly to the script.
+
+## Run With Codex Worker
+
+If you have Codex CLI available and want the actual worker-backed loop:
+
+```bash
+make loop
+```
+
+This expands to the default worker command in the `Makefile`:
+
+```bash
+ATC_WORKER_COMMAND="uv run scripts/codex_worker.py" \
+ATC_WORKER_TIMEOUT=420 \
+ATC_CODEX_TIMEOUT=390 \
+uv run scripts/run_loop.py --enable-worker
+```
+
+If you want to keep the current runtime state instead of reinitializing it:
+
+```bash
+make loop-continue
+```
 
 ## Quick Mental Model
 
@@ -62,103 +134,46 @@ For a first-time reader, the core files are:
 - `AutomatedTheoryConstruction/Derived.lean`: accumulated verified theorems
 - `scripts/run_loop.py`: main loop
 
-## Setup
+## Common Commands
 
-Requirements:
-
-- Lean toolchain from `lean-toolchain`
-- Lake + Mathlib dependencies
-- Python
-- `uv`
-- Codex CLI if you want to use `scripts/codex_worker.py`
-
-Build the project once:
-
-```bash
-lake build
-```
-
-or:
-
-```bash
-make build
-```
-
-Smoke-check the verification path:
-
-```bash
-lake env lean AutomatedTheoryConstruction/Scratch.lean
-```
-
-or:
-
-```bash
-make check-scratch
-```
-
-The repository also includes a small `Makefile` wrapper for common tasks:
+The repository includes a small `Makefile` wrapper for common tasks:
 
 ```bash
 make help
 ```
 
-## Quick Start
-
-Edit the active theory inputs:
-
-- `AutomatedTheoryConstruction/Theory.lean`
-- `AutomatedTheoryConstruction/Theory/*.lean` as needed for local theory submodules
-- `AutomatedTheoryConstruction/seeds.jsonl`
-
-`Theory.lean` remains the public entry point. If your theory grows beyond one file, keep the imports there and move detailed definitions or helper lemmas under `AutomatedTheoryConstruction/Theory/`.
-
-If you want to regenerate seeds from theory plus context files:
+Build:
 
 ```bash
-uv run python scripts/generate_seeds_from_theory.py \
-  --context-file path/to/context.tex \
-  --seed-count 4
+make build
 ```
 
-or:
+Check the three main Lean targets:
+
+```bash
+make check
+```
+
+Regenerate seeds from the current theory:
 
 ```bash
 make seed SEED_ARGS="--context-file path/to/context.tex --seed-count 4"
 ```
 
-If you want to run the main loop with the Codex worker:
-
-```bash
-ATC_WORKER_COMMAND="uv run scripts/codex_worker.py" \
-ATC_WORKER_TIMEOUT=420 \
-ATC_CODEX_TIMEOUT=390 \
-uv run scripts/run_loop.py --enable-worker
-```
-
-or:
-
-```bash
-make loop
-```
-
-If you want a one-shot pipeline from seed generation through refactor:
-
-```bash
-ATC_CODEX_TIMEOUT=390 \
-uv run python scripts/run_pipeline.py \
-  --article-file path/to/context.tex \
-  --worker-command "uv run python scripts/codex_worker.py" \
-  --worker-timeout 420 \
-  --max-iteration 40
-```
-
-or:
+Run the one-shot pipeline from seed generation through refactor:
 
 ```bash
 make pipeline PIPELINE_ARGS="--article-file path/to/context.tex --max-iterations 40"
 ```
 
-If you want the final two-stage cleanup of `Derived.lean`:
+Run the final two-stage cleanup of `Derived.lean`:
+
+```bash
+make refactor
+make review
+```
+
+If you prefer the underlying scripts directly instead of the `Makefile` wrappers:
 
 ```bash
 uv run python scripts/refactor_derived.py \
@@ -166,22 +181,10 @@ uv run python scripts/refactor_derived.py \
   --output-file AutomatedTheoryConstruction/Derived.refactored.preview.lean
 ```
 
-or:
-
-```bash
-make refactor
-```
-
 ```bash
 uv run python scripts/direct_refactor_derived.py \
   --input-file AutomatedTheoryConstruction/Derived.refactored.preview.lean \
   --output-file AutomatedTheoryConstruction/Derived.refactored.reviewed.lean
-```
-
-or:
-
-```bash
-make review
 ```
 
 ## More Details
