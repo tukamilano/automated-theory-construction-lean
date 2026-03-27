@@ -1,6 +1,6 @@
 # Automated Theory Construction
 
-This repository implements an automated theory-construction loop on top of Lean 4 + Mathlib. Given a base theory, the system proposes candidate statements, attempts to formalize and prove them in Lean, verifies successful results, and accumulates the verified theorems into the derived theory.
+This repository implements an automated theory-construction loop on top of Lean 4 + Mathlib. Given a base theory, the system proposes candidate statements, attempts to formalize and prove them in Lean, verifies successful results, and accumulates the verified theorems into the derived theory. A central feature of the approach is bottom-up problem creation: instead of only aiming directly at top-level target theorems, it also imitates the way human mathematicians experimentally manipulate formulas, operators, and intermediate identities to generate new local questions that can later grow into larger structure.
 
 ## Highlighted Result
 
