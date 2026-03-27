@@ -1834,8 +1834,8 @@ def attempt_formalization_until_timeout(
     repair_prompt: str,
     open_rows: list[dict[str, Any]],
     theory_context: str,
-    verify_timeout_sec: int = 180,
-    formalization_retry_budget_sec: int,
+    verify_timeout_sec: int | None = 180,
+    formalization_retry_budget_sec: int | None,
     memory_path: Path,
     current_iteration_full_logs: list[dict[str, Any]],
     initial_proof_text: str = "",
@@ -1941,7 +1941,11 @@ def attempt_formalization_until_timeout(
             save_formalization_memory(memory_path, problem_id, persisted_history)
             return verify_success, current_theorem_name, result, proof_text, counterexample_text, new_problems, verify_error_excerpt, current_stmt
 
-    deadline = time.monotonic() + max(1, formalization_retry_budget_sec)
+    deadline = (
+        None
+        if formalization_retry_budget_sec is None
+        else time.monotonic() + max(1, formalization_retry_budget_sec)
+    )
     persisted_history = load_formalization_memory(memory_path, problem_id)
     repair_round = 0
     repair_history: list[dict[str, Any]] = list(persisted_history)
@@ -2067,7 +2071,7 @@ def attempt_formalization_until_timeout(
                 current_stmt,
             )
 
-        if repair_worker_settings is None or time.monotonic() >= deadline:
+        if repair_worker_settings is None or (deadline is not None and time.monotonic() >= deadline):
             save_formalization_memory(memory_path, problem_id, repair_history)
             if best_verified_candidate is not None:
                 return (
@@ -2338,8 +2342,8 @@ def run_manual_main_theorem_check(
     prioritize_open_problems_prompt_file: str,
     current_iteration: int,
     skip_verify: bool,
-    verify_timeout_sec: int,
-    formalization_retry_budget_sec: int,
+    verify_timeout_sec: int | None,
+    formalization_retry_budget_sec: int | None,
     max_repair_rounds: int,
     max_same_error_streak: int,
     post_expand_count: int,
@@ -2347,6 +2351,12 @@ def run_manual_main_theorem_check(
     phase_logs: bool,
 ) -> dict[str, Any]:
     if worker_settings is None:
+        emit_phase_log(
+            phase_logs,
+            "main_theorem_check",
+            iteration=current_iteration,
+            status="worker_unavailable",
+        )
         return {
             "status": "main_theorem_worker_unavailable",
             "processed": False,
@@ -2356,6 +2366,14 @@ def run_manual_main_theorem_check(
     suggest_prompt = load_prompt_text(suggest_prompt_file)
     open_rows = [normalize_open_problem_row(row) for row in read_jsonl(data_dir / "open_problems.jsonl")]
     candidate_id = "mt_manual"
+    emit_phase_log(
+        phase_logs,
+        "main_theorem_suggest",
+        iteration=current_iteration,
+        candidate_id=candidate_id,
+        derived_theorem_count=len(derived_entries),
+        open_problem_count=len(open_rows),
+    )
     try:
         (
             result,
@@ -2375,6 +2393,14 @@ def run_manual_main_theorem_check(
             current_iteration=current_iteration,
         )
     except (RuntimeError, ValueError) as exc:
+        emit_phase_log(
+            phase_logs,
+            "main_theorem_suggest_result",
+            iteration=current_iteration,
+            candidate_id=candidate_id,
+            status="error",
+            error=str(exc),
+        )
         return {
             "status": "main_theorem_suggest_error",
             "processed": False,
@@ -2382,6 +2408,15 @@ def run_manual_main_theorem_check(
             "error": str(exc),
         }
 
+    emit_phase_log(
+        phase_logs,
+        "main_theorem_suggest_result",
+        iteration=current_iteration,
+        candidate_id=candidate_id,
+        status=result,
+        supporting_theorem_count=len(supporting_theorems),
+        missing_lemma_count=len(missing_lemmas),
+    )
     if result != "ok":
         return {
             "status": "main_theorem_suggest_stuck",
@@ -2455,8 +2490,8 @@ def process_manual_main_theorem(
     prioritize_open_problems_prompt_file: str,
     current_iteration: int,
     skip_verify: bool,
-    verify_timeout_sec: int,
-    formalization_retry_budget_sec: int,
+    verify_timeout_sec: int | None,
+    formalization_retry_budget_sec: int | None,
     max_repair_rounds: int,
     max_same_error_streak: int,
     post_expand_count: int,
@@ -2485,6 +2520,13 @@ def process_manual_main_theorem(
     plan_worker_meta: dict[str, Any] = {}
 
     if worker_settings is not None:
+        emit_phase_log(
+            phase_logs,
+            "main_theorem_plan",
+            iteration=current_iteration,
+            candidate_id=candidate_id,
+            theorem_name=theorem_name,
+        )
         planner_prompt = load_prompt_text(plan_prompt_file)
         try:
             (
@@ -2513,8 +2555,24 @@ def process_manual_main_theorem(
                 plan_summary = generated_plan_summary
                 proof_sketch = generated_proof_sketch
                 supporting_theorems = plan_supporting_theorems or list(supporting_theorems)
+            emit_phase_log(
+                phase_logs,
+                "main_theorem_plan_result",
+                iteration=current_iteration,
+                candidate_id=candidate_id,
+                status=plan_result,
+                intermediate_lemma_count=len(intermediate_lemmas),
+            )
         except (RuntimeError, ValueError) as exc:
             plan_notes = f"main theorem plan failed: {exc}"
+            emit_phase_log(
+                phase_logs,
+                "main_theorem_plan_result",
+                iteration=current_iteration,
+                candidate_id=candidate_id,
+                status="error",
+                error=str(exc),
+            )
 
     if not proof_sketch:
         proof_sketch = rationale.strip() or f"Prove {theorem_name} from the current Derived.lean cluster."
@@ -2554,6 +2612,16 @@ def process_manual_main_theorem(
         max_repair_rounds=max_repair_rounds,
         max_same_error_streak=max_same_error_streak,
     )
+    emit_phase_log(
+        phase_logs,
+        "main_theorem_formalization_result",
+        iteration=current_iteration,
+        candidate_id=candidate_id,
+        theorem_name=theorem_name,
+        result=result,
+        verify_success=verify_success,
+        error_excerpt=verify_error_excerpt,
+    )
 
     if not verify_success or result != "proof":
         return {
@@ -2572,12 +2640,27 @@ def process_manual_main_theorem(
         derived_entries=derived_entries,
         docstring=docstring_summary,
     )
+    emit_phase_log(
+        phase_logs,
+        "main_theorem_append_derived",
+        iteration=current_iteration,
+        candidate_id=candidate_id,
+        theorem_name=theorem_name,
+        appended=bool(theorem_code),
+    )
 
     post_new_problems: list[str] = []
     post_expand_error = ""
     post_expand_worker_meta: dict[str, Any] = {}
     theorem_context = build_problem_theory_context(base_theory_context, derived_entries, final_stmt)
     if worker_settings is not None and theorem_code:
+        emit_phase_log(
+            phase_logs,
+            "post_theorem_expand",
+            iteration=current_iteration,
+            candidate_id=candidate_id,
+            theorem_name=theorem_name,
+        )
         post_expand_prompt = load_prompt_text(post_expand_prompt_file)
         try:
             post_candidates, post_expand_worker_meta = request_expand_candidates(
@@ -2598,8 +2681,23 @@ def process_manual_main_theorem(
                 max_candidates=post_expand_count,
             )
             post_new_problems = [item["statement"] for item in post_candidates]
+            emit_phase_log(
+                phase_logs,
+                "post_theorem_expand_result",
+                iteration=current_iteration,
+                candidate_id=candidate_id,
+                generated_problem_count=len(post_new_problems),
+            )
         except (RuntimeError, ValueError) as exc:
             post_expand_error = str(exc)
+            emit_phase_log(
+                phase_logs,
+                "post_theorem_expand_result",
+                iteration=current_iteration,
+                candidate_id=candidate_id,
+                status="error",
+                error=post_expand_error,
+            )
 
     enqueue_report = enqueue_new_problems(
         data_dir,
@@ -2653,6 +2751,12 @@ def prebuild_lean_project() -> None:
             raise RuntimeError(f"Initialization build failed for {target}: {excerpt}")
 
 
+def next_main_theorem_trigger_count(current_count: int, interval: int) -> int | None:
+    if interval <= 0:
+        return None
+    return ((current_count // interval) + 1) * interval
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run the minimal prototype loop.")
     parser.add_argument("--initialize-on-start", action=argparse.BooleanOptionalAction, default=True)
@@ -2662,6 +2766,9 @@ def main() -> None:
     parser.add_argument("--worker-timeout", type=int)
     parser.add_argument("--skip-verify", action="store_true")
     parser.add_argument("--open-problem-failure-threshold", type=int, default=2)
+    parser.add_argument("--main-theorem-interval", type=int, default=0)
+    parser.add_argument("--main-theorem-verify-timeout", type=int, default=600)
+    parser.add_argument("--main-theorem-formalization-retry-budget-sec", type=int, default=3600)
     parser.add_argument(
         "--open-problem-failure-prune-threshold",
         dest="open_problem_failure_threshold",
@@ -2674,6 +2781,12 @@ def main() -> None:
         raise ValueError("--max-iterations must be >= 0")
     if args.open_problem_failure_threshold < 0:
         raise ValueError("--open-problem-failure-threshold must be >= 0")
+    if args.main_theorem_interval < 0:
+        raise ValueError("--main-theorem-interval must be >= 0")
+    if args.main_theorem_verify_timeout < 0:
+        raise ValueError("--main-theorem-verify-timeout must be >= 0")
+    if args.main_theorem_formalization_retry_budget_sec < 0:
+        raise ValueError("--main-theorem-formalization-retry-budget-sec must be >= 0")
     if args.priority_refresh_theorem_interval < 0:
         raise ValueError("--priority-refresh-theorem-interval must be >= 0")
 
@@ -2692,6 +2805,9 @@ def main() -> None:
     args.formalizer_prompt_file = "prompts/formalizer_simple.md"
     args.repair_prompt_file = None
     args.prioritize_open_problems_prompt_file = "prompts/open_problem_prioritizer.md"
+    args.main_theorem_suggest_prompt_file = "prompts/main_theorem_suggester.md"
+    args.main_theorem_plan_prompt_file = "prompts/main_theorem_planner.md"
+    args.main_theorem_post_expand_prompt_file = "prompts/post_theorem_expander.md"
     # Problem selection is deterministic local logic; the worker handles priority refresh and prover/formalize stages.
     args.prover_prompt_file = "prompts/prover_simple.md"
     args.expander_prompt_file = "prompts/new_problem_expander.md"
@@ -2769,6 +2885,10 @@ def main() -> None:
     completed_iterations = 0
     last_priority_refresh_theorem_count = 0
     archived_path = data_dir / ARCHIVED_PROBLEMS_FILENAME
+    next_main_theorem_check_count = next_main_theorem_trigger_count(
+        len(derived_entries),
+        args.main_theorem_interval,
+    )
     while True:
         if not open_path.exists() and not archived_path.exists():
             print({"status": "open_problems_missing", "iterations_completed": completed_iterations})
@@ -2986,6 +3106,7 @@ def main() -> None:
         formalizer_prompt = load_prompt_text(args.formalizer_prompt_file) if formalize_worker_settings is not None else ""
         repair_prompt_file = args.repair_prompt_file or args.formalizer_prompt_file
         repair_prompt = load_prompt_text(repair_prompt_file) if repair_worker_settings is not None else ""
+        theorem_code = ""
         (
             verify_success,
             theorem_name,
@@ -3019,6 +3140,7 @@ def main() -> None:
             phase_logger=(lambda **fields: emit_phase_log(args.phase_logs, iteration=completed_iterations + 1, **fields)),
         )
         if verify_success and result in {"proof", "counterexample"}:
+            derived_count_before_append = len(derived_entries)
             theorem_code = append_verified_theorem_from_scratch(
                 scratch_path=scratch_file,
                 derived_file=Path(args.derived_file),
@@ -3030,8 +3152,11 @@ def main() -> None:
                     statement_formalization_notes=statement_formalization_notes,
                 ),
             )
-            if theorem_code:
+            theorem_appended = len(derived_entries) > derived_count_before_append
+            if theorem_appended:
                 theory_context = build_problem_theory_context(base_theory_context, derived_entries, target_stmt)
+        else:
+            theorem_appended = False
 
         solver_new_problem_suggestions = list(new_problems)
         expander_new_problem_suggestions: list[str] = []
@@ -3135,6 +3260,70 @@ def main() -> None:
         report["priority_refresh_worker_raw_parse_fallback_used"] = bool(priority_refresh_worker_meta.get("raw_parse_fallback_used", False))
         report["priority_refresh_client_json_parse_attempts"] = int(priority_refresh_worker_meta.get("client_json_parse_attempts", 0) or 0)
         report["priority_refresh_client_raw_parse_fallback_used"] = bool(priority_refresh_worker_meta.get("client_raw_parse_fallback_used", False))
+        auto_main_theorem_report: dict[str, Any] | None = None
+        if (
+            worker_settings is not None
+            and theorem_appended
+            and next_main_theorem_check_count is not None
+            and len(derived_entries) >= next_main_theorem_check_count
+        ):
+            emit_phase_log(
+                args.phase_logs,
+                "main_theorem_interval_reached",
+                iteration=completed_iterations,
+                derived_theorem_count=len(derived_entries),
+                threshold=next_main_theorem_check_count,
+            )
+            auto_main_theorem_report = run_manual_main_theorem_check(
+                worker_settings=worker_settings,
+                scratch_file=scratch_file,
+                derived_file=derived_path,
+                derived_entries=derived_entries,
+                data_dir=data_dir,
+                base_theory_context=base_theory_context,
+                formalization_memory_path=memory_path,
+                formalize_worker_settings=formalize_worker_settings,
+                repair_worker_settings=repair_worker_settings,
+                formalizer_prompt_file=args.formalizer_prompt_file,
+                repair_prompt_file=repair_prompt_file,
+                suggest_prompt_file=args.main_theorem_suggest_prompt_file,
+                plan_prompt_file=args.main_theorem_plan_prompt_file,
+                post_expand_prompt_file=args.main_theorem_post_expand_prompt_file,
+                prioritize_open_problems_worker_settings=prioritize_open_problems_worker_settings,
+                prioritize_open_problems_prompt_file=args.prioritize_open_problems_prompt_file,
+                current_iteration=completed_iterations,
+                skip_verify=args.skip_verify,
+                verify_timeout_sec=(
+                    None
+                    if args.main_theorem_verify_timeout == 0
+                    else args.main_theorem_verify_timeout
+                ),
+                formalization_retry_budget_sec=(
+                    None
+                    if args.main_theorem_formalization_retry_budget_sec == 0
+                    else args.main_theorem_formalization_retry_budget_sec
+                ),
+                max_repair_rounds=20,
+                max_same_error_streak=5,
+                post_expand_count=5,
+                failure_threshold=args.open_problem_failure_threshold,
+                phase_logs=args.phase_logs,
+            )
+            emit_phase_log(
+                args.phase_logs,
+                "main_theorem_interval_result",
+                iteration=completed_iterations,
+                status=str(auto_main_theorem_report.get("status", "")),
+                verify_success=bool(auto_main_theorem_report.get("verify_success", False)),
+                processed=bool(auto_main_theorem_report.get("processed", False)),
+            )
+            next_main_theorem_check_count = next_main_theorem_trigger_count(
+                len(derived_entries),
+                args.main_theorem_interval,
+            )
+        report["auto_main_theorem_triggered"] = auto_main_theorem_report is not None
+        report["auto_main_theorem_report"] = auto_main_theorem_report
+        report["next_main_theorem_trigger_count"] = next_main_theorem_check_count
         final_open_rows = [normalize_open_problem_row(row) for row in read_jsonl(open_path)]
         final_archived_rows = read_archived_problem_rows(data_dir)
         report["archived_problem_count"] = len(final_archived_rows)

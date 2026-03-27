@@ -257,6 +257,25 @@ ATC_CODEX_TIMEOUT=390 \
 uv run scripts/run_loop.py --enable-worker --no-initialize-on-start
 ```
 
+If you want the loop to consider adding a main theorem whenever `Derived.lean` has gained another
+`N` verified theorems, set `--main-theorem-interval N`. For example, this checks once every 10
+newly accumulated theorems:
+
+```bash
+ATC_WORKER_COMMAND="uv run scripts/codex_worker.py" \
+ATC_WORKER_TIMEOUT=420 \
+ATC_CODEX_TIMEOUT=390 \
+uv run scripts/run_loop.py \
+  --enable-worker \
+  --no-initialize-on-start \
+  --main-theorem-interval 10
+```
+
+The auto main-theorem path uses the same worker stack and supports separate limits through
+`--main-theorem-verify-timeout` and `--main-theorem-formalization-retry-budget-sec`.
+The current defaults are `600` seconds per Lean verification and `3600` seconds for the overall
+main-theorem formalize/repair budget.
+
 This reset behavior is important: the current loop treats initialization as "start a fresh run from seeds".
 
 `scripts/run_pipeline.py` now prefers initialization in the seed-generation stage, then runs
@@ -307,6 +326,9 @@ You can also override the same settings through CLI flags such as:
 - `--prioritize-open-problems-worker-timeout`
 - `--open-problem-failure-threshold`
 - `--priority-refresh-theorem-interval`
+- `--main-theorem-interval`
+- `--main-theorem-verify-timeout`
+- `--main-theorem-formalization-retry-budget-sec`
 
 ## Open Problem Queue
 
@@ -368,7 +390,6 @@ This repository is licensed under the MIT License. See `LICENSE`.
 
 - Xin et al. (2025). *BFS-Prover-V2*.
 - Lev Beklemishev and Daniyar Shamkanov. *Some abstract versions of Gödel's second incompleteness theorem based on non-classical logics*. arXiv:1602.05728.
-- Elliott H. Lieb and Jakob Yngvason. *The physics and mathematics of the second law of thermodynamics*. Physics Reports, 310(1):1–96, 1999.
 - Antonius J.C. Hurkens. *A simplification of Girard's paradox*. *In Proceedings of the Typed Lambda Calculi and Applications.*Mariangiola Dezani-Ciancaglini and Gordon Plotkin (Eds.), Springer, Berlin, 266–278.
 - Girard, J.-Y. "Interprétation fonctionnelle et élimination des coupures
   de l'arithmétique d'ordre supérieur." Thèse de doctorat d'état, 1972.

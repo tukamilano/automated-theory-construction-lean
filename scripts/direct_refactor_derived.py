@@ -45,6 +45,7 @@ Task:
 - Preserve all public theorem names, theorem statements, namespace structure, and intended API.
 - Do not redesign the theorem inventory.
 - Prefer review-focused cleanup only: localize `classical`, remove brittle proof steps, tidy `have` structure, remove `by exact`, and prefer stable rewrites / `simpa` / short `calc` blocks.
+- For main-theorem-style results, prefer rewriting proofs to explicitly reuse existing `Derived.lean` theorems when that can be done without changing statements.
 - Do not introduce `sorry`.
 - Do not add or remove global instances, `[simp]` attributes, notation, coercions, or transparency changes.
 {verify_step}{final_step}

@@ -24,6 +24,7 @@ Refactoring policy:
 - Prefer a style closer to a curated library file such as Mathlib's `Basic.lean`: small canonical lemmas first, theorem families grouped by concept, lightweight aliases only when compatibility is important, and minimal theorem spam.
 - Prefer a bottom-up arrangement: foundational equivalence/monotonicity lemmas first, then structural existence/uniqueness lemmas, then consequence theorems and specialized corollaries.
 - If several theorems express the same fact at different strengths, keep the best reusable version as canonical and make weaker variants aliases only if they are still worth keeping.
+- For main-theorem-style results, prefer proofs that explicitly reuse existing `Derived.lean` theorems rather than reproving the same structure directly from axioms whenever a stable reuse path exists.
 - Preserve semantically useful theorem names when possible; avoid renaming everything just for style.
 - If `exact_duplicate_statement_groups` is non-empty, treat those groups as high-priority cleanup targets.
 - Use `refactor_goals` as strict guidance for style and structure.
