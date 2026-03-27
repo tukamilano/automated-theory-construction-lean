@@ -158,7 +158,7 @@ def build_review_command(args: argparse.Namespace) -> list[str]:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
-            "Generate seeds from the active Theory.lean and context files, run the loop, "
+            "Generate seeds from the active Theory.lean entry module, its local imports, and context files, run the loop, "
             "then run both Derived refactor passes."
         )
     )

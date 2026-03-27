@@ -12,6 +12,7 @@ from common import (
     ARCHIVED_PROBLEMS_FILENAME,
     LEGACY_DEFERRED_PROBLEMS_FILENAME,
     LEGACY_PRUNED_OPEN_PROBLEMS_FILENAME,
+    load_theory_context,
     write_jsonl_atomic,
 )
 from run_loop import DERIVED_TEMPLATE, SCRATCH_TEMPLATE, prebuild_lean_project
@@ -135,13 +136,16 @@ def _extract_json_object(text: str) -> dict[str, Any]:
 
 def build_prompt(
     *,
-    theory_file: Path,
+    theory_files: list[Path],
     derived_file: Path | None,
     context_files: list[Path],
     seed_count: int,
     extra_instruction: str,
 ) -> str:
-    read_lines = [f"- {theory_file.resolve()}"]
+    if not theory_files:
+        raise ValueError("theory_files must be non-empty")
+
+    read_lines = [f"- {path.resolve()}" for path in theory_files]
     if derived_file is not None:
         read_lines.append(f"- {derived_file.resolve()}")
     for path in context_files:
@@ -153,6 +157,7 @@ def build_prompt(
         else ""
     )
     extra_block = f"- Additional guidance: {extra_instruction.strip()}\n" if extra_instruction.strip() else ""
+    theory_files_rule = "- Do not restate declarations already present in the theory files listed above.\n"
 
     return f"""Read these files before generating seeds:
 {chr(10).join(read_lines)}
@@ -161,7 +166,8 @@ Task:
 - Generate {seed_count} initial open problems for the automated theory-construction loop.
 - Base every candidate on the actual definitions, notation, classes, axioms, and proved lemmas visible in the files above.
 - Stay faithful to the mathematics already described in those files.
-- Generate statements that remain within the concepts and proof-relevant structure that `Theory.lean` can actually express and manipulate.
+- Treat the first listed Lean file as the theory entry point and include any locally imported theory submodules in scope.
+- Generate statements that remain within the concepts and proof-relevant structure that the theory entry and its imported local modules can actually express and manipulate.
 - Each candidate must be one standalone Lean proposition string suitable for the `stmt` field in `seeds.jsonl`.
 
 Mathematical scope:
@@ -173,8 +179,7 @@ Mathematical scope:
 - Keep assumptions minimal but sufficient.
 
 Quality filter:
-- Do not restate declarations already proved in `{theory_file.resolve()}`.
-{derived_rule}- Do not propose a theorem that is already present in the read files up to cosmetic rewrites, alpha-renaming, trivial reassociation of binders, or other shallow reformulations.
+{theory_files_rule}{derived_rule}- Do not propose a theorem that is already present in the read files up to cosmetic rewrites, alpha-renaming, trivial reassociation of binders, or other shallow reformulations.
 - Do not propose propositions that are vacuous, purely definitional unfoldings, or trivial preorder facts.
 - Avoid seeds that differ only by notation changes, variable renaming, or tiny local rewrites.
 - Keep the seeds mathematically diverse when possible.
@@ -287,7 +292,7 @@ def run_codex(
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Generate seeds.jsonl from Theory.lean using `codex exec`."
+        description="Generate seeds.jsonl from a Theory.lean entry module using `codex exec`."
     )
     parser.add_argument("--theory-file", default=str(DEFAULT_THEORY))
     parser.add_argument("--derived-file", default=str(DEFAULT_DERIVED))
@@ -322,6 +327,10 @@ def main() -> int:
         if not path.exists():
             raise SystemExit(f"Context file not found: {path}")
 
+    theory_files, _ = load_theory_context(theory_file, repo_root=repo_root)
+    if not theory_files:
+        raise SystemExit(f"Failed to resolve theory context files from: {theory_file}")
+
     if args.initialize_runtime_state and not args.dry_run:
         reset_runtime_before_seed_generation(
             data_dir=(repo_root / DEFAULT_DATA_DIR).resolve(),
@@ -343,7 +352,7 @@ def main() -> int:
         effective_derived = None
 
     prompt = build_prompt(
-        theory_file=theory_file,
+        theory_files=theory_files,
         derived_file=effective_derived,
         context_files=context_files,
         seed_count=args.seed_count,

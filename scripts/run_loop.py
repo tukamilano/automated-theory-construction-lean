@@ -19,6 +19,7 @@ from common import (
     ARCHIVED_PROBLEMS_FILENAME,
     LEGACY_DEFERRED_PROBLEMS_FILENAME,
     LEGACY_PRUNED_OPEN_PROBLEMS_FILENAME,
+    load_theory_context,
     normalize_open_problem_row,
     normalize_open_problem_priority,
     parse_problem_index,
@@ -2873,7 +2874,7 @@ def main() -> None:
         prebuild_lean_project()
         debug_log("Initialization build completed")
 
-    base_theory_context = load_optional_text(args.theory_file)
+    _, base_theory_context = load_theory_context(Path(args.theory_file))
     derived_path = Path(args.derived_file)
     derived_entries = extract_derived_theorem_entries(derived_path)
     open_path = data_dir / "open_problems.jsonl"

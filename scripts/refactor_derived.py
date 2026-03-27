@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from append_derived import build_derived_entries_from_file
+from common import load_theory_context
 from theorem_reuse_memory import (
     load_theorem_reuse_memory,
     summarize_supporting_theorem_frequency,
@@ -246,7 +247,7 @@ def main() -> None:
 
     prompt_text = load_text(prompt_file)
     derived_code = load_text(derived_file)
-    theory_context = load_text(theory_file)
+    _, theory_context = load_theory_context(theory_file)
     theorem_inventory = build_derived_entries_from_file(derived_file)
     duplicate_groups = build_exact_duplicate_statement_groups(theorem_inventory)
     theorem_reuse_memory = load_theorem_reuse_memory(theorem_reuse_memory_file)

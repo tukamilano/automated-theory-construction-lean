@@ -4,9 +4,9 @@ import argparse
 import os
 from pathlib import Path
 
+from common import load_theory_context
 from run_loop import (
     extract_derived_theorem_entries,
-    load_optional_text,
     load_task_worker_settings,
     load_worker_settings,
     run_manual_main_theorem_check,
@@ -42,7 +42,7 @@ def main() -> None:
     scratch_file = Path("AutomatedTheoryConstruction/Scratch.lean")
     derived_file = Path("AutomatedTheoryConstruction/Derived.lean")
     memory_path = Path("data/formalization_memory.json")
-    base_theory_context = load_optional_text("AutomatedTheoryConstruction/Theory.lean")
+    _, base_theory_context = load_theory_context(Path("AutomatedTheoryConstruction/Theory.lean"))
     derived_entries = extract_derived_theorem_entries(derived_file)
 
     worker_settings = None
