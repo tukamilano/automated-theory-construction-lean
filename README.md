@@ -2,6 +2,14 @@
 
 It implements an automated theory-construction loop on top of Lean 4 + Mathlib. Given a base theory, the system proposes candidate statements, attempts to formalize and prove them in Lean, verifies successful results, and accumulates the verified theorems into the derived theory.
 
+Current claim:
+- the repository demonstrates an end-to-end loop for theory-relative problem generation, Lean verification, verified theorem accumulation, and occasional main-theorem attempts
+- the repository is intended as a research prototype for automated theory construction in Lean, not yet as a validated measure of mathematical interestingness or novelty
+
+Current non-claim:
+- it does not yet establish, through sufficient human validation, that the generated theorems are consistently interesting, important, or publishable
+- it does not yet claim benchmarked superiority over simpler conjecture-generation or theorem-proving baselines
+
 For more details and generation examples, please see here.
 - [Progress](https://tukamilano.github.io/automated-theory-construction-lean/notes/draft/2026/03/25/progress.html)
 - [Application to provability logic](https://gist.github.com/tukamilano/ba2c5719e0c5e2e1093b5b4dd174c182) (update 3.25)
@@ -57,6 +65,7 @@ The current design is a single runtime pipeline with:
 - deterministic orchestration in Python
 - Lean verification through `Scratch.lean`
 - verified theorem accumulation in `Derived.lean`
+- a main-theorem session triggered once every 10 newly accumulated theorems in the current setup
 - worker-driven stages for statement formalization, proving, formalization/repair, and expansion
 
 ## Current Runtime Design

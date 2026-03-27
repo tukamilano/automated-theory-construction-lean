@@ -664,4 +664,68 @@ theorem main_thm_fock_span_linear_equiv_polynomial : ∀ {V : Type*} [AddCommGro
   simpa [Polynomial.sum_def, Polynomial.support_toFinsupp, Polynomial.toFinsupp_apply, BosonCore.ket] using
     (Polynomial.aeval_endomorphism bc.aDagger bc.vacuum p).symm
 
+
+/-- The ket span is linearly equivalent to finitely supported complex sequences. -/
+theorem thm_ket_span_equiv_finsupp_000119 : ∀ {V : Type*} [AddCommGroup V] [Module ℂ V] (bc : BosonCore V), bc.vacuum ≠ 0 → let S : Submodule ℂ V := Submodule.span ℂ (Set.range bc.ket); ∃ Φ : S ≃ₗ[ℂ] (ℕ →₀ ℂ), (∀ n : ℕ, Φ ⟨bc.ket n, Submodule.subset_span (Set.mem_range_self n)⟩ = Finsupp.single n (1 : ℂ)) ∧ ∀ p : Polynomial ℂ, ((Polynomial.aeval bc.aDagger p) bc.vacuum ∈ S) ∧ ∀ hp : (Polynomial.aeval bc.aDagger p) bc.vacuum ∈ S, Φ ⟨(Polynomial.aeval bc.aDagger p) bc.vacuum, hp⟩ = p.toFinsupp := by
+  intro V _ _ bc hvac
+  dsimp
+  have hli : LinearIndependent ℂ (fun n : ℕ => bc.ket n) :=
+    AutomatedTheoryConstruction.thm_ket_linear_independent_of_vacuum_ne_zero_000006
+      (bc := bc) hvac
+  refine ⟨hli.linearCombinationEquiv.symm, ?_⟩
+  constructor
+  · intro n
+    simpa [LinearIndependent.repr] using
+      hli.repr_eq_single n
+        ⟨bc.ket n, Submodule.subset_span (Set.mem_range_self n)⟩ rfl
+  · intro p
+    constructor
+    · exact
+        (AutomatedTheoryConstruction.thm_mem_ket_span_iff_exists_aeval_000075
+          (bc := bc) ((Polynomial.aeval bc.aDagger p) bc.vacuum)).2 ⟨p, rfl⟩
+    · intro hp
+      have hp' :
+          (Polynomial.aeval bc.aDagger p) bc.vacuum =
+            Finsupp.linearCombination ℂ (fun n : ℕ => bc.ket n) p.toFinsupp := by
+        simpa [Polynomial.sum_def, Finsupp.linearCombination_apply, Finsupp.sum,
+          Polynomial.support_toFinsupp, Polynomial.toFinsupp_apply] using
+          AutomatedTheoryConstruction.thm_aeval_a_dagger_vacuum_support_sum_000060
+            (bc := bc) p
+      simpa [LinearIndependent.repr] using
+        (hli.repr_eq
+          (x := ⟨(Polynomial.aeval bc.aDagger p) bc.vacuum, hp⟩)
+          (l := p.toFinsupp)
+          (by simpa using hp'.symm))
+
+
+/-- A polynomial state annihilated by a must come from a constant polynomial. -/
+theorem thm_annihilated_polynomial_state_is_constant_000122 : ∀ {V : Type*} [AddCommGroup V] [Module ℂ V] (bc : BosonCore V) (p : Polynomial ℂ), bc.vacuum ≠ 0 → bc.a ((Polynomial.aeval bc.aDagger p) bc.vacuum) = 0 → ∃ c : ℂ, p = Polynomial.C c := by
+  intro V _ _ bc p hvac ha
+  have hderiv :
+      ∀ q : Polynomial ℂ,
+        bc.a ((Polynomial.aeval bc.aDagger q) bc.vacuum) =
+          (Polynomial.aeval bc.aDagger (Polynomial.derivative q)) bc.vacuum := by
+    intro q
+    induction q using Polynomial.induction_on' with
+    | add q r hq hr =>
+        simp [Polynomial.derivative_add, hq, hr]
+    | monomial n c =>
+        cases n with
+        | zero =>
+            simp [AutomatedTheoryConstruction.thm_aeval_a_dagger_vacuum_support_sum_000060,
+              bc.vacuum_annihilate]
+        | succ n =>
+            rw [AutomatedTheoryConstruction.thm_aeval_a_dagger_vacuum_support_sum_000060,
+              Polynomial.derivative_monomial_succ,
+              AutomatedTheoryConstruction.thm_aeval_a_dagger_vacuum_support_sum_000060]
+            simp [bc.a_ket_succ, smul_smul, mul_comm, mul_left_comm, mul_assoc]
+  have hz : (Polynomial.aeval bc.aDagger (Polynomial.derivative p)) bc.vacuum = 0 := by
+    simpa [hderiv p] using ha
+  have hdp : Polynomial.derivative p = 0 := by
+    apply
+      (AutomatedTheoryConstruction.thm_aeval_vacuum_injective_of_vacuum_ne_zero_000017
+        (bc := bc) hvac)
+    simpa using hz
+  exact ⟨p.coeff 0, Polynomial.eq_C_of_derivative_eq_zero hdp⟩
+
 end AutomatedTheoryConstruction
