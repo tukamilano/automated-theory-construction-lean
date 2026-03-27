@@ -151,6 +151,7 @@ lake env lean AutomatedTheoryConstruction/Scratch.lean
 Optional local defaults:
 
 - The repository root now contains a `Makefile` with common entry points such as `make help`, `make mock-loop`, and `make codex-loop`.
+- The same `Makefile` also exposes `make refactor-preview`, `make refactor-review`, and `make refactor-all` for the two-stage `Derived.lean` cleanup.
 - `.env.example` documents the most common variables. If you place the same keys in a local `.env`, the `Makefile` will load them automatically.
 
 Important reset behavior:
@@ -254,6 +255,12 @@ uv run python scripts/refactor_derived.py \
   --output-file AutomatedTheoryConstruction/Derived.refactored.preview.lean
 ```
 
+Short wrapper:
+
+```bash
+make refactor-preview
+```
+
 When `--worker-timeout` is omitted for `scripts/refactor_derived.py`, the refactor worker now defaults to no outer timeout.
 Set `--worker-timeout <seconds>` (or `ATC_REFACTOR_DERIVED_WORKER_TIMEOUT`) if you want a bound for this pass.
 
@@ -267,11 +274,23 @@ uv run python scripts/direct_refactor_derived.py \
   --output-file AutomatedTheoryConstruction/Derived.refactored.reviewed.lean
 ```
 
+Short wrapper:
+
+```bash
+make refactor-review
+```
+
 If `AutomatedTheoryConstruction/Derived.refactored.reviewed.lean` already exists and you want Codex
 to continue editing it without copying from the preview again, use:
 
 ```bash
 uv run python scripts/direct_refactor_derived.py --skip-copy
+```
+
+To run both passes in sequence:
+
+```bash
+make refactor-all
 ```
 
 ## Initialization Behavior
