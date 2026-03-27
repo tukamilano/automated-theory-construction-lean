@@ -10,9 +10,12 @@ SEEDS_FILE ?= AutomatedTheoryConstruction/seeds.jsonl
 PREVIEW_FILE ?= AutomatedTheoryConstruction/Derived.refactored.preview.lean
 REVIEWED_FILE ?= AutomatedTheoryConstruction/Derived.refactored.reviewed.lean
 
-WORKER_COMMAND ?= uv run python scripts/codex_worker.py
+WORKER_COMMAND ?= uv run scripts/codex_worker.py
 WORKER_TIMEOUT ?= 420
 CODEX_TIMEOUT ?= 390
+MAIN_THEOREM_INTERVAL ?= 10
+MAIN_THEOREM_FORMALIZE_WORKER_TIMEOUT ?= 900
+MAIN_THEOREM_REPAIR_WORKER_TIMEOUT ?= 600
 
 SEED_ARGS ?=
 LOOP_ARGS ?=
@@ -20,7 +23,7 @@ PIPELINE_ARGS ?=
 REFACTOR_ARGS ?=
 REVIEW_ARGS ?=
 
-.PHONY: help build check check-theory check-derived check-scratch seed loop pipeline refactor review
+.PHONY: help build check check-theory check-derived check-scratch seed loop loop-continue pipeline refactor review
 
 help:
 	@printf '%s\n' \
@@ -31,18 +34,21 @@ help:
 		'  make check-derived - lake env lean $(DERIVED_FILE)' \
 		'  make check-scratch - lake env lean $(SCRATCH_FILE)' \
 		'  make seed          - generate seeds.jsonl (extra flags via SEED_ARGS=...)' \
-		'  make loop          - run scripts/run_loop.py with worker defaults' \
-		'  make pipeline      - run scripts/run_pipeline.py with worker defaults' \
+		'  make loop          - run the default worker loop with main-theorem settings' \
+		'  make loop-continue - same as loop, but keep current runtime state' \
+		'  make pipeline      - run seed -> loop -> refactor -> review with the same loop defaults' \
 		'  make refactor      - run scripts/refactor_derived.py' \
 		'  make review        - run scripts/direct_refactor_derived.py' \
 		'' \
 		'Common overrides:' \
-		'  WORKER_COMMAND="uv run python scripts/mock_worker.py"' \
+		'  WORKER_COMMAND="uv run scripts/mock_worker.py"' \
 		'  WORKER_TIMEOUT=600 CODEX_TIMEOUT=540' \
+		'  MAIN_THEOREM_INTERVAL=10 MAIN_THEOREM_FORMALIZE_WORKER_TIMEOUT=900' \
+		'  MAIN_THEOREM_REPAIR_WORKER_TIMEOUT=600' \
 		'  THEORY_FILE=... DERIVED_FILE=... SCRATCH_FILE=...' \
 		'  THEORY_FILE should point to the Theory.lean entry module' \
 		'  SEED_ARGS="--context-file path/to/context.tex --seed-count 4"' \
-		'  LOOP_ARGS="--no-initialize-on-start --max-iterations 40"' \
+		'  LOOP_ARGS="--max-iterations 40"' \
 		'  PIPELINE_ARGS="--article-file path/to/context.tex --max-iterations 40"'
 
 build:
@@ -70,13 +76,33 @@ loop:
 	ATC_WORKER_COMMAND="$(WORKER_COMMAND)" \
 	ATC_WORKER_TIMEOUT="$(WORKER_TIMEOUT)" \
 	ATC_CODEX_TIMEOUT="$(CODEX_TIMEOUT)" \
-	$(PYTHON) scripts/run_loop.py --enable-worker $(LOOP_ARGS)
+	$(PYTHON) scripts/run_loop.py \
+		--enable-worker \
+		--main-theorem-interval $(MAIN_THEOREM_INTERVAL) \
+		--main-theorem-formalize-worker-timeout $(MAIN_THEOREM_FORMALIZE_WORKER_TIMEOUT) \
+		--main-theorem-repair-worker-timeout $(MAIN_THEOREM_REPAIR_WORKER_TIMEOUT) \
+		$(LOOP_ARGS)
+
+loop-continue:
+	ATC_WORKER_COMMAND="$(WORKER_COMMAND)" \
+	ATC_WORKER_TIMEOUT="$(WORKER_TIMEOUT)" \
+	ATC_CODEX_TIMEOUT="$(CODEX_TIMEOUT)" \
+	$(PYTHON) scripts/run_loop.py \
+		--enable-worker \
+		--no-initialize-on-start \
+		--main-theorem-interval $(MAIN_THEOREM_INTERVAL) \
+		--main-theorem-formalize-worker-timeout $(MAIN_THEOREM_FORMALIZE_WORKER_TIMEOUT) \
+		--main-theorem-repair-worker-timeout $(MAIN_THEOREM_REPAIR_WORKER_TIMEOUT) \
+		$(LOOP_ARGS)
 
 pipeline:
 	ATC_CODEX_TIMEOUT="$(CODEX_TIMEOUT)" \
 	$(PYTHON) scripts/run_pipeline.py \
 		--worker-command "$(WORKER_COMMAND)" \
 		--worker-timeout "$(WORKER_TIMEOUT)" \
+		--main-theorem-interval $(MAIN_THEOREM_INTERVAL) \
+		--main-theorem-formalize-worker-timeout $(MAIN_THEOREM_FORMALIZE_WORKER_TIMEOUT) \
+		--main-theorem-repair-worker-timeout $(MAIN_THEOREM_REPAIR_WORKER_TIMEOUT) \
 		$(PIPELINE_ARGS)
 
 refactor:
