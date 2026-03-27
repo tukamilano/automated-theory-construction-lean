@@ -2,6 +2,12 @@
 
 This repository implements an automated theory-construction loop on top of Lean 4 + Mathlib. Given a base theory, the system proposes candidate statements, attempts to formalize and prove them in Lean, verifies successful results, and accumulates the verified theorems into the derived theory.
 
+## Highlighted Result
+
+One of the clearest results of the project so far is a Lean development of the canonical commutation relations (CCR) in quantum mechanics that derives substantial Fock-space structure from a minimal abstract axiom system. Starting from creation/annihilation operators together with a vacuum axiom, the resulting development reaches verified ladder formulas, number-operator eigenvalue laws, linear independence of the generated ket family, a finite-dimensional impossibility theorem, and structural representation results for the generated ket span. The resulting development is available here:
+
+<https://gist.github.com/tukamilano/311759e88a5ec11647aa2b83f42ce8a1>
+
 ## 3-Minute Quick Start
 
 If you want the fastest possible first run, use the bundled example theory and the mock worker.
@@ -42,7 +48,7 @@ Current non-claim:
 - it does not yet claim benchmarked superiority over simpler conjecture-generation or theorem-proving baselines
 
 For more details and generation examples, please see here.
-- [Progress](https://tukamilano.github.io/automated-theory-construction-lean/notes/progress/draft/2026/03/27/progress-update.html) (update 3.27)
+- [Progress](https://tukamilano.github.io/automated-theory-construction-lean/notes/draft/2026/03/27/progress.html) (update 3.27)
 - [Application to provability logic](https://gist.github.com/tukamilano/ba2c5719e0c5e2e1093b5b4dd174c182) (update 3.25)
 - [Application to Pure Type System λU⁻](https://gist.github.com/tukamilano/cc1f22efd19a7553c9b9883f30e119af)
 - [Application to canonical commutation relations in quantum mechanics](https://gist.github.com/tukamilano/311759e88a5ec11647aa2b83f42ce8a1)
@@ -209,3 +215,4 @@ The prompting strategy for solving Lean problems was partially inspired by a pri
 
 This repository also includes one file that was copied and then adapted from SnO2WMaN's `provability-toy` repository:
 <https://github.com/SnO2WMaN/provability-toy>
+
