@@ -13,6 +13,7 @@ OPEN_PROBLEM_PRIORITY_LABELS = {"high", "medium", "low", "unknown"}
 ARCHIVED_PROBLEMS_FILENAME = "archived_problems.jsonl"
 LEGACY_DEFERRED_PROBLEMS_FILENAME = "deferred_problems.jsonl"
 LEGACY_PRUNED_OPEN_PROBLEMS_FILENAME = "pruned_open_problems.jsonl"
+LEAN_IMPORT_PATTERN = re.compile(r"^\s*import\s+([A-Za-z0-9_.']+)\s*$", re.MULTILINE)
 
 
 def read_jsonl(path: Path) -> list[dict[str, Any]]:
@@ -148,3 +149,90 @@ def partition_open_problem_rows(
         else:
             archived_rows.append(normalized)
     return active_rows, archived_rows
+
+
+def _default_repo_root() -> Path:
+    return Path(__file__).resolve().parent.parent
+
+
+def _resolve_repo_local_module_path(module_name: str, repo_root: Path) -> Path | None:
+    module_parts = [part for part in module_name.strip().split(".") if part]
+    if not module_parts:
+        return None
+    candidate = repo_root.joinpath(*module_parts).with_suffix(".lean")
+    if candidate.exists():
+        return candidate.resolve()
+    return None
+
+
+def _iter_repo_local_import_paths(file_path: Path, repo_root: Path) -> list[Path]:
+    try:
+        content = file_path.read_text(encoding="utf-8")
+    except OSError:
+        return []
+
+    import_paths: list[Path] = []
+    seen_paths: set[Path] = set()
+    for match in LEAN_IMPORT_PATTERN.finditer(content):
+        resolved = _resolve_repo_local_module_path(match.group(1), repo_root)
+        if resolved is None or resolved == file_path.resolve() or resolved in seen_paths:
+            continue
+        seen_paths.add(resolved)
+        import_paths.append(resolved)
+    return import_paths
+
+
+def collect_repo_local_lean_context_files(
+    entry_file: Path,
+    *,
+    repo_root: Path | None = None,
+) -> list[Path]:
+    resolved_entry = entry_file.resolve()
+    if not resolved_entry.exists():
+        return []
+
+    resolved_repo_root = (repo_root or _default_repo_root()).resolve()
+    ordered_files: list[Path] = []
+    visited: set[Path] = set()
+    visiting: set[Path] = set()
+
+    def visit(file_path: Path) -> None:
+        resolved = file_path.resolve()
+        if resolved in visited or resolved in visiting:
+            return
+        visiting.add(resolved)
+        ordered_files.append(resolved)
+        for imported in _iter_repo_local_import_paths(resolved, resolved_repo_root):
+            visit(imported)
+        visiting.remove(resolved)
+        visited.add(resolved)
+
+    visit(resolved_entry)
+    return ordered_files
+
+
+def render_lean_context(files: list[Path], *, repo_root: Path | None = None) -> str:
+    if not files:
+        return ""
+
+    resolved_repo_root = (repo_root or _default_repo_root()).resolve()
+    blocks: list[str] = []
+    for file_path in files:
+        resolved = file_path.resolve()
+        try:
+            display_path = resolved.relative_to(resolved_repo_root)
+        except ValueError:
+            display_path = resolved
+        blocks.append(
+            f"-- FILE: {display_path}\n{resolved.read_text(encoding='utf-8').rstrip()}"
+        )
+    return "\n\n".join(blocks).strip()
+
+
+def load_theory_context(
+    theory_file: Path,
+    *,
+    repo_root: Path | None = None,
+) -> tuple[list[Path], str]:
+    files = collect_repo_local_lean_context_files(theory_file, repo_root=repo_root)
+    return files, render_lean_context(files, repo_root=repo_root)

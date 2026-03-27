@@ -17,6 +17,65 @@ from common import (
 )
 
 
+def enqueue_new_problems(
+    data_dir: Path,
+    new_problems: list[str],
+    *,
+    source: str = "generated",
+    failure_threshold: int = 2,
+) -> dict[str, Any]:
+    open_path = data_dir / "open_problems.jsonl"
+    archived_path = data_dir / ARCHIVED_PROBLEMS_FILENAME
+    solved_path = data_dir / "solved_problems.jsonl"
+    counterexamples_path = data_dir / "counterexamples.jsonl"
+
+    open_rows = [normalize_open_problem_row(row) for row in read_jsonl(open_path)]
+    archived_rows = read_archived_problem_rows(data_dir)
+    solved_rows = read_jsonl(solved_path)
+    counter_rows = read_jsonl(counterexamples_path)
+
+    tracked_rows = [dict(row) for row in open_rows + archived_rows]
+    seen_norms = {
+        normalize_stmt(str(row.get("stmt", "")))
+        for row in (tracked_rows + solved_rows + counter_rows)
+        if row.get("stmt")
+    }
+    all_ids = [str(row.get("id", "")) for row in open_rows + archived_rows + solved_rows + counter_rows]
+
+    added_problem_ids: list[str] = []
+    for stmt in new_problems:
+        norm = normalize_stmt(stmt)
+        if not norm or norm in seen_norms:
+            continue
+        new_id = next_problem_id(all_ids)
+        all_ids.append(new_id)
+        seen_norms.add(norm)
+        tracked_rows.append(
+            normalize_open_problem_row(
+                {
+                    "id": new_id,
+                    "stmt": stmt,
+                    "src": source,
+                    "priority": "unknown",
+                }
+            )
+        )
+        added_problem_ids.append(new_id)
+
+    active_rows, archived_rows = partition_open_problem_rows(
+        tracked_rows,
+        failure_threshold=failure_threshold,
+    )
+    write_jsonl_atomic(open_path, active_rows)
+    write_jsonl_atomic(archived_path, archived_rows)
+
+    return {
+        "added_problem_ids": added_problem_ids,
+        "active_open_problem_count": len(active_rows),
+        "archived_problem_count": len(archived_rows),
+    }
+
+
 def apply_state_update(
     data_dir: Path,
     problem_id: str,

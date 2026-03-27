@@ -8,7 +8,6 @@ from import_inference import infer_minimal_imports, render_import_block
 
 
 THEOREM_NAME_PATTERN = re.compile(r"\btheorem\s+([A-Za-z0-9_']+)\b")
-THEOREM_HEADER_PATTERN = re.compile(r"\btheorem\s+([A-Za-z0-9_']+)\s*:\s*(.+?)\s*:=", re.DOTALL)
 LEAN_DECL_NAME_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_']*$")
 LEAN_IMPORT_PATTERN = re.compile(r"^import\s+([A-Za-z0-9_.']+)\s*$", re.MULTILINE)
 DOCSTRING_MAX_CHARS = 240
@@ -61,17 +60,52 @@ def iter_theorem_headers(derived_file: Path, max_theorems: int | None = None) ->
         return []
 
     entries: list[tuple[str, str]] = []
-    for line in content.splitlines():
-        match = THEOREM_HEADER_PATTERN.search(line)
-        if not match:
-            continue
+    theorem_matcher = re.compile(r"\btheorem\s+([A-Za-z0-9_']+)\s*:\s*", re.MULTILINE)
+
+    for match in theorem_matcher.finditer(content):
         theorem_name = match.group(1).strip()
-        statement = normalize_statement_text(match.group(2))
-        if not theorem_name or not statement:
+        if not theorem_name:
             continue
-        entries.append((theorem_name, statement))
+
+        i = match.end()
+        paren_depth = 0
+        bracket_depth = 0
+        brace_depth = 0
+        while i + 1 < len(content):
+            ch = content[i]
+            nxt = content[i + 1]
+            if ch == "(":
+                paren_depth += 1
+            elif ch == ")":
+                paren_depth = max(paren_depth - 1, 0)
+            elif ch == "[":
+                bracket_depth += 1
+            elif ch == "]":
+                bracket_depth = max(bracket_depth - 1, 0)
+            elif ch == "{":
+                brace_depth += 1
+            elif ch == "}":
+                brace_depth = max(brace_depth - 1, 0)
+            elif (
+                ch == ":"
+                and nxt == "="
+                and paren_depth == 0
+                and bracket_depth == 0
+                and brace_depth == 0
+            ):
+                j = i + 2
+                while j < len(content) and content[j].isspace():
+                    j += 1
+                if content.startswith("by", j):
+                    statement = normalize_statement_text(content[match.end() : i])
+                    if statement:
+                        entries.append((theorem_name, statement))
+                    break
+            i += 1
+
         if max_theorems is not None and len(entries) >= max_theorems:
             break
+
     return entries
 
 

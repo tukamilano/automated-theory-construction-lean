@@ -222,6 +222,12 @@ Imports are transitive. Downstream may rely on this file’s imports implicitly.
 - In non-semantic refactors, **do not introduce stronger automation**; risk: search/heartbeats/behavior drift.
 - Tuning existing automation is OK if build time does not worsen.
 
+### 6.10 Main theorem reuse preference
+
+- When refactoring a main-theorem-style proof in `Derived.lean`, prefer proof structure that explicitly reuses earlier `Derived.lean` theorems rather than re-deriving the same argument from axioms.
+- If a theorem is intended as a structural summary of an existing cluster, its proof should make that reuse visible when possible through `exact`, `simpa`, short `have`s, or targeted rewrites.
+- Only keep a direct-from-axioms proof when no stable reuse path exists or the reuse version would be materially more brittle.
+
 ---
 
 ## 7. `def` / `abbrev` / `opaque` (transparency)
