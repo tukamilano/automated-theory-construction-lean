@@ -2782,6 +2782,7 @@ def next_main_theorem_trigger_count(current_count: int, interval: int) -> int | 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run the minimal prototype loop.")
     parser.add_argument("--initialize-on-start", action=argparse.BooleanOptionalAction, default=True)
+    parser.add_argument("--phase-logs", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--max-iterations", type=int)
     parser.add_argument("--enable-worker", action="store_true")
     parser.add_argument("--worker-command")
@@ -2828,7 +2829,6 @@ def main() -> None:
     args.prover_output_json = None
     args.prover_output_file = None
     args.theory_file = "AutomatedTheoryConstruction/Theory.lean"
-    args.phase_logs = True
     args.prover_statement_prompt_file = "prompts/prover_statement_formalizer.md"
     args.formalizer_prompt_file = "prompts/formalizer_simple.md"
     args.repair_prompt_file = None

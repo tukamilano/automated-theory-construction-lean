@@ -95,7 +95,10 @@ Run:
 ```bash
 make build
 make check-scratch
-WORKER_COMMAND="uv run scripts/mock_worker.py" make loop LOOP_ARGS="--max-iterations 1"
+uv run python scripts/atc_cli.py loop \
+  --enable-worker \
+  --worker-command "uv run scripts/mock_worker.py" \
+  --max-iterations 1
 ```
 
 What this does:
@@ -106,6 +109,7 @@ What this does:
 
 Notes:
 
+- `make loop` is now a thin wrapper around `scripts/atc_cli.py loop`.
 - `make loop` resets the runtime state by default. Use `make loop-continue` if you want to keep the current `Derived.lean` and queue state.
 - If you want a real LLM-backed run instead of the mock worker, see [Run With Codex Worker](#run-with-codex-worker).
 
@@ -122,26 +126,38 @@ To switch from the bundled example to your own theory, edit:
 If you want to regenerate seeds from the current theory plus context files:
 
 ```bash
-make seed SEED_ARGS="--context-file path/to/context.tex --seed-count 4"
+uv run python scripts/atc_cli.py seed \
+  --context-file path/to/context.tex \
+  --seed-count 4
 ```
 
-That command refreshes `AutomatedTheoryConstruction/seeds.jsonl` and resets the active runtime state unless you pass the corresponding no-initialize flag directly to the script.
+In addition to `Theory.lean` and its local imported theory modules, seed generation can also read
+natural-language reference materials such as notes, drafts, papers, or problem sketches.
+The repository's `docs/` directory is a natural place to keep these files, although any path works.
+If you put supporting material there, pass it with `--context-file` so the seed generator can use it
+as extra context when proposing initial problems.
+
+That command refreshes `AutomatedTheoryConstruction/seeds.jsonl` and resets the active runtime state unless you pass `--no-initialize-runtime-state`.
 
 ## Run With Codex Worker
 
 If you have Codex CLI available and want the actual worker-backed loop:
 
 ```bash
-make loop
+uv run python scripts/atc_cli.py loop --enable-worker
 ```
 
-This expands to the default worker command in the `Makefile`:
+The `Makefile` still provides shortcuts. `make loop` now wraps the unified CLI:
 
 ```bash
-ATC_WORKER_COMMAND="uv run scripts/codex_worker.py" \
-ATC_WORKER_TIMEOUT=420 \
-ATC_CODEX_TIMEOUT=390 \
-uv run scripts/run_loop.py --enable-worker
+uv run python scripts/atc_cli.py loop \
+  --enable-worker \
+  --worker-command "uv run scripts/codex_worker.py" \
+  --worker-timeout 420 \
+  --codex-timeout 390 \
+  --main-theorem-interval 10 \
+  --main-theorem-formalize-worker-timeout 900 \
+  --main-theorem-repair-worker-timeout 600
 ```
 
 If you want to keep the current runtime state instead of reinitializing it:
@@ -196,7 +212,23 @@ For a first-time reader, the core files are:
 
 ## Common Commands
 
-The repository includes a small `Makefile` wrapper for common tasks:
+The unified operational entrypoint is:
+
+```bash
+uv run python scripts/atc_cli.py --help
+```
+
+Config files are also supported. The zero-dependency path is JSON:
+
+```bash
+cp atc.example.json atc.json
+uv run python scripts/atc_cli.py config show
+```
+
+If `atc.json` exists at the repo root, `scripts/atc_cli.py` picks it up automatically.
+You can also pass an explicit file with `--config path/to/file.json`.
+
+The repository also keeps a `Makefile` as a thin wrapper around the CLI:
 
 ```bash
 make help
@@ -217,39 +249,43 @@ make check
 Regenerate seeds from the current theory:
 
 ```bash
-make seed SEED_ARGS="--context-file path/to/context.tex --seed-count 4"
+uv run python scripts/atc_cli.py seed \
+  --context-file path/to/context.tex \
+  --seed-count 4
 ```
 
 Run the one-shot pipeline from seed generation through refactor:
 
 ```bash
-make pipeline PIPELINE_ARGS="--article-file path/to/context.tex --max-iterations 40"
+uv run python scripts/atc_cli.py pipeline \
+  --context-file path/to/context.tex \
+  --max-iterations 40
 ```
 
 Run the final two-stage cleanup of `Derived.lean`:
 
 ```bash
+uv run python scripts/atc_cli.py refactor
+uv run python scripts/atc_cli.py review
+```
+
+Equivalent `Makefile` shortcuts remain available:
+
+```bash
+make seed SEED_ARGS="--context-file path/to/context.tex --seed-count 4"
+make loop LOOP_ARGS="--max-iterations 40"
+make pipeline PIPELINE_ARGS="--context-file path/to/context.tex --max-iterations 40"
 make refactor
 make review
 ```
 
-If you prefer the underlying scripts directly instead of the `Makefile` wrappers:
-
 ```bash
-uv run python scripts/refactor_derived.py \
-  --worker-command "uv run python scripts/codex_worker.py" \
-  --output-file AutomatedTheoryConstruction/Derived.refactored.preview.lean
-```
-
-```bash
-uv run python scripts/direct_refactor_derived.py \
-  --input-file AutomatedTheoryConstruction/Derived.refactored.preview.lean \
-  --output-file AutomatedTheoryConstruction/Derived.refactored.reviewed.lean
+uv run python scripts/atc_cli.py config show
 ```
 
 ## More Details
 
-Detailed runtime behavior, initialization semantics, worker configuration, queue metadata, and extended command examples are documented in [RUNTIME.md](RUNTIME.md).
+Detailed runtime behavior, initialization semantics, worker configuration, queue metadata, and extended command examples are documented in [design/RUNTIME.md](design/RUNTIME.md).
 
 ## Notes and Progress
 
@@ -273,4 +309,3 @@ The prompting strategy for solving Lean problems was partially inspired by a pri
 
 This repository also includes one file that was copied and then adapted from SnO2WMaN's `provability-toy` repository:
 <https://github.com/SnO2WMaN/provability-toy>
-

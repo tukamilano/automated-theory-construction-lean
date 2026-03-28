@@ -1,0 +1,48 @@
+{
+  "paths": {
+    "theory_file": "AutomatedTheoryConstruction/Theory.lean",
+    "derived_file": "AutomatedTheoryConstruction/Derived.lean",
+    "scratch_file": "AutomatedTheoryConstruction/Scratch.lean",
+    "seeds_file": "AutomatedTheoryConstruction/seeds.jsonl",
+    "data_dir": "data",
+    "prompt_dir": "prompts",
+    "log_dir": "data/runs",
+    "preview_file": "AutomatedTheoryConstruction/Derived.refactored.preview.lean",
+    "reviewed_file": "AutomatedTheoryConstruction/Derived.refactored.reviewed.lean",
+    "theorem_reuse_memory_file": "data/theorem_reuse_memory.json"
+  },
+  "worker": {
+    "command": "uv run scripts/codex_worker.py",
+    "timeout": 420,
+    "codex_timeout": 390,
+    "tasks": {
+      "formalize": {
+        "timeout": 600
+      },
+      "repair": {
+        "timeout": 600
+      },
+      "refactor_derived": {
+        "timeout": 420
+      }
+    }
+  },
+  "runtime": {
+    "initialize_on_start": true,
+    "phase_logs": true,
+    "open_problem_failure_threshold": 2,
+    "priority_refresh_theorem_interval": 5,
+    "main_theorem_interval": 10,
+    "main_theorem_formalize_worker_timeout": 900,
+    "main_theorem_repair_worker_timeout": 600,
+    "main_theorem_verify_timeout": 600,
+    "main_theorem_formalization_retry_budget_sec": 3600
+  },
+  "logging": {
+    "console_level": "info",
+    "console_format": "pretty",
+    "persist_events": true,
+    "persist_summary": true,
+    "persist_worker_raw": false
+  }
+}
