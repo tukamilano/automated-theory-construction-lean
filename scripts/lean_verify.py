@@ -3,15 +3,18 @@ from __future__ import annotations
 import argparse
 import json
 import subprocess
+import time
 from pathlib import Path
 from typing import Any
 
 
 def verify_scratch(problem_id: str, mode: str, scratch_file: Path, timeout_sec: int | None) -> dict[str, Any]:
     cmd = ["lake", "env", "lean", str(scratch_file)]
+    started = time.monotonic()
     try:
         proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout_sec)
     except subprocess.TimeoutExpired as exc:
+        duration_ms = int((time.monotonic() - started) * 1000)
         stderr_text = (exc.stderr or "") if isinstance(exc.stderr, str) else ""
         stdout_text = (exc.stdout or "") if isinstance(exc.stdout, str) else ""
         timeout_label = f"{timeout_sec}s" if timeout_sec is not None else "without a time limit"
@@ -19,13 +22,18 @@ def verify_scratch(problem_id: str, mode: str, scratch_file: Path, timeout_sec: 
             "problem_id": problem_id,
             "success": False,
             "mode": mode,
+            "command": cmd,
+            "duration_ms": duration_ms,
             "stderr": f"Lean verification timed out after {timeout_label}\n{stderr_text}".strip(),
             "stdout": stdout_text,
         }
+    duration_ms = int((time.monotonic() - started) * 1000)
     return {
         "problem_id": problem_id,
         "success": proc.returncode == 0,
         "mode": mode,
+        "command": cmd,
+        "duration_ms": duration_ms,
         "stderr": proc.stderr,
         "stdout": proc.stdout,
     }
