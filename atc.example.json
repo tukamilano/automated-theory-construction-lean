@@ -26,7 +26,6 @@
       },
       "refactor_derived": {
         "timeout": 420,
-        "llm_model": "gpt-5.4",
         "llm_timeout": 390
       }
     }
@@ -34,7 +33,7 @@
   "runtime": {
     "initialize_on_start": true,
     "phase_logs": true,
-    "max_iterations": 2,
+    "max_iterations": 50,
     "run_seed": true,
     "run_refactor_pass_1": true,
     "run_refactor_pass_2": true,

@@ -241,7 +241,7 @@ def _review_command(args: argparse.Namespace, config: AppConfig) -> tuple[list[s
         cmd.append("--skip-copy")
     if args.no_verify:
         cmd.append("--no-verify")
-    return cmd, {}
+    return cmd, build_worker_env(config, task_names=("refactor_derived",))
 
 
 def _build_parser() -> argparse.ArgumentParser:

@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import argparse
+import os
 import shutil
 import sys
 import tempfile
 from pathlib import Path
 
 from llm_exec import build_exec_command
+from llm_exec import resolve_model
 from llm_exec import resolve_provider
 from llm_exec import run_llm_exec
 
@@ -16,6 +18,24 @@ DEFAULT_OUTPUT = Path("AutomatedTheoryConstruction/Derived.refactored.reviewed.l
 DEFAULT_POLICY = Path(".agents/shared/skills/lean-review-refactor-policy/SKILL.md")
 DEFAULT_LEAN_RULE = Path(".agents/shared/skills/lean-rule/SKILL.md")
 DEFAULT_MATHLIB_USAGE = Path(".agents/shared/skills/mathlib-usage/SKILL.md")
+
+
+def resolve_review_provider(explicit: str | None) -> str:
+    task_provider = (os.getenv("ATC_REFACTOR_DERIVED_LLM_PROVIDER") or "").strip()
+    if explicit:
+        return resolve_provider(explicit)
+    if task_provider:
+        return resolve_provider(task_provider)
+    return resolve_provider(None, env_name="ATC_LLM_PROVIDER", default="codex")
+
+
+def resolve_review_model(provider: str, explicit: str | None) -> str | None:
+    if explicit:
+        return resolve_model(provider, explicit)
+    task_model = (os.getenv("ATC_REFACTOR_DERIVED_LLM_MODEL") or "").strip()
+    if task_model:
+        return resolve_model(provider, task_model)
+    return resolve_model(provider, os.getenv("ATC_LLM_MODEL"))
 
 
 def build_prompt(
@@ -75,7 +95,8 @@ def main() -> int:
 
     input_file = Path(args.input_file)
     output_file = Path(args.output_file)
-    provider = resolve_provider(args.provider)
+    provider = resolve_review_provider(args.provider)
+    model = resolve_review_model(provider, args.model)
     policy_file = Path(args.policy_file)
     lean_rule_file = Path(args.lean_rule_file)
     mathlib_usage_file = Path(args.mathlib_usage_file)
@@ -106,7 +127,7 @@ def main() -> int:
     cmd = build_exec_command(
         provider=provider,
         sandbox=args.sandbox,
-        model=args.model,
+        model=model,
     )
 
     if args.dry_run:
@@ -120,7 +141,7 @@ def main() -> int:
             provider=provider,
             prompt=prompt,
             sandbox=args.sandbox,
-            model=args.model,
+            model=model,
             capture_output=False,
         )
         return completed.returncode

@@ -3,11 +3,14 @@ from __future__ import annotations
 import json
 import os
 import re
+import subprocess
 import sys
 import tempfile
 from pathlib import Path
 from typing import Any
 
+from llm_exec import extract_exec_text
+from llm_exec import format_exec_failure
 from llm_exec import resolve_model
 from llm_exec import resolve_provider
 from llm_exec import run_llm_exec
@@ -187,17 +190,24 @@ def _run_llm(task_type: str, prompt: str, timeout_sec: int | None) -> tuple[str,
         output_path = Path(handle.name)
 
     try:
-        def run_once(use_model: bool):
-            return run_llm_exec(
+        def run_once(
+            use_model: bool,
+            *,
+            use_output_file: bool,
+        ) -> tuple[subprocess.CompletedProcess[str], Path | None]:
+            output_last_message_path = output_path if use_output_file else None
+            completed = run_llm_exec(
                 provider=provider,
                 prompt=prompt,
                 sandbox="read-only",
                 model=model if use_model else None,
-                output_last_message_path=output_path,
+                output_last_message_path=output_last_message_path,
                 timeout_sec=timeout_sec,
             )
+            return completed, output_last_message_path
 
-        completed = run_once(use_model=True)
+        use_model = True
+        completed, output_last_message_path = run_once(use_model=True, use_output_file=True)
         if completed.returncode != 0:
             stderr = (completed.stderr or "").strip()
             unsupported_model = (
@@ -207,16 +217,23 @@ def _run_llm(task_type: str, prompt: str, timeout_sec: int | None) -> tuple[str,
                 and "model" in stderr.lower()
             )
             if unsupported_model:
-                completed = run_once(use_model=False)
+                use_model = False
+                completed, output_last_message_path = run_once(use_model=False, use_output_file=True)
                 if completed.returncode != 0:
-                    retry_stderr = (completed.stderr or "").strip()
-                    raise RuntimeError(f"{provider} exec failed ({completed.returncode}): {retry_stderr}")
+                    raise RuntimeError(format_exec_failure(provider, completed))
             else:
-                raise RuntimeError(f"{provider} exec failed ({completed.returncode}): {stderr}")
+                raise RuntimeError(format_exec_failure(provider, completed))
 
-        text = output_path.read_text(encoding="utf-8") if output_path.exists() else ""
-        if not text.strip():
-            text = (completed.stdout or "").strip()
+        text = extract_exec_text(
+            provider,
+            completed,
+            output_last_message_path=output_last_message_path,
+        )
+        if not text.strip() and provider == "claude":
+            completed, _ = run_once(use_model=use_model, use_output_file=False)
+            if completed.returncode != 0:
+                raise RuntimeError(format_exec_failure(provider, completed))
+            text = extract_exec_text(provider, completed, output_last_message_path=None)
         return text, model, provider
     finally:
         try:

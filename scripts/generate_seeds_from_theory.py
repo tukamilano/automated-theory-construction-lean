@@ -15,6 +15,8 @@ from common import (
     write_jsonl_atomic,
 )
 from llm_exec import build_exec_command
+from llm_exec import extract_exec_text
+from llm_exec import format_exec_failure
 from llm_exec import resolve_provider
 from llm_exec import run_llm_exec
 from run_loop import DERIVED_TEMPLATE, SCRATCH_TEMPLATE, prebuild_lean_project
@@ -255,22 +257,27 @@ def run_llm(
         output_path = Path(output_handle.name)
 
     try:
-        completed = run_llm_exec(
-            provider=provider,
-            prompt=prompt,
-            sandbox=sandbox,
-            model=model,
-            cwd=repo_root,
-            output_schema_path=schema_path,
-            output_last_message_path=output_path,
-        )
-        if completed.returncode != 0:
-            stderr = (completed.stderr or "").strip()
-            raise RuntimeError(f"{provider} exec failed ({completed.returncode}): {stderr}")
+        def run_once(*, use_structured_output: bool) -> str:
+            completed = run_llm_exec(
+                provider=provider,
+                prompt=prompt,
+                sandbox=sandbox,
+                model=model,
+                cwd=repo_root,
+                output_schema_path=schema_path if use_structured_output else None,
+                output_last_message_path=output_path if use_structured_output else None,
+            )
+            if completed.returncode != 0:
+                raise RuntimeError(format_exec_failure(provider, completed))
+            return extract_exec_text(
+                provider,
+                completed,
+                output_last_message_path=output_path if use_structured_output else None,
+            )
 
-        text = output_path.read_text(encoding="utf-8") if output_path.exists() else ""
-        if not text.strip():
-            text = (completed.stdout or "").strip()
+        text = run_once(use_structured_output=True)
+        if not text.strip() and provider == "claude":
+            text = run_once(use_structured_output=False)
         if not text.strip():
             raise RuntimeError(f"{provider} exec returned no final message")
         return text
