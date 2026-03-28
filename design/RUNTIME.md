@@ -36,7 +36,7 @@ Open problems may be either Lean-formal statements or semi-formal research promp
 - `AutomatedTheoryConstruction/Derived.lean`: verified theorem accumulation target
 - `AutomatedTheoryConstruction/Scratch.lean`: temporary verification artifact
 - `scripts/run_loop.py`: main orchestrator
-- `scripts/codex_worker.py`: worker wrapper around `codex exec`
+- `scripts/llm_worker.py`: worker wrapper around the configured LLM CLI (`codex`, `claude`, ...)
 - `scripts/mock_worker.py`: contract-compatible mock worker
 - `scripts/worker_client.py`: subprocess worker client and timeout handling
 - `scripts/lean_verify.py`: Lean verification wrapper
@@ -74,10 +74,11 @@ uv run python scripts/generate_seeds_from_theory.py \
 To generate `seeds.jsonl` from the active `Theory.lean` entry module, its imported local theory files, and article/context files, run `run_loop.py`, and then run the two-stage refactor in one go:
 
 ```bash
-ATC_CODEX_TIMEOUT=390 \
+ATC_LLM_PROVIDER=codex \
+ATC_LLM_TIMEOUT=390 \
 uv run python scripts/run_pipeline.py \
   --article-file path/to/context.tex \
-  --worker-command "uv run python scripts/codex_worker.py" \
+  --worker-command "uv run python scripts/llm_worker.py" \
   --worker-timeout 420 \
   --max-iteration 40
 ```
@@ -96,14 +97,27 @@ ATC_WORKER_COMMAND="uv run scripts/mock_worker.py" \
 uv run scripts/run_loop.py --enable-worker
 ```
 
-Run with the Codex worker:
+Run with the configured LLM worker using Codex:
 
 ```bash
-ATC_WORKER_COMMAND="uv run scripts/codex_worker.py" \
+ATC_WORKER_COMMAND="uv run scripts/llm_worker.py" \
+ATC_LLM_PROVIDER=codex \
 ATC_WORKER_TIMEOUT=420 \
-ATC_CODEX_TIMEOUT=390 \
+ATC_LLM_TIMEOUT=390 \
 uv run scripts/run_loop.py --enable-worker
 ```
+
+Run with the Claude worker:
+
+```bash
+ATC_WORKER_COMMAND="uv run scripts/llm_worker.py" \
+ATC_LLM_PROVIDER=claude \
+ATC_WORKER_TIMEOUT=420 \
+ATC_LLM_TIMEOUT=390 \
+uv run scripts/run_loop.py --enable-worker
+```
+
+Claude Code project agent files can live under `.claude/agents/`. This repository provides `.claude/agents/lean-dev.md` so Claude can load the shared repository guidance under `.agents/shared/`.
 
 ## Final Two-Stage Refactor For `Derived.lean`
 
@@ -113,13 +127,13 @@ Pass 1 performs the main structural refactor and writes a preview file:
 
 ```bash
 uv run python scripts/refactor_derived.py \
-  --worker-command "uv run python scripts/codex_worker.py" \
+  --worker-command "uv run python scripts/llm_worker.py" \
   --output-file AutomatedTheoryConstruction/Derived.refactored.preview.lean
 ```
 
 When `--worker-timeout` is omitted for `scripts/refactor_derived.py`, the refactor worker defaults to no outer timeout. Set `--worker-timeout <seconds>` or `ATC_REFACTOR_DERIVED_WORKER_TIMEOUT` if you want a bound for this pass.
 
-Pass 2 keeps the refactored theorem inventory but applies a review-focused non-semantic polish using the thin `codex exec` wrapper and the repository skills directly:
+Pass 2 keeps the refactored theorem inventory but applies a review-focused non-semantic polish using the configured LLM CLI wrapper and the repository skills directly:
 
 ```bash
 uv run python scripts/direct_refactor_derived.py \
@@ -127,7 +141,7 @@ uv run python scripts/direct_refactor_derived.py \
   --output-file AutomatedTheoryConstruction/Derived.refactored.reviewed.lean
 ```
 
-If `AutomatedTheoryConstruction/Derived.refactored.reviewed.lean` already exists and you want Codex to continue editing it without copying from the preview again, use:
+If `AutomatedTheoryConstruction/Derived.refactored.reviewed.lean` already exists and you want the configured LLM agent to continue editing it without copying from the preview again, use:
 
 ```bash
 uv run python scripts/direct_refactor_derived.py --skip-copy
@@ -155,18 +169,20 @@ If you run `scripts/run_loop.py` directly, it still defaults to `--initialize-on
 If you want to continue from the current runtime state and keep accumulated theorems in `Derived.lean`, use:
 
 ```bash
-ATC_WORKER_COMMAND="uv run scripts/codex_worker.py" \
+ATC_WORKER_COMMAND="uv run scripts/llm_worker.py" \
+ATC_LLM_PROVIDER=codex \
 ATC_WORKER_TIMEOUT=420 \
-ATC_CODEX_TIMEOUT=390 \
+ATC_LLM_TIMEOUT=390 \
 uv run scripts/run_loop.py --enable-worker --no-initialize-on-start
 ```
 
 If you want the loop to consider adding a main theorem whenever `Derived.lean` has gained another `N` verified theorems, set `--main-theorem-interval N`. For example:
 
 ```bash
-ATC_WORKER_COMMAND="uv run scripts/codex_worker.py" \
+ATC_WORKER_COMMAND="uv run scripts/llm_worker.py" \
+ATC_LLM_PROVIDER=codex \
 ATC_WORKER_TIMEOUT=420 \
-ATC_CODEX_TIMEOUT=390 \
+ATC_LLM_TIMEOUT=390 \
 uv run scripts/run_loop.py \
   --enable-worker \
   --no-initialize-on-start \
@@ -199,29 +215,47 @@ Task-specific overrides:
 - `ATC_PRIORITIZE_OPEN_PROBLEMS_WORKER_COMMAND`
 - `ATC_PRIORITIZE_OPEN_PROBLEMS_WORKER_TIMEOUT`
 
-Useful Codex worker settings:
+Useful generic worker settings:
 
-- `ATC_CODEX_TIMEOUT`: inner timeout used by `scripts/codex_worker.py`
-- `ATC_CODEX_MODEL`: optional model override for `codex exec`
-- `ATC_PROVER_CODEX_MODEL`: optional prover-only model override
-- `ATC_PROVER_CODEX_TIMEOUT`: optional prover-only inner timeout override
-- `ATC_PROVER_STATEMENT_CODEX_MODEL`: optional prover-statement-only model override
-- `ATC_PROVER_STATEMENT_CODEX_TIMEOUT`: optional prover-statement-only inner timeout override
+- `ATC_LLM_PROVIDER`: provider name such as `codex` or `claude`
+- `ATC_LLM_TIMEOUT`: inner timeout used by `scripts/llm_worker.py`
+- `ATC_LLM_MODEL`: optional provider model override
+- `ATC_PROVER_LLM_PROVIDER`: optional prover-only provider override
+- `ATC_PROVER_LLM_MODEL`: optional prover-only model override
+- `ATC_PROVER_LLM_TIMEOUT`: optional prover-only inner timeout override
 
 You can also override the same settings through CLI flags such as:
 
 - `--worker-command`
 - `--worker-timeout`
+- `--llm-provider`
+- `--llm-model`
+- `--llm-timeout`
 - `--prover-worker-command`
 - `--prover-worker-timeout`
+- `--prover-llm-provider`
+- `--prover-llm-model`
+- `--prover-llm-timeout`
 - `--prover-statement-worker-command`
 - `--prover-statement-worker-timeout`
+- `--prover-statement-llm-provider`
+- `--prover-statement-llm-model`
+- `--prover-statement-llm-timeout`
 - `--formalize-worker-command`
 - `--formalize-worker-timeout`
+- `--formalize-llm-provider`
+- `--formalize-llm-model`
+- `--formalize-llm-timeout`
 - `--repair-worker-command`
 - `--repair-worker-timeout`
+- `--repair-llm-provider`
+- `--repair-llm-model`
+- `--repair-llm-timeout`
 - `--prioritize-open-problems-worker-command`
 - `--prioritize-open-problems-worker-timeout`
+- `--prioritize-open-problems-llm-provider`
+- `--prioritize-open-problems-llm-model`
+- `--prioritize-open-problems-llm-timeout`
 - `--open-problem-failure-threshold`
 - `--priority-refresh-theorem-interval`
 - `--main-theorem-interval`

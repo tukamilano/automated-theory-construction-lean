@@ -8,6 +8,7 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
+from llm_exec import resolve_model
 from llm_exec import resolve_provider
 from llm_exec import run_llm_exec
 
@@ -32,14 +33,21 @@ def _resolve_task_env(task_type: str, suffix: str, default: str = "") -> str:
     return (os.getenv(f"ATC_{suffix}") or default).strip()
 
 
-def _resolve_codex_timeout_env(task_type: str) -> str:
-    task_override = (os.getenv(_task_env_key(task_type, "CODEX_TIMEOUT")) or "").strip()
+def _resolve_llm_model_env(task_type: str) -> str:
+    task_override = (os.getenv(_task_env_key(task_type, "LLM_MODEL")) or "").strip()
+    if task_override:
+        return task_override
+    return (os.getenv("ATC_LLM_MODEL") or "").strip()
+
+
+def _resolve_llm_timeout_env(task_type: str) -> str:
+    task_override = (os.getenv(_task_env_key(task_type, "LLM_TIMEOUT")) or "").strip()
     if task_override:
         return task_override
     # Refactor runs are intentionally unbounded unless the refactor task itself sets a timeout.
     if task_type == "refactor_derived":
         return ""
-    return (os.getenv("ATC_CODEX_TIMEOUT") or "").strip()
+    return (os.getenv("ATC_LLM_TIMEOUT") or "").strip()
 
 
 def _default_worker_timeout_for_task(task_type: str) -> int | None:
@@ -109,7 +117,6 @@ def _extract_json_object(text: str) -> tuple[dict[str, Any], int, bool]:
     except json.JSONDecodeError:
         pass
 
-    # Try explicit fenced json snippets first (common in interactive responses).
     fenced_blocks = re.findall(r"```json\s*(\{.*?\})\s*```", raw, flags=re.DOTALL | re.IGNORECASE)
     for block in fenced_blocks:
         try:
@@ -120,7 +127,6 @@ def _extract_json_object(text: str) -> tuple[dict[str, Any], int, bool]:
         except json.JSONDecodeError:
             continue
 
-    # Fallback to scanning for balanced JSON-object candidates.
     for candidate in _iter_braced_json_candidates(raw):
         try:
             parse_attempts += 1
@@ -169,13 +175,13 @@ def _build_contract_repair_prompt(
     )
 
 
-def _run_codex(task_type: str, prompt: str, timeout_sec: int | None) -> tuple[str, str, str]:
-    model = _resolve_task_env(task_type, "CODEX_MODEL")
+def _run_llm(task_type: str, prompt: str, timeout_sec: int | None) -> tuple[str, str | None, str]:
     provider = resolve_provider(
         _resolve_task_env(task_type, "LLM_PROVIDER"),
         env_name="ATC_LLM_PROVIDER",
         default="codex",
     )
+    model = resolve_model(provider, _resolve_llm_model_env(task_type))
 
     with tempfile.NamedTemporaryFile(mode="w+", encoding="utf-8", delete=False) as handle:
         output_path = Path(handle.name)
@@ -223,7 +229,7 @@ def main() -> None:
     response: dict[str, Any]
     task_type = ""
     resolved_provider = ""
-    resolved_model = ""
+    resolved_model: str | None = ""
     contract_retry_used = False
     initial_model_output = ""
     model_output = ""
@@ -259,17 +265,16 @@ def main() -> None:
             _resolve_task_env(task_type, "WORKER_TIMEOUT", default_outer_timeout_text),
             default_outer_timeout,
         )
-        codex_timeout_text = _resolve_codex_timeout_env(task_type)
-        codex_timeout = _resolve_timeout_seconds(codex_timeout_text, None)
-        # Keep inner timeout slightly below outer timeout to avoid subprocess timeout races when both are bounded.
-        if codex_timeout is not None:
-            timeout_sec = codex_timeout
+        llm_timeout_text = _resolve_llm_timeout_env(task_type)
+        llm_timeout = _resolve_timeout_seconds(llm_timeout_text, None)
+        if llm_timeout is not None:
+            timeout_sec = llm_timeout
         elif outer_timeout is not None:
             timeout_sec = max(30, outer_timeout - 10)
         else:
             timeout_sec = None
         prompt = _build_prompt(task_type=task_type, system_prompt=system_prompt, payload=payload)
-        model_output, resolved_model, resolved_provider = _run_codex(
+        model_output, resolved_model, resolved_provider = _run_llm(
             task_type=task_type,
             prompt=prompt,
             timeout_sec=timeout_sec,
@@ -285,7 +290,7 @@ def main() -> None:
                 payload=payload,
                 previous_output=model_output,
             )
-            model_output, resolved_model, resolved_provider = _run_codex(
+            model_output, resolved_model, resolved_provider = _run_llm(
                 task_type=task_type,
                 prompt=repair_prompt,
                 timeout_sec=max(30, timeout_sec // 2) if timeout_sec is not None else None,
@@ -309,7 +314,7 @@ def main() -> None:
         response = {
             "result_payload": result_payload,
             "worker_meta": {
-                "worker": "codex_worker",
+                "worker": "llm_worker",
                 "task_type": task_type,
                 "provider": resolved_provider,
                 "model": resolved_model,
@@ -322,7 +327,7 @@ def main() -> None:
             "error": None,
         }
     except Exception as exc:
-        worker_meta: dict[str, Any] = {"worker": "codex_worker"}
+        worker_meta: dict[str, Any] = {"worker": "llm_worker"}
         if task_type:
             worker_meta["task_type"] = task_type
         if resolved_provider:

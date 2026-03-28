@@ -13,9 +13,9 @@ from llm_exec import run_llm_exec
 
 DEFAULT_INPUT = Path("AutomatedTheoryConstruction/Derived.refactored.preview.lean")
 DEFAULT_OUTPUT = Path("AutomatedTheoryConstruction/Derived.refactored.reviewed.lean")
-DEFAULT_POLICY = Path(".codex/skills/lean-review-refactor-policy/SKILL.md")
-DEFAULT_LEAN_RULE = Path(".codex/skills/lean-rule/SKILL.md")
-DEFAULT_MATHLIB_USAGE = Path(".codex/skills/mathlib-usage/SKILL.md")
+DEFAULT_POLICY = Path(".agents/shared/skills/lean-review-refactor-policy/SKILL.md")
+DEFAULT_LEAN_RULE = Path(".agents/shared/skills/lean-rule/SKILL.md")
+DEFAULT_MATHLIB_USAGE = Path(".agents/shared/skills/mathlib-usage/SKILL.md")
 
 
 def build_prompt(

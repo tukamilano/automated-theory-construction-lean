@@ -66,13 +66,15 @@ def _add_common_flags(parser: argparse.ArgumentParser) -> None:
 def _add_worker_flags(parser: argparse.ArgumentParser, *, include_refactor_task: bool = False) -> None:
     parser.add_argument("--worker-command")
     parser.add_argument("--worker-timeout", type=int)
-    parser.add_argument("--codex-model")
-    parser.add_argument("--codex-timeout", type=int)
+    parser.add_argument("--llm-provider")
+    parser.add_argument("--llm-model")
+    parser.add_argument("--llm-timeout", type=int)
     if include_refactor_task:
         parser.add_argument("--refactor-worker-command")
         parser.add_argument("--refactor-worker-timeout", type=int)
-        parser.add_argument("--refactor-codex-model")
-        parser.add_argument("--refactor-codex-timeout", type=int)
+        parser.add_argument("--refactor-llm-provider")
+        parser.add_argument("--refactor-llm-model")
+        parser.add_argument("--refactor-llm-timeout", type=int)
 
 
 def _add_loop_task_worker_flags(parser: argparse.ArgumentParser) -> None:
@@ -86,8 +88,9 @@ def _add_loop_task_worker_flags(parser: argparse.ArgumentParser) -> None:
     for prefix in task_prefixes:
         parser.add_argument(f"--{prefix.replace('_', '-')}-worker-command", dest=f"{prefix}_worker_command")
         parser.add_argument(f"--{prefix.replace('_', '-')}-worker-timeout", dest=f"{prefix}_worker_timeout", type=int)
-        parser.add_argument(f"--{prefix.replace('_', '-')}-codex-model", dest=f"{prefix}_codex_model")
-        parser.add_argument(f"--{prefix.replace('_', '-')}-codex-timeout", dest=f"{prefix}_codex_timeout", type=int)
+        parser.add_argument(f"--{prefix.replace('_', '-')}-llm-provider", dest=f"{prefix}_llm_provider")
+        parser.add_argument(f"--{prefix.replace('_', '-')}-llm-model", dest=f"{prefix}_llm_model")
+        parser.add_argument(f"--{prefix.replace('_', '-')}-llm-timeout", dest=f"{prefix}_llm_timeout", type=int)
 
 
 def _seed_command(args: argparse.Namespace, config: AppConfig) -> tuple[list[str], dict[str, str]]:
@@ -115,7 +118,7 @@ def _seed_command(args: argparse.Namespace, config: AppConfig) -> tuple[list[str
         cmd.append("--no-initialize-runtime-state")
     for path in args.context_file:
         cmd.extend(["--context-file", path])
-    return cmd, {}
+    return cmd, build_worker_env(config, task_names=())
 
 
 def _loop_command(args: argparse.Namespace, config: AppConfig) -> tuple[list[str], dict[str, str]]:

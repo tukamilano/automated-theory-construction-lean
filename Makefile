@@ -11,9 +11,9 @@ SEEDS_FILE ?= AutomatedTheoryConstruction/seeds.jsonl
 PREVIEW_FILE ?= AutomatedTheoryConstruction/Derived.refactored.preview.lean
 REVIEWED_FILE ?= AutomatedTheoryConstruction/Derived.refactored.reviewed.lean
 
-WORKER_COMMAND ?= uv run scripts/codex_worker.py
+WORKER_COMMAND ?= uv run scripts/llm_worker.py
 WORKER_TIMEOUT ?= 420
-CODEX_TIMEOUT ?= 390
+LLM_TIMEOUT ?= 390
 MAIN_THEOREM_INTERVAL ?= 10
 MAIN_THEOREM_FORMALIZE_WORKER_TIMEOUT ?= 900
 MAIN_THEOREM_REPAIR_WORKER_TIMEOUT ?= 600
@@ -43,7 +43,7 @@ help:
 		'' \
 		'Common overrides:' \
 		'  WORKER_COMMAND="uv run scripts/mock_worker.py"' \
-		'  WORKER_TIMEOUT=600 CODEX_TIMEOUT=540' \
+		'  WORKER_TIMEOUT=600 LLM_TIMEOUT=540' \
 		'  MAIN_THEOREM_INTERVAL=10 MAIN_THEOREM_FORMALIZE_WORKER_TIMEOUT=900' \
 		'  MAIN_THEOREM_REPAIR_WORKER_TIMEOUT=600' \
 		'  THEORY_FILE=... DERIVED_FILE=... SCRATCH_FILE=...' \
@@ -78,7 +78,7 @@ loop:
 		--enable-worker \
 		--worker-command "$(WORKER_COMMAND)" \
 		--worker-timeout "$(WORKER_TIMEOUT)" \
-		--codex-timeout "$(CODEX_TIMEOUT)" \
+		--llm-timeout "$(LLM_TIMEOUT)" \
 		--main-theorem-interval $(MAIN_THEOREM_INTERVAL) \
 		--main-theorem-formalize-worker-timeout $(MAIN_THEOREM_FORMALIZE_WORKER_TIMEOUT) \
 		--main-theorem-repair-worker-timeout $(MAIN_THEOREM_REPAIR_WORKER_TIMEOUT) \
@@ -89,7 +89,7 @@ loop-continue:
 		--enable-worker \
 		--worker-command "$(WORKER_COMMAND)" \
 		--worker-timeout "$(WORKER_TIMEOUT)" \
-		--codex-timeout "$(CODEX_TIMEOUT)" \
+		--llm-timeout "$(LLM_TIMEOUT)" \
 		--no-initialize-on-start \
 		--main-theorem-interval $(MAIN_THEOREM_INTERVAL) \
 		--main-theorem-formalize-worker-timeout $(MAIN_THEOREM_FORMALIZE_WORKER_TIMEOUT) \
@@ -100,7 +100,7 @@ pipeline:
 	$(ATC) pipeline \
 		--worker-command "$(WORKER_COMMAND)" \
 		--worker-timeout "$(WORKER_TIMEOUT)" \
-		--codex-timeout "$(CODEX_TIMEOUT)" \
+		--llm-timeout "$(LLM_TIMEOUT)" \
 		--main-theorem-interval $(MAIN_THEOREM_INTERVAL) \
 		--main-theorem-formalize-worker-timeout $(MAIN_THEOREM_FORMALIZE_WORKER_TIMEOUT) \
 		--main-theorem-repair-worker-timeout $(MAIN_THEOREM_REPAIR_WORKER_TIMEOUT) \
@@ -115,7 +115,7 @@ refactor:
 		--output-file $(PREVIEW_FILE) \
 		--worker-command "$(WORKER_COMMAND)" \
 		--worker-timeout "$(WORKER_TIMEOUT)" \
-		--refactor-codex-timeout "$(CODEX_TIMEOUT)" \
+		--refactor-llm-timeout "$(LLM_TIMEOUT)" \
 		$(REFACTOR_ARGS)
 
 review:

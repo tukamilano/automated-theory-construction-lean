@@ -3388,7 +3388,7 @@ def main() -> None:
     if not args.enable_worker:
         raise ValueError(
             "run_loop.py now requires --enable-worker. "
-            "Use a contract-compatible worker command such as scripts/codex_worker.py or scripts/mock_worker.py."
+            "Use a contract-compatible worker command such as scripts/llm_worker.py or scripts/mock_worker.py."
         )
     worker_settings = load_worker_settings(
         command_override=args.worker_command,

@@ -39,16 +39,18 @@ class PathsConfig:
 class WorkerTaskConfig:
     command: str | None = None
     timeout: int | None = None
-    codex_model: str | None = None
-    codex_timeout: int | None = None
+    llm_provider: str | None = None
+    llm_model: str | None = None
+    llm_timeout: int | None = None
 
 
 @dataclass
 class WorkerConfig:
     command: str | None = None
     timeout: int | None = None
-    codex_model: str | None = None
-    codex_timeout: int | None = None
+    llm_provider: str | None = None
+    llm_model: str | None = None
+    llm_timeout: int | None = None
     tasks: dict[str, WorkerTaskConfig] = field(default_factory=dict)
 
 
@@ -378,13 +380,15 @@ def load_app_config(args: Any) -> tuple[AppConfig, dict[str, str]]:
         if task_name == "refactor_derived":
             cli_command_names = ("refactor_worker_command",)
             cli_timeout_names = ("refactor_worker_timeout",)
-            cli_model_names = ("refactor_codex_model",)
-            cli_codex_timeout_names = ("refactor_codex_timeout",)
+            cli_provider_names = ("refactor_llm_provider",)
+            cli_llm_model_names = ("refactor_llm_model",)
+            cli_llm_timeout_names = ("refactor_llm_timeout",)
         else:
             cli_command_names = (f"{cli_prefix}_worker_command",)
             cli_timeout_names = (f"{cli_prefix}_worker_timeout",)
-            cli_model_names = (f"{cli_prefix}_codex_model",)
-            cli_codex_timeout_names = (f"{cli_prefix}_codex_timeout",)
+            cli_provider_names = (f"{cli_prefix}_llm_provider",)
+            cli_llm_model_names = (f"{cli_prefix}_llm_model",)
+            cli_llm_timeout_names = (f"{cli_prefix}_llm_timeout",)
         task_configs[task_name] = WorkerTaskConfig(
             command=choose_str(
                 cli_names=cli_command_names,
@@ -401,20 +405,27 @@ def load_app_config(args: Any) -> tuple[AppConfig, dict[str, str]]:
                 minimum=0,
                 label=f"worker.tasks.{task_name}.timeout",
             ),
-            codex_model=choose_str(
-                cli_names=cli_model_names,
-                env_names=(f"ATC_{task_upper}_CODEX_MODEL",),
-                file_keys=("worker", "tasks", task_name, "codex_model"),
+            llm_provider=choose_str(
+                cli_names=cli_provider_names,
+                env_names=(f"ATC_{task_upper}_LLM_PROVIDER",),
+                file_keys=("worker", "tasks", task_name, "llm_provider"),
                 default=None,
-                label=f"worker.tasks.{task_name}.codex_model",
+                label=f"worker.tasks.{task_name}.llm_provider",
             ),
-            codex_timeout=choose_int(
-                cli_names=cli_codex_timeout_names,
-                env_names=(f"ATC_{task_upper}_CODEX_TIMEOUT",),
-                file_keys=("worker", "tasks", task_name, "codex_timeout"),
+            llm_model=choose_str(
+                cli_names=cli_llm_model_names,
+                env_names=(f"ATC_{task_upper}_LLM_MODEL",),
+                file_keys=("worker", "tasks", task_name, "llm_model"),
+                default=None,
+                label=f"worker.tasks.{task_name}.llm_model",
+            ),
+            llm_timeout=choose_int(
+                cli_names=cli_llm_timeout_names,
+                env_names=(f"ATC_{task_upper}_LLM_TIMEOUT",),
+                file_keys=("worker", "tasks", task_name, "llm_timeout"),
                 default=None,
                 minimum=0,
-                label=f"worker.tasks.{task_name}.codex_timeout",
+                label=f"worker.tasks.{task_name}.llm_timeout",
             ),
         )
 
@@ -434,20 +445,27 @@ def load_app_config(args: Any) -> tuple[AppConfig, dict[str, str]]:
             minimum=0,
             label="worker.timeout",
         ),
-        codex_model=choose_str(
-            cli_names=("codex_model",),
-            env_names=("ATC_CODEX_MODEL",),
-            file_keys=("worker", "codex_model"),
+        llm_provider=choose_str(
+            cli_names=("llm_provider",),
+            env_names=("ATC_LLM_PROVIDER",),
+            file_keys=("worker", "llm_provider"),
             default=None,
-            label="worker.codex_model",
+            label="worker.llm_provider",
         ),
-        codex_timeout=choose_int(
-            cli_names=("codex_timeout",),
-            env_names=("ATC_CODEX_TIMEOUT",),
-            file_keys=("worker", "codex_timeout"),
+        llm_model=choose_str(
+            cli_names=("llm_model",),
+            env_names=("ATC_LLM_MODEL",),
+            file_keys=("worker", "llm_model"),
+            default=None,
+            label="worker.llm_model",
+        ),
+        llm_timeout=choose_int(
+            cli_names=("llm_timeout",),
+            env_names=("ATC_LLM_TIMEOUT",),
+            file_keys=("worker", "llm_timeout"),
             default=None,
             minimum=0,
-            label="worker.codex_timeout",
+            label="worker.llm_timeout",
         ),
         tasks=task_configs,
     )
@@ -657,8 +675,9 @@ def build_worker_env(config: AppConfig, *, task_names: Iterable[str] = TASK_NAME
 
     put("ATC_WORKER_COMMAND", config.worker.command)
     put("ATC_WORKER_TIMEOUT", config.worker.timeout)
-    put("ATC_CODEX_MODEL", config.worker.codex_model)
-    put("ATC_CODEX_TIMEOUT", config.worker.codex_timeout)
+    put("ATC_LLM_PROVIDER", config.worker.llm_provider)
+    put("ATC_LLM_MODEL", config.worker.llm_model)
+    put("ATC_LLM_TIMEOUT", config.worker.llm_timeout)
 
     for task_name in task_names:
         task = config.worker.tasks.get(task_name)
@@ -667,7 +686,8 @@ def build_worker_env(config: AppConfig, *, task_names: Iterable[str] = TASK_NAME
         prefix = f"ATC_{task_name.upper()}"
         put(f"{prefix}_WORKER_COMMAND", task.command)
         put(f"{prefix}_WORKER_TIMEOUT", task.timeout)
-        put(f"{prefix}_CODEX_MODEL", task.codex_model)
-        put(f"{prefix}_CODEX_TIMEOUT", task.codex_timeout)
+        put(f"{prefix}_LLM_PROVIDER", task.llm_provider)
+        put(f"{prefix}_LLM_MODEL", task.llm_model)
+        put(f"{prefix}_LLM_TIMEOUT", task.llm_timeout)
 
     return env_updates

@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import argparse
+import json
 import shlex
 import subprocess
 import sys
 from pathlib import Path
+
+from common import write_json_atomic
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -13,6 +16,7 @@ DEFAULT_DERIVED = Path("AutomatedTheoryConstruction/Derived.lean")
 DEFAULT_SEEDS = Path("AutomatedTheoryConstruction/seeds.jsonl")
 DEFAULT_PREVIEW = Path("AutomatedTheoryConstruction/Derived.refactored.preview.lean")
 DEFAULT_REVIEWED = Path("AutomatedTheoryConstruction/Derived.refactored.reviewed.lean")
+DATA_RUNS_DIR = REPO_ROOT / "data" / "runs"
 
 
 def append_optional_flag(cmd: list[str], flag: str, value: str | int | None) -> None:
@@ -50,6 +54,80 @@ def run_stage(
             sys.stderr.write(completed.stderr)
             sys.stderr.flush()
     return completed
+
+
+def list_loop_run_ids() -> set[str]:
+    if not DATA_RUNS_DIR.exists():
+        return set()
+    return {
+        path.name
+        for path in DATA_RUNS_DIR.iterdir()
+        if path.is_dir() and path.name.endswith("-loop")
+    }
+
+
+def newest_loop_summary_path() -> Path | None:
+    if not DATA_RUNS_DIR.exists():
+        return None
+    loop_dirs = [
+        path
+        for path in DATA_RUNS_DIR.iterdir()
+        if path.is_dir() and path.name.endswith("-loop")
+    ]
+    if not loop_dirs:
+        return None
+    latest_dir = max(loop_dirs, key=lambda path: path.stat().st_mtime_ns)
+    return latest_dir / "summary.json"
+
+
+def resolve_loop_summary_path(previous_run_ids: set[str]) -> Path | None:
+    new_run_ids = list_loop_run_ids() - previous_run_ids
+    if len(new_run_ids) == 1:
+        run_id = next(iter(new_run_ids))
+        return DATA_RUNS_DIR / run_id / "summary.json"
+    return newest_loop_summary_path()
+
+
+def parse_stage_json_report(stdout: str) -> dict[str, object] | None:
+    for line in reversed(stdout.splitlines()):
+        text = line.strip()
+        if not text:
+            continue
+        try:
+            payload = json.loads(text)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(payload, dict):
+            return payload
+    return None
+
+
+def augment_run_summary_with_refactor(
+    summary_path: Path,
+    refactor_report: dict[str, object],
+) -> None:
+    if not summary_path.exists():
+        return
+
+    payload = json.loads(summary_path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        return
+
+    input_count_raw = refactor_report.get("refactor_input_theorem_count")
+    output_count_raw = refactor_report.get("refactor_output_theorem_count")
+    removed_count: int | None = None
+    if isinstance(input_count_raw, int) and isinstance(output_count_raw, int):
+        removed_count = input_count_raw - output_count_raw
+
+    payload["refactor_preview_status"] = str(refactor_report.get("status", "")).strip()
+    payload["refactor_preview_verify_success"] = bool(refactor_report.get("verify_success", False))
+    payload["refactor_input_theorem_count"] = input_count_raw
+    payload["refactor_output_theorem_count"] = output_count_raw
+    payload["refactor_removed_theorem_count"] = removed_count
+    payload["stage1_refactor_compression_rate"] = refactor_report.get("stage1_refactor_compression_rate")
+    payload["refactor_preview_output_file"] = refactor_report.get("output_file")
+
+    write_json_atomic(summary_path, payload)
 
 
 def require_success(stage_name: str, completed: subprocess.CompletedProcess[str] | None) -> None:
@@ -260,6 +338,7 @@ def main() -> int:
     loop_cmd = build_loop_command(args)
     refactor_cmd = build_refactor_command(args)
     review_input = args.preview_file
+    loop_run_ids_before = list_loop_run_ids()
 
     if args.run_seed:
         require_success("seed-generation", run_stage("seed-generation", seed_cmd, dry_run=args.dry_run))
@@ -267,6 +346,7 @@ def main() -> int:
         print("[pipeline] seed-generation: skipped (--no-run-seed)", file=sys.stderr, flush=True)
 
     require_success("main-loop", run_stage("main-loop", loop_cmd, dry_run=args.dry_run))
+    loop_summary_path = None if args.dry_run else resolve_loop_summary_path(loop_run_ids_before)
 
     if args.run_refactor_pass_1:
         refactor_result = run_stage("refactor-pass-1", refactor_cmd, dry_run=args.dry_run, capture_output=True)
@@ -278,6 +358,22 @@ def main() -> int:
             )
             review_input = str(DEFAULT_DERIVED)
         else:
+            if (
+                not args.dry_run
+                and loop_summary_path is not None
+                and refactor_result is not None
+                and refactor_result.stdout
+            ):
+                refactor_report = parse_stage_json_report(refactor_result.stdout)
+                if refactor_report is not None:
+                    try:
+                        augment_run_summary_with_refactor(loop_summary_path, refactor_report)
+                    except Exception as exc:
+                        print(
+                            f"[pipeline] warning: failed to update {loop_summary_path} with refactor metrics: {exc}",
+                            file=sys.stderr,
+                            flush=True,
+                        )
             require_success("refactor-pass-1", refactor_result)
     else:
         print("[pipeline] refactor-pass-1: skipped (--no-run-refactor-pass-1)", file=sys.stderr, flush=True)

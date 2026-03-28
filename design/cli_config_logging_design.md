@@ -254,9 +254,9 @@ prompt_dir = "prompts"
 log_dir = "data/runs"
 
 [worker]
-command = "uv run scripts/codex_worker.py"
+command = "uv run scripts/llm_worker.py"
 timeout = 420
-codex_timeout = 390
+llm_timeout = 390
 
 [worker.tasks.formalize]
 timeout = 600
@@ -308,7 +308,7 @@ Examples:
 
 - `ATC_WORKER_COMMAND`
 - `ATC_WORKER_TIMEOUT`
-- `ATC_CODEX_TIMEOUT`
+- `ATC_LLM_TIMEOUT`
 - `ATC_FORMALIZE_WORKER_TIMEOUT`
 - `ATC_REPAIR_WORKER_TIMEOUT`
 

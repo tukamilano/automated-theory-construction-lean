@@ -110,7 +110,7 @@ Notes:
 
 - `make loop` is now a thin wrapper around `scripts/atc_cli.py loop`.
 - `make loop` resets the runtime state by default. Use `make loop-continue` if you want to keep the current `Derived.lean` and queue state.
-- If you want a real LLM-backed run instead of the mock worker, see [Run With Codex Worker](#run-with-codex-worker).
+- If you want a real LLM-backed run instead of the mock worker, see [Run With LLM Worker](#run-with-llm-worker).
 
 ## Use Your Own Theory
 
@@ -138,25 +138,50 @@ as extra context when proposing initial problems.
 
 That command refreshes `AutomatedTheoryConstruction/seeds.jsonl` and resets the active runtime state unless you pass `--no-initialize-runtime-state`.
 
-## Run With Codex Worker
+## Run With LLM Worker
 
-If you have Codex CLI available and want the actual worker-backed loop:
+If you have a supported CLI such as Codex or Claude available and want the actual worker-backed loop:
 
 ```bash
 uv run python scripts/atc_cli.py loop
 ```
 
-The `Makefile` still provides shortcuts. `make loop` now wraps the unified CLI:
+Codex example:
 
 ```bash
 uv run python scripts/atc_cli.py loop \
-  --worker-command "uv run scripts/codex_worker.py" \
+  --worker-command "uv run scripts/llm_worker.py" \
+  --llm-provider codex \
+  --llm-model gpt-5.4 \
   --worker-timeout 420 \
-  --codex-timeout 390 \
+  --llm-timeout 390 \
   --main-theorem-interval 10 \
   --main-theorem-formalize-worker-timeout 900 \
   --main-theorem-repair-worker-timeout 600
 ```
+
+Claude example:
+
+```bash
+uv run python scripts/atc_cli.py loop \
+  --worker-command "uv run scripts/llm_worker.py" \
+  --llm-provider claude \
+  --llm-model sonnet \
+  --worker-timeout 420 \
+  --llm-timeout 390 \
+  --main-theorem-interval 10 \
+  --main-theorem-formalize-worker-timeout 900 \
+  --main-theorem-repair-worker-timeout 600
+```
+
+The repository also includes Claude Code project files:
+
+- `.agents/shared/AGENTS.md`
+- `.claude/agents/lean-dev.md`
+
+You can also pin the model in config with `worker.llm_model` and task-specific overrides such as `worker.tasks.refactor_derived.llm_model`.
+
+If `--llm-model` and `worker.llm_model` are both omitted, the worker defaults to `gpt-5.4` for `codex` and `sonnet` for `claude`.
 
 If you want to keep the current runtime state instead of reinitializing it:
 
