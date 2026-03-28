@@ -1,12 +1,72 @@
 # Automated Theory Construction
 
-This repository implements an automated theory-construction loop on top of Lean 4 + Mathlib. Given a base theory, the system proposes candidate statements, attempts to formalize and prove them in Lean, verifies successful results, and accumulates the verified theorems into the derived theory. A central feature of the approach is bottom-up problem creation: instead of only aiming directly at top-level target theorems, it also imitates the way human mathematicians experimentally manipulate formulas, operators, and intermediate identities to generate new local questions that can later grow into larger structure.
+This project builds and verifies nontrivial mathematical structure **automatically** in Lean 4.
 
-## Highlighted Result
+Given only a small axiom system, it generates candidate statements, attempts formal proofs, and accumulates verified theorems into a growing derived theory — without manually specifying targets in advance.
 
-One of the clearest results of the project so far is a Lean development of the canonical commutation relations (CCR) in quantum mechanics that derives substantial Fock-space structure from a minimal abstract axiom system. Starting from creation/annihilation operators together with a vacuum axiom, the resulting development reaches verified ladder formulas, number-operator eigenvalue laws, linear independence of the generated ket family, a finite-dimensional impossibility theorem, and structural representation results for the generated ket span. The resulting development is available here:
+Unlike conventional workflows that aim directly at predefined theorems, this system **constructs theory bottom-up**, continuously generating and refining local statements in a way that mirrors — and scales — experimental mathematical practice.
+
+---
+
+## Core Claim
+
+> Starting from minimal axioms, the system autonomously discovers and verifies structured theory that typically requires deliberate human design.
+
+---
+
+## Highlighted Result: CCR → Fock Space Structure
+
+From a minimal axiom system consisting only of:
+- creation / annihilation operators
+- a vacuum axiom
+
+this system automatically derives:
+
+- ladder operator structure  
+- eigenvalue laws for the number operator  
+- linear independence of generated ket families  
+- a finite-dimensional impossibility theorem  
+- structural representation results of the generated span  
+
+All results are:
+- fully formalized in Lean 4  
+- mechanically verified  
+- produced through the automated loop (not manually curated proofs)  
+
+Crucially, **no explicit representation theory or Fock-space structure is assumed upfront**.
+
+The system recovers these structures purely through iterative exploration of the axioms.
 
 [Application to canonical commutation relations in quantum mechanics](https://gist.github.com/tukamilano/311759e88a5ec11647aa2b83f42ce8a1)
+
+---
+
+## Why This Matters
+
+- Demonstrates that **theory growth itself can be automated**, not just proof search  
+- Shows that **local, experimental statement generation** can scale into global structure  
+- Suggests a path toward systems that discover nontrivial mathematics beyond predefined goals  
+
+---
+
+## Mechanism (High-Level)
+
+1. Start from a base theory (`Theory.lean`)  
+2. Generate candidate statements (bottom-up, local transformations)  
+3. Attempt formalization and proof in Lean  
+4. Verify and append successful theorems (`Derived.lean`)  
+5. Recycle failures into refined subproblems  
+
+This loop runs continuously, producing a growing body of verified results.
+
+---
+
+## Design Principle
+
+> Do not aim directly at the final theorem.  
+> Instead, generate the surrounding structure until the theorem becomes inevitable.
+
+---
 
 ## 3-Minute Quick Start
 
