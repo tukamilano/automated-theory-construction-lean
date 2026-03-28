@@ -44,12 +44,6 @@ Concrete outputs produced by the system:
 - [Application to canonical commutation relations in quantum mechanics](https://gist.github.com/tukamilano/311759e88a5ec11647aa2b83f42ce8a1)
 These are **fully generated and verified Lean developments**, not manually curated examples.
 
-## Notes and Progress
-
-- [Progress](https://tukamilano.github.io/automated-theory-construction-lean/notes/draft/2026/03/27/progress.html) (update 3.27)
-
-For more details and generation examples, please see here.
-
 ## Why This Matters
 
 Most current theorem provers focus on *proving given statements*.
@@ -256,6 +250,10 @@ uv run python scripts/direct_refactor_derived.py \
 ## More Details
 
 Detailed runtime behavior, initialization semantics, worker configuration, queue metadata, and extended command examples are documented in [RUNTIME.md](RUNTIME.md).
+
+## Notes and Progress
+
+- [Progress](https://tukamilano.github.io/automated-theory-construction-lean/notes/draft/2026/03/27/progress.html) (update 3.27)
 
 ## License
 
