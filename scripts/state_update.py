@@ -22,6 +22,7 @@ def enqueue_new_problems(
     new_problems: list[str],
     *,
     source: str = "generated",
+    source_details: dict[str, Any] | None = None,
     failure_threshold: int = 2,
 ) -> dict[str, Any]:
     open_path = data_dir / "open_problems.jsonl"
@@ -43,6 +44,8 @@ def enqueue_new_problems(
     all_ids = [str(row.get("id", "")) for row in open_rows + archived_rows + solved_rows + counter_rows]
 
     added_problem_ids: list[str] = []
+    added_problem_rows: list[dict[str, Any]] = []
+    normalized_source_details = dict(source_details or {})
     for stmt in new_problems:
         norm = normalize_stmt(stmt)
         if not norm or norm in seen_norms:
@@ -50,17 +53,18 @@ def enqueue_new_problems(
         new_id = next_problem_id(all_ids)
         all_ids.append(new_id)
         seen_norms.add(norm)
-        tracked_rows.append(
-            normalize_open_problem_row(
-                {
-                    "id": new_id,
-                    "stmt": stmt,
-                    "src": source,
-                    "priority": "unknown",
-                }
-            )
+        new_row = normalize_open_problem_row(
+            {
+                "id": new_id,
+                "stmt": stmt,
+                "src": source,
+                "priority": "unknown",
+                **normalized_source_details,
+            }
         )
+        tracked_rows.append(new_row)
         added_problem_ids.append(new_id)
+        added_problem_rows.append(dict(new_row))
 
     active_rows, archived_rows = partition_open_problem_rows(
         tracked_rows,
@@ -71,6 +75,7 @@ def enqueue_new_problems(
 
     return {
         "added_problem_ids": added_problem_ids,
+        "added_problem_rows": added_problem_rows,
         "active_open_problem_count": len(active_rows),
         "archived_problem_count": len(archived_rows),
     }
@@ -83,6 +88,8 @@ def apply_state_update(
     verify_success: bool,
     theorem_name: str | None,
     new_problems: list[str],
+    source_details: dict[str, Any] | None = None,
+    result_metadata: dict[str, Any] | None = None,
     failure_threshold: int = 2,
     current_iteration: int = 0,
 ) -> dict[str, Any]:
@@ -115,6 +122,8 @@ def apply_state_update(
 
     all_ids = [str(row.get("id", "")) for row in open_rows + archived_rows + solved_rows + counter_rows]
     added_problem_ids: list[str] = []
+    added_problem_rows: list[dict[str, Any]] = []
+    normalized_source_details = dict(source_details or {})
     for stmt in new_problems:
         norm = normalize_stmt(stmt)
         if not norm or norm in seen_norms:
@@ -122,27 +131,42 @@ def apply_state_update(
         new_id = next_problem_id(all_ids)
         all_ids.append(new_id)
         seen_norms.add(norm)
-        remaining_tracked.append(
-            normalize_open_problem_row(
-                {
-                    "id": new_id,
-                    "stmt": stmt,
-                    "src": "generated",
-                    "priority": "unknown",
-                }
-            )
+        new_row = normalize_open_problem_row(
+            {
+                "id": new_id,
+                "stmt": stmt,
+                "src": "generated",
+                "priority": "unknown",
+                **normalized_source_details,
+            }
         )
+        remaining_tracked.append(new_row)
         added_problem_ids.append(new_id)
+        added_problem_rows.append(dict(new_row))
 
     moved_to = "open"
+    result_details = dict(result_metadata or {})
+    solved_row: dict[str, Any] | None = None
+    counterexample_row: dict[str, Any] | None = None
 
     if verify_success and result == "proof":
         if not theorem_name:
             raise ValueError("theorem_name is required when result=proof and verify_success=true")
-        solved_rows.append({"id": target["id"], "stmt": target["stmt"], "thm": theorem_name})
+        solved_row = {
+            "id": target["id"],
+            "stmt": target["stmt"],
+            "thm": theorem_name,
+            **result_details,
+        }
+        solved_rows.append(solved_row)
         moved_to = "solved"
     elif verify_success and result == "counterexample":
-        counter_rows.append({"id": target["id"], "stmt": target["stmt"]})
+        counterexample_row = {
+            "id": target["id"],
+            "stmt": target["stmt"],
+            **result_details,
+        }
+        counter_rows.append(counterexample_row)
         moved_to = "counterexample"
     else:
         target["failure_count"] = int(target.get("failure_count", 0) or 0) + 1
@@ -163,6 +187,11 @@ def apply_state_update(
         "problem_id": problem_id,
         "moved_to": moved_to,
         "added_problem_ids": added_problem_ids,
+        "added_problem_rows": added_problem_rows,
+        "target_row": target,
+        "solved_row": solved_row,
+        "counterexample_row": counterexample_row,
+        "current_iteration": current_iteration,
     }
 
 

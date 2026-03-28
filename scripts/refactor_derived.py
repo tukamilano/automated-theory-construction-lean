@@ -141,6 +141,24 @@ def verify_refactored_code(derived_file: Path, code: str, timeout_sec: int | Non
         temp_path.unlink(missing_ok=True)
 
 
+def count_theorems_in_code(derived_file: Path, code: str) -> int:
+    with tempfile.NamedTemporaryFile(
+        mode="w",
+        encoding="utf-8",
+        suffix=".lean",
+        prefix="Derived.refactor.count.",
+        dir=str(derived_file.parent),
+        delete=False,
+    ) as handle:
+        temp_path = Path(handle.name)
+        handle.write(code + "\n")
+
+    try:
+        return len(build_derived_entries_from_file(temp_path))
+    finally:
+        temp_path.unlink(missing_ok=True)
+
+
 def build_payload(
     *,
     derived_file: Path,
@@ -249,6 +267,7 @@ def main() -> None:
     derived_code = load_text(derived_file)
     _, theory_context = load_theory_context(theory_file)
     theorem_inventory = build_derived_entries_from_file(derived_file)
+    input_theorem_count = len(theorem_inventory)
     duplicate_groups = build_exact_duplicate_statement_groups(theorem_inventory)
     theorem_reuse_memory = load_theorem_reuse_memory(theorem_reuse_memory_file)
     supporting_theorem_frequency = summarize_supporting_theorem_frequency(theorem_reuse_memory)
@@ -337,6 +356,12 @@ def main() -> None:
             f"raw_output_chars={int(worker_meta.get('raw_output_chars', 0) or 0)})"
         )
         result, candidate_code, summary, change_notes = validate_refactor_output(raw_result)
+        output_theorem_count = count_theorems_in_code(derived_file, candidate_code) if candidate_code else 0
+        compression_rate = (
+            1.0 - (output_theorem_count / input_theorem_count)
+            if input_theorem_count > 0
+            else 0.0
+        )
         if result == "stuck":
             debug_log(f"Round {repair_round}: worker returned stuck")
             report = {
@@ -350,6 +375,9 @@ def main() -> None:
                 "worker_raw_parse_fallback_used": bool(worker_meta.get("raw_parse_fallback_used", False)),
                 "client_json_parse_attempts": int(worker_meta.get("client_json_parse_attempts", 0) or 0),
                 "client_raw_parse_fallback_used": bool(worker_meta.get("client_raw_parse_fallback_used", False)),
+                "refactor_input_theorem_count": input_theorem_count,
+                "refactor_output_theorem_count": output_theorem_count,
+                "stage1_refactor_compression_rate": compression_rate,
             }
             print(json.dumps(report, ensure_ascii=False))
             return
@@ -401,6 +429,9 @@ def main() -> None:
                 "worker_raw_parse_fallback_used": bool(last_worker_meta.get("raw_parse_fallback_used", False)),
                 "client_json_parse_attempts": int(last_worker_meta.get("client_json_parse_attempts", 0) or 0),
                 "client_raw_parse_fallback_used": bool(last_worker_meta.get("client_raw_parse_fallback_used", False)),
+                "refactor_input_theorem_count": input_theorem_count,
+                "refactor_output_theorem_count": output_theorem_count,
+                "stage1_refactor_compression_rate": compression_rate,
             }
             print(json.dumps(report, ensure_ascii=False))
             return

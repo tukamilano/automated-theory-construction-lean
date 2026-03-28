@@ -7,6 +7,7 @@ import subprocess
 import sys
 import tempfile
 import time
+from datetime import datetime
 from pathlib import Path
 from typing import Callable
 from typing import Any
@@ -19,6 +20,7 @@ from common import (
     ARCHIVED_PROBLEMS_FILENAME,
     LEGACY_DEFERRED_PROBLEMS_FILENAME,
     LEGACY_PRUNED_OPEN_PROBLEMS_FILENAME,
+    append_jsonl,
     load_theory_context,
     normalize_open_problem_row,
     normalize_open_problem_priority,
@@ -26,6 +28,7 @@ from common import (
     partition_open_problem_rows,
     read_archived_problem_rows,
     read_jsonl,
+    write_json_atomic,
     write_jsonl_atomic,
 )
 from import_inference import infer_minimal_imports, render_import_block
@@ -72,6 +75,175 @@ OPEN_PROBLEM_PRIORITY_ORDER = {
     "unknown": 2,
     "low": 3,
 }
+
+
+def iso_timestamp_now() -> str:
+    return datetime.now().astimezone().isoformat(timespec="seconds")
+
+
+def monotonic_duration_ms(started_at: float) -> int:
+    return int((time.monotonic() - started_at) * 1000)
+
+
+def build_run_id(kind: str = "loop") -> str:
+    return f"{time.strftime('%Y%m%d-%H%M%S')}-{kind}"
+
+
+def build_run_artifact_paths(data_dir: Path, run_id: str) -> dict[str, Path]:
+    run_dir = data_dir / "runs" / run_id
+    return {
+        "run_dir": run_dir,
+        "summary": run_dir / "summary.json",
+        "phase_attempts": run_dir / "phase_attempts.jsonl",
+        "problem_nodes": run_dir / "problem_nodes.jsonl",
+        "theorem_nodes": run_dir / "theorem_nodes.jsonl",
+        "lineage_edges": run_dir / "lineage_edges.jsonl",
+    }
+
+
+def append_phase_attempt_record(
+    phase_attempts_path: Path,
+    *,
+    run_id: str,
+    session_type: str,
+    iteration: int,
+    entity_id: str,
+    phase: str,
+    worker_task: str,
+    started_at: str,
+    finished_at: str,
+    duration_ms: int,
+    success: bool,
+    result: str,
+    timeout: bool = False,
+    error: str = "",
+) -> None:
+    append_jsonl(
+        phase_attempts_path,
+        {
+            "run_id": run_id,
+            "session_type": session_type,
+            "iteration": iteration,
+            "entity_id": entity_id,
+            "phase": phase,
+            "worker_task": worker_task,
+            "started_at": started_at,
+            "finished_at": finished_at,
+            "duration_ms": duration_ms,
+            "success": bool(success),
+            "result": result,
+            "timeout": bool(timeout),
+            "error": error,
+        },
+    )
+
+
+def append_problem_node_record(
+    problem_nodes_path: Path,
+    *,
+    problem_row: dict[str, Any],
+    run_id: str,
+    iteration: int,
+    session_type: str,
+) -> None:
+    append_jsonl(
+        problem_nodes_path,
+        {
+            "problem_id": str(problem_row.get("id", "")),
+            "stmt": str(problem_row.get("stmt", "")),
+            "src": str(problem_row.get("src", "")),
+            "priority": open_problem_priority_label(problem_row),
+            "created_at_run_id": run_id,
+            "created_at_iteration": iteration,
+            "created_in_session_type": session_type,
+        },
+    )
+
+
+def append_theorem_node_record(
+    theorem_nodes_path: Path,
+    *,
+    theorem_name: str,
+    statement: str,
+    run_id: str,
+    iteration: int,
+    session_type: str,
+) -> None:
+    append_jsonl(
+        theorem_nodes_path,
+        {
+            "theorem_name": theorem_name,
+            "statement": statement,
+            "created_at_run_id": run_id,
+            "created_at_iteration": iteration,
+            "created_in_session_type": session_type,
+        },
+    )
+
+
+def append_lineage_edge_record(
+    lineage_edges_path: Path,
+    *,
+    run_id: str,
+    iteration: int,
+    session_type: str,
+    parent_id: str,
+    child_id: str,
+    edge_type: str,
+) -> None:
+    append_jsonl(
+        lineage_edges_path,
+        {
+            "run_id": run_id,
+            "iteration": iteration,
+            "session_type": session_type,
+            "parent_id": parent_id,
+            "child_id": child_id,
+            "edge_type": edge_type,
+        },
+    )
+
+
+def update_compile_metrics(metrics: dict[str, Any], verify_result: dict[str, Any]) -> None:
+    metrics["compile_attempt_count"] += 1
+    if bool(verify_result.get("success", False)):
+        metrics["compile_success_count"] += 1
+
+
+def finalize_run_summary(
+    summary_path: Path,
+    *,
+    run_id: str,
+    started_at: str,
+    started_monotonic: float,
+    metrics: dict[str, Any],
+    status: str,
+) -> None:
+    finished_at = iso_timestamp_now()
+    compile_attempt_count = int(metrics.get("compile_attempt_count", 0) or 0)
+    compile_success_count = int(metrics.get("compile_success_count", 0) or 0)
+    compile_success_rate = (
+        compile_success_count / compile_attempt_count
+        if compile_attempt_count > 0
+        else 0.0
+    )
+    write_json_atomic(
+        summary_path,
+        {
+            "run_id": run_id,
+            "started_at": started_at,
+            "finished_at": finished_at,
+            "duration_ms": monotonic_duration_ms(started_monotonic),
+            "status": status,
+            "success": bool(metrics.get("solved_per_run", 0) >= 1),
+            "solved_per_run": int(metrics.get("solved_per_run", 0) or 0),
+            "compile_attempt_count": compile_attempt_count,
+            "compile_success_count": compile_success_count,
+            "compile_success_rate": compile_success_rate,
+            "time_to_first_green_ms": metrics.get("time_to_first_green_ms"),
+            "wall_clock_to_last_solve_ms": metrics.get("wall_clock_to_last_solve_ms"),
+        },
+    )
 
 
 def normalize_stmt_text(stmt: str) -> str:
@@ -1325,6 +1497,10 @@ def query_prover_with_retries(
     memory_path: Path,
     current_iteration_full_logs: list[dict[str, Any]],
     same_problem_history_tail: list[dict[str, Any]],
+    run_id: str,
+    session_type: str,
+    iteration: int,
+    phase_attempts_path: Path,
 ) -> tuple[str, str, str, list[str], int, dict[str, Any]]:
     retries = max(1, prover_retries)
     last_result = "stuck"
@@ -1354,7 +1530,8 @@ def query_prover_with_retries(
 
         try:
             debug_log(f"Calling prover for problem {problem_id}, attempt {attempt}/{retries}")
-            prover_start = time.monotonic()
+            prover_started_monotonic = time.monotonic()
+            prover_started_at = iso_timestamp_now()
             prover_payload, worker_meta = invoke_worker_json(
                 settings=worker_settings,
                 task_type="prover",
@@ -1369,9 +1546,26 @@ def query_prover_with_retries(
                 index=attempt,
                 worker_meta=worker_meta,
             )
-            prover_elapsed = time.monotonic() - prover_start
+            prover_finished_at = iso_timestamp_now()
+            prover_elapsed = time.monotonic() - prover_started_monotonic
             debug_log(f"Prover returned for {problem_id}: {prover_payload.get('result', 'unknown')} (took {prover_elapsed:.1f}s)")
         except RuntimeError as exc:
+            append_phase_attempt_record(
+                phase_attempts_path,
+                run_id=run_id,
+                session_type=session_type,
+                iteration=iteration,
+                entity_id=problem_id,
+                phase="proof_nl",
+                worker_task="prover",
+                started_at=prover_started_at,
+                finished_at=iso_timestamp_now(),
+                duration_ms=monotonic_duration_ms(prover_started_monotonic),
+                success=False,
+                result="timeout" if is_worker_timeout_error(exc) else "error",
+                timeout=is_worker_timeout_error(exc),
+                error=str(exc),
+            )
             if is_worker_timeout_error(exc):
                 debug_log(f"Prover timed out for {problem_id}: {exc}")
                 timeout_sketch = (
@@ -1388,6 +1582,20 @@ def query_prover_with_retries(
                 return "stuck", timeout_sketch, "", timeout_subgoals, attempt, last_worker_meta
             raise
         result, proof_sketch, counterexample_text, new_problems = validate_prover_output(prover_payload, problem_id)
+        append_phase_attempt_record(
+            phase_attempts_path,
+            run_id=run_id,
+            session_type=session_type,
+            iteration=iteration,
+            entity_id=problem_id,
+            phase="proof_nl",
+            worker_task="prover",
+            started_at=prover_started_at,
+            finished_at=prover_finished_at,
+            duration_ms=monotonic_duration_ms(prover_started_monotonic),
+            success=result != "stuck",
+            result=result,
+        )
 
         last_result = result
         last_proof_sketch = proof_sketch
@@ -1493,6 +1701,9 @@ def resolve_solver_statement(
     open_rows: list[dict[str, Any]],
     theory_context: str,
     current_iteration_full_logs: list[dict[str, Any]],
+    run_id: str,
+    phase_attempts_path: Path,
+    compile_metrics: dict[str, Any],
 ) -> tuple[str, str, str, str, str, dict[str, Any]]:
     prover_statement_worker_meta: dict[str, Any] = {}
     if prover_statement_worker_settings is None:
@@ -1515,6 +1726,8 @@ def resolve_solver_statement(
         mode="worker",
     )
     prover_statement_prompt = load_prompt_text(prover_statement_prompt_file)
+    stmt_started_monotonic = time.monotonic()
+    stmt_started_at = iso_timestamp_now()
     try:
         result, formalized_stmt, theorem_name_stem, docstring_summary, notes, prover_statement_worker_meta = request_prover_statement_formalization(
             worker_settings=prover_statement_worker_settings,
@@ -1526,6 +1739,22 @@ def resolve_solver_statement(
             current_iteration_full_logs=current_iteration_full_logs,
         )
     except RuntimeError as exc:
+        append_phase_attempt_record(
+            phase_attempts_path,
+            run_id=run_id,
+            session_type="loop",
+            iteration=iteration,
+            entity_id=problem_id,
+            phase="stmt",
+            worker_task="prover_statement",
+            started_at=stmt_started_at,
+            finished_at=iso_timestamp_now(),
+            duration_ms=monotonic_duration_ms(stmt_started_monotonic),
+            success=False,
+            result="timeout" if is_worker_timeout_error(exc) else "error",
+            timeout=is_worker_timeout_error(exc),
+            error=str(exc),
+        )
         if not is_worker_timeout_error(exc):
             raise
         result = "stuck"
@@ -1534,6 +1763,20 @@ def resolve_solver_statement(
         docstring_summary = ""
         notes = f"prover_statement worker timeout: {exc}"
     else:
+        append_phase_attempt_record(
+            phase_attempts_path,
+            run_id=run_id,
+            session_type="loop",
+            iteration=iteration,
+            entity_id=problem_id,
+            phase="stmt",
+            worker_task="prover_statement",
+            started_at=stmt_started_at,
+            finished_at=iso_timestamp_now(),
+            duration_ms=monotonic_duration_ms(stmt_started_monotonic),
+            success=result == "ok",
+            result=result,
+        )
         emit_parse_phase_log(
             phase_logs,
             "prover_statement_parse",
@@ -1544,11 +1787,28 @@ def resolve_solver_statement(
 
     if result == "ok":
         theorem_name = build_theorem_name(problem_id, theorem_name_stem)
+        verify_started_monotonic = time.monotonic()
+        verify_started_at = iso_timestamp_now()
         verify_result = validate_solver_statement_with_lean(
             problem_id=problem_id,
             theorem_name=theorem_name,
             stmt=formalized_stmt,
             timeout_sec=statement_verify_timeout_sec,
+        )
+        update_compile_metrics(compile_metrics, verify_result)
+        append_phase_attempt_record(
+            phase_attempts_path,
+            run_id=run_id,
+            session_type="loop",
+            iteration=iteration,
+            entity_id=problem_id,
+            phase="verify",
+            worker_task="stmt_check",
+            started_at=verify_started_at,
+            finished_at=iso_timestamp_now(),
+            duration_ms=int(verify_result.get("duration_ms", monotonic_duration_ms(verify_started_monotonic)) or 0),
+            success=bool(verify_result.get("success", False)),
+            result="verified" if bool(verify_result.get("success", False)) else "failed",
         )
         if not bool(verify_result.get("success", False)):
             lean_stderr = str(verify_result.get("stderr", "")).strip()
@@ -1822,6 +2082,11 @@ def attempt_formalization_until_timeout(
     forbid_sorry: bool = False,
     max_repair_rounds: int | None = None,
     max_same_error_streak: int | None = None,
+    run_id: str,
+    session_type: str,
+    iteration: int,
+    phase_attempts_path: Path,
+    compile_metrics: dict[str, Any],
 ) -> tuple[bool, str | None, str, str, str, list[str], str, str]:
     verify_success = False
     current_theorem_name = validate_theorem_name(theorem_name)
@@ -1871,6 +2136,8 @@ def attempt_formalization_until_timeout(
 
         try:
             same_problem_history_tail = load_formalization_memory(memory_path, problem_id)[-8:]
+            proof_lean_started_monotonic = time.monotonic()
+            proof_lean_started_at = iso_timestamp_now()
             result, proof_sketch, proof_text, counterexample_text = request_initial_formalization(
                 formalize_worker_settings=formalize_worker_settings,
                 formalizer_prompt=formalizer_prompt,
@@ -1885,6 +2152,22 @@ def attempt_formalization_until_timeout(
                 same_problem_history_tail=same_problem_history_tail,
             )
         except RuntimeError as exc:
+            append_phase_attempt_record(
+                phase_attempts_path,
+                run_id=run_id,
+                session_type=session_type,
+                iteration=iteration,
+                entity_id=problem_id,
+                phase="proof_lean",
+                worker_task="formalize",
+                started_at=proof_lean_started_at,
+                finished_at=iso_timestamp_now(),
+                duration_ms=monotonic_duration_ms(proof_lean_started_monotonic),
+                success=False,
+                result="timeout" if is_worker_timeout_error(exc) else "error",
+                timeout=is_worker_timeout_error(exc),
+                error=str(exc),
+            )
             if is_worker_timeout_error(exc):
                 persisted_history = load_formalization_memory(memory_path, problem_id)
                 verify_error_excerpt = f"formalize worker timeout: {exc}"
@@ -1903,6 +2186,20 @@ def attempt_formalization_until_timeout(
                 save_formalization_memory(memory_path, problem_id, persisted_history)
                 return verify_success, current_theorem_name, "stuck", proof_text, counterexample_text, new_problems, verify_error_excerpt, current_stmt
             raise
+        append_phase_attempt_record(
+            phase_attempts_path,
+            run_id=run_id,
+            session_type=session_type,
+            iteration=iteration,
+            entity_id=problem_id,
+            phase="proof_lean",
+            worker_task="formalize",
+            started_at=proof_lean_started_at,
+            finished_at=iso_timestamp_now(),
+            duration_ms=monotonic_duration_ms(proof_lean_started_monotonic),
+            success=result in {"proof", "counterexample"},
+            result=result,
+        )
         if result not in {"proof", "counterexample"}:
             persisted_history = load_formalization_memory(memory_path, problem_id)
             persisted_history.append(
@@ -1961,7 +2258,10 @@ def attempt_formalization_until_timeout(
                 "top_lines": [],
             }
         else:
+            verify_started_at = iso_timestamp_now()
+            verify_started_monotonic = time.monotonic()
             verify_result = verify_scratch(problem_id, result, scratch_file, timeout_sec=verify_timeout_sec)
+            update_compile_metrics(compile_metrics, verify_result)
             verify_success = bool(verify_result.get("success", False))
             verify_stderr_text = str(verify_result.get("stderr", ""))
             verify_stdout_text = str(verify_result.get("stdout", ""))
@@ -1975,6 +2275,20 @@ def attempt_formalization_until_timeout(
             verify_error_analysis = analyze_lean_failure(
                 verify_stderr_text,
                 verify_stdout_text,
+            )
+            append_phase_attempt_record(
+                phase_attempts_path,
+                run_id=run_id,
+                session_type=session_type,
+                iteration=iteration,
+                entity_id=problem_id,
+                phase="verify",
+                worker_task="scratch_verify",
+                started_at=verify_started_at,
+                finished_at=iso_timestamp_now(),
+                duration_ms=int(verify_result.get("duration_ms", monotonic_duration_ms(verify_started_monotonic)) or 0),
+                success=verify_success,
+                result="verified" if verify_success else "failed",
             )
 
         if phase_logger is not None:
@@ -2194,6 +2508,8 @@ def attempt_formalization_until_timeout(
         }
 
         try:
+            repair_started_monotonic = time.monotonic()
+            repair_started_at = iso_timestamp_now()
             repaired, repair_worker_meta = invoke_worker_json(
                 settings=repair_worker_settings,
                 task_type="repair",
@@ -2208,6 +2524,22 @@ def attempt_formalization_until_timeout(
                 worker_meta=repair_worker_meta,
             )
         except RuntimeError as exc:
+            append_phase_attempt_record(
+                phase_attempts_path,
+                run_id=run_id,
+                session_type=session_type,
+                iteration=iteration,
+                entity_id=problem_id,
+                phase="repair_lean",
+                worker_task="repair",
+                started_at=repair_started_at,
+                finished_at=iso_timestamp_now(),
+                duration_ms=monotonic_duration_ms(repair_started_monotonic),
+                success=False,
+                result="timeout" if is_worker_timeout_error(exc) else "error",
+                timeout=is_worker_timeout_error(exc),
+                error=str(exc),
+            )
             if is_worker_timeout_error(exc):
                 verify_error_excerpt = f"repair worker timeout: {exc}"
                 save_formalization_memory(memory_path, problem_id, repair_history)
@@ -2233,6 +2565,20 @@ def attempt_formalization_until_timeout(
                     current_stmt,
                 )
             raise
+        append_phase_attempt_record(
+            phase_attempts_path,
+            run_id=run_id,
+            session_type=session_type,
+            iteration=iteration,
+            entity_id=problem_id,
+            phase="repair_lean",
+            worker_task="repair",
+            started_at=repair_started_at,
+            finished_at=iso_timestamp_now(),
+            duration_ms=monotonic_duration_ms(repair_started_monotonic),
+            success=True,
+            result="ok",
+        )
         try:
             result, proof_sketch, proof_text, counterexample_text = validate_formalizer_output(repaired, problem_id)
         except ValueError as exc:
@@ -2328,6 +2674,9 @@ def run_manual_main_theorem_check(
     post_expand_count: int,
     failure_threshold: int,
     phase_logs: bool,
+    run_id: str,
+    phase_attempts_path: Path,
+    compile_metrics: dict[str, Any],
 ) -> dict[str, Any]:
     if worker_settings is None:
         emit_phase_log(
@@ -2353,6 +2702,8 @@ def run_manual_main_theorem_check(
         derived_theorem_count=len(derived_entries),
         open_problem_count=len(open_rows),
     )
+    suggest_started_monotonic = time.monotonic()
+    suggest_started_at = iso_timestamp_now()
     try:
         (
             result,
@@ -2372,6 +2723,21 @@ def run_manual_main_theorem_check(
             current_iteration=current_iteration,
         )
     except (RuntimeError, ValueError) as exc:
+        append_phase_attempt_record(
+            phase_attempts_path,
+            run_id=run_id,
+            session_type="main_theorem_session",
+            iteration=current_iteration,
+            entity_id=candidate_id,
+            phase="main_theorem_suggest",
+            worker_task="main_theorem_suggest",
+            started_at=suggest_started_at,
+            finished_at=iso_timestamp_now(),
+            duration_ms=monotonic_duration_ms(suggest_started_monotonic),
+            success=False,
+            result="error",
+            error=str(exc),
+        )
         emit_phase_log(
             phase_logs,
             "main_theorem_suggest_result",
@@ -2386,6 +2752,20 @@ def run_manual_main_theorem_check(
             "verify_success": False,
             "error": str(exc),
         }
+    append_phase_attempt_record(
+        phase_attempts_path,
+        run_id=run_id,
+        session_type="main_theorem_session",
+        iteration=current_iteration,
+        entity_id=candidate_id,
+        phase="main_theorem_suggest",
+        worker_task="main_theorem_suggest",
+        started_at=suggest_started_at,
+        finished_at=iso_timestamp_now(),
+        duration_ms=monotonic_duration_ms(suggest_started_monotonic),
+        success=result == "ok",
+        result=result,
+    )
 
     emit_phase_log(
         phase_logs,
@@ -2433,6 +2813,9 @@ def run_manual_main_theorem_check(
         post_expand_count=post_expand_count,
         failure_threshold=failure_threshold,
         phase_logs=phase_logs,
+        run_id=run_id,
+        phase_attempts_path=phase_attempts_path,
+        compile_metrics=compile_metrics,
     )
     report["suggested_statement"] = statement
     report["suggested_rationale"] = rationale
@@ -2472,6 +2855,9 @@ def process_manual_main_theorem(
     post_expand_count: int,
     failure_threshold: int,
     phase_logs: bool,
+    run_id: str,
+    phase_attempts_path: Path,
+    compile_metrics: dict[str, Any],
 ) -> dict[str, Any]:
     statement = statement.strip()
     theorem_name = theorem_name.strip()
@@ -2503,6 +2889,8 @@ def process_manual_main_theorem(
             theorem_name=theorem_name,
         )
         planner_prompt = load_prompt_text(plan_prompt_file)
+        plan_started_monotonic = time.monotonic()
+        plan_started_at = iso_timestamp_now()
         try:
             (
                 plan_result,
@@ -2526,6 +2914,20 @@ def process_manual_main_theorem(
                 derived_entries=derived_entries,
                 theory_context=theorem_context,
             )
+            append_phase_attempt_record(
+                phase_attempts_path,
+                run_id=run_id,
+                session_type="main_theorem_session",
+                iteration=current_iteration,
+                entity_id=candidate_id,
+                phase="main_theorem_plan",
+                worker_task="main_theorem_plan",
+                started_at=plan_started_at,
+                finished_at=iso_timestamp_now(),
+                duration_ms=monotonic_duration_ms(plan_started_monotonic),
+                success=plan_result == "ok",
+                result=plan_result,
+            )
             if plan_result == "ok":
                 plan_summary = generated_plan_summary
                 proof_sketch = generated_proof_sketch
@@ -2539,6 +2941,21 @@ def process_manual_main_theorem(
             )
         except (RuntimeError, ValueError) as exc:
             plan_notes = f"main theorem plan failed: {exc}"
+            append_phase_attempt_record(
+                phase_attempts_path,
+                run_id=run_id,
+                session_type="main_theorem_session",
+                iteration=current_iteration,
+                entity_id=candidate_id,
+                phase="main_theorem_plan",
+                worker_task="main_theorem_plan",
+                started_at=plan_started_at,
+                finished_at=iso_timestamp_now(),
+                duration_ms=monotonic_duration_ms(plan_started_monotonic),
+                success=False,
+                result="error",
+                error=str(exc),
+            )
             emit_phase_log(
                 phase_logs,
                 "main_theorem_plan_result",
@@ -2585,6 +3002,11 @@ def process_manual_main_theorem(
         forbid_sorry=True,
         max_repair_rounds=max_repair_rounds,
         max_same_error_streak=max_same_error_streak,
+        run_id=run_id,
+        session_type="main_theorem_session",
+        iteration=current_iteration,
+        phase_attempts_path=phase_attempts_path,
+        compile_metrics=compile_metrics,
     )
     emit_phase_log(
         phase_logs,
@@ -2658,6 +3080,8 @@ def process_manual_main_theorem(
             theorem_name=theorem_name,
         )
         post_expand_prompt = load_prompt_text(post_expand_prompt_file)
+        post_expand_started_monotonic = time.monotonic()
+        post_expand_started_at = iso_timestamp_now()
         try:
             post_candidates, post_expand_worker_meta = request_expand_candidates(
                 worker_settings=worker_settings,
@@ -2677,6 +3101,20 @@ def process_manual_main_theorem(
                 max_candidates=post_expand_count,
             )
             post_new_problems = [item["statement"] for item in post_candidates]
+            append_phase_attempt_record(
+                phase_attempts_path,
+                run_id=run_id,
+                session_type="main_theorem_session",
+                iteration=current_iteration,
+                entity_id=candidate_id,
+                phase="post_theorem_expand",
+                worker_task="post_theorem_expand",
+                started_at=post_expand_started_at,
+                finished_at=iso_timestamp_now(),
+                duration_ms=monotonic_duration_ms(post_expand_started_monotonic),
+                success=True,
+                result="ok",
+            )
             emit_phase_log(
                 phase_logs,
                 "post_theorem_expand_result",
@@ -2686,6 +3124,21 @@ def process_manual_main_theorem(
             )
         except (RuntimeError, ValueError) as exc:
             post_expand_error = str(exc)
+            append_phase_attempt_record(
+                phase_attempts_path,
+                run_id=run_id,
+                session_type="main_theorem_session",
+                iteration=current_iteration,
+                entity_id=candidate_id,
+                phase="post_theorem_expand",
+                worker_task="post_theorem_expand",
+                started_at=post_expand_started_at,
+                finished_at=iso_timestamp_now(),
+                duration_ms=monotonic_duration_ms(post_expand_started_monotonic),
+                success=False,
+                result="error",
+                error=post_expand_error,
+            )
             emit_phase_log(
                 phase_logs,
                 "post_theorem_expand_result",
@@ -2699,6 +3152,14 @@ def process_manual_main_theorem(
         data_dir,
         post_new_problems,
         source="post_theorem_expand",
+        source_details={
+            "parent_entity_id": theorem_name,
+            "parent_entity_type": "theorem",
+            "generated_by_phase": "post_theorem_expand",
+            "created_at_run_id": run_id,
+            "created_at_iteration": current_iteration,
+            "created_in_session_type": "main_theorem_session",
+        },
         failure_threshold=failure_threshold,
     )
     priority_refresh_ran, priority_refresh_error, priority_refresh_worker_meta = force_refresh_open_problem_priorities(
@@ -2715,33 +3176,48 @@ def process_manual_main_theorem(
         "status": "proved",
         "verify_success": True,
         "theorem_name": theorem_name,
+        "statement": final_stmt.strip() or statement,
+        "supporting_theorems": list(supporting_theorems),
         "post_theorem_new_problems": post_new_problems,
         "post_theorem_expand_error": post_expand_error,
         "priority_refresh_ran": priority_refresh_ran,
         "priority_refresh_error": priority_refresh_error,
         "enqueue_added_problem_ids": list(enqueue_report.get("added_problem_ids", [])),
+        "enqueue_added_problem_rows": list(enqueue_report.get("added_problem_rows", [])),
     }
 
 
-def prebuild_lean_project() -> None:
+def prebuild_lean_project() -> list[dict[str, Any]]:
     """Build Lean artifacts once during initialization.
 
     Build only the stable library modules here.
     Scratch.lean is a transient verification target and should remain outside
     initialization builds so a broken scratch proof does not block the loop.
     """
+    results: list[dict[str, Any]] = []
     for target in ("AutomatedTheoryConstruction.Theory", "AutomatedTheoryConstruction.Derived"):
+        started = time.monotonic()
         proc = subprocess.run(
             ["lake", "build", target],
             capture_output=True,
             text=True,
             check=False,
         )
+        results.append(
+            {
+                "target": target,
+                "success": proc.returncode == 0,
+                "duration_ms": monotonic_duration_ms(started),
+                "stderr": proc.stderr,
+                "stdout": proc.stdout,
+            }
+        )
         if proc.returncode != 0:
             stderr = (proc.stderr or "").strip()
             stdout = (proc.stdout or "").strip()
             excerpt = stderr or stdout or f"lake build {target} failed without output"
             raise RuntimeError(f"Initialization build failed for {target}: {excerpt}")
+    return results
 
 
 def next_main_theorem_trigger_count(current_count: int, interval: int) -> int | None:
@@ -2811,6 +3287,48 @@ def main() -> None:
     scratch_file = Path(args.scratch_file)
     memory_path = Path(args.formalization_memory_file)
     archived_problems_path = Path(args.archived_problems_file)
+    run_id = build_run_id("loop")
+    run_started_at = iso_timestamp_now()
+    run_started_monotonic = time.monotonic()
+    artifact_paths = build_run_artifact_paths(data_dir, run_id)
+    compile_metrics = {
+        "compile_attempt_count": 0,
+        "compile_success_count": 0,
+        "solved_per_run": 0,
+        "time_to_first_green_ms": None,
+        "wall_clock_to_last_solve_ms": None,
+    }
+    run_status = "started"
+    recorded_problem_ids: set[str] = set()
+    recorded_theorem_names: set[str] = set()
+
+    def record_problem_rows(rows: list[dict[str, Any]], *, iteration: int, session_type: str) -> None:
+        for row in rows:
+            problem_id = str(row.get("id", "")).strip()
+            if not problem_id or problem_id in recorded_problem_ids:
+                continue
+            append_problem_node_record(
+                artifact_paths["problem_nodes"],
+                problem_row=row,
+                run_id=run_id,
+                iteration=iteration,
+                session_type=session_type,
+            )
+            recorded_problem_ids.add(problem_id)
+
+    def record_theorem(theorem_name: str, statement: str, *, iteration: int, session_type: str) -> None:
+        normalized_name = theorem_name.strip()
+        if not normalized_name or normalized_name in recorded_theorem_names:
+            return
+        append_theorem_node_record(
+            artifact_paths["theorem_nodes"],
+            theorem_name=normalized_name,
+            statement=statement,
+            run_id=run_id,
+            iteration=iteration,
+            session_type=session_type,
+        )
+        recorded_theorem_names.add(normalized_name)
 
     if args.initialize_on_start:
         initialize_runtime_state(
@@ -2829,13 +3347,35 @@ def main() -> None:
             archived_problems_file=archived_problems_path,
         )
         debug_log("Running lake build during initialization")
-        prebuild_lean_project()
+        for build_result in prebuild_lean_project():
+            update_compile_metrics(compile_metrics, build_result)
+            append_phase_attempt_record(
+                artifact_paths["phase_attempts"],
+                run_id=run_id,
+                session_type="loop",
+                iteration=0,
+                entity_id=str(build_result.get("target", "")),
+                phase="verify",
+                worker_task="initial_lake_build",
+                started_at=run_started_at,
+                finished_at=iso_timestamp_now(),
+                duration_ms=int(build_result.get("duration_ms", 0) or 0),
+                success=bool(build_result.get("success", False)),
+                result="verified" if bool(build_result.get("success", False)) else "failed",
+            )
         debug_log("Initialization build completed")
 
     _, base_theory_context = load_theory_context(Path(args.theory_file))
     derived_path = Path(args.derived_file)
     derived_entries = extract_derived_theorem_entries(derived_path)
     open_path = data_dir / "open_problems.jsonl"
+    initial_problem_rows = [normalize_open_problem_row(row) for row in read_jsonl(open_path)]
+    initial_problem_rows.extend(read_archived_problem_rows(data_dir))
+    record_problem_rows(
+        initial_problem_rows,
+        iteration=0,
+        session_type="loop",
+    )
 
     worker_settings = None
     prover_worker_settings = None
@@ -2893,6 +3433,15 @@ def main() -> None:
     )
     while True:
         if not open_path.exists() and not archived_path.exists():
+            run_status = "open_problems_missing"
+            finalize_run_summary(
+                artifact_paths["summary"],
+                run_id=run_id,
+                started_at=run_started_at,
+                started_monotonic=run_started_monotonic,
+                metrics=compile_metrics,
+                status=run_status,
+            )
             print({"status": "open_problems_missing", "iterations_completed": completed_iterations})
             return
 
@@ -2900,6 +3449,15 @@ def main() -> None:
         archived_rows = read_archived_problem_rows(data_dir)
         tracked_rows = open_rows + archived_rows
         if not tracked_rows:
+            run_status = "no_open_problems"
+            finalize_run_summary(
+                artifact_paths["summary"],
+                run_id=run_id,
+                started_at=run_started_at,
+                started_monotonic=run_started_monotonic,
+                metrics=compile_metrics,
+                status=run_status,
+            )
             print({"status": "no_open_problems", "iterations_completed": completed_iterations, "archived_problem_count": 0})
             return
 
@@ -2907,6 +3465,15 @@ def main() -> None:
             last_priority_refresh_theorem_count = len(derived_entries)
 
         if args.max_iterations is not None and completed_iterations >= args.max_iterations:
+            run_status = "max_iterations_reached"
+            finalize_run_summary(
+                artifact_paths["summary"],
+                run_id=run_id,
+                started_at=run_started_at,
+                started_monotonic=run_started_monotonic,
+                metrics=compile_metrics,
+                status=run_status,
+            )
             print({"status": "max_iterations_reached", "iterations_completed": completed_iterations})
             return
 
@@ -2970,6 +3537,15 @@ def main() -> None:
             write_jsonl_atomic(archived_path, archived_rows)
 
         if not open_rows:
+            run_status = "no_open_problems"
+            finalize_run_summary(
+                artifact_paths["summary"],
+                run_id=run_id,
+                started_at=run_started_at,
+                started_monotonic=run_started_monotonic,
+                metrics=compile_metrics,
+                status=run_status,
+            )
             print(
                 {
                     "status": "no_open_problems",
@@ -2996,6 +3572,15 @@ def main() -> None:
         picked = pick_next_problem(open_rows)
 
         if picked is None:
+            run_status = "no_open_problems"
+            finalize_run_summary(
+                artifact_paths["summary"],
+                run_id=run_id,
+                started_at=run_started_at,
+                started_monotonic=run_started_monotonic,
+                metrics=compile_metrics,
+                status=run_status,
+            )
             print(
                 {
                     "status": "no_open_problems",
@@ -3028,6 +3613,9 @@ def main() -> None:
             open_rows=open_rows,
             theory_context=initial_theory_context,
             current_iteration_full_logs=current_iteration_full_logs,
+            run_id=run_id,
+            phase_attempts_path=artifact_paths["phase_attempts"],
+            compile_metrics=compile_metrics,
         )
         target_stmt = solver_stmt or original_stmt
         theorem_name = build_theorem_name(problem_id, theorem_name_stem) if solver_stmt else None
@@ -3086,6 +3674,10 @@ def main() -> None:
                 memory_path=memory_path,
                 current_iteration_full_logs=current_iteration_full_logs,
                 same_problem_history_tail=same_problem_history_tail,
+                run_id=run_id,
+                session_type="loop",
+                iteration=completed_iterations + 1,
+                phase_attempts_path=artifact_paths["phase_attempts"],
             )
             emit_parse_phase_log(
                 args.phase_logs,
@@ -3130,6 +3722,11 @@ def main() -> None:
             current_iteration_full_logs=current_iteration_full_logs,
             initial_proof_text=proof_text,
             phase_logger=(lambda **fields: emit_phase_log(args.phase_logs, iteration=completed_iterations + 1, **fields)),
+            run_id=run_id,
+            session_type="loop",
+            iteration=completed_iterations + 1,
+            phase_attempts_path=artifact_paths["phase_attempts"],
+            compile_metrics=compile_metrics,
         )
         if verify_success and result in {"proof", "counterexample"}:
             derived_count_before_append = len(derived_entries)
@@ -3167,6 +3764,8 @@ def main() -> None:
             )
             expand_prompt = load_prompt_text(args.expander_prompt_file)
             same_problem_history_tail = load_formalization_memory(memory_path, problem_id)[-8:]
+            expand_started_monotonic = time.monotonic()
+            expand_started_at = iso_timestamp_now()
             try:
                 expander_candidates, expander_worker_meta = request_expand_candidates(
                     worker_settings=worker_settings,
@@ -3185,6 +3784,20 @@ def main() -> None:
                     same_problem_history_tail=same_problem_history_tail,
                     max_candidates=2,
                 )
+                append_phase_attempt_record(
+                    artifact_paths["phase_attempts"],
+                    run_id=run_id,
+                    session_type="loop",
+                    iteration=completed_iterations + 1,
+                    entity_id=problem_id,
+                    phase="expand",
+                    worker_task="expand",
+                    started_at=expand_started_at,
+                    finished_at=iso_timestamp_now(),
+                    duration_ms=monotonic_duration_ms(expand_started_monotonic),
+                    success=True,
+                    result="ok",
+                )
                 emit_phase_log(
                     args.phase_logs,
                     "expand_generate_result",
@@ -3195,6 +3808,21 @@ def main() -> None:
                 expander_new_problem_suggestions = [item["statement"] for item in expander_candidates]
                 new_problems = merge_new_problems(new_problems, expander_new_problem_suggestions, max_items=2)
             except (RuntimeError, ValueError) as exc:
+                append_phase_attempt_record(
+                    artifact_paths["phase_attempts"],
+                    run_id=run_id,
+                    session_type="loop",
+                    iteration=completed_iterations + 1,
+                    entity_id=problem_id,
+                    phase="expand",
+                    worker_task="expand",
+                    started_at=expand_started_at,
+                    finished_at=iso_timestamp_now(),
+                    duration_ms=monotonic_duration_ms(expand_started_monotonic),
+                    success=False,
+                    result="error",
+                    error=str(exc),
+                )
                 debug_log(f"Expander failed for {problem_id}: {exc}")
                 emit_phase_log(
                     args.phase_logs,
@@ -3211,9 +3839,61 @@ def main() -> None:
             verify_success=verify_success,
             theorem_name=theorem_name,
             new_problems=new_problems,
+            source_details={
+                "parent_entity_id": problem_id,
+                "parent_entity_type": "open_problem",
+                "generated_by_phase": "expand",
+                "created_at_run_id": run_id,
+                "created_at_iteration": completed_iterations + 1,
+                "created_in_session_type": "loop",
+            },
+            result_metadata={
+                "run_id": run_id,
+                "iteration": completed_iterations + 1,
+                "session_type": "loop",
+            },
             failure_threshold=args.open_problem_failure_threshold,
             current_iteration=completed_iterations + 1,
         )
+        current_iteration = completed_iterations + 1
+        record_problem_rows(
+            list(report.get("added_problem_rows", [])),
+            iteration=current_iteration,
+            session_type="loop",
+        )
+        for added_row in list(report.get("added_problem_rows", [])):
+            added_problem_id = str(added_row.get("id", "")).strip()
+            if added_problem_id:
+                append_lineage_edge_record(
+                    artifact_paths["lineage_edges"],
+                    run_id=run_id,
+                    iteration=current_iteration,
+                    session_type="loop",
+                    parent_id=problem_id,
+                    child_id=added_problem_id,
+                    edge_type="generated_from",
+                )
+        if theorem_appended and theorem_name and result == "proof":
+            compile_metrics["solved_per_run"] += 1
+            elapsed_ms = monotonic_duration_ms(run_started_monotonic)
+            if compile_metrics["time_to_first_green_ms"] is None:
+                compile_metrics["time_to_first_green_ms"] = elapsed_ms
+            compile_metrics["wall_clock_to_last_solve_ms"] = elapsed_ms
+            record_theorem(
+                theorem_name,
+                target_stmt,
+                iteration=current_iteration,
+                session_type="loop",
+            )
+            append_lineage_edge_record(
+                artifact_paths["lineage_edges"],
+                run_id=run_id,
+                iteration=current_iteration,
+                session_type="loop",
+                parent_id=problem_id,
+                child_id=theorem_name,
+                edge_type="solved_as",
+            )
         emit_phase_log(args.phase_logs, "state_update", iteration=completed_iterations + 1, problem_id=problem_id)
         completed_iterations += 1
         debug_log(f"=== Iteration {completed_iterations} END ({result}, verify={verify_success}) ===\n")
@@ -3277,7 +3957,61 @@ def main() -> None:
                 post_expand_count=5,
                 failure_threshold=args.open_problem_failure_threshold,
                 phase_logs=args.phase_logs,
+                run_id=run_id,
+                phase_attempts_path=artifact_paths["phase_attempts"],
+                compile_metrics=compile_metrics,
             )
+            if auto_main_theorem_report is not None:
+                main_theorem_name = str(auto_main_theorem_report.get("theorem_name", "")).strip()
+                main_candidate_id = str(auto_main_theorem_report.get("candidate_id", "")).strip()
+                if bool(auto_main_theorem_report.get("verify_success", False)) and main_theorem_name:
+                    record_theorem(
+                        main_theorem_name,
+                        str(auto_main_theorem_report.get("statement", "")),
+                        iteration=completed_iterations,
+                        session_type="main_theorem_session",
+                    )
+                    if main_candidate_id:
+                        append_lineage_edge_record(
+                            artifact_paths["lineage_edges"],
+                            run_id=run_id,
+                            iteration=completed_iterations,
+                            session_type="main_theorem_session",
+                            parent_id=main_candidate_id,
+                            child_id=main_theorem_name,
+                            edge_type="proved_as_main",
+                        )
+                    for supporting_theorem in list(auto_main_theorem_report.get("supporting_theorems", [])):
+                        supporting_name = str(supporting_theorem).strip()
+                        if not supporting_name or not main_candidate_id:
+                            continue
+                        append_lineage_edge_record(
+                            artifact_paths["lineage_edges"],
+                            run_id=run_id,
+                            iteration=completed_iterations,
+                            session_type="main_theorem_session",
+                            parent_id=supporting_name,
+                            child_id=main_candidate_id,
+                            edge_type="selected_as_main",
+                        )
+                added_problem_rows = list(auto_main_theorem_report.get("enqueue_added_problem_rows", []))
+                record_problem_rows(
+                    added_problem_rows,
+                    iteration=completed_iterations,
+                    session_type="main_theorem_session",
+                )
+                for added_row in added_problem_rows:
+                    added_problem_id = str(added_row.get("id", "")).strip()
+                    if added_problem_id and main_theorem_name:
+                        append_lineage_edge_record(
+                            artifact_paths["lineage_edges"],
+                            run_id=run_id,
+                            iteration=completed_iterations,
+                            session_type="main_theorem_session",
+                            parent_id=main_theorem_name,
+                            child_id=added_problem_id,
+                            edge_type="post_theorem_expand",
+                        )
             emit_phase_log(
                 args.phase_logs,
                 "main_theorem_interval_result",

@@ -37,6 +37,21 @@ def write_jsonl_atomic(path: Path, rows: list[dict[str, Any]]) -> None:
     os.replace(tmp_path, path)
 
 
+def append_jsonl(path: Path, row: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(row, ensure_ascii=False, separators=(",", ":")) + "\n")
+
+
+def write_json_atomic(path: Path, payload: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    serialized = json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+    with tempfile.NamedTemporaryFile("w", encoding="utf-8", dir=str(path.parent), delete=False) as tmp:
+        tmp.write(serialized)
+        tmp_path = Path(tmp.name)
+    os.replace(tmp_path, path)
+
+
 def normalize_stmt(stmt: str) -> str:
     return " ".join(stmt.strip().lower().split())
 
