@@ -3,11 +3,13 @@ from __future__ import annotations
 import json
 import os
 import re
-import subprocess
 import sys
 import tempfile
 from pathlib import Path
 from typing import Any
+
+from llm_exec import resolve_provider
+from llm_exec import run_llm_exec
 
 
 def _single_line_excerpt(text: str, limit: int = 400) -> str:
@@ -28,6 +30,16 @@ def _resolve_task_env(task_type: str, suffix: str, default: str = "") -> str:
     if task_override:
         return task_override
     return (os.getenv(f"ATC_{suffix}") or default).strip()
+
+
+def _resolve_codex_timeout_env(task_type: str) -> str:
+    task_override = (os.getenv(_task_env_key(task_type, "CODEX_TIMEOUT")) or "").strip()
+    if task_override:
+        return task_override
+    # Refactor runs are intentionally unbounded unless the refactor task itself sets a timeout.
+    if task_type == "refactor_derived":
+        return ""
+    return (os.getenv("ATC_CODEX_TIMEOUT") or "").strip()
 
 
 def _default_worker_timeout_for_task(task_type: str) -> int | None:
@@ -157,37 +169,26 @@ def _build_contract_repair_prompt(
     )
 
 
-def _run_codex(task_type: str, prompt: str, timeout_sec: int | None) -> tuple[str, str]:
+def _run_codex(task_type: str, prompt: str, timeout_sec: int | None) -> tuple[str, str, str]:
     model = _resolve_task_env(task_type, "CODEX_MODEL")
-    base_cmd: list[str] = [
-        "codex",
-        "exec",
-        "-",
-        "--sandbox",
-        "read-only",
-        "--skip-git-repo-check",
-    ]
-
-    def build_cmd(use_model: bool) -> list[str]:
-        cmd = list(base_cmd)
-        if use_model and model:
-            cmd.extend(["--model", model])
-        return cmd
+    provider = resolve_provider(
+        _resolve_task_env(task_type, "LLM_PROVIDER"),
+        env_name="ATC_LLM_PROVIDER",
+        default="codex",
+    )
 
     with tempfile.NamedTemporaryFile(mode="w+", encoding="utf-8", delete=False) as handle:
         output_path = Path(handle.name)
 
     try:
-        def run_once(use_model: bool) -> subprocess.CompletedProcess[str]:
-            cmd = build_cmd(use_model)
-            cmd.extend(["--output-last-message", str(output_path)])
-            return subprocess.run(
-                cmd,
-                input=prompt,
-                capture_output=True,
-                text=True,
-                timeout=timeout_sec,
-                check=False,
+        def run_once(use_model: bool):
+            return run_llm_exec(
+                provider=provider,
+                prompt=prompt,
+                sandbox="read-only",
+                model=model if use_model else None,
+                output_last_message_path=output_path,
+                timeout_sec=timeout_sec,
             )
 
         completed = run_once(use_model=True)
@@ -195,6 +196,7 @@ def _run_codex(task_type: str, prompt: str, timeout_sec: int | None) -> tuple[st
             stderr = (completed.stderr or "").strip()
             unsupported_model = (
                 model
+                and provider == "codex"
                 and "not supported" in stderr.lower()
                 and "model" in stderr.lower()
             )
@@ -202,14 +204,14 @@ def _run_codex(task_type: str, prompt: str, timeout_sec: int | None) -> tuple[st
                 completed = run_once(use_model=False)
                 if completed.returncode != 0:
                     retry_stderr = (completed.stderr or "").strip()
-                    raise RuntimeError(f"codex exec failed ({completed.returncode}): {retry_stderr}")
+                    raise RuntimeError(f"{provider} exec failed ({completed.returncode}): {retry_stderr}")
             else:
-                raise RuntimeError(f"codex exec failed ({completed.returncode}): {stderr}")
+                raise RuntimeError(f"{provider} exec failed ({completed.returncode}): {stderr}")
 
         text = output_path.read_text(encoding="utf-8") if output_path.exists() else ""
         if not text.strip():
             text = (completed.stdout or "").strip()
-        return text, model
+        return text, model, provider
     finally:
         try:
             output_path.unlink(missing_ok=True)
@@ -220,6 +222,7 @@ def _run_codex(task_type: str, prompt: str, timeout_sec: int | None) -> tuple[st
 def main() -> None:
     response: dict[str, Any]
     task_type = ""
+    resolved_provider = ""
     resolved_model = ""
     contract_retry_used = False
     initial_model_output = ""
@@ -256,7 +259,7 @@ def main() -> None:
             _resolve_task_env(task_type, "WORKER_TIMEOUT", default_outer_timeout_text),
             default_outer_timeout,
         )
-        codex_timeout_text = _resolve_task_env(task_type, "CODEX_TIMEOUT")
+        codex_timeout_text = _resolve_codex_timeout_env(task_type)
         codex_timeout = _resolve_timeout_seconds(codex_timeout_text, None)
         # Keep inner timeout slightly below outer timeout to avoid subprocess timeout races when both are bounded.
         if codex_timeout is not None:
@@ -266,7 +269,11 @@ def main() -> None:
         else:
             timeout_sec = None
         prompt = _build_prompt(task_type=task_type, system_prompt=system_prompt, payload=payload)
-        model_output, resolved_model = _run_codex(task_type=task_type, prompt=prompt, timeout_sec=timeout_sec)
+        model_output, resolved_model, resolved_provider = _run_codex(
+            task_type=task_type,
+            prompt=prompt,
+            timeout_sec=timeout_sec,
+        )
         try:
             result_payload, parse_attempts, used_fallback = _extract_json_object(model_output)
         except ValueError:
@@ -278,7 +285,7 @@ def main() -> None:
                 payload=payload,
                 previous_output=model_output,
             )
-            model_output, resolved_model = _run_codex(
+            model_output, resolved_model, resolved_provider = _run_codex(
                 task_type=task_type,
                 prompt=repair_prompt,
                 timeout_sec=max(30, timeout_sec // 2) if timeout_sec is not None else None,
@@ -304,6 +311,7 @@ def main() -> None:
             "worker_meta": {
                 "worker": "codex_worker",
                 "task_type": task_type,
+                "provider": resolved_provider,
                 "model": resolved_model,
                 "json_parse_attempts": parse_attempts,
                 "raw_parse_fallback_used": used_fallback,
@@ -317,6 +325,8 @@ def main() -> None:
         worker_meta: dict[str, Any] = {"worker": "codex_worker"}
         if task_type:
             worker_meta["task_type"] = task_type
+        if resolved_provider:
+            worker_meta["provider"] = resolved_provider
         if resolved_model:
             worker_meta["model"] = resolved_model
         if contract_retry_used:

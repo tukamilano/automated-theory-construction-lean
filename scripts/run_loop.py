@@ -531,33 +531,10 @@ def validate_main_theorem_plan_output(
     return result, plan_summary, proof_sketch, supporting_theorems, intermediate_lemmas, notes
 
 
-def load_json_payload_from_args(inline_json: str | None, json_file: str | None) -> dict[str, Any] | None:
-    if inline_json is None and json_file is None:
-        return None
-    if inline_json is not None and json_file is not None:
-        raise ValueError("Use only one of inline JSON or JSON file input")
-
-    raw = inline_json
-    if raw is None and json_file is not None:
-        raw = Path(json_file).read_text(encoding="utf-8")
-
-    payload = json.loads(raw)
-    if not isinstance(payload, dict):
-        raise ValueError("JSON payload must be an object")
-    return payload
-
-
 def load_prompt_text(prompt_file: str) -> str:
     path = Path(prompt_file)
     if not path.exists():
         raise ValueError(f"Prompt file not found: {prompt_file}")
-    return path.read_text(encoding="utf-8")
-
-
-def load_optional_text(file_path: str) -> str:
-    path = Path(file_path)
-    if not path.exists():
-        return ""
     return path.read_text(encoding="utf-8")
 
 
@@ -2422,7 +2399,6 @@ def run_manual_main_theorem_check(
             "status": "main_theorem_suggest_stuck",
             "processed": False,
             "verify_success": False,
-            "worker_json_parse_attempts": int(suggest_worker_meta.get("json_parse_attempts", 0) or 0),
         }
 
     report = process_manual_main_theorem(
@@ -2460,7 +2436,6 @@ def run_manual_main_theorem_check(
     )
     report["suggested_statement"] = statement
     report["suggested_rationale"] = rationale
-    report["suggest_worker_json_parse_attempts"] = int(suggest_worker_meta.get("json_parse_attempts", 0) or 0)
     return report
 
 
@@ -2630,7 +2605,6 @@ def process_manual_main_theorem(
             "verify_success": False,
             "verify_error_excerpt": verify_error_excerpt,
             "plan_summary": plan_summary,
-            "worker_json_parse_attempts": int(plan_worker_meta.get("json_parse_attempts", 0) or 0),
         }
 
     theorem_code = append_verified_theorem_from_scratch(
@@ -2745,9 +2719,6 @@ def process_manual_main_theorem(
         "post_theorem_expand_error": post_expand_error,
         "priority_refresh_ran": priority_refresh_ran,
         "priority_refresh_error": priority_refresh_error,
-        "worker_json_parse_attempts": int(plan_worker_meta.get("json_parse_attempts", 0) or 0),
-        "post_expand_worker_json_parse_attempts": int(post_expand_worker_meta.get("json_parse_attempts", 0) or 0),
-        "priority_refresh_worker_json_parse_attempts": int(priority_refresh_worker_meta.get("json_parse_attempts", 0) or 0),
         "enqueue_added_problem_ids": list(enqueue_report.get("added_problem_ids", [])),
     }
 
@@ -2782,6 +2753,7 @@ def next_main_theorem_trigger_count(current_count: int, interval: int) -> int | 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run the minimal prototype loop.")
     parser.add_argument("--initialize-on-start", action=argparse.BooleanOptionalAction, default=True)
+    parser.add_argument("--phase-logs", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--max-iterations", type=int)
     parser.add_argument("--enable-worker", action="store_true")
     parser.add_argument("--worker-command")
@@ -2793,12 +2765,6 @@ def main() -> None:
     parser.add_argument("--main-theorem-repair-worker-timeout", type=int)
     parser.add_argument("--main-theorem-verify-timeout", type=int, default=600)
     parser.add_argument("--main-theorem-formalization-retry-budget-sec", type=int, default=3600)
-    parser.add_argument(
-        "--open-problem-failure-prune-threshold",
-        dest="open_problem_failure_threshold",
-        type=int,
-        help=argparse.SUPPRESS,
-    )
     parser.add_argument("--priority-refresh-theorem-interval", type=int, default=5)
     args = parser.parse_args()
     if args.max_iterations is not None and args.max_iterations < 0:
@@ -2825,10 +2791,7 @@ def main() -> None:
     args.derived_file = "AutomatedTheoryConstruction/Derived.lean"
     args.reset_scratch_on_start = True
     args.reset_derived_on_start = True
-    args.prover_output_json = None
-    args.prover_output_file = None
     args.theory_file = "AutomatedTheoryConstruction/Theory.lean"
-    args.phase_logs = True
     args.prover_statement_prompt_file = "prompts/prover_statement_formalizer.md"
     args.formalizer_prompt_file = "prompts/formalizer_simple.md"
     args.repair_prompt_file = None
@@ -2844,11 +2807,6 @@ def main() -> None:
     args.formalization_memory_file = "data/formalization_memory.json"
     args.archived_problems_file = f"data/{ARCHIVED_PROBLEMS_FILENAME}"
     args.reset_formalization_memory_on_start = True
-    args.mock_result = "stuck"
-    args.mock_proof_text = ""
-    args.mock_counterexample_text = ""
-    args.mock_new_problem = []
-
     data_dir = Path(args.data_dir)
     scratch_file = Path(args.scratch_file)
     memory_path = Path(args.formalization_memory_file)
@@ -2887,41 +2845,45 @@ def main() -> None:
     main_theorem_formalize_worker_settings = None
     main_theorem_repair_worker_settings = None
     prioritize_open_problems_worker_settings = None
-    if args.enable_worker:
-        worker_settings = load_worker_settings(
-            command_override=args.worker_command,
-            timeout_override=args.worker_timeout,
+    if not args.enable_worker:
+        raise ValueError(
+            "run_loop.py now requires --enable-worker. "
+            "Use a contract-compatible worker command such as scripts/codex_worker.py or scripts/mock_worker.py."
         )
-        prover_worker_settings = load_task_worker_settings(
-            task_name="prover",
-            base_settings=worker_settings,
-        )
-        prover_statement_worker_settings = load_task_worker_settings(
-            task_name="prover_statement",
-            base_settings=worker_settings,
-        )
-        formalize_worker_settings = load_task_worker_settings(
-            task_name="formalize",
-            base_settings=worker_settings,
-        )
-        repair_worker_settings = load_task_worker_settings(
-            task_name="repair",
-            base_settings=worker_settings,
-        )
-        main_theorem_formalize_worker_settings = load_task_worker_settings(
-            task_name="formalize",
-            base_settings=worker_settings,
-            timeout_override=args.main_theorem_formalize_worker_timeout,
-        )
-        main_theorem_repair_worker_settings = load_task_worker_settings(
-            task_name="repair",
-            base_settings=worker_settings,
-            timeout_override=args.main_theorem_repair_worker_timeout,
-        )
-        prioritize_open_problems_worker_settings = load_task_worker_settings(
-            task_name="prioritize_open_problems",
-            base_settings=worker_settings,
-        )
+    worker_settings = load_worker_settings(
+        command_override=args.worker_command,
+        timeout_override=args.worker_timeout,
+    )
+    prover_worker_settings = load_task_worker_settings(
+        task_name="prover",
+        base_settings=worker_settings,
+    )
+    prover_statement_worker_settings = load_task_worker_settings(
+        task_name="prover_statement",
+        base_settings=worker_settings,
+    )
+    formalize_worker_settings = load_task_worker_settings(
+        task_name="formalize",
+        base_settings=worker_settings,
+    )
+    repair_worker_settings = load_task_worker_settings(
+        task_name="repair",
+        base_settings=worker_settings,
+    )
+    main_theorem_formalize_worker_settings = load_task_worker_settings(
+        task_name="formalize",
+        base_settings=worker_settings,
+        timeout_override=args.main_theorem_formalize_worker_timeout,
+    )
+    main_theorem_repair_worker_settings = load_task_worker_settings(
+        task_name="repair",
+        base_settings=worker_settings,
+        timeout_override=args.main_theorem_repair_worker_timeout,
+    )
+    prioritize_open_problems_worker_settings = load_task_worker_settings(
+        task_name="prioritize_open_problems",
+        base_settings=worker_settings,
+    )
     completed_iterations = 0
     last_priority_refresh_theorem_count = 0
     archived_path = data_dir / ARCHIVED_PROBLEMS_FILENAME
@@ -3098,7 +3060,6 @@ def main() -> None:
             target_stmt,
         )
 
-        prover_payload = load_json_payload_from_args(args.prover_output_json, args.prover_output_file)
         prover_attempts_used = 1
         proof_sketch = ""
         proof_text = ""
@@ -3110,10 +3071,7 @@ def main() -> None:
             proof_sketch = statement_formalization_notes or "Statement formalization failed before proof search."
             counterexample_text = ""
             new_problems = []
-        elif prover_payload is not None:
-            emit_phase_log(args.phase_logs, "prover", iteration=completed_iterations + 1, problem_id=problem_id, mode="provided")
-            result, proof_sketch, counterexample_text, new_problems = validate_prover_output(prover_payload, problem_id)
-        elif prover_worker_settings is not None:
+        else:
             emit_phase_log(args.phase_logs, "prover", iteration=completed_iterations + 1, problem_id=problem_id, mode="worker")
             prover_prompt = load_prompt_text(args.prover_prompt_file)
             result, proof_sketch, counterexample_text, new_problems, prover_attempts_used, prover_worker_meta = query_prover_with_retries(
@@ -3136,12 +3094,6 @@ def main() -> None:
                 problem_id=problem_id,
                 worker_meta=prover_worker_meta,
             )
-        else:
-            emit_phase_log(args.phase_logs, "prover", iteration=completed_iterations + 1, problem_id=problem_id, mode="mock")
-            result = args.mock_result
-            counterexample_text = args.mock_counterexample_text
-            proof_text = args.mock_proof_text
-            new_problems = []
 
         formalizer_prompt = load_prompt_text(args.formalizer_prompt_file) if formalize_worker_settings is not None else ""
         repair_prompt_file = args.repair_prompt_file or args.formalizer_prompt_file
@@ -3273,33 +3225,10 @@ def main() -> None:
         report["original_stmt"] = original_stmt
         report["formalized_stmt"] = target_stmt if solver_stmt else ""
         report["prover_statement_result"] = statement_formalization_result
-        report["prover_statement_theorem_name_stem"] = theorem_name_stem
-        report["prover_statement_docstring_summary"] = docstring_summary
-        report["prover_statement_notes"] = statement_formalization_notes
         report["prover_attempts_used"] = prover_attempts_used
-        report["prover_proof_sketch"] = proof_sketch
-        report["prover_counterexample_text"] = counterexample_text
-        report["prover_new_problem_suggestions"] = solver_new_problem_suggestions
-        report["expander_new_problem_suggestions"] = expander_new_problem_suggestions
         report["final_new_problems"] = new_problems
-        report["prover_statement_worker_json_parse_attempts"] = int(prover_statement_worker_meta.get("json_parse_attempts", 0) or 0)
-        report["prover_statement_worker_raw_parse_fallback_used"] = bool(prover_statement_worker_meta.get("raw_parse_fallback_used", False))
-        report["prover_statement_client_json_parse_attempts"] = int(prover_statement_worker_meta.get("client_json_parse_attempts", 0) or 0)
-        report["prover_statement_client_raw_parse_fallback_used"] = bool(prover_statement_worker_meta.get("client_raw_parse_fallback_used", False))
-        report["worker_json_parse_attempts"] = int(prover_worker_meta.get("json_parse_attempts", 0) or 0)
-        report["worker_raw_parse_fallback_used"] = bool(prover_worker_meta.get("raw_parse_fallback_used", False))
-        report["client_json_parse_attempts"] = int(prover_worker_meta.get("client_json_parse_attempts", 0) or 0)
-        report["client_raw_parse_fallback_used"] = bool(prover_worker_meta.get("client_raw_parse_fallback_used", False))
-        report["expander_worker_json_parse_attempts"] = int(expander_worker_meta.get("json_parse_attempts", 0) or 0)
-        report["expander_worker_raw_parse_fallback_used"] = bool(expander_worker_meta.get("raw_parse_fallback_used", False))
-        report["expander_client_json_parse_attempts"] = int(expander_worker_meta.get("client_json_parse_attempts", 0) or 0)
-        report["expander_client_raw_parse_fallback_used"] = bool(expander_worker_meta.get("client_raw_parse_fallback_used", False))
         report["priority_refresh_ran"] = priority_refresh_ran
         report["priority_refresh_error"] = priority_refresh_error
-        report["priority_refresh_worker_json_parse_attempts"] = int(priority_refresh_worker_meta.get("json_parse_attempts", 0) or 0)
-        report["priority_refresh_worker_raw_parse_fallback_used"] = bool(priority_refresh_worker_meta.get("raw_parse_fallback_used", False))
-        report["priority_refresh_client_json_parse_attempts"] = int(priority_refresh_worker_meta.get("client_json_parse_attempts", 0) or 0)
-        report["priority_refresh_client_raw_parse_fallback_used"] = bool(priority_refresh_worker_meta.get("client_raw_parse_fallback_used", False))
         auto_main_theorem_report: dict[str, Any] | None = None
         if (
             worker_settings is not None
