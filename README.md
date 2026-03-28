@@ -35,11 +35,30 @@ The system recovers these structures purely through iterative exploration of the
 
 [Application to canonical commutation relations in quantum mechanics](https://gist.github.com/tukamilano/311759e88a5ec11647aa2b83f42ce8a1)
 
+For more details and generation examples, please see here.
+- [Progress](https://tukamilano.github.io/automated-theory-construction-lean/notes/draft/2026/03/27/progress.html) (update 3.27)
+- [Application to provability logic](https://gist.github.com/tukamilano/ba2c5719e0c5e2e1093b5b4dd174c182) (update 3.25)
+- [Application to Pure Type System λU⁻](https://gist.github.com/tukamilano/cc1f22efd19a7553c9b9883f30e119af)
+- [Application to canonical commutation relations in quantum mechanics](https://gist.github.com/tukamilano/311759e88a5ec11647aa2b83f42ce8a1)
+
 ## Why This Matters
 
-- Demonstrates that **theory growth itself can be automated**, not just proof search  
-- Shows that **local, experimental statement generation** can scale into global structure  
-- Suggests a path toward systems that discover nontrivial mathematics beyond predefined goals  
+Most current theorem provers focus on *proving given statements*.
+
+This project targets a different layer:
+
+- generating the statements themselves  
+- organizing them into coherent theory  
+- and doing so without predefined goals  
+
+In other words, this shifts the problem from **proof automation** to **theory construction**.
+
+This distinction is critical:
+
+- proof search scales within a fixed space  
+- theory construction expands the space itself  
+
+The CCR example demonstrates that nontrivial mathematical structure can emerge purely from local exploration of minimal axioms — without embedding domain knowledge or target representations in advance.
 
 ## Mechanism (High-Level)
 
@@ -86,22 +105,6 @@ Notes:
 
 - `make loop` resets the runtime state by default. Use `make loop-continue` if you want to keep the current `Derived.lean` and queue state.
 - If you want a real LLM-backed run instead of the mock worker, see [Run With Codex Worker](#run-with-codex-worker).
-
-Current claim:
-- the repository demonstrates an end-to-end loop for theory-relative problem generation, Lean verification, verified theorem accumulation, and occasional main-theorem attempts
-- the repository is intended as a research prototype for automated theory construction in Lean, not yet as a validated measure of mathematical interestingness or novelty
-
-Current non-claim:
-- it does not yet establish, through sufficient human validation, that the generated theorems are consistently interesting, important, or publishable
-- it does not yet claim benchmarked superiority over simpler conjecture-generation or theorem-proving baselines
-
-For more details and generation examples, please see here.
-- [Progress](https://tukamilano.github.io/automated-theory-construction-lean/notes/draft/2026/03/27/progress.html) (update 3.27)
-- [Application to provability logic](https://gist.github.com/tukamilano/ba2c5719e0c5e2e1093b5b4dd174c182) (update 3.25)
-- [Application to Pure Type System λU⁻](https://gist.github.com/tukamilano/cc1f22efd19a7553c9b9883f30e119af)
-- [Application to canonical commutation relations in quantum mechanics](https://gist.github.com/tukamilano/311759e88a5ec11647aa2b83f42ce8a1)
-
-As the developer is not an expert for these theories, any feedback, suggestions, or contributions are very welcome. Please open an issue or a pull request.
 
 ## Use Your Own Theory
 
