@@ -6,13 +6,9 @@ Given only a small axiom system, it generates candidate statements, attempts for
 
 Unlike conventional workflows that aim directly at predefined theorems, this system **constructs theory bottom-up**, continuously generating and refining local statements in a way that mirrors — and scales — experimental mathematical practice.
 
----
-
 ## Core Claim
 
 > Starting from minimal axioms, the system autonomously discovers and verifies structured theory that typically requires deliberate human design.
-
----
 
 ## Highlighted Result: CCR → Fock Space Structure
 
@@ -39,15 +35,11 @@ The system recovers these structures purely through iterative exploration of the
 
 [Application to canonical commutation relations in quantum mechanics](https://gist.github.com/tukamilano/311759e88a5ec11647aa2b83f42ce8a1)
 
----
-
 ## Why This Matters
 
 - Demonstrates that **theory growth itself can be automated**, not just proof search  
 - Shows that **local, experimental statement generation** can scale into global structure  
 - Suggests a path toward systems that discover nontrivial mathematics beyond predefined goals  
-
----
 
 ## Mechanism (High-Level)
 
@@ -59,14 +51,10 @@ The system recovers these structures purely through iterative exploration of the
 
 This loop runs continuously, producing a growing body of verified results.
 
----
-
 ## Design Principle
 
 > Do not aim directly at the final theorem.  
 > Instead, generate the surrounding structure until the theorem becomes inevitable.
-
----
 
 ## 3-Minute Quick Start
 
