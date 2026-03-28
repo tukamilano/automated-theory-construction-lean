@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import subprocess
 import sys
 import tempfile
 from pathlib import Path
@@ -15,6 +14,9 @@ from common import (
     load_theory_context,
     write_jsonl_atomic,
 )
+from llm_exec import build_exec_command
+from llm_exec import resolve_provider
+from llm_exec import run_llm_exec
 from run_loop import DERIVED_TEMPLATE, SCRATCH_TEMPLATE, prebuild_lean_project
 
 
@@ -236,12 +238,13 @@ def validate_seed_payload(payload: dict[str, Any], seed_count: int) -> list[str]
     return seeds
 
 
-def run_codex(
+def run_llm(
     *,
     prompt: str,
     schema: dict[str, Any],
     repo_root: Path,
     sandbox: str,
+    provider: str,
     model: str | None,
 ) -> str:
     with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", delete=False, suffix=".json") as schema_handle:
@@ -252,38 +255,24 @@ def run_codex(
         output_path = Path(output_handle.name)
 
     try:
-        cmd = [
-            "codex",
-            "exec",
-            "-",
-            "--sandbox",
-            sandbox,
-            "--skip-git-repo-check",
-            "--output-schema",
-            str(schema_path),
-            "--output-last-message",
-            str(output_path),
-        ]
-        if model:
-            cmd.extend(["--model", model])
-
-        completed = subprocess.run(
-            cmd,
-            input=prompt,
-            text=True,
-            cwd=str(repo_root),
-            capture_output=True,
-            check=False,
+        completed = run_llm_exec(
+            provider=provider,
+            prompt=prompt,
+            sandbox=sandbox,
+            model=model,
+            cwd=repo_root,
+            output_schema_path=schema_path,
+            output_last_message_path=output_path,
         )
         if completed.returncode != 0:
             stderr = (completed.stderr or "").strip()
-            raise RuntimeError(f"codex exec failed ({completed.returncode}): {stderr}")
+            raise RuntimeError(f"{provider} exec failed ({completed.returncode}): {stderr}")
 
         text = output_path.read_text(encoding="utf-8") if output_path.exists() else ""
         if not text.strip():
             text = (completed.stdout or "").strip()
         if not text.strip():
-            raise RuntimeError("codex exec returned no final message")
+            raise RuntimeError(f"{provider} exec returned no final message")
         return text
     finally:
         schema_path.unlink(missing_ok=True)
@@ -292,7 +281,7 @@ def run_codex(
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Generate seeds.jsonl from a Theory.lean entry module using `codex exec`."
+        description="Generate seeds.jsonl from a Theory.lean entry module using the configured LLM CLI."
     )
     parser.add_argument("--theory-file", default=str(DEFAULT_THEORY))
     parser.add_argument("--derived-file", default=str(DEFAULT_DERIVED))
@@ -301,6 +290,7 @@ def main() -> int:
     parser.add_argument("--seed-src", default="seed")
     parser.add_argument("--context-file", action="append", default=[])
     parser.add_argument("--extra-instruction", default="")
+    parser.add_argument("--provider")
     parser.add_argument("--model")
     parser.add_argument("--sandbox", default="read-only")
     parser.add_argument("--repo-root", default=str(DEFAULT_REPO_ROOT))
@@ -312,6 +302,7 @@ def main() -> int:
         raise SystemExit("--seed-count must be positive")
 
     repo_root = Path(args.repo_root).resolve()
+    provider = resolve_provider(args.provider)
     theory_file = (repo_root / args.theory_file).resolve() if not Path(args.theory_file).is_absolute() else Path(args.theory_file)
     derived_arg = Path(args.derived_file)
     derived_file = (repo_root / derived_arg).resolve() if not derived_arg.is_absolute() else derived_arg.resolve()
@@ -361,31 +352,25 @@ def main() -> int:
     schema = build_output_schema(args.seed_count)
 
     if args.dry_run:
-        cmd = [
-            "codex",
-            "exec",
-            "-",
-            "--sandbox",
-            args.sandbox,
-            "--skip-git-repo-check",
-            "--output-schema",
-            "<temp-schema.json>",
-            "--output-last-message",
-            "<temp-output.txt>",
-        ]
-        if args.model:
-            cmd.extend(["--model", args.model])
+        cmd = build_exec_command(
+            provider=provider,
+            sandbox=args.sandbox,
+            model=args.model,
+            output_schema_path=Path("<temp-schema.json>"),
+            output_last_message_path=Path("<temp-output.txt>"),
+        )
         sys.stdout.write("Command:\n")
         sys.stdout.write(" ".join(cmd) + "\n\n")
         sys.stdout.write("Prompt:\n")
         sys.stdout.write(prompt)
         return 0
 
-    raw_output = run_codex(
+    raw_output = run_llm(
         prompt=prompt,
         schema=schema,
         repo_root=repo_root,
         sandbox=args.sandbox,
+        provider=provider,
         model=args.model,
     )
     payload = _extract_json_object(raw_output)

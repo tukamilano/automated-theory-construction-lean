@@ -14,7 +14,7 @@ from theorem_reuse_memory import (
     load_theorem_reuse_memory,
     summarize_supporting_theorem_frequency,
 )
-from worker_client import invoke_worker_json, load_task_worker_settings, load_worker_settings
+from worker_client import WorkerSettings, invoke_worker_json, load_task_worker_settings, load_worker_settings
 
 DEFAULT_PREVIEW_OUTPUT = Path("AutomatedTheoryConstruction/Derived.refactored.preview.lean")
 
@@ -258,9 +258,14 @@ def main() -> None:
         timeout_override=args.worker_timeout,
         default_timeout_sec=None,
     )
+    refactor_base_settings = WorkerSettings(
+        command=base_worker_settings.command,
+        timeout_sec=None,
+        propagate_timeout=False,
+    )
     worker_settings = load_task_worker_settings(
         task_name="refactor_derived",
-        base_settings=base_worker_settings,
+        base_settings=refactor_base_settings,
         timeout_override=args.worker_timeout,
     )
 

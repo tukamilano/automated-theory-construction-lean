@@ -56,6 +56,11 @@ class WorkerConfig:
 class RuntimeConfig:
     initialize_on_start: bool = True
     phase_logs: bool = True
+    max_iterations: int | None = None
+    run_seed: bool = True
+    run_refactor_pass_1: bool = True
+    run_refactor_pass_2: bool = True
+    run_main_theorem_session: bool = True
     open_problem_failure_threshold: int = 2
     priority_refresh_theorem_interval: int = 5
     main_theorem_interval: int = 0
@@ -462,6 +467,44 @@ def load_app_config(args: Any) -> tuple[AppConfig, dict[str, str]]:
                 file_keys=("runtime", "phase_logs"),
                 default=True,
                 label="runtime.phase_logs",
+            )
+        ),
+        max_iterations=choose_int(
+            cli_names=("max_iterations",),
+            file_keys=("runtime", "max_iterations"),
+            default=None,
+            minimum=0,
+            label="runtime.max_iterations",
+        ),
+        run_seed=bool(
+            choose_bool(
+                cli_names=("run_seed",),
+                file_keys=("runtime", "run_seed"),
+                default=True,
+                label="runtime.run_seed",
+            )
+        ),
+        run_refactor_pass_1=bool(
+            choose_bool(
+                cli_names=("run_refactor_pass_1",),
+                file_keys=("runtime", "run_refactor_pass_1"),
+                default=True,
+                label="runtime.run_refactor_pass_1",
+            )
+        ),
+        run_refactor_pass_2=bool(
+            choose_bool(
+                cli_names=("run_refactor_pass_2",),
+                file_keys=("runtime", "run_refactor_pass_2"),
+                default=True,
+                label="runtime.run_refactor_pass_2",
+            )
+        ),
+        run_main_theorem_session=bool(
+            choose_bool(
+                file_keys=("runtime", "run_main_theorem_session"),
+                default=True,
+                label="runtime.run_main_theorem_session",
             )
         ),
         open_problem_failure_threshold=int(

@@ -118,24 +118,20 @@ def _seed_command(args: argparse.Namespace, config: AppConfig) -> tuple[list[str
     return cmd, {}
 
 
-def _should_enable_worker(args: argparse.Namespace, config: AppConfig) -> bool:
-    if getattr(args, "enable_worker", None) is not None:
-        return bool(args.enable_worker)
-    return config.worker.command is not None
-
-
 def _loop_command(args: argparse.Namespace, config: AppConfig) -> tuple[list[str], dict[str, str]]:
     cmd = _python_command("run_loop.py")
     _append_bool_flag(cmd, "--initialize-on-start", config.runtime.initialize_on_start)
     _append_bool_flag(cmd, "--phase-logs", config.runtime.phase_logs)
-    if _should_enable_worker(args, config):
-        cmd.append("--enable-worker")
+    cmd.append("--enable-worker")
     if args.skip_verify:
         cmd.append("--skip-verify")
-    _append_flag(cmd, "--max-iterations", args.max_iterations)
+    _append_flag(cmd, "--max-iterations", config.runtime.max_iterations)
     _append_flag(cmd, "--open-problem-failure-threshold", config.runtime.open_problem_failure_threshold)
     _append_flag(cmd, "--priority-refresh-theorem-interval", config.runtime.priority_refresh_theorem_interval)
-    _append_flag(cmd, "--main-theorem-interval", config.runtime.main_theorem_interval)
+    if config.runtime.run_main_theorem_session:
+        _append_flag(cmd, "--main-theorem-interval", config.runtime.main_theorem_interval)
+    else:
+        cmd.extend(["--main-theorem-interval", "0"])
     _append_flag(
         cmd,
         "--main-theorem-formalize-worker-timeout",
@@ -168,7 +164,7 @@ def _pipeline_command(args: argparse.Namespace, config: AppConfig) -> tuple[list
     _append_bool_flag(cmd, "--phase-logs", config.runtime.phase_logs)
     if args.skip_loop_verify:
         cmd.append("--skip-loop-verify")
-    _append_flag(cmd, "--max-iterations", args.max_iterations)
+    _append_flag(cmd, "--max-iterations", config.runtime.max_iterations)
     _append_flag(cmd, "--open-problem-failure-threshold", config.runtime.open_problem_failure_threshold)
     _append_flag(cmd, "--priority-refresh-theorem-interval", config.runtime.priority_refresh_theorem_interval)
     _append_flag(cmd, "--main-theorem-interval", config.runtime.main_theorem_interval)
@@ -192,6 +188,10 @@ def _pipeline_command(args: argparse.Namespace, config: AppConfig) -> tuple[list
     _append_flag(cmd, "--review-output-file", args.review_output_file or config.paths.reviewed_file)
     _append_flag(cmd, "--review-model", args.review_model)
     _append_flag(cmd, "--review-sandbox", args.review_sandbox)
+    _append_bool_flag(cmd, "--run-seed", config.runtime.run_seed)
+    _append_bool_flag(cmd, "--run-refactor-pass-1", config.runtime.run_refactor_pass_1)
+    _append_bool_flag(cmd, "--run-refactor-pass-2", config.runtime.run_refactor_pass_2)
+    _append_bool_flag(cmd, "--run-main-theorem-session", config.runtime.run_main_theorem_session)
     if args.no_review_verify:
         cmd.append("--no-review-verify")
     return cmd, build_worker_env(config)
@@ -263,7 +263,6 @@ def _build_parser() -> argparse.ArgumentParser:
     _add_worker_flags(loop)
     _add_loop_task_worker_flags(loop)
     loop.add_argument("--max-iterations", type=int)
-    loop.add_argument("--enable-worker", action=argparse.BooleanOptionalAction, default=None)
     loop.add_argument("--initialize-on-start", action=argparse.BooleanOptionalAction, default=None)
     loop.add_argument("--phase-logs", action=argparse.BooleanOptionalAction, default=None)
     loop.add_argument("--skip-verify", action="store_true")
@@ -301,7 +300,9 @@ def _build_parser() -> argparse.ArgumentParser:
     pipeline.add_argument("--review-model")
     pipeline.add_argument("--review-sandbox", default="workspace-write")
     pipeline.add_argument("--no-review-verify", action="store_true")
-
+    pipeline.add_argument("--run-seed", action=argparse.BooleanOptionalAction, default=None)
+    pipeline.add_argument("--run-refactor-pass-1", action=argparse.BooleanOptionalAction, default=None)
+    pipeline.add_argument("--run-refactor-pass-2", action=argparse.BooleanOptionalAction, default=None)
     refactor = subparsers.add_parser("refactor", help="Run the first refactor pass for Derived.lean.")
     _add_common_flags(refactor)
     _add_worker_flags(refactor, include_refactor_task=True)
@@ -338,6 +339,10 @@ def _build_parser() -> argparse.ArgumentParser:
     _add_loop_task_worker_flags(config_show)
     config_show.add_argument("--initialize-on-start", action=argparse.BooleanOptionalAction, default=None)
     config_show.add_argument("--phase-logs", action=argparse.BooleanOptionalAction, default=None)
+    config_show.add_argument("--max-iterations", type=int)
+    config_show.add_argument("--run-seed", action=argparse.BooleanOptionalAction, default=None)
+    config_show.add_argument("--run-refactor-pass-1", action=argparse.BooleanOptionalAction, default=None)
+    config_show.add_argument("--run-refactor-pass-2", action=argparse.BooleanOptionalAction, default=None)
     config_show.add_argument("--open-problem-failure-threshold", type=int)
     config_show.add_argument("--priority-refresh-theorem-interval", type=int)
     config_show.add_argument("--main-theorem-interval", type=int)

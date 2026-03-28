@@ -2,10 +2,13 @@ from __future__ import annotations
 
 import argparse
 import shutil
-import subprocess
 import sys
 import tempfile
 from pathlib import Path
+
+from llm_exec import build_exec_command
+from llm_exec import resolve_provider
+from llm_exec import run_llm_exec
 
 
 DEFAULT_INPUT = Path("AutomatedTheoryConstruction/Derived.refactored.preview.lean")
@@ -55,10 +58,11 @@ When finished, give a short summary of the non-semantic cleanup you made and whe
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Thin wrapper around `codex exec` for review-polishing Derived Lean files."
+        description="Thin wrapper around the configured LLM CLI for review-polishing Derived Lean files."
     )
     parser.add_argument("--input-file", default=str(DEFAULT_INPUT))
     parser.add_argument("--output-file", default=str(DEFAULT_OUTPUT))
+    parser.add_argument("--provider")
     parser.add_argument("--model")
     parser.add_argument("--sandbox", default="workspace-write")
     parser.add_argument("--skip-copy", action="store_true")
@@ -71,6 +75,7 @@ def main() -> int:
 
     input_file = Path(args.input_file)
     output_file = Path(args.output_file)
+    provider = resolve_provider(args.provider)
     policy_file = Path(args.policy_file)
     lean_rule_file = Path(args.lean_rule_file)
     mathlib_usage_file = Path(args.mathlib_usage_file)
@@ -98,16 +103,11 @@ def main() -> int:
         handle.write(prompt)
         prompt_path = Path(handle.name)
 
-    cmd = [
-        "codex",
-        "exec",
-        "-",
-        "--sandbox",
-        args.sandbox,
-        "--skip-git-repo-check",
-    ]
-    if args.model:
-        cmd.extend(["--model", args.model])
+    cmd = build_exec_command(
+        provider=provider,
+        sandbox=args.sandbox,
+        model=args.model,
+    )
 
     if args.dry_run:
         sys.stdout.write("Command:\n")
@@ -116,11 +116,12 @@ def main() -> int:
         return 0
 
     try:
-        completed = subprocess.run(
-            cmd,
-            input=prompt,
-            text=True,
-            check=False,
+        completed = run_llm_exec(
+            provider=provider,
+            prompt=prompt,
+            sandbox=args.sandbox,
+            model=args.model,
+            capture_output=False,
         )
         return completed.returncode
     finally:

@@ -24,18 +24,49 @@ def append_optional_flag(cmd: list[str], flag: str, value: str | int | None) -> 
     cmd.extend([flag, text])
 
 
-def run_stage(name: str, cmd: list[str], *, dry_run: bool) -> None:
+def run_stage(
+    name: str,
+    cmd: list[str],
+    *,
+    dry_run: bool,
+    capture_output: bool = False,
+) -> subprocess.CompletedProcess[str] | None:
     print(f"[pipeline] {name}: {shlex.join(cmd)}", file=sys.stderr, flush=True)
     if dry_run:
-        return
+        return None
 
     completed = subprocess.run(
         cmd,
         cwd=str(REPO_ROOT),
         check=False,
+        capture_output=capture_output,
+        text=capture_output,
     )
-    if completed.returncode != 0:
+    if capture_output:
+        if completed.stdout:
+            sys.stdout.write(completed.stdout)
+            sys.stdout.flush()
+        if completed.stderr:
+            sys.stderr.write(completed.stderr)
+            sys.stderr.flush()
+    return completed
+
+
+def require_success(stage_name: str, completed: subprocess.CompletedProcess[str] | None) -> None:
+    if completed is not None and completed.returncode != 0:
+        print(
+            f"[pipeline] {stage_name} failed with exit code {completed.returncode}",
+            file=sys.stderr,
+            flush=True,
+        )
         raise SystemExit(completed.returncode)
+
+
+def stage_timed_out(completed: subprocess.CompletedProcess[str] | None) -> bool:
+    if completed is None or completed.returncode == 0:
+        return False
+    combined = "\n".join(part for part in (completed.stdout, completed.stderr) if part).lower()
+    return "timed out after" in combined or "timeoutexpired" in combined
 
 
 def build_seed_command(args: argparse.Namespace) -> list[str]:
@@ -95,7 +126,10 @@ def build_loop_command(args: argparse.Namespace) -> list[str]:
     append_optional_flag(cmd, "--prioritize-open-problems-worker-timeout", args.prioritize_open_problems_worker_timeout)
     append_optional_flag(cmd, "--priority-refresh-theorem-interval", args.priority_refresh_theorem_interval)
     append_optional_flag(cmd, "--open-problem-failure-threshold", args.open_problem_failure_threshold)
-    append_optional_flag(cmd, "--main-theorem-interval", args.main_theorem_interval)
+    if args.run_main_theorem_session:
+        append_optional_flag(cmd, "--main-theorem-interval", args.main_theorem_interval)
+    else:
+        cmd.extend(["--main-theorem-interval", "0"])
     append_optional_flag(
         cmd,
         "--main-theorem-formalize-worker-timeout",
@@ -136,14 +170,14 @@ def build_refactor_command(args: argparse.Namespace) -> list[str]:
     return cmd
 
 
-def build_review_command(args: argparse.Namespace) -> list[str]:
+def build_review_command_with_input(args: argparse.Namespace, *, input_file: str) -> list[str]:
     cmd = [
         "uv",
         "run",
         "python",
         "scripts/direct_refactor_derived.py",
         "--input-file",
-        args.preview_file,
+        input_file,
         "--output-file",
         args.review_output_file,
         "--sandbox",
@@ -203,12 +237,6 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--main-theorem-repair-worker-timeout", type=int)
     parser.add_argument("--main-theorem-verify-timeout", type=int)
     parser.add_argument("--main-theorem-formalization-retry-budget-sec", type=int)
-    parser.add_argument(
-        "--open-problem-failure-prune-threshold",
-        dest="open_problem_failure_threshold",
-        type=int,
-        help=argparse.SUPPRESS,
-    )
     parser.add_argument("--refactor-worker-command")
     parser.add_argument("--refactor-worker-timeout", type=int)
     parser.add_argument("--refactor-verify-timeout", type=int)
@@ -217,6 +245,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--review-model")
     parser.add_argument("--review-sandbox", default="workspace-write")
     parser.add_argument("--no-review-verify", action="store_true")
+    parser.add_argument("--run-seed", action=argparse.BooleanOptionalAction, default=True)
+    parser.add_argument("--run-refactor-pass-1", action=argparse.BooleanOptionalAction, default=True)
+    parser.add_argument("--run-refactor-pass-2", action=argparse.BooleanOptionalAction, default=True)
+    parser.add_argument("--run-main-theorem-session", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--dry-run", action="store_true")
     return parser.parse_args()
 
@@ -227,12 +259,35 @@ def main() -> int:
     seed_cmd = build_seed_command(args)
     loop_cmd = build_loop_command(args)
     refactor_cmd = build_refactor_command(args)
-    review_cmd = build_review_command(args)
+    review_input = args.preview_file
 
-    run_stage("seed-generation", seed_cmd, dry_run=args.dry_run)
-    run_stage("main-loop", loop_cmd, dry_run=args.dry_run)
-    run_stage("refactor-pass-1", refactor_cmd, dry_run=args.dry_run)
-    run_stage("refactor-pass-2", review_cmd, dry_run=args.dry_run)
+    if args.run_seed:
+        require_success("seed-generation", run_stage("seed-generation", seed_cmd, dry_run=args.dry_run))
+    else:
+        print("[pipeline] seed-generation: skipped (--no-run-seed)", file=sys.stderr, flush=True)
+
+    require_success("main-loop", run_stage("main-loop", loop_cmd, dry_run=args.dry_run))
+
+    if args.run_refactor_pass_1:
+        refactor_result = run_stage("refactor-pass-1", refactor_cmd, dry_run=args.dry_run, capture_output=True)
+        if stage_timed_out(refactor_result):
+            print(
+                "[pipeline] refactor-pass-1 timed out; falling back to direct review from Derived.lean",
+                file=sys.stderr,
+                flush=True,
+            )
+            review_input = str(DEFAULT_DERIVED)
+        else:
+            require_success("refactor-pass-1", refactor_result)
+    else:
+        print("[pipeline] refactor-pass-1: skipped (--no-run-refactor-pass-1)", file=sys.stderr, flush=True)
+        review_input = str(DEFAULT_DERIVED)
+
+    if args.run_refactor_pass_2:
+        review_cmd = build_review_command_with_input(args, input_file=review_input)
+        require_success("refactor-pass-2", run_stage("refactor-pass-2", review_cmd, dry_run=args.dry_run))
+    else:
+        print("[pipeline] refactor-pass-2: skipped (--no-run-refactor-pass-2)", file=sys.stderr, flush=True)
 
     if args.dry_run:
         print("[pipeline] dry-run only; no stage was executed.", file=sys.stderr, flush=True)

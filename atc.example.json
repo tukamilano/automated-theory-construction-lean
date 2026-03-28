@@ -23,13 +23,19 @@
         "timeout": 600
       },
       "refactor_derived": {
-        "timeout": 420
+        "timeout": 420,
+        "codex_timeout": 390
       }
     }
   },
   "runtime": {
     "initialize_on_start": true,
     "phase_logs": true,
+    "max_iterations": 50,
+    "run_seed": true,
+    "run_refactor_pass_1": true,
+    "run_refactor_pass_2": true,
+    "run_main_theorem_session": true,
     "open_problem_failure_threshold": 2,
     "priority_refresh_theorem_interval": 5,
     "main_theorem_interval": 10,

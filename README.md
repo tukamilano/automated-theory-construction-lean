@@ -96,7 +96,6 @@ Run:
 make build
 make check-scratch
 uv run python scripts/atc_cli.py loop \
-  --enable-worker \
   --worker-command "uv run scripts/mock_worker.py" \
   --max-iterations 1
 ```
@@ -144,14 +143,13 @@ That command refreshes `AutomatedTheoryConstruction/seeds.jsonl` and resets the 
 If you have Codex CLI available and want the actual worker-backed loop:
 
 ```bash
-uv run python scripts/atc_cli.py loop --enable-worker
+uv run python scripts/atc_cli.py loop
 ```
 
 The `Makefile` still provides shortcuts. `make loop` now wraps the unified CLI:
 
 ```bash
 uv run python scripts/atc_cli.py loop \
-  --enable-worker \
   --worker-command "uv run scripts/codex_worker.py" \
   --worker-timeout 420 \
   --codex-timeout 390 \
@@ -227,6 +225,7 @@ uv run python scripts/atc_cli.py config show
 
 If `atc.json` exists at the repo root, `scripts/atc_cli.py` picks it up automatically.
 You can also pass an explicit file with `--config path/to/file.json`.
+For example, `runtime.max_iterations` in `atc.json` controls the loop iteration cap unless you override it with `--max-iterations`, `runtime.run_main_theorem_session` toggles the main-theorem session, and `runtime.run_seed` / `runtime.run_refactor_pass_1` / `runtime.run_refactor_pass_2` control which optional pipeline stages run.
 
 The repository also keeps a `Makefile` as a thin wrapper around the CLI:
 
