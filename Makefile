@@ -24,7 +24,7 @@ PIPELINE_ARGS ?=
 REFACTOR_ARGS ?=
 REVIEW_ARGS ?=
 
-.PHONY: help build check check-theory check-derived check-scratch seed loop loop-continue pipeline refactor review
+.PHONY: help build check check-theory check-derived check-scratch smoke seed loop loop-continue pipeline refactor review
 
 help:
 	@printf '%s\n' \
@@ -34,6 +34,7 @@ help:
 		'  make check-theory  - lake env lean $(THEORY_FILE)' \
 		'  make check-derived - lake env lean $(DERIVED_FILE)' \
 		'  make check-scratch - lake env lean $(SCRATCH_FILE)' \
+		'  make smoke         - isolated mock-worker smoke test in a temp repo copy' \
 		'  make seed          - generate seeds.jsonl via scripts/atc_cli.py seed' \
 		'  make loop          - run the default worker loop via scripts/atc_cli.py loop' \
 		'  make loop-continue - same as loop, but keep current runtime state' \
@@ -65,6 +66,9 @@ check-derived:
 
 check-scratch:
 	$(LAKE) env lean $(SCRATCH_FILE)
+
+smoke:
+	python3 tests/smoke_test.py
 
 seed:
 	$(ATC) seed \

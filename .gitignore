@@ -10,6 +10,11 @@ __pycache__/
 .installed.cfg
 .Python
 .venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.hypothesis/
 
 # macOS
 .DS_Store
@@ -21,9 +26,10 @@ __pycache__/
 *.swp
 *.swo
 
-AutomatedTheoryConstruction/
-!AutomatedTheoryConstruction/
-AutomatedTheoryConstruction/*
-!AutomatedTheoryConstruction/seeds.jsonl
-data/*
-docs/*
+# Runtime-generated ATC state
+AutomatedTheoryConstruction/Theory/
+data/runs/
+data/open_problems.jsonl
+data/archived_problems.jsonl
+data/solved_problems.jsonl
+data/theorem_reuse_memory.json
