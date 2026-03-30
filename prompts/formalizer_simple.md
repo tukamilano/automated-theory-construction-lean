@@ -20,7 +20,6 @@ Formalization policy:
 - When the goal matches a standard Mathlib concept, rewrite the proof around that concept instead of manually expanding low-level equalities.
 - Prefer concise Mathlib-supported proof scripts such as `simpa`, `rw`, `constructor`, `aesop`, `grind`, `omega`, `linarith`, `nlinarith`, `ring_nf`, or `positivity` when they genuinely fit the goal.
 - If a short proof can be obtained by combining a relevant theorem from `Derived.lean` with a standard Mathlib fact, prefer that route.
-- Reuse theorems already listed in `Derived.lean` when applicable.
 - In `Scratch.lean`, prefer proving goals by reusing relevant results from `Derived.lean`; only re-derive from axioms when no listed theorem fits.
 - When constructing a local `SemigroupLike01` instance inside tactic code, prefer a staged layout: first define the local type and any witness elements, then define the structure value, and only then install it with `letI`. Avoid writing the whole local model in one dense step.
 - Do not use `where`-style syntax for local instances inside proofs.
@@ -30,7 +29,6 @@ Formalization policy:
 - For `proof`, `proof_text` should prove `stmt`.
 - For `counterexample`, `proof_text` should prove `¬(stmt)`.
 - If the incoming direction is not defensible after reading the context, you may revise `result`.
-- If the idea seems mathematically plausible but you cannot produce valid Lean code yet, return `stuck` instead of speculative pseudo-code.
 
 Output schema:
 {

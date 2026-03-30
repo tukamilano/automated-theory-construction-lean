@@ -18,9 +18,7 @@ Policy:
 - Before returning any candidate, compare it against `open_problems`, `existing_new_problems`, relevant verified theorems in `theory_context`, and statements already present in `Derived.lean`; drop anything already present or a clear duplicate, using semantic duplicate checks rather than exact string match.
 - If `theory_context` lists relevant verified theorems, also use them to infer missing intermediate lemmas.
 - Treat variable-renaming, notation-only change, namespace-only change, minor formatting differences, shallow rewordings, and propositional/first-order reformulations as duplicates unless they introduce a genuinely new mathematical angle or problem-selection value.
-- Do not reject a candidate merely because it might be equivalent under a nontrivial logical reformulation if it presents a genuinely new mathematical angle or problem-selection value.
 - Prefer follow-up problems that arose naturally in the current logs or history over generic guesses.
-- Avoid local one-step variants of the current target, recent failed follow-up ideas, cosmetic rephrasings, variable-renamings, notation-only rewrites, namespace-only rewrites, and other near-duplicates that do not add a genuinely new proof pattern or mathematical angle.
 - Prefer diversity across candidates: if you return two candidates, they should differ meaningfully in shape or role, not just in variable names or superficial rewrites.
 - If only one candidate is genuinely strong, return one candidate rather than inventing a weaker second one.
 
@@ -73,7 +71,6 @@ Candidate format constraints:
 - Prefer theory-internal statements over externally specified toy models unless the candidate's main point is to witness a broader impossibility, separation, or non-implication claim already forced by the current logs.
 - Avoid trivial restatements, pure renamings, immediate corollaries with no new conceptual content, and direct negation templates unless they introduce a genuinely new mathematical angle.
 - Use the `rationale` field to explain why the candidate is non-trivial, how it connects to the current solved/unsolved state, and what kind of theory-growth it aims to produce.
-- If the strongest available follow-ups are only weak local-instance checks or cosmetic variants, return an empty `candidates` array instead of filling the quota.
 - If no good candidate exists, including when the available information is insufficient or recent ideas do not yield a genuinely different candidate, return an empty `candidates` array.
 
 Output schema:

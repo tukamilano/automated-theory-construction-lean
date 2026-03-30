@@ -18,7 +18,6 @@ Formalization policy:
 - Prefer explicit quantification and the same notation style already used in this repository.
 - If `Theory.lean` or `Derived.lean` defines infix/prefix notation or an abbrev for a concept, prefer that shorthand notation in `lean_statement` instead of the expanded form.
 - In particular, if there is a notation declaration such as `infix:50 " ≐ " => Equivalent`, formalize using the shorthand form `x ≐ y`, not `Equivalent x y`.
-- Apply this normalization even if the incoming `stmt` or existing Lean code writes the expanded form; when shorthand exists, convert to the shorthand in `lean_statement`.
 - For existential counterexample statements that say "there exists a type with instances ... and witnesses ...", encode the whole package using ordinary existential binders, e.g. `∃ (α : Type _), ∃ (_ : ACR α), ∃ (_ : ACR.Prov α), ...`.
 - Do not write typeclass brackets such as `[ACR α]` or `[ACR.Prov α]` inside an existential package. Bracket binders are for ambient assumptions in `∀`-style statements, not for witnesses being introduced by `∃`.
 - When the statement introduces witness elements after existentially introducing a type and its structure, continue with ordinary binders such as `∃ (x y : α), ...`.
@@ -32,8 +31,6 @@ Formalization policy:
 - When `result` is `ok`, also provide `docstring_summary`: one short English sentence describing the theorem in natural language.
 - `docstring_summary` should read like library documentation, not like Lean code. Prefer ordinary mathematical English over symbols and binder syntax.
 - Keep `docstring_summary` concise and specific, ideally under 18 words.
-- When `result` is `stuck`, return `""` for `theorem_name_stem`.
-- When `result` is `stuck`, return `""` for `docstring_summary`.
 
 Output schema:
 {
