@@ -27,7 +27,6 @@ __pycache__/
 *.swo
 
 # Runtime-generated ATC state
-AutomatedTheoryConstruction/Theory/
 data/runs/
 data/open_problems.jsonl
 data/archived_problems.jsonl
