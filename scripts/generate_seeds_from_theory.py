@@ -11,13 +11,14 @@ from common import (
     ARCHIVED_PROBLEMS_FILENAME,
     LEGACY_DEFERRED_PROBLEMS_FILENAME,
     LEGACY_PRUNED_OPEN_PROBLEMS_FILENAME,
+    dedupe_problem_rows_by_stmt,
     load_theory_context,
     write_jsonl_atomic,
 )
 from llm_exec import build_exec_command
 from llm_exec import resolve_provider
 from llm_exec import run_llm_exec
-from run_loop import DERIVED_TEMPLATE, SCRATCH_TEMPLATE, prebuild_lean_project
+from run_loop import DERIVED_TEMPLATE, SCRATCH_TEMPLATE, cleanup_parallel_scratch_files, prebuild_lean_project
 
 
 DEFAULT_THEORY = Path("AutomatedTheoryConstruction/Theory.lean")
@@ -56,6 +57,7 @@ def reset_runtime_before_seed_generation(
     write_jsonl_atomic(data_dir / "counterexamples.jsonl", [])
     (data_dir / LEGACY_DEFERRED_PROBLEMS_FILENAME).unlink(missing_ok=True)
     (data_dir / LEGACY_PRUNED_OPEN_PROBLEMS_FILENAME).unlink(missing_ok=True)
+    cleanup_parallel_scratch_files(scratch_file)
 
     scratch_file.parent.mkdir(parents=True, exist_ok=True)
     scratch_file.write_text(SCRATCH_TEMPLATE, encoding="utf-8")
@@ -70,7 +72,7 @@ def reset_runtime_before_seed_generation(
 
 
 def sync_open_problems_from_seed_rows(*, data_dir: Path, rows: list[dict[str, Any]]) -> None:
-    write_jsonl_atomic(data_dir / "open_problems.jsonl", rows)
+    write_jsonl_atomic(data_dir / "open_problems.jsonl", dedupe_problem_rows_by_stmt(rows))
 
 
 def _normalize_stmt(stmt: str) -> str:

@@ -14,6 +14,7 @@
   "worker": {
     "command": "uv run scripts/codex_worker.py",
     "timeout": 420,
+    "codex_model": "gpt-5.2",
     "codex_timeout": 390,
     "tasks": {
       "formalize": {
@@ -31,7 +32,9 @@
   "runtime": {
     "initialize_on_start": true,
     "phase_logs": true,
-    "max_iterations": 10,
+    "seed_count": 5,
+    "max_iterations": 50,
+    "parallel_sessions": 2,
     "run_seed": true,
     "run_refactor_pass_1": true,
     "run_refactor_pass_2": true,

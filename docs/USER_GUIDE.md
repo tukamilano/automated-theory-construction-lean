@@ -75,7 +75,6 @@ uv run python scripts/atc_cli.py --help
 Config files are also supported:
 
 ```bash
-cp atc.example.json atc.json
 uv run python scripts/atc_cli.py config show
 ```
 

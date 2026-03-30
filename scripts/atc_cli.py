@@ -101,7 +101,7 @@ def _seed_command(args: argparse.Namespace, config: AppConfig) -> tuple[list[str
             "--output-file",
             str(config.paths.seeds_file),
             "--seed-count",
-            str(args.seed_count),
+            str(config.runtime.seed_count),
             "--seed-src",
             args.seed_src,
             "--sandbox",
@@ -126,6 +126,7 @@ def _loop_command(args: argparse.Namespace, config: AppConfig) -> tuple[list[str
     if args.skip_verify:
         cmd.append("--skip-verify")
     _append_flag(cmd, "--max-iterations", config.runtime.max_iterations)
+    _append_flag(cmd, "--parallel-sessions", config.runtime.parallel_sessions)
     _append_flag(cmd, "--open-problem-failure-threshold", config.runtime.open_problem_failure_threshold)
     _append_flag(cmd, "--priority-refresh-theorem-interval", config.runtime.priority_refresh_theorem_interval)
     if config.runtime.run_main_theorem_session:
@@ -155,7 +156,7 @@ def _pipeline_command(args: argparse.Namespace, config: AppConfig) -> tuple[list
     cmd = _python_command("run_pipeline.py")
     for path in args.context_file:
         cmd.extend(["--context-file", path])
-    _append_flag(cmd, "--seed-count", args.seed_count)
+    _append_flag(cmd, "--seed-count", config.runtime.seed_count)
     _append_flag(cmd, "--seed-src", args.seed_src)
     _append_flag(cmd, "--seed-extra-instruction", args.seed_extra_instruction)
     _append_flag(cmd, "--seed-model", args.seed_model)
@@ -165,6 +166,7 @@ def _pipeline_command(args: argparse.Namespace, config: AppConfig) -> tuple[list
     if args.skip_loop_verify:
         cmd.append("--skip-loop-verify")
     _append_flag(cmd, "--max-iterations", config.runtime.max_iterations)
+    _append_flag(cmd, "--parallel-sessions", config.runtime.parallel_sessions)
     _append_flag(cmd, "--open-problem-failure-threshold", config.runtime.open_problem_failure_threshold)
     _append_flag(cmd, "--priority-refresh-theorem-interval", config.runtime.priority_refresh_theorem_interval)
     _append_flag(cmd, "--main-theorem-interval", config.runtime.main_theorem_interval)
@@ -250,7 +252,7 @@ def _build_parser() -> argparse.ArgumentParser:
     seed.add_argument("--theory-file")
     seed.add_argument("--derived-file")
     seed.add_argument("--seeds-file")
-    seed.add_argument("--seed-count", type=int, default=4)
+    seed.add_argument("--seed-count", type=int)
     seed.add_argument("--seed-src", default="seed")
     seed.add_argument("--seed-extra-instruction", default="")
     seed.add_argument("--seed-model")
@@ -263,6 +265,7 @@ def _build_parser() -> argparse.ArgumentParser:
     _add_worker_flags(loop)
     _add_loop_task_worker_flags(loop)
     loop.add_argument("--max-iterations", type=int)
+    loop.add_argument("--parallel-sessions", type=int)
     loop.add_argument("--initialize-on-start", action=argparse.BooleanOptionalAction, default=None)
     loop.add_argument("--phase-logs", action=argparse.BooleanOptionalAction, default=None)
     loop.add_argument("--skip-verify", action="store_true")
@@ -278,7 +281,7 @@ def _build_parser() -> argparse.ArgumentParser:
     _add_common_flags(pipeline)
     _add_worker_flags(pipeline, include_refactor_task=True)
     _add_loop_task_worker_flags(pipeline)
-    pipeline.add_argument("--seed-count", type=int, default=4)
+    pipeline.add_argument("--seed-count", type=int)
     pipeline.add_argument("--seed-src", default="seed")
     pipeline.add_argument("--seed-extra-instruction", default="")
     pipeline.add_argument("--seed-model")
@@ -287,6 +290,7 @@ def _build_parser() -> argparse.ArgumentParser:
     pipeline.add_argument("--initialize-on-start", action=argparse.BooleanOptionalAction, default=None)
     pipeline.add_argument("--phase-logs", action=argparse.BooleanOptionalAction, default=None)
     pipeline.add_argument("--max-iterations", type=int)
+    pipeline.add_argument("--parallel-sessions", type=int)
     pipeline.add_argument("--skip-loop-verify", action="store_true")
     pipeline.add_argument("--open-problem-failure-threshold", type=int)
     pipeline.add_argument("--priority-refresh-theorem-interval", type=int)
@@ -339,7 +343,9 @@ def _build_parser() -> argparse.ArgumentParser:
     _add_loop_task_worker_flags(config_show)
     config_show.add_argument("--initialize-on-start", action=argparse.BooleanOptionalAction, default=None)
     config_show.add_argument("--phase-logs", action=argparse.BooleanOptionalAction, default=None)
+    config_show.add_argument("--seed-count", type=int)
     config_show.add_argument("--max-iterations", type=int)
+    config_show.add_argument("--parallel-sessions", type=int)
     config_show.add_argument("--run-seed", action=argparse.BooleanOptionalAction, default=None)
     config_show.add_argument("--run-refactor-pass-1", action=argparse.BooleanOptionalAction, default=None)
     config_show.add_argument("--run-refactor-pass-2", action=argparse.BooleanOptionalAction, default=None)
