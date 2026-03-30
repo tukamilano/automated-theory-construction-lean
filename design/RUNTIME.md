@@ -47,7 +47,7 @@ Open problems may be either Lean-formal statements or semi-formal research promp
 - `prompts/formalizer_simple.md`: formalize/repair prompt
 - `prompts/new_problem_expander.md`: expansion prompt
 - `AutomatedTheoryConstruction/seeds.jsonl`: currently active seed queue
-- `docs/*`: optional papers, notes, and context files for seed generation
+- `materials/*`: optional papers, notes, and context files for seed generation
 - `example/*`: reference examples not wired into `run_loop.py`
 
 ## Seed Generation Only
@@ -63,7 +63,7 @@ uv run python scripts/generate_seeds_from_theory.py \
 - Repeat `--context-file` to provide multiple files.
 - The output path defaults to `AutomatedTheoryConstruction/seeds.jsonl`.
 - Seed generation reads the `Theory.lean` entry file together with its repo-local imported theory modules, so splitting the theory under `AutomatedTheoryConstruction/Theory/` is supported.
-- `docs/` is just a convenient place to keep these materials in the repo; any file path works.
+- `materials/` is just a convenient place to keep these materials in the repo; any file path works.
 - By default, this command first resets the active runtime state, clears archived/solved/counterexample state, resets `Scratch.lean` and `Derived.lean`, rebuilds the stable Lean targets, and then generates fresh seeds against that reset state.
 - As part of that reset, the previous `AutomatedTheoryConstruction/seeds.jsonl` is removed before new seeds are generated.
 - After seed generation finishes, the new `AutomatedTheoryConstruction/seeds.jsonl` is copied into `data/open_problems.jsonl`.

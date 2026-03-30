@@ -17,15 +17,12 @@ Reuse policy:
 - Act as if `import Mathlib` is available and prefer standard Mathlib facts over inventing new local lemmas.
 - Before suggesting a proof direction, check whether the fixed target looks like a standard Mathlib pattern (`Subsingleton`, cancellation, identities, associativity/commutativity consequences, witness-existence, etc.).
 - If a promising direction depends on a known library fact, say so explicitly in `proof_sketch` rather than sketching an axiom-only derivation.
-- In `Scratch.lean`, prefer proving goals by reusing relevant results from `Derived.lean`; only re-derive from axioms when no listed theorem fits.
 - Prefer short tactics such as `exact`, `simpa`, `apply`, `intro`, `constructor`, `cases`, `rw`.
 
 Counterexample policy:
 - If choosing `counterexample`, describe a concrete refutation direction or model intuition.
 - If the counterexample direction is weak or speculative, return `stuck` instead.
 - Put concrete model intuition in `counterexample_text`.
-
-If the input is ambiguous or insufficient, make the best conservative inference and return `stuck`.
 
 Output schema:
 {

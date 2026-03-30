@@ -78,6 +78,13 @@ This loop runs continuously, producing a growing body of verified results.
 > Do not aim directly at the final theorem.  
 > Instead, generate the surrounding structure until the theorem becomes inevitable.
 
+## Documentation
+
+- Getting started: [`docs/GETTING_STARTED.md`](docs/GETTING_STARTED.md)
+- User guide: [`docs/USER_GUIDE.md`](docs/USER_GUIDE.md)
+- Repository ownership map: [`docs/REPO_MAP.md`](docs/REPO_MAP.md)
+- Internal runtime design notes: [`design/RUNTIME.md`](design/RUNTIME.md)
+
 ## 3-Minute Quick Start
 
 If you want the fastest possible first run, use the bundled example theory and the mock worker.
@@ -110,181 +117,7 @@ Notes:
 
 - `make loop` is now a thin wrapper around `scripts/atc_cli.py loop`.
 - `make loop` resets the runtime state by default. Use `make loop-continue` if you want to keep the current `Derived.lean` and queue state.
-- If you want a real LLM-backed run instead of the mock worker, see [Run With Codex Worker](#run-with-codex-worker).
-
-## Use Your Own Theory
-
-To switch from the bundled example to your own theory, edit:
-
-- `AutomatedTheoryConstruction/Theory.lean`
-- `AutomatedTheoryConstruction/Theory/*.lean` as needed for local theory submodules
-- `AutomatedTheoryConstruction/seeds.jsonl` if you want to provide your own initial problems
-
-`Theory.lean` remains the public entry point. If your theory grows beyond one file, keep the imports there and move detailed definitions or helper lemmas under `AutomatedTheoryConstruction/Theory/`.
-
-If you want to regenerate seeds from the current theory plus context files:
-
-```bash
-uv run python scripts/atc_cli.py seed \
-  --context-file path/to/context.tex \
-  --seed-count 4
-```
-
-In addition to `Theory.lean` and its local imported theory modules, seed generation can also read
-natural-language reference materials such as notes, drafts, papers, or problem sketches.
-The repository's `docs/` directory is a natural place to keep these files, although any path works.
-If you put supporting material there, pass it with `--context-file` so the seed generator can use it
-as extra context when proposing initial problems.
-
-That command refreshes `AutomatedTheoryConstruction/seeds.jsonl` and resets the active runtime state unless you pass `--no-initialize-runtime-state`.
-
-## Run With Codex Worker
-
-If you have Codex CLI available and want the actual worker-backed loop:
-
-```bash
-uv run python scripts/atc_cli.py loop
-```
-
-The `Makefile` still provides shortcuts. `make loop` now wraps the unified CLI:
-
-```bash
-uv run python scripts/atc_cli.py loop \
-  --worker-command "uv run scripts/codex_worker.py" \
-  --worker-timeout 420 \
-  --codex-timeout 390 \
-  --main-theorem-interval 10 \
-  --main-theorem-formalize-worker-timeout 900 \
-  --main-theorem-repair-worker-timeout 600
-```
-
-If you want to keep the current runtime state instead of reinitializing it:
-
-```bash
-make loop-continue
-```
-
-## Quick Mental Model
-
-```text
-[Theory.lean (+ optional Theory/*.lean)] + [docs/articles / notes / paper]
-        ↓
-[scripts/generate_seeds_from_theory.py]
-  generate initial open problems
-        ↓
-[seeds.jsonl]
-        ↓
-+-------------------------------------------+
-| [Theory.lean]                             |
-|   entry module for base theory            |
-|   + optional local theory submodules      |
-|         ↓                                 |
-| [scripts/run_loop.py]                     |
-|   generate / formalize / prove / repair   |
-|         ↓                                 |
-| [Scratch.lean]                            |
-|   temporary Lean verification             |
-|         ↓                                 |
-| [Derived.lean]                            |
-|   accumulated verified theorems           |
-+-------------------------------------------+
-        ↓
-[scripts/refactor_derived.py]
-  structural refactor
-        ↓
-[Derived.refactored.preview.lean]
-        ↓
-[scripts/direct_refactor_derived.py]
-  review-focused non-semantic cleanup
-        ↓
-[Derived.refactored.reviewed.lean]
-```
-
-For a first-time reader, the core files are:
-
-- `AutomatedTheoryConstruction/Theory.lean`: theory entry module
-- `AutomatedTheoryConstruction/Theory/*.lean` (optional): local supporting definitions and lemmas imported by `Theory.lean`
-- `AutomatedTheoryConstruction/Scratch.lean`: temporary Lean verification target
-- `AutomatedTheoryConstruction/Derived.lean`: accumulated verified theorems
-- `scripts/run_loop.py`: main loop
-
-## Common Commands
-
-The unified operational entrypoint is:
-
-```bash
-uv run python scripts/atc_cli.py --help
-```
-
-Config files are also supported. The zero-dependency path is JSON:
-
-```bash
-cp atc.example.json atc.json
-uv run python scripts/atc_cli.py config show
-```
-
-If `atc.json` exists at the repo root, `scripts/atc_cli.py` picks it up automatically.
-You can also pass an explicit file with `--config path/to/file.json`.
-For example, `runtime.max_iterations` in `atc.json` controls the loop iteration cap unless you override it with `--max-iterations`, `runtime.run_main_theorem_session` toggles the main-theorem session, and `runtime.run_seed` / `runtime.run_refactor_pass_1` / `runtime.run_refactor_pass_2` control which optional pipeline stages run.
-
-The repository also keeps a `Makefile` as a thin wrapper around the CLI:
-
-```bash
-make help
-```
-
-Build:
-
-```bash
-make build
-```
-
-Check the three main Lean targets:
-
-```bash
-make check
-```
-
-Regenerate seeds from the current theory:
-
-```bash
-uv run python scripts/atc_cli.py seed \
-  --context-file path/to/context.tex \
-  --seed-count 4
-```
-
-Run the one-shot pipeline from seed generation through refactor:
-
-```bash
-uv run python scripts/atc_cli.py pipeline \
-  --context-file path/to/context.tex \
-  --max-iterations 40
-```
-
-Run the final two-stage cleanup of `Derived.lean`:
-
-```bash
-uv run python scripts/atc_cli.py refactor
-uv run python scripts/atc_cli.py review
-```
-
-Equivalent `Makefile` shortcuts remain available:
-
-```bash
-make seed SEED_ARGS="--context-file path/to/context.tex --seed-count 4"
-make loop LOOP_ARGS="--max-iterations 40"
-make pipeline PIPELINE_ARGS="--context-file path/to/context.tex --max-iterations 40"
-make refactor
-make review
-```
-
-```bash
-uv run python scripts/atc_cli.py config show
-```
-
-## More Details
-
-Detailed runtime behavior, initialization semantics, worker configuration, queue metadata, and extended command examples are documented in [design/RUNTIME.md](design/RUNTIME.md).
+- If you want a real LLM-backed run instead of the mock worker, see [`docs/USER_GUIDE.md`](docs/USER_GUIDE.md).
 
 ## Notes and Progress
 
