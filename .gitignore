@@ -26,6 +26,10 @@ __pycache__/
 *.swp
 *.swo
 
+# Keep documentation and context materials tracked
+!docs/
+!docs/**
+
 # Runtime-generated ATC state
 data/runs/
 data/open_problems.jsonl
