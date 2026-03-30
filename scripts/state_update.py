@@ -6,6 +6,7 @@ from typing import Any
 
 from common import (
     ARCHIVED_PROBLEMS_FILENAME,
+    dedupe_problem_rows_by_stmt,
     is_active_open_problem,
     next_problem_id,
     normalize_open_problem_row,
@@ -148,6 +149,20 @@ def apply_state_update(
     result_details = dict(result_metadata or {})
     solved_row: dict[str, Any] | None = None
     counterexample_row: dict[str, Any] | None = None
+    duplicate_stmt_rows_removed: list[dict[str, Any]] = []
+    target_stmt_norm = normalize_stmt(str(target.get("stmt", "")))
+
+    def drop_duplicate_stmt_rows() -> None:
+        nonlocal remaining_tracked, duplicate_stmt_rows_removed
+        if not target_stmt_norm:
+            return
+        kept_rows: list[dict[str, Any]] = []
+        for row in remaining_tracked:
+            if normalize_stmt(str(row.get("stmt", ""))) == target_stmt_norm:
+                duplicate_stmt_rows_removed.append(dict(row))
+                continue
+            kept_rows.append(row)
+        remaining_tracked = kept_rows
 
     if verify_success and result == "proof":
         if not theorem_name:
@@ -158,7 +173,9 @@ def apply_state_update(
             "thm": theorem_name,
             **result_details,
         }
-        solved_rows.append(solved_row)
+        if not any(normalize_stmt(str(row.get("stmt", ""))) == target_stmt_norm for row in solved_rows):
+            solved_rows.append(solved_row)
+        drop_duplicate_stmt_rows()
         moved_to = "solved"
     elif verify_success and result == "counterexample":
         counterexample_row = {
@@ -166,7 +183,9 @@ def apply_state_update(
             "stmt": target["stmt"],
             **result_details,
         }
-        counter_rows.append(counterexample_row)
+        if not any(normalize_stmt(str(row.get("stmt", ""))) == target_stmt_norm for row in counter_rows):
+            counter_rows.append(counterexample_row)
+        drop_duplicate_stmt_rows()
         moved_to = "counterexample"
     else:
         target["failure_count"] = int(target.get("failure_count", 0) or 0) + 1
@@ -175,7 +194,7 @@ def apply_state_update(
             moved_to = "archived"
 
     active_rows, archived_rows = partition_open_problem_rows(
-        remaining_tracked,
+        dedupe_problem_rows_by_stmt(remaining_tracked),
         failure_threshold=failure_threshold,
     )
     write_jsonl_atomic(open_path, active_rows)
@@ -191,6 +210,7 @@ def apply_state_update(
         "target_row": target,
         "solved_row": solved_row,
         "counterexample_row": counterexample_row,
+        "duplicate_stmt_rows_removed": duplicate_stmt_rows_removed,
         "current_iteration": current_iteration,
     }
 

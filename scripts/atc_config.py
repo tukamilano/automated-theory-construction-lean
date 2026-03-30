@@ -56,7 +56,9 @@ class WorkerConfig:
 class RuntimeConfig:
     initialize_on_start: bool = True
     phase_logs: bool = True
+    seed_count: int = 4
     max_iterations: int | None = None
+    parallel_sessions: int = 1
     run_seed: bool = True
     run_refactor_pass_1: bool = True
     run_refactor_pass_2: bool = True
@@ -438,7 +440,7 @@ def load_app_config(args: Any) -> tuple[AppConfig, dict[str, str]]:
             cli_names=("codex_model",),
             env_names=("ATC_CODEX_MODEL",),
             file_keys=("worker", "codex_model"),
-            default=None,
+            default="gpt-5.4",
             label="worker.codex_model",
         ),
         codex_timeout=choose_int(
@@ -469,12 +471,30 @@ def load_app_config(args: Any) -> tuple[AppConfig, dict[str, str]]:
                 label="runtime.phase_logs",
             )
         ),
+        seed_count=int(
+            choose_int(
+                cli_names=("seed_count",),
+                file_keys=("runtime", "seed_count"),
+                default=4,
+                minimum=1,
+                label="runtime.seed_count",
+            )
+        ),
         max_iterations=choose_int(
             cli_names=("max_iterations",),
             file_keys=("runtime", "max_iterations"),
             default=None,
             minimum=0,
             label="runtime.max_iterations",
+        ),
+        parallel_sessions=int(
+            choose_int(
+                cli_names=("parallel_sessions",),
+                file_keys=("runtime", "parallel_sessions"),
+                default=1,
+                minimum=1,
+                label="runtime.parallel_sessions",
+            )
         ),
         run_seed=bool(
             choose_bool(

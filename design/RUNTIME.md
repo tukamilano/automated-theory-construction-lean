@@ -202,11 +202,26 @@ Task-specific overrides:
 Useful Codex worker settings:
 
 - `ATC_CODEX_TIMEOUT`: inner timeout used by `scripts/codex_worker.py`
-- `ATC_CODEX_MODEL`: optional model override for `codex exec`
+- `ATC_CODEX_MODEL`: model override for `codex exec`; when unset, the app config defaults to `gpt-5.4`
 - `ATC_PROVER_CODEX_MODEL`: optional prover-only model override
 - `ATC_PROVER_CODEX_TIMEOUT`: optional prover-only inner timeout override
 - `ATC_PROVER_STATEMENT_CODEX_MODEL`: optional prover-statement-only model override
 - `ATC_PROVER_STATEMENT_CODEX_TIMEOUT`: optional prover-statement-only inner timeout override
+
+The same model settings can be written in `atc.json`. Example:
+
+```json
+{
+  "worker": {
+    "codex_model": "gpt-5.4",
+    "tasks": {
+      "formalize": {
+        "codex_model": "gpt-5.2-codex"
+      }
+    }
+  }
+}
+```
 
 You can also override the same settings through CLI flags such as:
 
