@@ -9,6 +9,8 @@
     "log_dir": "data/runs",
     "preview_file": "AutomatedTheoryConstruction/Derived.refactored.preview.lean",
     "reviewed_file": "AutomatedTheoryConstruction/Derived.refactored.reviewed.lean",
+    "try_at_each_step_raw_output_file": "AutomatedTheoryConstruction/Derived.tryAtEachStep.json",
+    "try_at_each_step_apply_report_file": "AutomatedTheoryConstruction/Derived.tryAtEachStep.apply_report.json",
     "theorem_reuse_memory_file": "data/theorem_reuse_memory.json"
   },
   "worker": {
@@ -37,8 +39,10 @@
     "parallel_sessions": 2,
     "run_seed": true,
     "run_refactor_pass_1": true,
+    "run_refactor_pass_1_5": true,
     "run_refactor_pass_2": true,
     "run_main_theorem_session": true,
+    "try_at_each_step_tactic": "with_reducible exact?",
     "open_problem_failure_threshold": 2,
     "priority_refresh_theorem_interval": 3,
     "main_theorem_interval": 3,

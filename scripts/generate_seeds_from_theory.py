@@ -39,6 +39,14 @@ def _reviewed_file_for(derived_file: Path) -> Path:
     return derived_file.with_name(f"{derived_file.stem}.refactored.reviewed{derived_file.suffix}")
 
 
+def _try_at_each_step_raw_output_file_for(derived_file: Path) -> Path:
+    return derived_file.with_name(f"{derived_file.stem}.tryAtEachStep.json")
+
+
+def _try_at_each_step_apply_report_file_for(derived_file: Path) -> Path:
+    return derived_file.with_name(f"{derived_file.stem}.tryAtEachStep.apply_report.json")
+
+
 def reset_runtime_before_seed_generation(
     *,
     data_dir: Path,
@@ -333,6 +341,8 @@ def main() -> int:
             derived_cleanup_files=(
                 _preview_file_for(derived_file),
                 _reviewed_file_for(derived_file),
+                _try_at_each_step_raw_output_file_for(derived_file),
+                _try_at_each_step_apply_report_file_for(derived_file),
             ),
             formalization_memory_file=(repo_root / DEFAULT_FORMALIZATION_MEMORY).resolve(),
             archived_problems_file=(repo_root / DEFAULT_ARCHIVED).resolve(),

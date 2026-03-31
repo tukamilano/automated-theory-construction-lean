@@ -58,6 +58,11 @@ Any format is fine as long as the workflow can read it.
         ↓
 [Derived.refactored.preview.lean]
         ↓
+[scripts/apply_try_at_each_step_rewrites.py]
+  direct proof-shortening rewrites from `tryAtEachStep`
+        ↓
+[Derived.refactored.preview.lean]
+        ↓
 [scripts/direct_refactor_derived.py]
   review-focused non-semantic cleanup
         ↓
@@ -120,10 +125,11 @@ uv run python scripts/atc_cli.py pipeline \
   --max-iterations 40
 ```
 
-Run the final two-stage cleanup of `Derived.lean`:
+Run the final refactor stages of `Derived.lean`:
 
 ```bash
 uv run python scripts/atc_cli.py refactor
+uv run python scripts/atc_cli.py rewrite
 uv run python scripts/atc_cli.py review
 ```
 
@@ -134,6 +140,7 @@ make seed SEED_ARGS="--context-file materials/example.md --seed-count 4"
 make loop LOOP_ARGS="--max-iterations 40"
 make pipeline PIPELINE_ARGS="--context-file materials/example.md --max-iterations 40"
 make refactor
+make rewrite
 make review
 ```
 

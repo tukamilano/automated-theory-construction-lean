@@ -188,10 +188,26 @@ def _pipeline_command(args: argparse.Namespace, config: AppConfig) -> tuple[list
     )
     _append_flag(cmd, "--preview-file", args.preview_file or config.paths.preview_file)
     _append_flag(cmd, "--review-output-file", args.review_output_file or config.paths.reviewed_file)
+    _append_flag(
+        cmd,
+        "--try-at-each-step-raw-output-file",
+        args.try_at_each_step_raw_output_file or config.paths.try_at_each_step_raw_output_file,
+    )
+    _append_flag(
+        cmd,
+        "--try-at-each-step-apply-report-file",
+        args.try_at_each_step_apply_report_file or config.paths.try_at_each_step_apply_report_file,
+    )
+    _append_flag(
+        cmd,
+        "--try-at-each-step-tactic",
+        args.try_at_each_step_tactic or config.runtime.try_at_each_step_tactic,
+    )
     _append_flag(cmd, "--review-model", args.review_model)
     _append_flag(cmd, "--review-sandbox", args.review_sandbox)
     _append_bool_flag(cmd, "--run-seed", config.runtime.run_seed)
     _append_bool_flag(cmd, "--run-refactor-pass-1", config.runtime.run_refactor_pass_1)
+    _append_bool_flag(cmd, "--run-refactor-pass-1_5", config.runtime.run_refactor_pass_1_5)
     _append_bool_flag(cmd, "--run-refactor-pass-2", config.runtime.run_refactor_pass_2)
     _append_bool_flag(cmd, "--run-main-theorem-session", config.runtime.run_main_theorem_session)
     if args.no_review_verify:
@@ -243,6 +259,31 @@ def _review_command(args: argparse.Namespace, config: AppConfig) -> tuple[list[s
     return cmd, {}
 
 
+def _rewrite_command(args: argparse.Namespace, config: AppConfig) -> tuple[list[str], dict[str, str]]:
+    input_file = args.input_file or config.paths.preview_file
+    output_file = args.output_file or input_file
+    cmd = _python_command("apply_try_at_each_step_rewrites.py")
+    cmd.extend(
+        [
+            "--input-file",
+            str(input_file),
+            "--output-file",
+            str(output_file),
+            "--raw-output-file",
+            str(args.raw_output_file or config.paths.try_at_each_step_raw_output_file),
+            "--apply-report-file",
+            str(args.apply_report_file or config.paths.try_at_each_step_apply_report_file),
+            "--tactic",
+            str(args.tactic or config.runtime.try_at_each_step_tactic),
+        ]
+    )
+    _append_flag(cmd, "--backup-file", args.backup_file)
+    _append_flag(cmd, "--verify-timeout", args.verify_timeout)
+    if args.dry_run:
+        cmd.append("--dry-run")
+    return cmd, {}
+
+
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Unified CLI for the ATC runtime scripts.")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -277,7 +318,7 @@ def _build_parser() -> argparse.ArgumentParser:
     loop.add_argument("--main-theorem-verify-timeout", type=int)
     loop.add_argument("--main-theorem-formalization-retry-budget-sec", type=int)
 
-    pipeline = subparsers.add_parser("pipeline", help="Run seed -> loop -> refactor -> review.")
+    pipeline = subparsers.add_parser("pipeline", help="Run seed -> loop -> refactor -> rewrite -> review.")
     _add_common_flags(pipeline)
     _add_worker_flags(pipeline, include_refactor_task=True)
     _add_loop_task_worker_flags(pipeline)
@@ -301,11 +342,15 @@ def _build_parser() -> argparse.ArgumentParser:
     pipeline.add_argument("--main-theorem-formalization-retry-budget-sec", type=int)
     pipeline.add_argument("--preview-file")
     pipeline.add_argument("--review-output-file")
+    pipeline.add_argument("--try-at-each-step-raw-output-file")
+    pipeline.add_argument("--try-at-each-step-apply-report-file")
+    pipeline.add_argument("--try-at-each-step-tactic")
     pipeline.add_argument("--review-model")
     pipeline.add_argument("--review-sandbox", default="workspace-write")
     pipeline.add_argument("--no-review-verify", action="store_true")
     pipeline.add_argument("--run-seed", action=argparse.BooleanOptionalAction, default=None)
     pipeline.add_argument("--run-refactor-pass-1", action=argparse.BooleanOptionalAction, default=None)
+    pipeline.add_argument("--run-refactor-pass-1_5", action=argparse.BooleanOptionalAction, default=None)
     pipeline.add_argument("--run-refactor-pass-2", action=argparse.BooleanOptionalAction, default=None)
     refactor = subparsers.add_parser("refactor", help="Run the first refactor pass for Derived.lean.")
     _add_common_flags(refactor)
@@ -331,6 +376,16 @@ def _build_parser() -> argparse.ArgumentParser:
     review.add_argument("--lean-rule-file")
     review.add_argument("--mathlib-usage-file")
 
+    rewrite = subparsers.add_parser("rewrite", help="Apply tryAtEachStep rewrites before the review pass.")
+    _add_common_flags(rewrite)
+    rewrite.add_argument("--input-file")
+    rewrite.add_argument("--output-file")
+    rewrite.add_argument("--raw-output-file")
+    rewrite.add_argument("--apply-report-file")
+    rewrite.add_argument("--tactic")
+    rewrite.add_argument("--backup-file")
+    rewrite.add_argument("--verify-timeout", type=int)
+
     config_cmd = subparsers.add_parser("config", help="Inspect resolved configuration.")
     config_subparsers = config_cmd.add_subparsers(dest="config_command", required=True)
     config_show = config_subparsers.add_parser("show", help="Print resolved config as JSON.")
@@ -348,7 +403,11 @@ def _build_parser() -> argparse.ArgumentParser:
     config_show.add_argument("--parallel-sessions", type=int)
     config_show.add_argument("--run-seed", action=argparse.BooleanOptionalAction, default=None)
     config_show.add_argument("--run-refactor-pass-1", action=argparse.BooleanOptionalAction, default=None)
+    config_show.add_argument("--run-refactor-pass-1_5", action=argparse.BooleanOptionalAction, default=None)
     config_show.add_argument("--run-refactor-pass-2", action=argparse.BooleanOptionalAction, default=None)
+    config_show.add_argument("--try-at-each-step-tactic")
+    config_show.add_argument("--try-at-each-step-raw-output-file")
+    config_show.add_argument("--try-at-each-step-apply-report-file")
     config_show.add_argument("--open-problem-failure-threshold", type=int)
     config_show.add_argument("--priority-refresh-theorem-interval", type=int)
     config_show.add_argument("--main-theorem-interval", type=int)
@@ -380,6 +439,7 @@ def main() -> int:
         "loop": _loop_command,
         "pipeline": _pipeline_command,
         "refactor": _refactor_command,
+        "rewrite": _rewrite_command,
         "review": _review_command,
     }
     builder = builders.get(args.command)

@@ -29,6 +29,8 @@ class PathsConfig:
     seeds_file: Path
     preview_file: Path
     reviewed_file: Path
+    try_at_each_step_raw_output_file: Path
+    try_at_each_step_apply_report_file: Path
     data_dir: Path
     prompt_dir: Path
     log_dir: Path
@@ -61,8 +63,10 @@ class RuntimeConfig:
     parallel_sessions: int = 1
     run_seed: bool = True
     run_refactor_pass_1: bool = True
+    run_refactor_pass_1_5: bool = True
     run_refactor_pass_2: bool = True
     run_main_theorem_session: bool = True
+    try_at_each_step_tactic: str = "with_reducible exact?"
     open_problem_failure_threshold: int = 2
     priority_refresh_theorem_interval: int = 5
     main_theorem_interval: int = 0
@@ -347,6 +351,18 @@ def load_app_config(args: Any) -> tuple[AppConfig, dict[str, str]]:
             default="AutomatedTheoryConstruction/Derived.refactored.reviewed.lean",
             label="paths.reviewed_file",
         ),
+        try_at_each_step_raw_output_file=choose_path(
+            cli_names=("try_at_each_step_raw_output_file",),
+            file_keys=("paths", "try_at_each_step_raw_output_file"),
+            default="AutomatedTheoryConstruction/Derived.tryAtEachStep.json",
+            label="paths.try_at_each_step_raw_output_file",
+        ),
+        try_at_each_step_apply_report_file=choose_path(
+            cli_names=("try_at_each_step_apply_report_file",),
+            file_keys=("paths", "try_at_each_step_apply_report_file"),
+            default="AutomatedTheoryConstruction/Derived.tryAtEachStep.apply_report.json",
+            label="paths.try_at_each_step_apply_report_file",
+        ),
         data_dir=choose_path(
             cli_names=("data_dir",),
             file_keys=("paths", "data_dir"),
@@ -512,6 +528,14 @@ def load_app_config(args: Any) -> tuple[AppConfig, dict[str, str]]:
                 label="runtime.run_refactor_pass_1",
             )
         ),
+        run_refactor_pass_1_5=bool(
+            choose_bool(
+                cli_names=("run_refactor_pass_1_5",),
+                file_keys=("runtime", "run_refactor_pass_1_5"),
+                default=True,
+                label="runtime.run_refactor_pass_1_5",
+            )
+        ),
         run_refactor_pass_2=bool(
             choose_bool(
                 cli_names=("run_refactor_pass_2",),
@@ -519,6 +543,15 @@ def load_app_config(args: Any) -> tuple[AppConfig, dict[str, str]]:
                 default=True,
                 label="runtime.run_refactor_pass_2",
             )
+        ),
+        try_at_each_step_tactic=(
+            choose_str(
+                cli_names=("try_at_each_step_tactic",),
+                file_keys=("runtime", "try_at_each_step_tactic"),
+                default="with_reducible exact?",
+                label="runtime.try_at_each_step_tactic",
+            )
+            or "with_reducible exact?"
         ),
         run_main_theorem_session=bool(
             choose_bool(

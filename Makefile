@@ -10,6 +10,8 @@ SCRATCH_FILE ?= AutomatedTheoryConstruction/Scratch.lean
 SEEDS_FILE ?= AutomatedTheoryConstruction/seeds.jsonl
 PREVIEW_FILE ?= AutomatedTheoryConstruction/Derived.refactored.preview.lean
 REVIEWED_FILE ?= AutomatedTheoryConstruction/Derived.refactored.reviewed.lean
+TRY_AT_EACH_STEP_RAW_OUTPUT_FILE ?= AutomatedTheoryConstruction/Derived.tryAtEachStep.json
+TRY_AT_EACH_STEP_APPLY_REPORT_FILE ?= AutomatedTheoryConstruction/Derived.tryAtEachStep.apply_report.json
 
 WORKER_COMMAND ?= uv run scripts/codex_worker.py
 WORKER_TIMEOUT ?= 420
@@ -22,9 +24,10 @@ SEED_ARGS ?=
 LOOP_ARGS ?=
 PIPELINE_ARGS ?=
 REFACTOR_ARGS ?=
+REWRITE_ARGS ?=
 REVIEW_ARGS ?=
 
-.PHONY: help build check check-theory check-derived check-scratch smoke seed loop loop-continue pipeline refactor review
+.PHONY: help build check check-theory check-derived check-scratch smoke seed loop loop-continue pipeline refactor rewrite review
 
 help:
 	@printf '%s\n' \
@@ -38,8 +41,9 @@ help:
 		'  make seed          - generate seeds.jsonl via scripts/atc_cli.py seed' \
 		'  make loop          - run the default worker loop via scripts/atc_cli.py loop' \
 		'  make loop-continue - same as loop, but keep current runtime state' \
-		'  make pipeline      - run seed -> loop -> refactor -> review via scripts/atc_cli.py pipeline' \
+		'  make pipeline      - run seed -> loop -> refactor -> rewrite -> review via scripts/atc_cli.py pipeline' \
 		'  make refactor      - run scripts/atc_cli.py refactor' \
+		'  make rewrite       - run scripts/atc_cli.py rewrite' \
 		'  make review        - run scripts/atc_cli.py review' \
 		'' \
 		'Common overrides:' \
@@ -121,6 +125,14 @@ refactor:
 		--worker-timeout "$(WORKER_TIMEOUT)" \
 		--refactor-codex-timeout "$(CODEX_TIMEOUT)" \
 		$(REFACTOR_ARGS)
+
+rewrite:
+	$(ATC) rewrite \
+		--input-file $(PREVIEW_FILE) \
+		--output-file $(PREVIEW_FILE) \
+		--raw-output-file $(TRY_AT_EACH_STEP_RAW_OUTPUT_FILE) \
+		--apply-report-file $(TRY_AT_EACH_STEP_APPLY_REPORT_FILE) \
+		$(REWRITE_ARGS)
 
 review:
 	$(ATC) review \

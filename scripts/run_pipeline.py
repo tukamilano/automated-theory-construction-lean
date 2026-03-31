@@ -13,6 +13,8 @@ DEFAULT_DERIVED = Path("AutomatedTheoryConstruction/Derived.lean")
 DEFAULT_SEEDS = Path("AutomatedTheoryConstruction/seeds.jsonl")
 DEFAULT_PREVIEW = Path("AutomatedTheoryConstruction/Derived.refactored.preview.lean")
 DEFAULT_REVIEWED = Path("AutomatedTheoryConstruction/Derived.refactored.reviewed.lean")
+DEFAULT_TRY_AT_EACH_STEP_RAW = Path("AutomatedTheoryConstruction/Derived.tryAtEachStep.json")
+DEFAULT_TRY_AT_EACH_STEP_REPORT = Path("AutomatedTheoryConstruction/Derived.tryAtEachStep.apply_report.json")
 
 
 def append_optional_flag(cmd: list[str], flag: str, value: str | int | None) -> None:
@@ -22,6 +24,16 @@ def append_optional_flag(cmd: list[str], flag: str, value: str | int | None) -> 
     if not text:
         return
     cmd.extend([flag, text])
+
+
+def cleanup_pipeline_artifacts(paths: list[str]) -> None:
+    seen: set[Path] = set()
+    for raw_path in paths:
+        path = Path(raw_path)
+        if path in seen:
+            continue
+        seen.add(path)
+        path.unlink(missing_ok=True)
 
 
 def run_stage(
@@ -190,11 +202,32 @@ def build_review_command_with_input(args: argparse.Namespace, *, input_file: str
     return cmd
 
 
+def build_rewrite_command(args: argparse.Namespace, *, input_file: str, output_file: str) -> list[str]:
+    cmd = [
+        "uv",
+        "run",
+        "python",
+        "scripts/apply_try_at_each_step_rewrites.py",
+        "--input-file",
+        input_file,
+        "--output-file",
+        output_file,
+        "--raw-output-file",
+        args.try_at_each_step_raw_output_file,
+        "--apply-report-file",
+        args.try_at_each_step_apply_report_file,
+        "--tactic",
+        args.try_at_each_step_tactic,
+    ]
+    append_optional_flag(cmd, "--verify-timeout", args.try_at_each_step_verify_timeout)
+    return cmd
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
             "Generate seeds from the active Theory.lean entry module, its local imports, and context files, run the loop, "
-            "then run both Derived refactor passes."
+            "then run the three Derived refactor passes."
         )
     )
     parser.add_argument(
@@ -244,11 +277,16 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--refactor-verify-timeout", type=int)
     parser.add_argument("--preview-file", default=str(DEFAULT_PREVIEW))
     parser.add_argument("--review-output-file", default=str(DEFAULT_REVIEWED))
+    parser.add_argument("--try-at-each-step-raw-output-file", default=str(DEFAULT_TRY_AT_EACH_STEP_RAW))
+    parser.add_argument("--try-at-each-step-apply-report-file", default=str(DEFAULT_TRY_AT_EACH_STEP_REPORT))
+    parser.add_argument("--try-at-each-step-tactic", default="with_reducible exact?")
+    parser.add_argument("--try-at-each-step-verify-timeout", type=int)
     parser.add_argument("--review-model")
     parser.add_argument("--review-sandbox", default="workspace-write")
     parser.add_argument("--no-review-verify", action="store_true")
     parser.add_argument("--run-seed", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--run-refactor-pass-1", action=argparse.BooleanOptionalAction, default=True)
+    parser.add_argument("--run-refactor-pass-1_5", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--run-refactor-pass-2", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--run-main-theorem-session", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--dry-run", action="store_true")
@@ -258,9 +296,21 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     args = parse_args()
 
+    if args.initialize_on_start and not args.dry_run:
+        cleanup_pipeline_artifacts(
+            [
+                args.preview_file,
+                args.review_output_file,
+                args.try_at_each_step_raw_output_file,
+                args.try_at_each_step_apply_report_file,
+            ]
+        )
+
     seed_cmd = build_seed_command(args)
     loop_cmd = build_loop_command(args)
     refactor_cmd = build_refactor_command(args)
+    rewrite_input = args.preview_file
+    rewrite_output = args.preview_file
     review_input = args.preview_file
 
     if args.run_seed:
@@ -278,12 +328,30 @@ def main() -> int:
                 file=sys.stderr,
                 flush=True,
             )
+            rewrite_input = str(DEFAULT_DERIVED)
+            rewrite_output = args.preview_file
             review_input = str(DEFAULT_DERIVED)
         else:
             require_success("refactor-pass-1", refactor_result)
     else:
         print("[pipeline] refactor-pass-1: skipped (--no-run-refactor-pass-1)", file=sys.stderr, flush=True)
+        rewrite_input = str(DEFAULT_DERIVED)
+        rewrite_output = args.preview_file
         review_input = str(DEFAULT_DERIVED)
+
+    if args.run_refactor_pass_1_5:
+        rewrite_cmd = build_rewrite_command(args, input_file=rewrite_input, output_file=rewrite_output)
+        rewrite_result = run_stage("refactor-pass-1_5", rewrite_cmd, dry_run=args.dry_run, capture_output=True)
+        if rewrite_result is None or rewrite_result.returncode == 0:
+            review_input = rewrite_output
+        else:
+            print(
+                "[pipeline] refactor-pass-1_5 failed; falling back to review input before tryAtEachStep rewrites",
+                file=sys.stderr,
+                flush=True,
+            )
+    else:
+        print("[pipeline] refactor-pass-1_5: skipped (--no-run-refactor-pass-1_5)", file=sys.stderr, flush=True)
 
     if args.run_refactor_pass_2:
         review_cmd = build_review_command_with_input(args, input_file=review_input)
@@ -301,6 +369,8 @@ def main() -> int:
         f"- seeds: {DEFAULT_SEEDS}\n"
         f"- derived: {DEFAULT_DERIVED}\n"
         f"- refactor preview: {args.preview_file}\n"
+        f"- tryAtEachStep raw: {args.try_at_each_step_raw_output_file}\n"
+        f"- tryAtEachStep report: {args.try_at_each_step_apply_report_file}\n"
         f"- reviewed output: {args.review_output_file}",
         file=sys.stderr,
         flush=True,

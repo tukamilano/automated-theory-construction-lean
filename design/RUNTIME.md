@@ -105,9 +105,9 @@ ATC_CODEX_TIMEOUT=390 \
 uv run scripts/run_loop.py --enable-worker
 ```
 
-## Final Two-Stage Refactor For `Derived.lean`
+## Final Three-Stage Refactor For `Derived.lean`
 
-After the main loop has accumulated enough theorems in `AutomatedTheoryConstruction/Derived.lean`, run the final cleanup in two passes.
+After the main loop has accumulated enough theorems in `AutomatedTheoryConstruction/Derived.lean`, run the final cleanup in three passes.
 
 Pass 1 performs the main structural refactor and writes a preview file:
 
@@ -118,6 +118,16 @@ uv run python scripts/refactor_derived.py \
 ```
 
 When `--worker-timeout` is omitted for `scripts/refactor_derived.py`, the refactor worker defaults to no outer timeout. Set `--worker-timeout <seconds>` or `ATC_REFACTOR_DERIVED_WORKER_TIMEOUT` if you want a bound for this pass.
+
+Pass 1.5 rewrites the preview in place using parseable `tryAtEachStep` suggestions:
+
+```bash
+uv run python scripts/apply_try_at_each_step_rewrites.py \
+  --input-file AutomatedTheoryConstruction/Derived.refactored.preview.lean \
+  --output-file AutomatedTheoryConstruction/Derived.refactored.preview.lean \
+  --raw-output-file AutomatedTheoryConstruction/Derived.tryAtEachStep.json \
+  --apply-report-file AutomatedTheoryConstruction/Derived.tryAtEachStep.apply_report.json
+```
 
 Pass 2 keeps the refactored theorem inventory but applies a review-focused non-semantic polish using the thin `codex exec` wrapper and the repository skills directly:
 
@@ -132,6 +142,12 @@ If `AutomatedTheoryConstruction/Derived.refactored.reviewed.lean` already exists
 ```bash
 uv run python scripts/direct_refactor_derived.py --skip-copy
 ```
+
+If you use `scripts/atc_cli.py` or `atc.json`, the stage toggles are:
+
+- `runtime.run_refactor_pass_1`
+- `runtime.run_refactor_pass_1_5`
+- `runtime.run_refactor_pass_2`
 
 ## Initialization Behavior
 
