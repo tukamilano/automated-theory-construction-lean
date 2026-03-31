@@ -5,12 +5,6 @@ date: 2026-03-29 21:00:00 +0900
 categories: notes progress draft
 ---
 
-layout: post
-title: "Progress Update"
-date: 2026-03-29 21:00:00 +0900
-categories: notes progress draft
---------------------------------
-
 The implementation of the features I had planned is now largely complete. Going forward, I will continue making incremental improvements, while shifting the main focus toward exploring how this system can be applied in broader contexts.
 
 Improving the system to discover and verify more complex proofs would require a substantial increase in inference resources. Given this constraint, I plan to prioritize expanding its range of applications rather than pushing purely on raw proof complexity for now.
