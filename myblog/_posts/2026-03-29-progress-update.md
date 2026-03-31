@@ -5,8 +5,6 @@ date: 2026-03-29 21:00:00 +0900
 categories: notes progress draft
 ---
 
----
-
 layout: post
 title: "Progress Update"
 date: 2026-03-29 21:00:00 +0900

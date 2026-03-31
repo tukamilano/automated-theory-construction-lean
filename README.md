@@ -121,7 +121,7 @@ Notes:
 
 ## Notes and Progress
 
-- [Progress](https://tukamilano.github.io/automated-theory-construction-lean/notes/draft/2026/03/27/progress.html) (update 3.27)
+- [Progress](https://tukamilano.github.io/automated-theory-construction-lean/notes/progress/draft/2026/03/29/progress-update.html) (update 3.29)
 
 ## License
 
