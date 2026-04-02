@@ -54,7 +54,7 @@ Any format is fine as long as the workflow can read it.
 +-------------------------------------------+
         ↓
 [scripts/refactor_derived.py]
-  structural refactor
+  final local refactor sweep
         ↓
 [Derived.refactored.preview.lean]
         ↓

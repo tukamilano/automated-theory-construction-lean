@@ -94,7 +94,7 @@ Dry run with the mock worker:
 
 ```bash
 ATC_WORKER_COMMAND="uv run scripts/mock_worker.py" \
-uv run scripts/run_loop.py --enable-worker
+uv run scripts/run_loop.py
 ```
 
 Run with the Codex worker:
@@ -103,14 +103,14 @@ Run with the Codex worker:
 ATC_WORKER_COMMAND="uv run scripts/codex_worker.py" \
 ATC_WORKER_TIMEOUT=420 \
 ATC_CODEX_TIMEOUT=390 \
-uv run scripts/run_loop.py --enable-worker
+uv run scripts/run_loop.py
 ```
 
 ## Final Three-Stage Refactor For `Derived.lean`
 
 After the main loop has accumulated enough theorems in `AutomatedTheoryConstruction/Derived.lean`, run the final cleanup in three passes.
 
-Pass 1 performs the main structural refactor and writes a preview file:
+Pass 1 runs a preview-oriented local refactor sweep over the accumulated `Derived.lean` theorems and writes a preview file:
 
 ```bash
 uv run python scripts/refactor_derived.py \
@@ -175,7 +175,7 @@ If you want to continue from the current runtime state and keep accumulated theo
 ATC_WORKER_COMMAND="uv run scripts/codex_worker.py" \
 ATC_WORKER_TIMEOUT=420 \
 ATC_CODEX_TIMEOUT=390 \
-uv run scripts/run_loop.py --enable-worker --no-initialize-on-start
+uv run scripts/run_loop.py --no-initialize-on-start
 ```
 
 If you want the loop to consider adding a main theorem whenever `Derived.lean` has gained another `N` verified theorems, set `--main-theorem-interval N`. For example:
@@ -185,7 +185,6 @@ ATC_WORKER_COMMAND="uv run scripts/codex_worker.py" \
 ATC_WORKER_TIMEOUT=420 \
 ATC_CODEX_TIMEOUT=390 \
 uv run scripts/run_loop.py \
-  --enable-worker \
   --no-initialize-on-start \
   --main-theorem-interval 10 \
   --main-theorem-formalize-worker-timeout 900 \

@@ -122,7 +122,6 @@ def _loop_command(args: argparse.Namespace, config: AppConfig) -> tuple[list[str
     cmd = _python_command("run_loop.py")
     _append_bool_flag(cmd, "--initialize-on-start", config.runtime.initialize_on_start)
     _append_bool_flag(cmd, "--phase-logs", config.runtime.phase_logs)
-    cmd.append("--enable-worker")
     if args.skip_verify:
         cmd.append("--skip-verify")
     _append_flag(cmd, "--max-iterations", config.runtime.max_iterations)
@@ -352,7 +351,7 @@ def _build_parser() -> argparse.ArgumentParser:
     pipeline.add_argument("--run-refactor-pass-1", action=argparse.BooleanOptionalAction, default=None)
     pipeline.add_argument("--run-refactor-pass-1_5", action=argparse.BooleanOptionalAction, default=None)
     pipeline.add_argument("--run-refactor-pass-2", action=argparse.BooleanOptionalAction, default=None)
-    refactor = subparsers.add_parser("refactor", help="Run the first refactor pass for Derived.lean.")
+    refactor = subparsers.add_parser("refactor", help="Run final refactor pass 1 for Derived.lean.")
     _add_common_flags(refactor)
     _add_worker_flags(refactor, include_refactor_task=True)
     refactor.add_argument("--theory-file")

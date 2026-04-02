@@ -115,7 +115,6 @@ def build_loop_command(args: argparse.Namespace) -> list[str]:
         "run",
         "python",
         "scripts/run_loop.py",
-        "--enable-worker",
         "--no-initialize-on-start",
     ]
     if not args.phase_logs:

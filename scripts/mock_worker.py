@@ -139,11 +139,17 @@ def _post_theorem_expand_result(payload: dict[str, Any]) -> dict[str, Any]:
 
 def _refactor_derived_result(payload: dict[str, Any]) -> dict[str, Any]:
     derived_code = str(payload.get("derived_code", "")).strip()
+    focus_theorem_names = [
+        str(item).strip()
+        for item in payload.get("focus_theorem_names", [])
+        if str(item).strip()
+    ]
     return {
-        "result": "ok" if derived_code else "stuck",
+        "result": "noop" if derived_code else "stuck",
         "refactored_code": derived_code,
-        "summary": "mock_worker: echoed input Derived.lean" if derived_code else "mock_worker: no Derived.lean content provided",
-        "change_notes": ["mock_worker: no refactor applied"] if derived_code else [],
+        "summary": "mock_worker: no local refactor applied" if derived_code else "mock_worker: no Derived.lean content provided",
+        "change_notes": ["mock_worker: returned input unchanged"] if derived_code else [],
+        "touched_theorems": focus_theorem_names,
     }
 
 

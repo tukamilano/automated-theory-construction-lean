@@ -83,7 +83,6 @@ seed:
 
 loop:
 	$(ATC) loop \
-		--enable-worker \
 		--worker-command "$(WORKER_COMMAND)" \
 		--worker-timeout "$(WORKER_TIMEOUT)" \
 		--codex-timeout "$(CODEX_TIMEOUT)" \
@@ -94,7 +93,6 @@ loop:
 
 loop-continue:
 	$(ATC) loop \
-		--enable-worker \
 		--worker-command "$(WORKER_COMMAND)" \
 		--worker-timeout "$(WORKER_TIMEOUT)" \
 		--codex-timeout "$(CODEX_TIMEOUT)" \

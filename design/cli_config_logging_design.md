@@ -162,7 +162,6 @@ Example:
 
 ```bash
 uv run python scripts/atc_cli.py loop \
-  --enable-worker \
   --max-iterations 40
 ```
 

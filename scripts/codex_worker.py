@@ -5,6 +5,7 @@ import os
 import re
 import sys
 import tempfile
+import time
 from pathlib import Path
 from typing import Any
 
@@ -169,6 +170,26 @@ def _build_contract_repair_prompt(
     )
 
 
+def _is_unsupported_model_error(provider: str, model: str, stderr: str) -> bool:
+    return bool(
+        model
+        and provider == "codex"
+        and "not supported" in stderr.lower()
+        and "model" in stderr.lower()
+    )
+
+
+def _is_capacity_error(provider: str, stderr: str) -> bool:
+    lowered = stderr.lower()
+    return bool(
+        provider == "codex"
+        and (
+            "at capacity" in lowered
+            or "selected model is at capacity" in lowered
+        )
+    )
+
+
 def _run_codex(task_type: str, prompt: str, timeout_sec: int | None) -> tuple[str, str, str]:
     model = _resolve_task_env(task_type, "CODEX_MODEL")
     provider = resolve_provider(
@@ -191,27 +212,41 @@ def _run_codex(task_type: str, prompt: str, timeout_sec: int | None) -> tuple[st
                 timeout_sec=timeout_sec,
             )
 
+        resolved_model = model
         completed = run_once(use_model=True)
         if completed.returncode != 0:
             stderr = (completed.stderr or "").strip()
-            unsupported_model = (
-                model
-                and provider == "codex"
-                and "not supported" in stderr.lower()
-                and "model" in stderr.lower()
-            )
-            if unsupported_model:
+            if _is_unsupported_model_error(provider, model, stderr):
                 completed = run_once(use_model=False)
+                resolved_model = ""
                 if completed.returncode != 0:
                     retry_stderr = (completed.stderr or "").strip()
                     raise RuntimeError(f"{provider} exec failed ({completed.returncode}): {retry_stderr}")
+            elif _is_capacity_error(provider, stderr):
+                if model:
+                    completed = run_once(use_model=False)
+                    resolved_model = ""
+                    if completed.returncode != 0:
+                        retry_stderr = (completed.stderr or "").strip()
+                        if _is_capacity_error(provider, retry_stderr):
+                            time.sleep(5)
+                            completed = run_once(use_model=False)
+                            retry_stderr = (completed.stderr or "").strip()
+                        if completed.returncode != 0:
+                            raise RuntimeError(f"{provider} exec failed ({completed.returncode}): {retry_stderr}")
+                else:
+                    time.sleep(5)
+                    completed = run_once(use_model=True)
+                    if completed.returncode != 0:
+                        retry_stderr = (completed.stderr or "").strip()
+                        raise RuntimeError(f"{provider} exec failed ({completed.returncode}): {retry_stderr}")
             else:
                 raise RuntimeError(f"{provider} exec failed ({completed.returncode}): {stderr}")
 
         text = output_path.read_text(encoding="utf-8") if output_path.exists() else ""
         if not text.strip():
             text = (completed.stdout or "").strip()
-        return text, model, provider
+        return text, resolved_model, provider
     finally:
         try:
             output_path.unlink(missing_ok=True)

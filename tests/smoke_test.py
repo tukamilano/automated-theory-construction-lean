@@ -124,6 +124,15 @@ def main() -> None:
             "problem_id": problem_id,
             "candidates": [],
         }
+    elif task_type == "refactor_derived":
+        derived_code = str(payload.get("derived_code", "")).strip()
+        result_payload = {
+            "result": "noop",
+            "refactored_code": derived_code,
+            "summary": "mock_proof_worker: no refactor changes",
+            "change_notes": [],
+            "touched_theorems": [],
+        }
     elif task_type == "prioritize_open_problems":
         tracked_problems = payload.get("tracked_problems", [])
         if not isinstance(tracked_problems, list):
@@ -262,11 +271,25 @@ def assert_smoke_outputs(dst_root: Path) -> None:
         raise RuntimeError("smoke loop did not create a run summary")
 
     summary = json.loads(summary_paths[-1].read_text(encoding="utf-8"))
-    if summary.get("status") != "max_iterations_reached":
+    if summary.get("status") not in {"max_iterations_reached", "no_open_problems"}:
         raise RuntimeError(f"unexpected smoke summary status: {summary.get('status')}")
+    theory_state_history_path = summary_paths[-1].with_name("theory_state_history.jsonl")
+    if not theory_state_history_path.exists():
+        raise RuntimeError("smoke loop did not create runs/<run_id>/theory_state_history.jsonl")
     theory_state = json.loads((data_dir / "theory_state.json").read_text(encoding="utf-8"))
     if theory_state.get("next_direction", {}).get("label") != "smoke_direction":
         raise RuntimeError(f"unexpected theory_state next_direction: {theory_state}")
+    theory_state_history_rows = [
+        json.loads(line)
+        for line in theory_state_history_path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    if not theory_state_history_rows:
+        raise RuntimeError("theory_state_history.jsonl is empty")
+    if theory_state_history_rows[0].get("theory_state", {}).get("summary_basis", {}).get("derived_theorem_count") != 0:
+        raise RuntimeError(f"unexpected initial theory_state history head: {theory_state_history_rows[0]}")
+    if theory_state_history_rows[-1].get("theory_state", {}).get("next_direction", {}).get("label") != "smoke_direction":
+        raise RuntimeError(f"unexpected theory_state history tail: {theory_state_history_rows[-1]}")
 
     open_rows = [
         json.loads(line)
