@@ -1,0 +1,1 @@
+{"id":"op_000009","stmt":"∀ {V : Type*} [AddCommGroup V] [Module ℂ V] (bc : BosonCore V) (hvac : bc.vacuum ≠ 0) (m n : ℕ), m ≠ n → bc.ket m ≠ bc.ket n","run_id":"20260402-230920-loop","iteration":9,"session_type":"loop"}

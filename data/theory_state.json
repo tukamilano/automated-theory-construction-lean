@@ -1,0 +1,36 @@
+{
+  "derived_generation": 9,
+  "next_direction": {
+    "guidance": "Prioritize abstract ladder-operator results that relate `a`, powers of `aDagger`, `number`, and the indexed ket family, especially statements that turn the current eigenvalue theorem into nonvanishing and separation facts.",
+    "label": "ladder_operator_fock_structure",
+    "rationale": "The theory already has the basic ket eigenvalue law and a concrete model, so the largest structural gain now comes from reusable ladder identities that organize the full Fock-state picture."
+  },
+  "summary_basis": {
+    "archived_problem_count": 2,
+    "derived_theorem_count": 3,
+    "open_problem_count": 6
+  },
+  "theory_summary": {
+    "current_picture": "The visible theory now looks like an abstract bosonic/Fock-style core in which the distinguished kets already form a number-operator eigenfamily, with one basic propagation lemma for vanishing and a concrete polynomial realization identifying those kets with monomials. The main unfinished layer is the ladder-operator structure: how `a` and powers of `aDagger` act on kets and how those actions control nonvanishing and separation of states. The polynomial model is present as a canonical example, but it still lacks a few characterization results that would make it a stronger bridge back to the abstract theory.",
+    "missing_pieces": [
+      "The closed commutator formula between `number` and `aDagger^n` is still missing.",
+      "Explicit ladder-action formulas on kets, especially for `a` and repeated `aDagger`, are not yet derived.",
+      "There is no full nonvanishing/distinctness package for the ket family when the vacuum is nonzero.",
+      "The polynomial model still lacks a clean characterization of the kernel of `a` as the constants."
+    ],
+    "recurring_patterns": [
+      "Natural-number-indexed ket families are controlled by linear operator identities with scalar eigenvalues.",
+      "Vanishing information is propagated along adjacent ladder levels rather than characterized outright.",
+      "Concrete polynomial formulas are used to realize abstract bosonic data explicitly.",
+      "Powers of `aDagger` are the expected mechanism for moving between basis levels and commuting with `number`."
+    ],
+    "representative_results": [
+      "`number (ket n) = n • ket n` gives the core eigenvalue law for abstract kets.",
+      "`ket (n + 1) = 0 -> ket n = 0` gives downward propagation of vanishing along the ladder.",
+      "In the polynomial model, `ket n` is exactly the monomial `X^n`."
+    ]
+  },
+  "updated_at_iteration": 9,
+  "updated_at_run_id": "20260402-230920-loop",
+  "version": 1
+}

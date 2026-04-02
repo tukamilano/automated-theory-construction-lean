@@ -3031,6 +3031,7 @@ def run_manual_main_theorem_check(
         phase_logs=phase_logs,
         run_id=run_id,
         phase_attempts_path=phase_attempts_path,
+        theory_state_history_path=Path(phase_attempts_path).parent / "theory_state_history.jsonl",
         compile_metrics=compile_metrics,
         state_lock=state_lock,
         derived_runtime_state=derived_runtime_state,
@@ -3075,6 +3076,7 @@ def process_manual_main_theorem(
     phase_logs: bool,
     run_id: str,
     phase_attempts_path: Path,
+    theory_state_history_path: Path,
     compile_metrics: dict[str, Any],
     state_lock: threading.Lock,
     derived_runtime_state: dict[str, Any],
@@ -3404,7 +3406,7 @@ def process_manual_main_theorem(
             current_iteration=current_iteration,
             failure_threshold=failure_threshold,
             run_id=run_id,
-            theory_state_history_path=artifact_paths["theory_state_history"],
+            theory_state_history_path=theory_state_history_path,
         )
     return {
         "processed": True,

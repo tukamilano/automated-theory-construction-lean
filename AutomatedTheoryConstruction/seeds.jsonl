@@ -1,0 +1,4 @@
+{"id":"op_000001","stmt":"∀ {V : Type*} [AddCommGroup V] [Module ℂ V] (bc : BosonCore V) (n : ℕ), bc.number * bc.aDagger ^ n - bc.aDagger ^ n * bc.number = (↑n : ℂ) • bc.aDagger ^ n","src":"seed","priority":"unknown","priority_rationale":"","failure_count":0}
+{"id":"op_000002","stmt":"∀ {V : Type*} [AddCommGroup V] [Module ℂ V] (bc : BosonCore V) (n : ℕ), bc.number (bc.ket n) = (↑n : ℂ) • bc.ket n","src":"seed","priority":"unknown","priority_rationale":"","failure_count":0}
+{"id":"op_000003","stmt":"∀ {V : Type*} [AddCommGroup V] [Module ℂ V] (bc : BosonCore V) (n : ℕ), bc.ket (n + 1) = 0 → bc.ket n = 0","src":"seed","priority":"unknown","priority_rationale":"","failure_count":0}
+{"id":"op_000004","stmt":"∀ n : ℕ, BosonCore.polyBosonCore.ket n = Polynomial.X ^ n","src":"seed","priority":"unknown","priority_rationale":"","failure_count":0}
