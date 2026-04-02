@@ -18,7 +18,7 @@ from worker_client import WorkerSettings, invoke_worker_json, load_task_worker_s
 
 DEFAULT_PREVIEW_OUTPUT = Path("AutomatedTheoryConstruction/Derived.refactored.preview.lean")
 DEFAULT_CONSECUTIVE_NOOP_LIMIT = 2
-DEFAULT_MAX_WALL_CLOCK_SEC = 390
+DEFAULT_MAX_WALL_CLOCK_SEC = 900
 
 
 def debug_log(message: str) -> None:

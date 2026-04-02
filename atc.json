@@ -24,8 +24,8 @@
         "timeout": 600
       },
       "refactor_derived": {
-        "timeout": 420,
-        "codex_timeout": 390
+        "timeout": 960,
+        "codex_timeout": 900
       }
     }
   },
