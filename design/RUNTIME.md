@@ -18,14 +18,15 @@ So the current implementation is not yet a generic multi-theory runner. To chang
 
 Each iteration runs the following stages:
 
-1. Pick the next open problem deterministically.
-2. If the problem is not already Lean-formal, try `prover_statement` to turn it into a Lean-ready statement.
-3. Run `prover` to choose `proof`, `counterexample`, or `stuck`.
-4. Run `formalize`, then `lake env lean AutomatedTheoryConstruction/Scratch.lean`.
-5. If verification fails, run `repair` until the retry budget is exhausted.
-6. If verification succeeds, append the theorem body from `Scratch.lean` into `Derived.lean`.
-7. Run `expand` to suggest additional problems.
-8. Apply deterministic state updates to `open`, `solved`, and `counterexamples`.
+1. Refresh tracked problem priorities when needed, and update the lightweight global theory view in `data/theory_state.json`.
+2. Pick the next open problem deterministically.
+3. If the problem is not already Lean-formal, try `prover_statement` to turn it into a Lean-ready statement.
+4. Run `prover` to choose `proof`, `counterexample`, or `stuck`.
+5. Run `formalize`, then `lake env lean AutomatedTheoryConstruction/Scratch.lean`.
+6. If verification fails, run `repair` until the retry budget is exhausted.
+7. If verification succeeds, append the theorem body from `Scratch.lean` into `Derived.lean`.
+8. Run `expand` to suggest additional problems, biased by the current `next_direction` when available.
+9. Apply deterministic state updates to `open`, `solved`, and `counterexamples`.
 
 Open problems may be either Lean-formal statements or semi-formal research prompts. If a problem cannot be formalized, it stays open.
 
@@ -269,6 +270,8 @@ You can also override the same settings through CLI flags such as:
 
 Open problem priorities are refreshed by a dedicated worker prompt whenever unevaluated `unknown` problems exist, and otherwise after `Derived.lean` has gained enough new theorems during the current run, by default every `5` additional verified theorems. Priorities are refreshed across the full tracked problem set: the active `open` queue plus `archived` problems kept only for priority context.
 
+The same refresh step also updates a lightweight global theory view. The worker summarizes the current theory, revises the previous summary when needed, and chooses one coarse `next_direction`. This direction is a strong preference for future seed generation and follow-up problem generation, but not a hard constraint.
+
 `data/open_problems.jsonl` stores only the active solver queue. Any tracked problem whose priority is `low`, or whose `failure_count` has reached the failure threshold, by default `2`, is moved to `data/archived_problems.jsonl`. Archived problems are not solver-eligible, but they remain visible during future priority refreshes so the worker can judge new and active problems against older low-value or repeatedly failed statements.
 
 ## Runtime Artifacts
@@ -280,8 +283,10 @@ The loop stores its state in `data/`:
 - `data/solved_problems.jsonl`
 - `data/counterexamples.jsonl`
 - `data/formalization_memory.json`
+- `data/theory_state.json`
 
 `data/formalization_memory.json` stores same-problem history across statement formalization, formalization, and repair attempts.
+`data/theory_state.json` stores the latest global theory summary and one coarse `next_direction`.
 
 ## Lean Module Contract
 

@@ -24,6 +24,7 @@ This file explains which parts of the repository users are expected to edit and 
 | `data/solved_problems.jsonl` | AI | Not recommended | Solved problem log |
 | `data/counterexamples.jsonl` | AI | Not recommended | Counterexample log |
 | `data/formalization_memory.json` | AI | Not recommended | Retry/history memory |
+| `data/theory_state.json` | AI | Not recommended | Latest global theory summary and current next-direction bias |
 | `data/runs/` | AI | Do not edit | Run artifacts and logs |
 
 ## Shared Or Advanced

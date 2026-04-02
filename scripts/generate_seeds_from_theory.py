@@ -18,7 +18,14 @@ from common import (
 from llm_exec import build_exec_command
 from llm_exec import resolve_provider
 from llm_exec import run_llm_exec
-from run_loop import DERIVED_TEMPLATE, SCRATCH_TEMPLATE, cleanup_parallel_scratch_files, prebuild_lean_project
+from run_loop import (
+    DERIVED_TEMPLATE,
+    SCRATCH_TEMPLATE,
+    cleanup_parallel_scratch_files,
+    load_theory_state,
+    prebuild_lean_project,
+    theory_state_path,
+)
 
 
 DEFAULT_THEORY = Path("AutomatedTheoryConstruction/Theory.lean")
@@ -65,6 +72,7 @@ def reset_runtime_before_seed_generation(
     write_jsonl_atomic(data_dir / "counterexamples.jsonl", [])
     (data_dir / LEGACY_DEFERRED_PROBLEMS_FILENAME).unlink(missing_ok=True)
     (data_dir / LEGACY_PRUNED_OPEN_PROBLEMS_FILENAME).unlink(missing_ok=True)
+    theory_state_path(data_dir).unlink(missing_ok=True)
     cleanup_parallel_scratch_files(scratch_file)
 
     scratch_file.parent.mkdir(parents=True, exist_ok=True)
@@ -153,6 +161,7 @@ def build_prompt(
     context_files: list[Path],
     seed_count: int,
     extra_instruction: str,
+    theory_state: dict[str, Any] | None = None,
 ) -> str:
     if not theory_files:
         raise ValueError("theory_files must be non-empty")
@@ -170,6 +179,37 @@ def build_prompt(
     )
     extra_block = f"- Additional guidance: {extra_instruction.strip()}\n" if extra_instruction.strip() else ""
     theory_files_rule = "- Do not restate declarations already present in the theory files listed above.\n"
+    theory_summary_block = ""
+    next_direction_block = ""
+    state = dict(theory_state or {})
+    summary = state.get("theory_summary")
+    direction = state.get("next_direction")
+    if isinstance(summary, dict):
+        current_picture = str(summary.get("current_picture", "")).strip()
+        missing_pieces = summary.get("missing_pieces", [])
+        normalized_missing = [
+            str(item).strip()
+            for item in missing_pieces
+            if str(item).strip()
+        ] if isinstance(missing_pieces, list) else []
+        if current_picture:
+            theory_summary_block += f"- Current theory picture: {current_picture}\n"
+        if normalized_missing:
+            theory_summary_block += f"- Current missing pieces: {'; '.join(normalized_missing[:4])}\n"
+    if isinstance(direction, dict):
+        guidance = str(direction.get("guidance", "")).strip()
+        rationale = str(direction.get("rationale", "")).strip()
+        if guidance:
+            next_direction_block += (
+                "- Strongly prefer seed problems that follow the current next direction: "
+                f"{guidance}\n"
+            )
+        if rationale:
+            next_direction_block += f"- Why this direction matters now: {rationale}\n"
+        if guidance:
+            next_direction_block += (
+                "- This direction is a strong preference, not a hard constraint. Keep some diversity and allow a small number of clearly stronger problems outside it.\n"
+            )
 
     return f"""Read these files before generating seeds:
 {chr(10).join(read_lines)}
@@ -189,6 +229,7 @@ Mathematical scope:
 - Reuse exact symbol names from the source files. Do not invent new definitions or predicates.
 - Quantify every extra variable or witness explicitly inside the proposition.
 - Keep assumptions minimal but sufficient.
+{theory_summary_block}{next_direction_block}
 
 Quality filter:
 {theory_files_rule}{derived_rule}- Do not propose a theorem that is already present in the read files up to cosmetic rewrites, alpha-renaming, trivial reassociation of binders, or other shallow reformulations.
@@ -353,6 +394,7 @@ def main() -> int:
         effective_derived: Path | None = derived_file
     else:
         effective_derived = None
+    effective_theory_state = load_theory_state((repo_root / DEFAULT_DATA_DIR).resolve())
 
     prompt = build_prompt(
         theory_files=theory_files,
@@ -360,6 +402,7 @@ def main() -> int:
         context_files=context_files,
         seed_count=args.seed_count,
         extra_instruction=args.extra_instruction,
+        theory_state=effective_theory_state,
     )
     schema = build_output_schema(args.seed_count)
 

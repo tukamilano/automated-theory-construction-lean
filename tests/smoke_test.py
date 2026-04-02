@@ -54,16 +54,16 @@ def write_smoke_seed_file(dst_root: Path) -> None:
             "id": "op_000001",
             "stmt": "∀ {α : Type _}, True",
             "src": "smoke",
-            "priority": "medium",
-            "priority_rationale": "smoke fixture",
+            "priority": "unknown",
+            "priority_rationale": "",
             "failure_count": 0,
         },
         {
             "id": "op_000002",
             "stmt": "∀ {α : Type _} [Inhabited α], True ∧ True",
             "src": "smoke",
-            "priority": "medium",
-            "priority_rationale": "smoke fixture",
+            "priority": "unknown",
+            "priority_rationale": "",
             "failure_count": 0,
         },
     ]
@@ -138,6 +138,17 @@ def main() -> None:
                 for item in tracked_problems
                 if isinstance(item, dict) and str(item.get("problem_id", "")).strip()
             ],
+            "theory_summary": {
+                "current_picture": "Mock smoke theory: the active queue is being solved directly.",
+                "representative_results": ["Smoke fixture solves every tracked problem by construction."],
+                "recurring_patterns": ["Every problem is treated as immediately provable in the fixture."],
+                "missing_pieces": ["No genuine structural gap analysis is performed in the smoke fixture."],
+            },
+            "next_direction": {
+                "label": "smoke_direction",
+                "guidance": "Prefer continuing the direct-solvability smoke fixture path.",
+                "rationale": "The smoke worker is intentionally configured to solve the queued problems immediately.",
+            },
         }
     elif task_type == "main_theorem_suggest":
         result_payload = {
@@ -189,6 +200,7 @@ def run_smoke_loop(
     max_iterations: int = 2,
     parallel_sessions: int = 2,
     priority_refresh_theorem_interval: int = 0,
+    timeout_sec: int = 420,
 ) -> subprocess.CompletedProcess[str]:
     cmd = [
         sys.executable,
@@ -213,7 +225,7 @@ def run_smoke_loop(
             check=False,
             capture_output=True,
             text=True,
-            timeout=180,
+            timeout=timeout_sec,
         )
     except subprocess.TimeoutExpired as exc:
         raise RuntimeError(
@@ -234,6 +246,8 @@ def assert_smoke_outputs(dst_root: Path) -> None:
     data_dir = dst_root / "data"
     if not (data_dir / "open_problems.jsonl").exists():
         raise RuntimeError("smoke loop did not create data/open_problems.jsonl")
+    if not (data_dir / "theory_state.json").exists():
+        raise RuntimeError("smoke loop did not create data/theory_state.json")
     if not (dst_root / "AutomatedTheoryConstruction" / "Scratch.lean").exists():
         raise RuntimeError("smoke loop did not create Scratch.lean")
     if not (dst_root / "AutomatedTheoryConstruction" / "Scratch.loop.lean").exists():
@@ -250,6 +264,9 @@ def assert_smoke_outputs(dst_root: Path) -> None:
     summary = json.loads(summary_paths[-1].read_text(encoding="utf-8"))
     if summary.get("status") != "max_iterations_reached":
         raise RuntimeError(f"unexpected smoke summary status: {summary.get('status')}")
+    theory_state = json.loads((data_dir / "theory_state.json").read_text(encoding="utf-8"))
+    if theory_state.get("next_direction", {}).get("label") != "smoke_direction":
+        raise RuntimeError(f"unexpected theory_state next_direction: {theory_state}")
 
     open_rows = [
         json.loads(line)

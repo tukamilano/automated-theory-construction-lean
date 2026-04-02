@@ -74,6 +74,34 @@ def _expand_result(payload: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _prioritize_open_problems_result(payload: dict[str, Any]) -> dict[str, Any]:
+    tracked_problems = payload.get("tracked_problems", [])
+    if not isinstance(tracked_problems, list):
+        tracked_problems = []
+    return {
+        "priorities": [
+            {
+                "problem_id": str(item.get("problem_id", "")).strip(),
+                "priority": "medium",
+                "rationale": "mock_worker: neutral priority refresh",
+            }
+            for item in tracked_problems
+            if isinstance(item, dict) and str(item.get("problem_id", "")).strip()
+        ],
+        "theory_summary": {
+            "current_picture": "Mock theory state: no global interpretation available.",
+            "representative_results": ["Mock worker did not inspect derived theorems."],
+            "recurring_patterns": ["No recurring pattern analysis available in mock mode."],
+            "missing_pieces": ["No theory gap analysis available in mock mode."],
+        },
+        "next_direction": {
+            "label": "mock_direction",
+            "guidance": "Prefer neutral exploratory problems in mock mode.",
+            "rationale": "Mock worker does not compute a real global direction.",
+        },
+    }
+
+
 def _main_theorem_suggest_result(payload: dict[str, Any]) -> dict[str, Any]:
     candidate_id = str(payload.get("candidate_id", ""))
     return {
@@ -137,6 +165,8 @@ def main() -> None:
             result_payload = _repair_result(payload)
         elif task_type == "expand":
             result_payload = _expand_result(payload)
+        elif task_type == "prioritize_open_problems":
+            result_payload = _prioritize_open_problems_result(payload)
         elif task_type == "main_theorem_suggest":
             result_payload = _main_theorem_suggest_result(payload)
         elif task_type == "main_theorem_plan":

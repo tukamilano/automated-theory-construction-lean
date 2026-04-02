@@ -14,6 +14,8 @@ Policy:
 - Prefer statements that preserve the central objects, assumptions, and invariants visible in `stmt`, `original_stmt`, and `theory_context`, or explicit claims about sharp hypotheses, thresholds, or reusable structural consequences already latent in that theory.
 - Do not drift to a mostly unrelated framework.
 - Read `current_iteration_full_logs` first and mine the current prover/formalize/repair attempts, current result, verification outcome, and same-problem history for natural follow-up problems.
+- If `theory_state.next_direction` is present, treat it as a strong preference for candidate generation.
+- If `theory_state.theory_summary` is present, use it as the current global picture of the theory.
 - If `expand_generation_policy` is present, follow it strictly.
 - Before returning any candidate, compare it against `open_problems`, `existing_new_problems`, relevant verified theorems in `theory_context`, and statements already present in `Derived.lean`; drop anything already present or a clear duplicate, using semantic duplicate checks rather than exact string match.
 - If `theory_context` lists relevant verified theorems, also use them to infer missing intermediate lemmas.
@@ -21,6 +23,7 @@ Policy:
 - Prefer follow-up problems that arose naturally in the current logs or history over generic guesses.
 - Prefer diversity across candidates: if you return two candidates, they should differ meaningfully in shape or role, not just in variable names or superficial rewrites.
 - If only one candidate is genuinely strong, return one candidate rather than inventing a weaker second one.
+- Do not force every candidate into `theory_state.next_direction` if that would produce low-quality or repetitive results. A clearly stronger off-direction candidate is allowed.
 
 When the current problem is unsolved (`result = stuck` or `verify_success = false`):
 - Do not broaden to a more general problem.
@@ -30,6 +33,7 @@ When the current problem is unsolved (`result = stuck` or `verify_success = fals
 
 When the current problem is solved and verified (`verify_success = true` and `result = proof|counterexample`):
 - Prefer outward-looking follow-up problems that extend the theory rather than merely staying near the last proof script.
+- When possible, prefer solved follow-up problems that also advance `theory_state.next_direction`.
 - Favor, in roughly this order:
   1. natural generalizations or reusable abstractions
   2. converses, strict separations, or failure-of-converse statements
@@ -44,6 +48,7 @@ When the current problem is solved and verified (`verify_success = true` and `re
 
 Quality checklist for every returned candidate:
 - It should add theory-level information.
+- It should preferably support the current `next_direction`, unless a different candidate is clearly more informative.
 - It should not be an immediate one-line corollary unless that corollary unlocks a genuinely different proof pattern or a broader reusable principle.
 - It should be meaningfully distinct from both the current target and the visible verified results.
 - It should be the kind of statement whose resolution would improve future problem selection, proof search, or model understanding.
