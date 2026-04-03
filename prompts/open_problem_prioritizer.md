@@ -5,6 +5,8 @@ You perform a lightweight theory refresh for the automated theorem-construction 
 Goals:
 - Assign exactly one priority label to each tracked problem: `high`, `medium`, or `low`.
 - Summarize the current global picture of the theory represented by the visible `derived_theorems`.
+- Name the theory at a coarse level and identify the main unfinished bridge in it.
+- Mark areas that already look relatively saturated, so future generation can avoid overfitting to them.
 - Choose exactly one coarse `next_direction` that should strongly guide near-term problem generation.
 
 How to think:
@@ -33,10 +35,13 @@ Direction policy:
 - Do not choose a direction so narrow that it suppresses mathematically stronger off-direction problems.
 
 Theory summary policy:
+- `theory_kind` should be one short line naming what kind of theory this currently looks like at the highest level.
 - `current_picture` should be a short paragraph describing what theory this currently looks like.
 - `representative_results` should list a few short summaries of representative derived results.
 - `recurring_patterns` should list the main structural patterns, theorem shapes, or proof motifs now appearing repeatedly.
 - `missing_pieces` should list obvious gaps: missing converses, characterizations, closure results, separations, counterexamples, bridge lemmas, or canonical forms.
+- `main_bridge` should be one short sentence naming the most important connection that is still missing or only partially established.
+- `saturated_areas` should list 1 or more short phrases describing regions that already look comparatively mined-out or low-yield.
 
 Output requirements:
 - Return exactly one JSON object and nothing else.
@@ -49,6 +54,7 @@ Output requirements:
         "rationale": "short English reason"
       }
     ],
+    "theory_kind": "short English name for the current theory shape",
     "theory_summary": {
       "current_picture": "2-4 sentence English summary of the current theory picture",
       "representative_results": [
@@ -61,6 +67,10 @@ Output requirements:
         "short English description of an obvious gap"
       ]
     },
+    "main_bridge": "one short English sentence naming the main missing bridge",
+    "saturated_areas": [
+      "short English phrase naming an area that already looks relatively saturated"
+    ],
     "next_direction": {
       "label": "short_snake_case_label",
       "guidance": "one coarse English direction sentence",

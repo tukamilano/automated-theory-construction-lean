@@ -147,12 +147,15 @@ def main() -> None:
                 for item in tracked_problems
                 if isinstance(item, dict) and str(item.get("problem_id", "")).strip()
             ],
+            "theory_kind": "mock smoke theory with immediate solvability bias",
             "theory_summary": {
                 "current_picture": "Mock smoke theory: the active queue is being solved directly.",
                 "representative_results": ["Smoke fixture solves every tracked problem by construction."],
                 "recurring_patterns": ["Every problem is treated as immediately provable in the fixture."],
                 "missing_pieces": ["No genuine structural gap analysis is performed in the smoke fixture."],
             },
+            "main_bridge": "Relate direct solvability of the queue to a reusable structural account of why the fixture always succeeds.",
+            "saturated_areas": ["local direct-solvability smoke fixture behavior"],
             "next_direction": {
                 "label": "smoke_direction",
                 "guidance": "Prefer continuing the direct-solvability smoke fixture path.",

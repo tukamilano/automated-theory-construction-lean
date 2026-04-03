@@ -351,7 +351,10 @@ def write_theory_state(
     derived_theorem_count: int,
     open_problem_count: int,
     archived_problem_count: int,
+    theory_kind: str,
     theory_summary: dict[str, Any],
+    main_bridge: str,
+    saturated_areas: list[str],
     next_direction: dict[str, Any],
 ) -> dict[str, Any]:
     existing_payload = load_theory_state(data_dir)
@@ -359,7 +362,10 @@ def write_theory_state(
         "version": 1,
         "updated_at_iteration": current_iteration,
         "updated_at_run_id": run_id,
+        "theory_kind": theory_kind,
         "theory_summary": theory_summary,
+        "main_bridge": main_bridge,
+        "saturated_areas": saturated_areas,
         "next_direction": next_direction,
         "summary_basis": {
             "derived_theorem_count": derived_theorem_count,
@@ -408,7 +414,10 @@ def persist_derived_generation(
             "version": 1,
             "updated_at_iteration": current_iteration,
             "updated_at_run_id": run_id,
+            "theory_kind": "",
             "theory_summary": {},
+            "main_bridge": "",
+            "saturated_areas": [],
             "next_direction": {},
             "summary_basis": {
                 "derived_theorem_count": 0,
@@ -811,13 +820,45 @@ def validate_next_direction_payload(payload: Any) -> dict[str, str]:
     }
 
 
+def validate_theory_kind_payload(payload: Any) -> str:
+    theory_kind = str(payload or "").strip()
+    if not theory_kind:
+        raise ValueError("theory_kind must be non-empty")
+    return theory_kind
+
+
+def validate_main_bridge_payload(payload: Any) -> str:
+    main_bridge = str(payload or "").strip()
+    if not main_bridge:
+        raise ValueError("main_bridge must be non-empty")
+    return main_bridge
+
+
+def validate_saturated_areas_payload(payload: Any) -> list[str]:
+    if not isinstance(payload, list):
+        raise ValueError("saturated_areas must be an array of strings")
+    items = [str(item).strip() for item in payload if str(item).strip()]
+    if not items:
+        raise ValueError("saturated_areas must contain at least 1 non-empty item")
+    return items
+
+
 def validate_open_problem_priority_output(
     payload: dict[str, Any],
     expected_problem_ids: list[str],
-) -> tuple[list[dict[str, str]], dict[str, Any], dict[str, str]]:
-    required_keys = {"priorities", "theory_summary", "next_direction"}
+) -> tuple[list[dict[str, str]], str, dict[str, Any], str, list[str], dict[str, str]]:
+    required_keys = {
+        "priorities",
+        "theory_kind",
+        "theory_summary",
+        "main_bridge",
+        "saturated_areas",
+        "next_direction",
+    }
     if set(payload.keys()) != required_keys:
-        raise ValueError("priority refresh output must contain exactly: priorities, theory_summary, next_direction")
+        raise ValueError(
+            "priority refresh output must contain exactly: priorities, theory_kind, theory_summary, main_bridge, saturated_areas, next_direction"
+        )
 
     priorities_value = payload.get("priorities")
     if not isinstance(priorities_value, list):
@@ -854,7 +895,10 @@ def validate_open_problem_priority_output(
 
     return (
         parsed,
+        validate_theory_kind_payload(payload.get("theory_kind")),
         validate_theory_summary_payload(payload.get("theory_summary")),
+        validate_main_bridge_payload(payload.get("main_bridge")),
+        validate_saturated_areas_payload(payload.get("saturated_areas")),
         validate_next_direction_payload(payload.get("next_direction")),
     )
 
@@ -2404,7 +2448,7 @@ def request_open_problem_priorities(
     derived_entries: list[dict[str, str]],
     current_iteration: int,
     previous_theory_state: dict[str, Any] | None = None,
-) -> tuple[list[dict[str, str]], dict[str, Any], dict[str, str], dict[str, Any]]:
+) -> tuple[list[dict[str, str]], str, dict[str, Any], str, list[str], dict[str, str], dict[str, Any]]:
     expected_problem_ids = [str(row.get("id", "")) for row in tracked_rows]
     priority_payload: dict[str, Any] = {
         "current_iteration": current_iteration,
@@ -2437,8 +2481,11 @@ def request_open_problem_priorities(
         payload=priority_payload,
         metadata={"tracked_problem_count": len(tracked_rows), "derived_theorem_count": len(derived_entries)},
     )
-    priority_updates, theory_summary, next_direction = validate_open_problem_priority_output(prioritized, expected_problem_ids)
-    return priority_updates, theory_summary, next_direction, worker_meta
+    priority_updates, theory_kind, theory_summary, main_bridge, saturated_areas, next_direction = validate_open_problem_priority_output(
+        prioritized,
+        expected_problem_ids,
+    )
+    return priority_updates, theory_kind, theory_summary, main_bridge, saturated_areas, next_direction, worker_meta
 
 
 def force_refresh_open_problem_priorities(
@@ -2463,7 +2510,15 @@ def force_refresh_open_problem_priorities(
     prioritizer_prompt = load_prompt_text(prioritizer_prompt_file)
     previous_theory_state = load_theory_state(data_dir)
     try:
-        priority_updates, theory_summary, next_direction, worker_meta = request_open_problem_priorities(
+        (
+            priority_updates,
+            theory_kind,
+            theory_summary,
+            main_bridge,
+            saturated_areas,
+            next_direction,
+            worker_meta,
+        ) = request_open_problem_priorities(
             worker_settings=worker_settings,
             prioritizer_prompt=prioritizer_prompt,
             tracked_rows=tracked_rows,
@@ -2491,7 +2546,10 @@ def force_refresh_open_problem_priorities(
         derived_theorem_count=len(derived_entries),
         open_problem_count=len(refreshed_open_rows),
         archived_problem_count=len(refreshed_archived_rows),
+        theory_kind=theory_kind,
         theory_summary=theory_summary,
+        main_bridge=main_bridge,
+        saturated_areas=saturated_areas,
         next_direction=next_direction,
     )
     if theory_state_history_path is not None:

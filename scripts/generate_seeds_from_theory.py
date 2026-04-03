@@ -198,8 +198,13 @@ def build_prompt(
     theory_summary_block = ""
     next_direction_block = ""
     state = dict(theory_state or {})
+    theory_kind = str(state.get("theory_kind", "")).strip()
     summary = state.get("theory_summary")
+    main_bridge = str(state.get("main_bridge", "")).strip()
+    saturated_areas = state.get("saturated_areas", [])
     direction = state.get("next_direction")
+    if theory_kind:
+        theory_summary_block += f"- Current theory kind: {theory_kind}\n"
     if isinstance(summary, dict):
         current_picture = str(summary.get("current_picture", "")).strip()
         missing_pieces = summary.get("missing_pieces", [])
@@ -212,6 +217,12 @@ def build_prompt(
             theory_summary_block += f"- Current theory picture: {current_picture}\n"
         if normalized_missing:
             theory_summary_block += f"- Current missing pieces: {'; '.join(normalized_missing[:4])}\n"
+    if main_bridge:
+        theory_summary_block += f"- Main bridge to pursue: {main_bridge}\n"
+    if isinstance(saturated_areas, list):
+        normalized_saturated = [str(item).strip() for item in saturated_areas if str(item).strip()]
+        if normalized_saturated:
+            theory_summary_block += f"- Areas that already look relatively saturated: {'; '.join(normalized_saturated[:3])}\n"
     if isinstance(direction, dict):
         guidance = str(direction.get("guidance", "")).strip()
         rationale = str(direction.get("rationale", "")).strip()
