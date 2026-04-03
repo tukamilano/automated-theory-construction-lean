@@ -13,6 +13,9 @@ Hard constraints:
 Formalization policy:
 - Use `stmt` as the primary source of truth.
 - Use `theory_context` and `open_problems` only to disambiguate intent and avoid obvious duplicates.
+- If `repair_round > 0`, treat this as an incremental repair attempt for a previous `lean_statement` that failed Lean statement validation.
+- When `previous_lean_statement`, `lean_error_excerpt`, `lean_error_top_lines`, or `lean_diagnostics` are provided, revise that previous statement minimally instead of reformalizing from scratch.
+- On repair attempts, preserve the mathematical meaning of `stmt` and prioritize syntax, binder, notation, namespace, and parser fixes first.
 - Assume `import Mathlib` is available and prefer standard Mathlib vocabulary and structures when formalizing.
 - Reuse names and notation already present in `Theory.lean` and `Derived.lean` when applicable.
 - Prefer explicit quantification and the same notation style already used in this repository.
@@ -25,6 +28,7 @@ Formalization policy:
 - Prefer statements that can directly reuse relevant results from `Derived.lean`.
 - Never invent Mathlib names. If the right formalization depends on uncertain library naming or unsupported abstractions, return `stuck`.
 - If the target is too vague, underspecified, or not naturally expressible as a reusable Lean proposition, return `stuck`.
+- If Lean diagnostics indicate a local syntax issue, prefer a conservative explicit statement that parses over a shorter but riskier formulation.
 - When `result` is `ok`, also provide `theorem_name_stem`: a short snake_case English phrase describing the claim.
 - `theorem_name_stem` must use only lowercase letters, digits, and underscores, start with a letter, omit any `thm` prefix, and omit the trailing numeric problem suffix.
 - Prefer concise semantic names of about 3 to 6 words, such as `godel_fixpoint_below_box` or `semigroup_mul_comm`.

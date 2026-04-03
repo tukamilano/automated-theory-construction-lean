@@ -9,6 +9,10 @@ DERIVED_FILE ?= AutomatedTheoryConstruction/Derived.lean
 SCRATCH_FILE ?= AutomatedTheoryConstruction/Scratch.lean
 SEEDS_FILE ?= AutomatedTheoryConstruction/seeds.jsonl
 PREVIEW_FILE ?= AutomatedTheoryConstruction/Derived.refactored.preview.lean
+COMPRESSION_PLAN_FILE ?= AutomatedTheoryConstruction/Derived.compression.plan.json
+COMPRESSION_REPORT_FILE ?= AutomatedTheoryConstruction/Derived.compression.report.json
+REFACTOR_PROGRESS_LOG_FILE ?= AutomatedTheoryConstruction/Derived.refactor.pass1.log.jsonl
+COMPRESSION_PROGRESS_LOG_FILE ?= AutomatedTheoryConstruction/Derived.compression.executor.log.jsonl
 REVIEWED_FILE ?= AutomatedTheoryConstruction/Derived.refactored.reviewed.lean
 TRY_AT_EACH_STEP_RAW_OUTPUT_FILE ?= AutomatedTheoryConstruction/Derived.tryAtEachStep.json
 TRY_AT_EACH_STEP_APPLY_REPORT_FILE ?= AutomatedTheoryConstruction/Derived.tryAtEachStep.apply_report.json
@@ -27,7 +31,7 @@ REFACTOR_ARGS ?=
 REWRITE_ARGS ?=
 REVIEW_ARGS ?=
 
-.PHONY: help build check check-theory check-derived check-scratch smoke seed loop loop-continue pipeline refactor rewrite review
+.PHONY: help build check check-theory check-derived check-scratch smoke seed loop loop-continue pipeline refactor compress rewrite review
 
 help:
 	@printf '%s\n' \
@@ -41,8 +45,9 @@ help:
 		'  make seed          - generate seeds.jsonl via scripts/atc_cli.py seed' \
 		'  make loop          - run the default worker loop via scripts/atc_cli.py loop' \
 		'  make loop-continue - same as loop, but keep current runtime state' \
-		'  make pipeline      - run seed -> loop -> refactor -> rewrite -> review via scripts/atc_cli.py pipeline' \
+		'  make pipeline      - run seed -> loop -> refactor -> compress -> rewrite -> review via scripts/atc_cli.py pipeline' \
 		'  make refactor      - run scripts/atc_cli.py refactor' \
+		'  make compress      - run scripts/atc_cli.py compress' \
 		'  make rewrite       - run scripts/atc_cli.py rewrite' \
 		'  make review        - run scripts/atc_cli.py review' \
 		'' \
@@ -111,6 +116,10 @@ pipeline:
 		--main-theorem-formalize-worker-timeout $(MAIN_THEOREM_FORMALIZE_WORKER_TIMEOUT) \
 		--main-theorem-repair-worker-timeout $(MAIN_THEOREM_REPAIR_WORKER_TIMEOUT) \
 		--preview-file $(PREVIEW_FILE) \
+		--compression-plan-file $(COMPRESSION_PLAN_FILE) \
+		--compression-report-file $(COMPRESSION_REPORT_FILE) \
+		--refactor-progress-log-file $(REFACTOR_PROGRESS_LOG_FILE) \
+		--compression-progress-log-file $(COMPRESSION_PROGRESS_LOG_FILE) \
 		--review-output-file $(REVIEWED_FILE) \
 		$(PIPELINE_ARGS)
 
@@ -119,6 +128,19 @@ refactor:
 		--derived-file $(DERIVED_FILE) \
 		--theory-file $(THEORY_FILE) \
 		--output-file $(PREVIEW_FILE) \
+		--progress-log-file $(REFACTOR_PROGRESS_LOG_FILE) \
+		--worker-command "$(WORKER_COMMAND)" \
+		--worker-timeout "$(WORKER_TIMEOUT)" \
+		--refactor-codex-timeout "$(CODEX_TIMEOUT)" \
+		$(REFACTOR_ARGS)
+
+compress:
+	$(ATC) compress \
+		--input-file $(PREVIEW_FILE) \
+		--output-file $(PREVIEW_FILE) \
+		--compression-plan-file $(COMPRESSION_PLAN_FILE) \
+		--compression-report-file $(COMPRESSION_REPORT_FILE) \
+		--compression-progress-log-file $(COMPRESSION_PROGRESS_LOG_FILE) \
 		--worker-command "$(WORKER_COMMAND)" \
 		--worker-timeout "$(WORKER_TIMEOUT)" \
 		--refactor-codex-timeout "$(CODEX_TIMEOUT)" \

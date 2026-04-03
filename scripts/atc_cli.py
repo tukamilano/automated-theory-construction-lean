@@ -127,6 +127,9 @@ def _loop_command(args: argparse.Namespace, config: AppConfig) -> tuple[list[str
     _append_flag(cmd, "--max-iterations", config.runtime.max_iterations)
     _append_flag(cmd, "--parallel-sessions", config.runtime.parallel_sessions)
     _append_flag(cmd, "--open-problem-failure-threshold", config.runtime.open_problem_failure_threshold)
+    _append_flag(cmd, "--prover-retry-budget-sec", config.runtime.prover_retry_budget_sec)
+    _append_flag(cmd, "--formalization-retry-budget-sec", config.runtime.formalization_retry_budget_sec)
+    _append_flag(cmd, "--max-same-error-streak", config.runtime.max_same_error_streak)
     _append_flag(cmd, "--priority-refresh-theorem-interval", config.runtime.priority_refresh_theorem_interval)
     if config.runtime.run_main_theorem_session:
         _append_flag(cmd, "--main-theorem-interval", config.runtime.main_theorem_interval)
@@ -167,6 +170,11 @@ def _pipeline_command(args: argparse.Namespace, config: AppConfig) -> tuple[list
     _append_flag(cmd, "--max-iterations", config.runtime.max_iterations)
     _append_flag(cmd, "--parallel-sessions", config.runtime.parallel_sessions)
     _append_flag(cmd, "--open-problem-failure-threshold", config.runtime.open_problem_failure_threshold)
+    _append_flag(cmd, "--refactor-max-wall-clock-sec", config.runtime.refactor_pass_1_max_wall_clock_sec)
+    _append_flag(cmd, "--compression-max-wall-clock-sec", config.runtime.refactor_pass_1_2_max_wall_clock_sec)
+    _append_flag(cmd, "--prover-retry-budget-sec", config.runtime.prover_retry_budget_sec)
+    _append_flag(cmd, "--formalization-retry-budget-sec", config.runtime.formalization_retry_budget_sec)
+    _append_flag(cmd, "--max-same-error-streak", config.runtime.max_same_error_streak)
     _append_flag(cmd, "--priority-refresh-theorem-interval", config.runtime.priority_refresh_theorem_interval)
     _append_flag(cmd, "--main-theorem-interval", config.runtime.main_theorem_interval)
     _append_flag(
@@ -186,7 +194,28 @@ def _pipeline_command(args: argparse.Namespace, config: AppConfig) -> tuple[list
         config.runtime.main_theorem_formalization_retry_budget_sec,
     )
     _append_flag(cmd, "--preview-file", args.preview_file or config.paths.preview_file)
+    _append_flag(
+        cmd,
+        "--compression-plan-file",
+        args.compression_plan_file or config.paths.compression_plan_file,
+    )
+    _append_flag(
+        cmd,
+        "--compression-report-file",
+        args.compression_report_file or config.paths.compression_report_file,
+    )
+    _append_flag(
+        cmd,
+        "--refactor-progress-log-file",
+        args.refactor_progress_log_file or config.paths.refactor_pass_1_log_file,
+    )
+    _append_flag(
+        cmd,
+        "--compression-progress-log-file",
+        args.compression_progress_log_file or config.paths.compression_executor_log_file,
+    )
     _append_flag(cmd, "--review-output-file", args.review_output_file or config.paths.reviewed_file)
+    _append_flag(cmd, "--review-report-file", args.review_report_file or config.paths.review_report_file)
     _append_flag(
         cmd,
         "--try-at-each-step-raw-output-file",
@@ -206,6 +235,7 @@ def _pipeline_command(args: argparse.Namespace, config: AppConfig) -> tuple[list
     _append_flag(cmd, "--review-sandbox", args.review_sandbox)
     _append_bool_flag(cmd, "--run-seed", config.runtime.run_seed)
     _append_bool_flag(cmd, "--run-refactor-pass-1", config.runtime.run_refactor_pass_1)
+    _append_bool_flag(cmd, "--run-refactor-pass-1_2", config.runtime.run_refactor_pass_1_2)
     _append_bool_flag(cmd, "--run-refactor-pass-1_5", config.runtime.run_refactor_pass_1_5)
     _append_bool_flag(cmd, "--run-refactor-pass-2", config.runtime.run_refactor_pass_2)
     _append_bool_flag(cmd, "--run-main-theorem-session", config.runtime.run_main_theorem_session)
@@ -228,10 +258,48 @@ def _refactor_command(args: argparse.Namespace, config: AppConfig) -> tuple[list
     )
     _append_flag(cmd, "--prompt-file", args.prompt_file)
     _append_flag(cmd, "--verify-timeout", args.verify_timeout)
+    _append_flag(cmd, "--max-wall-clock-sec", config.runtime.refactor_pass_1_max_wall_clock_sec)
     if args.apply:
         cmd.append("--apply")
     _append_flag(cmd, "--output-file", args.output_file or (None if args.apply else config.paths.preview_file))
     _append_flag(cmd, "--backup-file", args.backup_file)
+    _append_flag(cmd, "--progress-log-file", args.refactor_progress_log_file or config.paths.refactor_pass_1_log_file)
+    return cmd, build_worker_env(config, task_names=("refactor_derived",))
+
+
+def _compress_command(args: argparse.Namespace, config: AppConfig) -> tuple[list[str], dict[str, str]]:
+    input_file = getattr(args, "input_file", None) or config.paths.preview_file
+    output_file = getattr(args, "output_file", None) or input_file
+    compression_plan_file = getattr(args, "compression_plan_file", None) or config.paths.compression_plan_file
+    compression_report_file = getattr(args, "compression_report_file", None) or config.paths.compression_report_file
+    compression_progress_log_file = (
+        getattr(args, "compression_progress_log_file", None) or config.paths.compression_executor_log_file
+    )
+    theorem_reuse_memory_file = (
+        getattr(args, "theorem_reuse_memory_file", None) or config.paths.theorem_reuse_memory_file
+    )
+    cmd = _python_command("run_compression_pass.py")
+    cmd.extend(
+        [
+            "--input-file",
+            str(input_file),
+            "--theory-file",
+            str(config.paths.theory_file),
+            "--plan-file",
+            str(compression_plan_file),
+            "--report-file",
+            str(compression_report_file),
+            "--progress-log-file",
+            str(compression_progress_log_file),
+            "--theorem-reuse-memory-file",
+            str(theorem_reuse_memory_file),
+        ]
+    )
+    _append_flag(cmd, "--output-file", output_file)
+    _append_flag(cmd, "--planner-prompt-file", getattr(args, "planner_prompt_file", None))
+    _append_flag(cmd, "--executor-prompt-file", getattr(args, "executor_prompt_file", None))
+    _append_flag(cmd, "--verify-timeout", getattr(args, "verify_timeout", None))
+    _append_flag(cmd, "--max-wall-clock-sec", config.runtime.refactor_pass_1_2_max_wall_clock_sec)
     return cmd, build_worker_env(config, task_names=("refactor_derived",))
 
 
@@ -243,6 +311,8 @@ def _review_command(args: argparse.Namespace, config: AppConfig) -> tuple[list[s
             str(args.input_file or config.paths.preview_file),
             "--output-file",
             str(args.output_file or config.paths.reviewed_file),
+            "--report-file",
+            str(args.review_report_file or config.paths.review_report_file),
             "--sandbox",
             args.sandbox,
         ]
@@ -286,6 +356,11 @@ def _rewrite_command(args: argparse.Namespace, config: AppConfig) -> tuple[list[
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Unified CLI for the ATC runtime scripts.")
     subparsers = parser.add_subparsers(dest="command", required=True)
+    worker_timeout_help = "Per worker subprocess timeout in seconds."
+    verify_timeout_help = "Per Lean verification timeout in seconds."
+    retry_budget_help = "Whole retry-loop budget in seconds."
+    refactor_budget_help = "Whole pass 1 wall-clock budget in seconds."
+    compression_budget_help = "Whole pass 1.2 wall-clock budget in seconds."
 
     seed = subparsers.add_parser("seed", help="Generate seeds from the active theory.")
     _add_common_flags(seed)
@@ -310,14 +385,19 @@ def _build_parser() -> argparse.ArgumentParser:
     loop.add_argument("--phase-logs", action=argparse.BooleanOptionalAction, default=None)
     loop.add_argument("--skip-verify", action="store_true")
     loop.add_argument("--open-problem-failure-threshold", type=int)
+    loop.add_argument("--refactor-max-wall-clock-sec", type=int, help=refactor_budget_help)
+    loop.add_argument("--compression-max-wall-clock-sec", type=int, help=compression_budget_help)
+    loop.add_argument("--prover-retry-budget-sec", type=int, help=retry_budget_help)
+    loop.add_argument("--formalization-retry-budget-sec", type=int, help=retry_budget_help)
+    loop.add_argument("--max-same-error-streak", type=int)
     loop.add_argument("--priority-refresh-theorem-interval", type=int)
     loop.add_argument("--main-theorem-interval", type=int)
-    loop.add_argument("--main-theorem-formalize-worker-timeout", type=int)
-    loop.add_argument("--main-theorem-repair-worker-timeout", type=int)
-    loop.add_argument("--main-theorem-verify-timeout", type=int)
-    loop.add_argument("--main-theorem-formalization-retry-budget-sec", type=int)
+    loop.add_argument("--main-theorem-formalize-worker-timeout", type=int, help=worker_timeout_help)
+    loop.add_argument("--main-theorem-repair-worker-timeout", type=int, help=worker_timeout_help)
+    loop.add_argument("--main-theorem-verify-timeout", type=int, help=verify_timeout_help)
+    loop.add_argument("--main-theorem-formalization-retry-budget-sec", type=int, help=retry_budget_help)
 
-    pipeline = subparsers.add_parser("pipeline", help="Run seed -> loop -> refactor -> rewrite -> review.")
+    pipeline = subparsers.add_parser("pipeline", help="Run seed -> loop -> refactor -> compress -> rewrite -> review.")
     _add_common_flags(pipeline)
     _add_worker_flags(pipeline, include_refactor_task=True)
     _add_loop_task_worker_flags(pipeline)
@@ -333,14 +413,24 @@ def _build_parser() -> argparse.ArgumentParser:
     pipeline.add_argument("--parallel-sessions", type=int)
     pipeline.add_argument("--skip-loop-verify", action="store_true")
     pipeline.add_argument("--open-problem-failure-threshold", type=int)
+    pipeline.add_argument("--refactor-max-wall-clock-sec", type=int, help=refactor_budget_help)
+    pipeline.add_argument("--compression-max-wall-clock-sec", type=int, help=compression_budget_help)
+    pipeline.add_argument("--prover-retry-budget-sec", type=int, help=retry_budget_help)
+    pipeline.add_argument("--formalization-retry-budget-sec", type=int, help=retry_budget_help)
+    pipeline.add_argument("--max-same-error-streak", type=int)
     pipeline.add_argument("--priority-refresh-theorem-interval", type=int)
     pipeline.add_argument("--main-theorem-interval", type=int)
-    pipeline.add_argument("--main-theorem-formalize-worker-timeout", type=int)
-    pipeline.add_argument("--main-theorem-repair-worker-timeout", type=int)
-    pipeline.add_argument("--main-theorem-verify-timeout", type=int)
-    pipeline.add_argument("--main-theorem-formalization-retry-budget-sec", type=int)
+    pipeline.add_argument("--main-theorem-formalize-worker-timeout", type=int, help=worker_timeout_help)
+    pipeline.add_argument("--main-theorem-repair-worker-timeout", type=int, help=worker_timeout_help)
+    pipeline.add_argument("--main-theorem-verify-timeout", type=int, help=verify_timeout_help)
+    pipeline.add_argument("--main-theorem-formalization-retry-budget-sec", type=int, help=retry_budget_help)
     pipeline.add_argument("--preview-file")
+    pipeline.add_argument("--compression-plan-file")
+    pipeline.add_argument("--compression-report-file")
+    pipeline.add_argument("--refactor-progress-log-file")
+    pipeline.add_argument("--compression-progress-log-file")
     pipeline.add_argument("--review-output-file")
+    pipeline.add_argument("--review-report-file")
     pipeline.add_argument("--try-at-each-step-raw-output-file")
     pipeline.add_argument("--try-at-each-step-apply-report-file")
     pipeline.add_argument("--try-at-each-step-tactic")
@@ -349,6 +439,7 @@ def _build_parser() -> argparse.ArgumentParser:
     pipeline.add_argument("--no-review-verify", action="store_true")
     pipeline.add_argument("--run-seed", action=argparse.BooleanOptionalAction, default=None)
     pipeline.add_argument("--run-refactor-pass-1", action=argparse.BooleanOptionalAction, default=None)
+    pipeline.add_argument("--run-refactor-pass-1_2", action=argparse.BooleanOptionalAction, default=None)
     pipeline.add_argument("--run-refactor-pass-1_5", action=argparse.BooleanOptionalAction, default=None)
     pipeline.add_argument("--run-refactor-pass-2", action=argparse.BooleanOptionalAction, default=None)
     refactor = subparsers.add_parser("refactor", help="Run final refactor pass 1 for Derived.lean.")
@@ -357,16 +448,33 @@ def _build_parser() -> argparse.ArgumentParser:
     refactor.add_argument("--theory-file")
     refactor.add_argument("--derived-file")
     refactor.add_argument("--prompt-file")
-    refactor.add_argument("--verify-timeout", type=int)
+    refactor.add_argument("--verify-timeout", type=int, help=verify_timeout_help)
     refactor.add_argument("--output-file")
     refactor.add_argument("--apply", action="store_true")
     refactor.add_argument("--backup-file")
+    refactor.add_argument("--progress-log-file", dest="refactor_progress_log_file")
+    refactor.add_argument("--max-wall-clock-sec", dest="refactor_max_wall_clock_sec", type=int, help=refactor_budget_help)
     refactor.add_argument("--theorem-reuse-memory-file")
+
+    compress = subparsers.add_parser("compress", help="Run pass 1.2 soft compression on the preview file.")
+    _add_common_flags(compress)
+    _add_worker_flags(compress, include_refactor_task=True)
+    compress.add_argument("--input-file")
+    compress.add_argument("--output-file")
+    compress.add_argument("--verify-timeout", type=int, help=verify_timeout_help)
+    compress.add_argument("--compression-plan-file")
+    compress.add_argument("--compression-report-file")
+    compress.add_argument("--compression-progress-log-file")
+    compress.add_argument("--planner-prompt-file")
+    compress.add_argument("--executor-prompt-file")
+    compress.add_argument("--theorem-reuse-memory-file")
+    compress.add_argument("--max-wall-clock-sec", dest="compression_max_wall_clock_sec", type=int, help=compression_budget_help)
 
     review = subparsers.add_parser("review", help="Run the second review-polish pass.")
     _add_common_flags(review)
     review.add_argument("--input-file")
     review.add_argument("--output-file")
+    review.add_argument("--report-file", dest="review_report_file")
     review.add_argument("--model")
     review.add_argument("--sandbox", default="workspace-write")
     review.add_argument("--skip-copy", action="store_true")
@@ -383,7 +491,7 @@ def _build_parser() -> argparse.ArgumentParser:
     rewrite.add_argument("--apply-report-file")
     rewrite.add_argument("--tactic")
     rewrite.add_argument("--backup-file")
-    rewrite.add_argument("--verify-timeout", type=int)
+    rewrite.add_argument("--verify-timeout", type=int, help=verify_timeout_help)
 
     config_cmd = subparsers.add_parser("config", help="Inspect resolved configuration.")
     config_subparsers = config_cmd.add_subparsers(dest="config_command", required=True)
@@ -402,18 +510,29 @@ def _build_parser() -> argparse.ArgumentParser:
     config_show.add_argument("--parallel-sessions", type=int)
     config_show.add_argument("--run-seed", action=argparse.BooleanOptionalAction, default=None)
     config_show.add_argument("--run-refactor-pass-1", action=argparse.BooleanOptionalAction, default=None)
+    config_show.add_argument("--run-refactor-pass-1_2", action=argparse.BooleanOptionalAction, default=None)
     config_show.add_argument("--run-refactor-pass-1_5", action=argparse.BooleanOptionalAction, default=None)
     config_show.add_argument("--run-refactor-pass-2", action=argparse.BooleanOptionalAction, default=None)
+    config_show.add_argument("--compression-plan-file")
+    config_show.add_argument("--compression-report-file")
+    config_show.add_argument("--refactor-progress-log-file")
+    config_show.add_argument("--compression-progress-log-file")
+    config_show.add_argument("--review-report-file")
     config_show.add_argument("--try-at-each-step-tactic")
     config_show.add_argument("--try-at-each-step-raw-output-file")
     config_show.add_argument("--try-at-each-step-apply-report-file")
     config_show.add_argument("--open-problem-failure-threshold", type=int)
+    config_show.add_argument("--refactor-max-wall-clock-sec", type=int, help=refactor_budget_help)
+    config_show.add_argument("--compression-max-wall-clock-sec", type=int, help=compression_budget_help)
+    config_show.add_argument("--prover-retry-budget-sec", type=int, help=retry_budget_help)
+    config_show.add_argument("--formalization-retry-budget-sec", type=int, help=retry_budget_help)
+    config_show.add_argument("--max-same-error-streak", type=int)
     config_show.add_argument("--priority-refresh-theorem-interval", type=int)
     config_show.add_argument("--main-theorem-interval", type=int)
-    config_show.add_argument("--main-theorem-formalize-worker-timeout", type=int)
-    config_show.add_argument("--main-theorem-repair-worker-timeout", type=int)
-    config_show.add_argument("--main-theorem-verify-timeout", type=int)
-    config_show.add_argument("--main-theorem-formalization-retry-budget-sec", type=int)
+    config_show.add_argument("--main-theorem-formalize-worker-timeout", type=int, help=worker_timeout_help)
+    config_show.add_argument("--main-theorem-repair-worker-timeout", type=int, help=worker_timeout_help)
+    config_show.add_argument("--main-theorem-verify-timeout", type=int, help=verify_timeout_help)
+    config_show.add_argument("--main-theorem-formalization-retry-budget-sec", type=int, help=retry_budget_help)
 
     return parser
 
@@ -438,6 +557,7 @@ def main() -> int:
         "loop": _loop_command,
         "pipeline": _pipeline_command,
         "refactor": _refactor_command,
+        "compress": _compress_command,
         "rewrite": _rewrite_command,
         "review": _review_command,
     }

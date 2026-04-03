@@ -13,6 +13,12 @@ from llm_exec import resolve_provider
 from llm_exec import run_llm_exec
 
 
+TASK_TYPE_ENV_ALIASES = {
+    "plan_derived_compression": "refactor_derived",
+    "apply_derived_compression_item": "refactor_derived",
+}
+
+
 def _single_line_excerpt(text: str, limit: int = 400) -> str:
     normalized = " ".join(text.strip().split())
     if not normalized:
@@ -30,6 +36,11 @@ def _resolve_task_env(task_type: str, suffix: str, default: str = "") -> str:
     task_override = (os.getenv(_task_env_key(task_type, suffix)) or "").strip()
     if task_override:
         return task_override
+    alias = TASK_TYPE_ENV_ALIASES.get(task_type, "")
+    if alias:
+        alias_override = (os.getenv(_task_env_key(alias, suffix)) or "").strip()
+        if alias_override:
+            return alias_override
     return (os.getenv(f"ATC_{suffix}") or default).strip()
 
 
@@ -38,13 +49,13 @@ def _resolve_codex_timeout_env(task_type: str) -> str:
     if task_override:
         return task_override
     # Refactor runs are intentionally unbounded unless the refactor task itself sets a timeout.
-    if task_type == "refactor_derived":
+    if task_type in {"refactor_derived", "plan_derived_compression", "apply_derived_compression_item"}:
         return ""
     return (os.getenv("ATC_CODEX_TIMEOUT") or "").strip()
 
 
 def _default_worker_timeout_for_task(task_type: str) -> int | None:
-    if task_type == "refactor_derived":
+    if task_type in {"refactor_derived", "plan_derived_compression", "apply_derived_compression_item"}:
         return None
     return 180
 
@@ -281,6 +292,8 @@ def main() -> None:
             "repair",
             "expand",
             "refactor_derived",
+            "plan_derived_compression",
+            "apply_derived_compression_item",
             "prioritize_open_problems",
             "main_theorem_suggest",
             "main_theorem_plan",

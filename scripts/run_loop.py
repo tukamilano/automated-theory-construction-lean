@@ -78,6 +78,55 @@ OPEN_PROBLEM_PRIORITY_ORDER = {
     "unknown": 2,
     "low": 3,
 }
+
+DEFAULT_PROVER_RETRY_BUDGET_SEC = 120
+DEFAULT_FORMALIZATION_RETRY_BUDGET_SEC = 300
+DEFAULT_MAIN_THEOREM_FORMALIZATION_RETRY_BUDGET_SEC = 3600
+DEFAULT_MAX_SAME_ERROR_STREAK = 5
+
+
+def build_retry_deadline(budget_sec: int | None) -> float | None:
+    if budget_sec is None:
+        return None
+    return time.monotonic() + max(1, budget_sec)
+
+
+def remaining_retry_budget_sec(deadline: float | None) -> int | None:
+    if deadline is None:
+        return None
+    remaining = int(deadline - time.monotonic())
+    return max(0, remaining)
+
+
+def update_same_fingerprint_streak(
+    *,
+    last_fingerprint: str,
+    current_fingerprint: str,
+    current_streak: int,
+) -> tuple[str, int]:
+    if not current_fingerprint:
+        return "", 0
+    if current_fingerprint == last_fingerprint:
+        return last_fingerprint, current_streak + 1
+    return current_fingerprint, 1
+
+
+def prover_response_fingerprint(
+    *,
+    result: str,
+    proof_sketch: str,
+    counterexample_text: str,
+    new_problems: list[str],
+) -> str:
+    normalized_new_problems = [normalize_stmt_text(item) for item in new_problems if str(item).strip()]
+    return " || ".join(
+        [
+            result.strip(),
+            " ".join(proof_sketch.strip().split()),
+            " ".join(counterexample_text.strip().split()),
+            "|".join(normalized_new_problems),
+        ]
+    )
 PHASE_ATTEMPT_LOCK = threading.Lock()
 FORMALIZATION_MEMORY_LOCK = threading.RLock()
 COMPILE_METRICS_LOCK = threading.Lock()
@@ -1041,7 +1090,15 @@ def emit_phase_log(enabled: bool, phase: str, **fields: Any) -> None:
     print(payload, flush=True)
 
 
-def emit_parse_phase_log(enabled: bool, phase: str, *, iteration: int, problem_id: str, worker_meta: dict[str, Any]) -> None:
+def emit_parse_phase_log(
+    enabled: bool,
+    phase: str,
+    *,
+    iteration: int,
+    problem_id: str,
+    worker_meta: dict[str, Any],
+    repair_round: int | None = None,
+) -> None:
     worker_attempts = int(worker_meta.get("json_parse_attempts", 0) or 0)
     client_attempts = int(worker_meta.get("client_json_parse_attempts", 0) or 0)
     worker_fallback = bool(worker_meta.get("raw_parse_fallback_used", False))
@@ -1057,6 +1114,8 @@ def emit_parse_phase_log(enabled: bool, phase: str, *, iteration: int, problem_i
         "worker_attempts": worker_attempts,
         "client_attempts": client_attempts,
     }
+    if repair_round is not None:
+        payload["repair_round"] = repair_round
     if worker_fallback or client_fallback:
         payload["fallback_used"] = worker_fallback or client_fallback
     emit_phase_log(enabled, phase, **payload)
@@ -1700,7 +1759,7 @@ def query_prover_with_retries(
     stmt: str,
     original_stmt: str,
     open_rows: list[dict[str, Any]],
-    prover_retries: int,
+    prover_retry_budget_sec: int | None,
     theory_context: str,
     memory_path: Path,
     current_iteration_full_logs: list[dict[str, Any]],
@@ -1709,21 +1768,29 @@ def query_prover_with_retries(
     session_type: str,
     iteration: int,
     phase_attempts_path: Path,
+    max_same_error_streak: int | None = None,
 ) -> tuple[str, str, str, list[str], int, dict[str, Any]]:
-    retries = max(1, prover_retries)
+    deadline = build_retry_deadline(prover_retry_budget_sec)
     last_result = "stuck"
     last_proof_sketch = ""
     last_counterexample_text = ""
     last_new_problems: list[str] = []
     last_worker_meta: dict[str, Any] = {}
+    last_response_fingerprint = ""
+    same_response_streak = 0
+    attempt = 0
 
-    for attempt in range(1, retries + 1):
+    while True:
+        if deadline is not None and attempt > 0 and time.monotonic() >= deadline:
+            break
+        attempt += 1
         payload: dict[str, Any] = {
             "problem_id": problem_id,
             "stmt": stmt,
             "original_stmt": original_stmt,
             "theory_context": theory_context,
             "same_problem_history_tail": same_problem_history_tail,
+            "retry_round": attempt - 1,
         }
         if attempt > 1:
             payload["retry_instruction"] = (
@@ -1737,7 +1804,7 @@ def query_prover_with_retries(
             payload["previous_new_problems"] = last_new_problems
 
         try:
-            debug_log(f"Calling prover for problem {problem_id}, attempt {attempt}/{retries}")
+            debug_log(f"Calling prover for problem {problem_id}, attempt {attempt}")
             prover_started_monotonic = time.monotonic()
             prover_started_at = iso_timestamp_now()
             prover_payload, worker_meta = invoke_worker_json(
@@ -1813,12 +1880,26 @@ def query_prover_with_retries(
         if result != "stuck":
             return result, proof_sketch, counterexample_text, new_problems, attempt, last_worker_meta
 
+        response_fingerprint = prover_response_fingerprint(
+            result=result,
+            proof_sketch=proof_sketch,
+            counterexample_text=counterexample_text,
+            new_problems=new_problems,
+        )
+        last_response_fingerprint, same_response_streak = update_same_fingerprint_streak(
+            last_fingerprint=last_response_fingerprint,
+            current_fingerprint=response_fingerprint,
+            current_streak=same_response_streak,
+        )
+        if max_same_error_streak is not None and same_response_streak >= max_same_error_streak:
+            break
+
     return (
         last_result,
         last_proof_sketch,
         last_counterexample_text,
         last_new_problems,
-        retries,
+        attempt,
         last_worker_meta,
     )
 
@@ -1873,13 +1954,42 @@ def request_prover_statement_formalization(
     open_rows: list[dict[str, Any]],
     theory_context: str,
     current_iteration_full_logs: list[dict[str, Any]],
+    repair_round: int = 0,
+    retry_instruction: str = "",
+    previous_lean_statement: str = "",
+    previous_theorem_name_stem: str = "",
+    previous_docstring_summary: str = "",
+    previous_notes: str = "",
+    lean_error_excerpt: str = "",
+    lean_error_top_lines: list[str] | None = None,
+    lean_diagnostics: str = "",
+    repair_history_tail: list[dict[str, Any]] | None = None,
 ) -> tuple[str, str, str, str, str, dict[str, Any]]:
     statement_payload: dict[str, Any] = {
         "problem_id": problem_id,
         "stmt": stmt,
         "theory_context": theory_context,
         "open_problems": open_rows,
+        "repair_round": repair_round,
     }
+    if retry_instruction:
+        statement_payload["retry_instruction"] = retry_instruction
+    if previous_lean_statement:
+        statement_payload["previous_lean_statement"] = previous_lean_statement
+    if previous_theorem_name_stem:
+        statement_payload["previous_theorem_name_stem"] = previous_theorem_name_stem
+    if previous_docstring_summary:
+        statement_payload["previous_docstring_summary"] = previous_docstring_summary
+    if previous_notes:
+        statement_payload["previous_notes"] = previous_notes
+    if lean_error_excerpt:
+        statement_payload["lean_error_excerpt"] = lean_error_excerpt
+    if lean_error_top_lines:
+        statement_payload["lean_error_top_lines"] = list(lean_error_top_lines)
+    if lean_diagnostics:
+        statement_payload["lean_diagnostics"] = lean_diagnostics
+    if repair_history_tail:
+        statement_payload["repair_history_tail"] = list(repair_history_tail)
     formalized, worker_meta = invoke_worker_json(
         settings=worker_settings,
         task_type="prover_statement",
@@ -1890,7 +2000,7 @@ def request_prover_statement_formalization(
     append_current_iteration_log(
         current_iteration_full_logs,
         stage="prover_statement",
-        index=1,
+        index=repair_round + 1,
         worker_meta=worker_meta,
     )
     try:
@@ -1921,6 +2031,8 @@ def resolve_solver_statement(
     prover_statement_worker_settings: Any,
     prover_statement_prompt_file: str,
     statement_verify_timeout_sec: int = 180,
+    statement_retry_budget_sec: int | None = None,
+    max_same_error_streak: int | None = None,
     phase_logs: bool,
     iteration: int,
     problem_id: str,
@@ -1933,51 +2045,89 @@ def resolve_solver_statement(
     compile_metrics: dict[str, Any],
 ) -> tuple[str, str, str, str, str, dict[str, Any]]:
     prover_statement_worker_meta: dict[str, Any] = {}
-    emit_phase_log(
-        phase_logs,
-        "prover_statement",
-        iteration=iteration,
-        problem_id=problem_id,
-        mode="worker",
-    )
     prover_statement_prompt = load_prompt_text(prover_statement_prompt_file)
-    stmt_started_monotonic = time.monotonic()
-    stmt_started_at = iso_timestamp_now()
-    try:
-        result, formalized_stmt, theorem_name_stem, docstring_summary, notes, prover_statement_worker_meta = request_prover_statement_formalization(
-            worker_settings=prover_statement_worker_settings,
-            prover_statement_prompt=prover_statement_prompt,
-            problem_id=problem_id,
-            stmt=original_stmt,
-            open_rows=open_rows,
-            theory_context=theory_context,
-            current_iteration_full_logs=current_iteration_full_logs,
-        )
-    except RuntimeError as exc:
-        append_phase_attempt_record(
-            phase_attempts_path,
-            run_id=run_id,
-            session_type="loop",
+    repair_round = 0
+    retry_instruction = ""
+    previous_lean_statement = ""
+    previous_theorem_name_stem = ""
+    previous_docstring_summary = ""
+    previous_notes = ""
+    lean_error_excerpt = ""
+    lean_error_top_lines: list[str] = []
+    lean_diagnostics = ""
+    repair_history: list[dict[str, Any]] = []
+    last_failure_signature = ""
+    same_failure_streak = 0
+    deadline = build_retry_deadline(statement_retry_budget_sec)
+
+    while True:
+        if deadline is not None and repair_round > 0 and time.monotonic() >= deadline:
+            result = "stuck"
+            formalized_stmt = ""
+            theorem_name_stem = ""
+            docstring_summary = ""
+            notes = (
+                f"{previous_notes}\nStatement repair budget exhausted before a valid Lean statement was found."
+                if previous_notes
+                else "Statement repair budget exhausted before a valid Lean statement was found."
+            )
+            break
+        emit_phase_log(
+            phase_logs,
+            "prover_statement",
             iteration=iteration,
-            entity_id=problem_id,
-            phase="stmt",
-            worker_task="prover_statement",
-            started_at=stmt_started_at,
-            finished_at=iso_timestamp_now(),
-            duration_ms=monotonic_duration_ms(stmt_started_monotonic),
-            success=False,
-            result="timeout" if is_worker_timeout_error(exc) else "error",
-            timeout=is_worker_timeout_error(exc),
-            error=str(exc),
+            problem_id=problem_id,
+            mode="worker",
+            repair_round=repair_round,
         )
-        if not is_worker_timeout_error(exc):
-            raise
-        result = "stuck"
-        formalized_stmt = ""
-        theorem_name_stem = ""
-        docstring_summary = ""
-        notes = f"prover_statement worker timeout: {exc}"
-    else:
+        stmt_started_monotonic = time.monotonic()
+        stmt_started_at = iso_timestamp_now()
+        try:
+            result, formalized_stmt, theorem_name_stem, docstring_summary, notes, prover_statement_worker_meta = request_prover_statement_formalization(
+                worker_settings=prover_statement_worker_settings,
+                prover_statement_prompt=prover_statement_prompt,
+                problem_id=problem_id,
+                stmt=original_stmt,
+                open_rows=open_rows,
+                theory_context=theory_context,
+                current_iteration_full_logs=current_iteration_full_logs,
+                repair_round=repair_round,
+                retry_instruction=retry_instruction,
+                previous_lean_statement=previous_lean_statement,
+                previous_theorem_name_stem=previous_theorem_name_stem,
+                previous_docstring_summary=previous_docstring_summary,
+                previous_notes=previous_notes,
+                lean_error_excerpt=lean_error_excerpt,
+                lean_error_top_lines=lean_error_top_lines,
+                lean_diagnostics=lean_diagnostics,
+                repair_history_tail=repair_history[-8:],
+            )
+        except RuntimeError as exc:
+            append_phase_attempt_record(
+                phase_attempts_path,
+                run_id=run_id,
+                session_type="loop",
+                iteration=iteration,
+                entity_id=problem_id,
+                phase="stmt",
+                worker_task="prover_statement",
+                started_at=stmt_started_at,
+                finished_at=iso_timestamp_now(),
+                duration_ms=monotonic_duration_ms(stmt_started_monotonic),
+                success=False,
+                result="timeout" if is_worker_timeout_error(exc) else "error",
+                timeout=is_worker_timeout_error(exc),
+                error=str(exc),
+            )
+            if not is_worker_timeout_error(exc):
+                raise
+            result = "stuck"
+            formalized_stmt = ""
+            theorem_name_stem = ""
+            docstring_summary = ""
+            notes = f"prover_statement worker timeout: {exc}"
+            break
+
         append_phase_attempt_record(
             phase_attempts_path,
             run_id=run_id,
@@ -1998,9 +2148,12 @@ def resolve_solver_statement(
             iteration=iteration,
             problem_id=problem_id,
             worker_meta=prover_statement_worker_meta,
+            repair_round=repair_round,
         )
 
-    if result == "ok":
+        if result != "ok":
+            break
+
         theorem_name = build_theorem_name(problem_id, theorem_name_stem)
         verify_started_monotonic = time.monotonic()
         verify_started_at = iso_timestamp_now()
@@ -2011,6 +2164,7 @@ def resolve_solver_statement(
             timeout_sec=statement_verify_timeout_sec,
         )
         update_compile_metrics(compile_metrics, verify_result)
+        verify_success = bool(verify_result.get("success", False))
         append_phase_attempt_record(
             phase_attempts_path,
             run_id=run_id,
@@ -2022,22 +2176,77 @@ def resolve_solver_statement(
             started_at=verify_started_at,
             finished_at=iso_timestamp_now(),
             duration_ms=int(verify_result.get("duration_ms", monotonic_duration_ms(verify_started_monotonic)) or 0),
-            success=bool(verify_result.get("success", False)),
-            result="verified" if bool(verify_result.get("success", False)) else "failed",
+            success=verify_success,
+            result="verified" if verify_success else "failed",
         )
-        if not bool(verify_result.get("success", False)):
-            lean_stderr = str(verify_result.get("stderr", "")).strip()
-            lean_stdout = str(verify_result.get("stdout", "")).strip()
-            lean_excerpt = (lean_stderr or lean_stdout).splitlines()[0] if (lean_stderr or lean_stdout) else "Lean statement validation failed"
+        if verify_success:
+            break
+
+        lean_stderr = str(verify_result.get("stderr", "")).strip()
+        lean_stdout = str(verify_result.get("stdout", "")).strip()
+        lean_excerpt = (lean_stderr or lean_stdout).splitlines()[0] if (lean_stderr or lean_stdout) else "Lean statement validation failed"
+        error_analysis = analyze_lean_failure(lean_stderr, lean_stdout)
+        error_fingerprint = str(error_analysis.get("fingerprint", "no_diagnostics"))
+        failure_signature = f"{normalize_stmt_text(formalized_stmt)} || {error_fingerprint}"
+        last_failure_signature, same_failure_streak = update_same_fingerprint_streak(
+            last_fingerprint=last_failure_signature,
+            current_fingerprint=failure_signature,
+            current_streak=same_failure_streak,
+        )
+
+        lean_failure_note = f"Lean statement validation failed before proof search: {lean_excerpt}"
+        notes = "\n".join(part for part in (notes, lean_failure_note) if part).strip()
+        repair_history.append(
+            {
+                "repair_round": repair_round,
+                "lean_statement": formalized_stmt,
+                "theorem_name_stem": theorem_name_stem,
+                "docstring_summary": docstring_summary,
+                "notes": notes,
+                "lean_error_excerpt": lean_excerpt,
+                "lean_error_fingerprint": error_fingerprint,
+            }
+        )
+        if len(repair_history) > 20:
+            repair_history = repair_history[-20:]
+
+        emit_phase_log(
+            phase_logs,
+            "prover_statement_repair",
+            iteration=iteration,
+            problem_id=problem_id,
+            repair_round=repair_round + 1,
+            error_fingerprint=error_fingerprint,
+            theorem_name_stem=theorem_name_stem,
+        )
+        if max_same_error_streak is not None and same_failure_streak >= max_same_error_streak:
             result = "stuck"
             formalized_stmt = ""
             theorem_name_stem = ""
             docstring_summary = ""
             notes = (
-                f"{notes}\nLean statement validation failed before proof search: {lean_excerpt}"
+                f"{notes}\nStatement repair stopped after repeated identical stmt_check failures."
                 if notes
-                else f"Lean statement validation failed before proof search: {lean_excerpt}"
+                else "Statement repair stopped after repeated identical stmt_check failures."
             )
+            break
+
+        retry_instruction = (
+            "Previous lean_statement failed Lean statement validation before proof search. "
+            "Keep the mathematical meaning of `stmt`, but repair the Lean proposition minimally. "
+            "Prioritize parser, binder, notation, and namespace fixes. "
+            "Return only one proposition statement, not a theorem or proof."
+        )
+        previous_lean_statement = formalized_stmt
+        previous_theorem_name_stem = theorem_name_stem
+        previous_docstring_summary = docstring_summary
+        previous_notes = notes
+        lean_error_excerpt = lean_excerpt
+        lean_error_top_lines = [str(line).strip() for line in error_analysis.get("top_lines", []) if str(line).strip()]
+        lean_diagnostics = "\n".join(
+            (lean_stderr + "\n" + lean_stdout).splitlines()[:60]
+        ).strip()
+        repair_round += 1
 
     solver_stmt = formalized_stmt if result == "ok" else ""
     emit_phase_log(
@@ -2048,6 +2257,7 @@ def resolve_solver_statement(
         formalized=result == "ok",
         theorem_name_stem=theorem_name_stem,
         notes=notes,
+        repair_round=repair_round,
     )
     return solver_stmt, result, theorem_name_stem, docstring_summary, notes, prover_statement_worker_meta
 
@@ -2318,7 +2528,6 @@ def attempt_formalization_until_timeout(
     initial_proof_text: str = "",
     phase_logger: Callable[..., None] | None = None,
     forbid_sorry: bool = False,
-    max_repair_rounds: int | None = None,
     max_same_error_streak: int | None = None,
     run_id: str,
     session_type: str,
@@ -2438,11 +2647,7 @@ def attempt_formalization_until_timeout(
             save_formalization_memory(memory_path, problem_id, persisted_history)
             return verify_success, current_theorem_name, result, proof_text, counterexample_text, new_problems, verify_error_excerpt, current_stmt
 
-    deadline = (
-        None
-        if formalization_retry_budget_sec is None
-        else time.monotonic() + max(1, formalization_retry_budget_sec)
-    )
+    deadline = build_retry_deadline(formalization_retry_budget_sec)
     persisted_history = load_formalization_memory(memory_path, problem_id)
     repair_round = 0
     repair_history: list[dict[str, Any]] = list(persisted_history)
@@ -2614,11 +2819,11 @@ def attempt_formalization_until_timeout(
         error_fingerprint = str(verify_error_analysis.get("fingerprint", "no_diagnostics"))
         error_categories = verify_error_analysis.get("categories", [])
         lean_error_top_lines = verify_error_analysis.get("top_lines", [])
-        if error_fingerprint == last_error_fingerprint:
-            same_error_streak += 1
-        else:
-            last_error_fingerprint = error_fingerprint
-            same_error_streak = 1
+        last_error_fingerprint, same_error_streak = update_same_fingerprint_streak(
+            last_fingerprint=last_error_fingerprint,
+            current_fingerprint=error_fingerprint,
+            current_streak=same_error_streak,
+        )
         if best_verified_candidate is not None and normalize_stmt_text(current_stmt) != normalize_stmt_text(str(best_verified_candidate["stmt"])):
             retry_instruction = (
                 "The previous theorem already verified. A stronger candidate statement was formed by removing unused binders "
@@ -2649,30 +2854,7 @@ def attempt_formalization_until_timeout(
         save_formalization_memory(memory_path, problem_id, repair_history)
 
         repair_round += 1
-        if max_repair_rounds is not None and repair_round > max_repair_rounds:
-            save_formalization_memory(memory_path, problem_id, repair_history)
-            if best_verified_candidate is not None:
-                return (
-                    True,
-                    current_theorem_name,
-                    str(best_verified_candidate["result"]),
-                    str(best_verified_candidate["proof_text"]),
-                    str(best_verified_candidate["counterexample_text"]),
-                    list(best_verified_candidate["new_problems"]),
-                    str(best_verified_candidate["verify_error_excerpt"]),
-                    str(best_verified_candidate["stmt"]),
-                )
-            return (
-                False,
-                current_theorem_name,
-                result,
-                proof_text,
-                counterexample_text,
-                retained_new_problems,
-                verify_error_excerpt,
-                current_stmt,
-            )
-        if max_same_error_streak is not None and same_error_streak > max_same_error_streak:
+        if max_same_error_streak is not None and same_error_streak >= max_same_error_streak:
             save_formalization_memory(memory_path, problem_id, repair_history)
             if best_verified_candidate is not None:
                 return (
@@ -2896,7 +3078,6 @@ def run_manual_main_theorem_check(
     skip_verify: bool,
     verify_timeout_sec: int | None,
     formalization_retry_budget_sec: int | None,
-    max_repair_rounds: int,
     max_same_error_streak: int,
     post_expand_count: int,
     failure_threshold: int,
@@ -3024,7 +3205,6 @@ def run_manual_main_theorem_check(
         skip_verify=skip_verify,
         verify_timeout_sec=verify_timeout_sec,
         formalization_retry_budget_sec=formalization_retry_budget_sec,
-        max_repair_rounds=max_repair_rounds,
         max_same_error_streak=max_same_error_streak,
         post_expand_count=post_expand_count,
         failure_threshold=failure_threshold,
@@ -3069,7 +3249,6 @@ def process_manual_main_theorem(
     skip_verify: bool,
     verify_timeout_sec: int | None,
     formalization_retry_budget_sec: int | None,
-    max_repair_rounds: int,
     max_same_error_streak: int,
     post_expand_count: int,
     failure_threshold: int,
@@ -3219,7 +3398,6 @@ def process_manual_main_theorem(
         initial_proof_text="",
         phase_logger=(lambda **fields: emit_phase_log(phase_logs, iteration=current_iteration, **fields)),
         forbid_sorry=True,
-        max_repair_rounds=max_repair_rounds,
         max_same_error_streak=max_same_error_streak,
         run_id=run_id,
         session_type="main_theorem_session",
@@ -3471,6 +3649,8 @@ def run_problem_session(
     ) = resolve_solver_statement(
         prover_statement_worker_settings=prover_statement_worker_settings,
         prover_statement_prompt_file=args.prover_statement_prompt_file,
+        statement_retry_budget_sec=args.formalization_retry_budget_sec,
+        max_same_error_streak=args.max_same_error_streak,
         phase_logs=args.phase_logs,
         iteration=current_iteration,
         problem_id=problem_id,
@@ -3534,7 +3714,7 @@ def run_problem_session(
             stmt=solver_stmt,
             original_stmt=original_stmt,
             open_rows=open_rows,
-            prover_retries=args.prover_retries,
+            prover_retry_budget_sec=args.prover_retry_budget_sec,
             theory_context=theory_context,
             memory_path=memory_path,
             current_iteration_full_logs=current_iteration_full_logs,
@@ -3543,6 +3723,7 @@ def run_problem_session(
             session_type="loop",
             iteration=current_iteration,
             phase_attempts_path=artifact_paths["phase_attempts"],
+            max_same_error_streak=args.max_same_error_streak,
         )
         emit_parse_phase_log(
             args.phase_logs,
@@ -3555,6 +3736,7 @@ def run_problem_session(
     formalizer_prompt = load_prompt_text(args.formalizer_prompt_file)
     repair_prompt_file = args.repair_prompt_file or args.formalizer_prompt_file
     repair_prompt = load_prompt_text(repair_prompt_file)
+    formalization_deadline = build_retry_deadline(args.formalization_retry_budget_sec)
     theorem_code = ""
     (
         verify_success,
@@ -3582,11 +3764,12 @@ def run_problem_session(
         open_rows=open_rows,
         theory_context=theory_context,
         verify_timeout_sec=180,
-        formalization_retry_budget_sec=args.formalization_retry_budget_sec,
+        formalization_retry_budget_sec=remaining_retry_budget_sec(formalization_deadline),
         memory_path=memory_path,
         current_iteration_full_logs=current_iteration_full_logs,
         initial_proof_text=proof_text,
         phase_logger=(lambda **fields: emit_phase_log(args.phase_logs, iteration=current_iteration, **fields)),
+        max_same_error_streak=args.max_same_error_streak,
         run_id=run_id,
         session_type="loop",
         iteration=current_iteration,
@@ -3642,11 +3825,12 @@ def run_problem_session(
                 open_rows=open_rows,
                 theory_context=retry_theory_context,
                 verify_timeout_sec=180,
-                formalization_retry_budget_sec=args.formalization_retry_budget_sec,
+                formalization_retry_budget_sec=remaining_retry_budget_sec(formalization_deadline),
                 memory_path=memory_path,
                 current_iteration_full_logs=current_iteration_full_logs,
                 initial_proof_text=proof_text,
                 phase_logger=(lambda **fields: emit_phase_log(args.phase_logs, iteration=current_iteration, **fields)),
+                max_same_error_streak=args.max_same_error_streak,
                 run_id=run_id,
                 session_type="loop",
                 iteration=current_iteration,
@@ -3880,6 +4064,8 @@ def run_parallel_loop(
         len(derived_entries),
         args.main_theorem_interval,
     )
+    stop_requested = False
+    interrupt_notice_emitted = False
 
     initial_open_rows = [normalize_open_problem_row(row) for row in read_jsonl(open_path)]
     if needs_bootstrap_priority_refresh(initial_open_rows):
@@ -4074,7 +4260,8 @@ def run_parallel_loop(
                 derived_entries_snapshot = [dict(entry) for entry in derived_entries]
 
             if (
-                main_theorem_future is None
+                not stop_requested
+                and main_theorem_future is None
                 and tracked_rows
                 and should_refresh_open_problem_priorities(
                     derived_theorem_count=len(derived_entries_snapshot),
@@ -4123,7 +4310,8 @@ def run_parallel_loop(
                     tracked_rows = open_rows + archived_rows
 
             while (
-                len(problem_futures) < int(args.parallel_sessions)
+                not stop_requested
+                and len(problem_futures) < int(args.parallel_sessions)
                 and (args.max_iterations is None or launched_iterations < args.max_iterations)
             ):
                 picked = pick_next_available_problem(
@@ -4169,7 +4357,8 @@ def run_parallel_loop(
                 made_progress = True
 
             if (
-                args.main_theorem_interval > 0
+                not stop_requested
+                and args.main_theorem_interval > 0
                 and main_theorem_future is None
                 and next_main_theorem_check_count is not None
                 and len(derived_entries) >= next_main_theorem_check_count
@@ -4254,8 +4443,7 @@ def run_parallel_loop(
                         if args.main_theorem_formalization_retry_budget_sec == 0
                         else args.main_theorem_formalization_retry_budget_sec
                     ),
-                    max_repair_rounds=20,
-                    max_same_error_streak=5,
+                    max_same_error_streak=args.max_same_error_streak,
                     post_expand_count=5,
                     failure_threshold=args.open_problem_failure_threshold,
                     phase_logs=args.phase_logs,
@@ -4266,6 +4454,25 @@ def run_parallel_loop(
                     derived_runtime_state=derived_runtime_state,
                 )
                 made_progress = True
+
+            if stop_requested and not problem_futures and main_theorem_future is None:
+                finalize_run_summary(
+                    artifact_paths["summary"],
+                    run_id=run_id,
+                    started_at=run_started_at,
+                    started_monotonic=run_started_monotonic,
+                    metrics=compile_metrics,
+                    status="interrupted",
+                )
+                print(
+                    {
+                        "status": "interrupted",
+                        "iterations_completed": completed_problem_sessions,
+                        "priority_refresh_ran": pending_priority_refresh_ran_for_report,
+                        "priority_refresh_error": pending_priority_refresh_error_for_report,
+                    }
+                )
+                return
 
             if args.max_iterations is not None and launched_iterations >= args.max_iterations and not problem_futures:
                 if main_theorem_future is None:
@@ -4330,7 +4537,21 @@ def run_parallel_loop(
             if main_theorem_future is not None:
                 all_futures.append(main_theorem_future)
             if not made_progress and all_futures:
-                concurrent.futures.wait(all_futures, return_when=concurrent.futures.FIRST_COMPLETED)
+                try:
+                    concurrent.futures.wait(all_futures, return_when=concurrent.futures.FIRST_COMPLETED)
+                except KeyboardInterrupt:
+                    stop_requested = True
+                    if not interrupt_notice_emitted:
+                        interrupt_notice_emitted = True
+                        debug_log("Interrupt received; stop launching new sessions and drain active work.")
+                        print(
+                            {
+                                "status": "interrupt_requested",
+                                "iterations_completed": completed_problem_sessions,
+                                "active_problem_sessions": len(problem_futures),
+                                "active_main_theorem_session": main_theorem_future is not None,
+                            }
+                        )
 
 
 def prebuild_lean_project() -> list[dict[str, Any]]:
@@ -4374,19 +4595,35 @@ def next_main_theorem_trigger_count(current_count: int, interval: int) -> int | 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run the minimal prototype loop.")
+    worker_timeout_help = "Per worker subprocess timeout in seconds."
+    verify_timeout_help = "Per Lean verification timeout in seconds."
+    retry_budget_help = "Whole retry-loop budget in seconds."
     parser.add_argument("--initialize-on-start", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--phase-logs", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--max-iterations", type=int)
     parser.add_argument("--worker-command")
-    parser.add_argument("--worker-timeout", type=int)
+    parser.add_argument("--worker-timeout", type=int, help=worker_timeout_help)
     parser.add_argument("--skip-verify", action="store_true")
     parser.add_argument("--parallel-sessions", type=int, default=1)
     parser.add_argument("--open-problem-failure-threshold", type=int, default=2)
     parser.add_argument("--main-theorem-interval", type=int, default=0)
-    parser.add_argument("--main-theorem-formalize-worker-timeout", type=int)
-    parser.add_argument("--main-theorem-repair-worker-timeout", type=int)
-    parser.add_argument("--main-theorem-verify-timeout", type=int, default=600)
-    parser.add_argument("--main-theorem-formalization-retry-budget-sec", type=int, default=3600)
+    parser.add_argument("--main-theorem-formalize-worker-timeout", type=int, help=worker_timeout_help)
+    parser.add_argument("--main-theorem-repair-worker-timeout", type=int, help=worker_timeout_help)
+    parser.add_argument("--main-theorem-verify-timeout", type=int, default=600, help=verify_timeout_help)
+    parser.add_argument("--prover-retry-budget-sec", type=int, default=DEFAULT_PROVER_RETRY_BUDGET_SEC, help=retry_budget_help)
+    parser.add_argument(
+        "--formalization-retry-budget-sec",
+        type=int,
+        default=DEFAULT_FORMALIZATION_RETRY_BUDGET_SEC,
+        help=retry_budget_help,
+    )
+    parser.add_argument("--max-same-error-streak", type=int, default=DEFAULT_MAX_SAME_ERROR_STREAK)
+    parser.add_argument(
+        "--main-theorem-formalization-retry-budget-sec",
+        type=int,
+        default=3600,
+        help=retry_budget_help,
+    )
     parser.add_argument("--priority-refresh-theorem-interval", type=int, default=5)
     args = parser.parse_args()
     if args.max_iterations is not None and args.max_iterations < 0:
@@ -4403,6 +4640,12 @@ def main() -> None:
         raise ValueError("--main-theorem-repair-worker-timeout must be >= 0")
     if args.main_theorem_verify_timeout < 0:
         raise ValueError("--main-theorem-verify-timeout must be >= 0")
+    if args.prover_retry_budget_sec < 0:
+        raise ValueError("--prover-retry-budget-sec must be >= 0")
+    if args.formalization_retry_budget_sec < 0:
+        raise ValueError("--formalization-retry-budget-sec must be >= 0")
+    if args.max_same_error_streak < 1:
+        raise ValueError("--max-same-error-streak must be >= 1")
     if args.main_theorem_formalization_retry_budget_sec < 0:
         raise ValueError("--main-theorem-formalization-retry-budget-sec must be >= 0")
     if args.priority_refresh_theorem_interval < 0:
@@ -4426,8 +4669,6 @@ def main() -> None:
     # Problem selection is deterministic local logic; the worker handles priority refresh and prover/formalize stages.
     args.prover_prompt_file = "prompts/prover_simple.md"
     args.expander_prompt_file = "prompts/new_problem_expander.md"
-    args.prover_retries = 2
-    args.formalization_retry_budget_sec = 300
     args.formalization_memory_file = "data/formalization_memory.json"
     args.archived_problems_file = f"data/{ARCHIVED_PROBLEMS_FILENAME}"
     args.reset_formalization_memory_on_start = True

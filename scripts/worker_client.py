@@ -221,7 +221,8 @@ def invoke_worker_json(
             detail_parts.append(f"stdout={stdout_excerpt}")
         detail_suffix = f" ({'; '.join(detail_parts)})" if detail_parts else ""
         raise RuntimeError(
-            f"Worker timed out after {timeout_label}. "
+            f"Worker call timed out after {timeout_label}. "
+            "This timeout applies to one worker subprocess invocation, not a whole retry loop. "
             "Try increasing --worker-timeout (or ATC_WORKER_TIMEOUT), e.g. 180-300."
             f"{detail_suffix}"
         ) from exc

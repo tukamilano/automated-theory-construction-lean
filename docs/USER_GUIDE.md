@@ -58,6 +58,11 @@ Any format is fine as long as the workflow can read it.
         ↓
 [Derived.refactored.preview.lean]
         ↓
+[scripts/run_compression_pass.py]
+  planned soft compression with incremental repair
+        ↓
+[Derived.refactored.preview.lean]
+        ↓
 [scripts/apply_try_at_each_step_rewrites.py]
   direct proof-shortening rewrites from `tryAtEachStep`
         ↓

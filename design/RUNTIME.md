@@ -120,6 +120,16 @@ uv run python scripts/refactor_derived.py \
 
 When `--worker-timeout` is omitted for `scripts/refactor_derived.py`, the refactor worker defaults to no outer timeout. Set `--worker-timeout <seconds>` or `ATC_REFACTOR_DERIVED_WORKER_TIMEOUT` if you want a bound for this pass.
 
+Pass 1.2 keeps the same preview file but applies planned soft compression in place:
+
+```bash
+uv run python scripts/run_compression_pass.py \
+  --input-file AutomatedTheoryConstruction/Derived.refactored.preview.lean \
+  --output-file AutomatedTheoryConstruction/Derived.refactored.preview.lean \
+  --plan-file AutomatedTheoryConstruction/Derived.compression.plan.json \
+  --report-file AutomatedTheoryConstruction/Derived.compression.report.json
+```
+
 Pass 1.5 rewrites the preview in place using parseable `tryAtEachStep` suggestions:
 
 ```bash
@@ -147,6 +157,7 @@ uv run python scripts/direct_refactor_derived.py --skip-copy
 If you use `scripts/atc_cli.py` or `atc.json`, the stage toggles are:
 
 - `runtime.run_refactor_pass_1`
+- `runtime.run_refactor_pass_1_2`
 - `runtime.run_refactor_pass_1_5`
 - `runtime.run_refactor_pass_2`
 
@@ -162,6 +173,10 @@ By default, `scripts/generate_seeds_from_theory.py` initializes a fresh runtime 
 - reset `AutomatedTheoryConstruction/Scratch.lean`
 - reset `AutomatedTheoryConstruction/Derived.lean`
 - delete `AutomatedTheoryConstruction/Derived.refactored.preview.lean` if present
+- delete `AutomatedTheoryConstruction/Derived.compression.plan.json` if present
+- delete `AutomatedTheoryConstruction/Derived.compression.report.json` if present
+- delete `AutomatedTheoryConstruction/Derived.refactor.pass1.log.jsonl` if present
+- delete `AutomatedTheoryConstruction/Derived.compression.executor.log.jsonl` if present
 - delete `AutomatedTheoryConstruction/Derived.refactored.reviewed.lean` if present
 - run `lake build` for `AutomatedTheoryConstruction.Theory` and `AutomatedTheoryConstruction.Derived`
 

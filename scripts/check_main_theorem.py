@@ -15,14 +15,18 @@ from run_loop import (
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run a one-shot manual main-theorem check.")
+    worker_timeout_help = "Per worker subprocess timeout in seconds."
+    verify_timeout_help = "Per Lean verification timeout in seconds."
+    retry_budget_help = "Whole retry-loop budget in seconds."
     parser.add_argument("--enable-worker", action="store_true")
     parser.add_argument("--worker-command")
-    parser.add_argument("--worker-timeout", type=int)
-    parser.add_argument("--formalize-worker-timeout", type=int)
-    parser.add_argument("--repair-worker-timeout", type=int)
+    parser.add_argument("--worker-timeout", type=int, help=worker_timeout_help)
+    parser.add_argument("--formalize-worker-timeout", type=int, help=worker_timeout_help)
+    parser.add_argument("--repair-worker-timeout", type=int, help=worker_timeout_help)
     parser.add_argument("--skip-verify", action="store_true")
-    parser.add_argument("--verify-timeout", type=int, default=600)
-    parser.add_argument("--formalization-retry-budget-sec", type=int, default=3600)
+    parser.add_argument("--verify-timeout", type=int, default=600, help=verify_timeout_help)
+    parser.add_argument("--formalization-retry-budget-sec", type=int, default=3600, help=retry_budget_help)
+    parser.add_argument("--max-same-error-streak", type=int, default=5)
     parser.add_argument("--open-problem-failure-threshold", type=int, default=2)
     args = parser.parse_args()
 
@@ -32,6 +36,8 @@ def main() -> None:
         raise ValueError("--verify-timeout must be >= 0")
     if args.formalization_retry_budget_sec < 0:
         raise ValueError("--formalization-retry-budget-sec must be >= 0")
+    if args.max_same_error_streak < 1:
+        raise ValueError("--max-same-error-streak must be >= 1")
 
     verify_timeout_sec = None if args.verify_timeout == 0 else args.verify_timeout
     formalization_retry_budget_sec = (
@@ -96,8 +102,7 @@ def main() -> None:
         skip_verify=args.skip_verify,
         verify_timeout_sec=verify_timeout_sec,
         formalization_retry_budget_sec=formalization_retry_budget_sec,
-        max_repair_rounds=20,
-        max_same_error_streak=5,
+        max_same_error_streak=args.max_same_error_streak,
         post_expand_count=5,
         failure_threshold=args.open_problem_failure_threshold,
         phase_logs=True,

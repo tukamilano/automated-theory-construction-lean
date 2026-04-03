@@ -1,15 +1,15 @@
 {
   "paths": {
-    "theory_file": "AutomatedTheoryConstruction/Theory.lean",
-    "derived_file": "AutomatedTheoryConstruction/Derived.lean",
-    "scratch_file": "AutomatedTheoryConstruction/Scratch.lean",
-    "seeds_file": "AutomatedTheoryConstruction/seeds.jsonl",
-    "data_dir": "data",
-    "prompt_dir": "prompts",
-    "log_dir": "data/runs",
-    "preview_file": "AutomatedTheoryConstruction/Derived.refactored.preview.lean",
-    "reviewed_file": "AutomatedTheoryConstruction/Derived.refactored.reviewed.lean",
-    "theorem_reuse_memory_file": "data/theorem_reuse_memory.json"
+    "theory_file": "../AutomatedTheoryConstruction/Theory.lean",
+    "derived_file": "../AutomatedTheoryConstruction/Derived.lean",
+    "scratch_file": "../AutomatedTheoryConstruction/Scratch.lean",
+    "seeds_file": "../AutomatedTheoryConstruction/seeds.jsonl",
+    "data_dir": "../data",
+    "prompt_dir": "../prompts",
+    "log_dir": "../data/runs",
+    "preview_file": "../AutomatedTheoryConstruction/Derived.refactored.preview.lean",
+    "reviewed_file": "../AutomatedTheoryConstruction/Derived.refactored.reviewed.lean",
+    "theorem_reuse_memory_file": "../data/theorem_reuse_memory.json"
   },
   "worker": {
     "command": "uv run scripts/codex_worker.py",
@@ -30,12 +30,12 @@
     }
   },
   "runtime": {
-    "initialize_on_start": true,
+    "initialize_on_start": false,
     "phase_logs": true,
     "seed_count": 5,
     "max_iterations": 50,
     "parallel_sessions": 2,
-    "run_seed": true,
+    "run_seed": false,
     "run_refactor_pass_1": true,
     "run_refactor_pass_2": true,
     "run_main_theorem_session": true,

@@ -1,181 +1,38 @@
 from __future__ import annotations
 
 import argparse
-import json
-import sys
-import tempfile
 import time
 from pathlib import Path
 from typing import Any
 
 from append_derived import build_derived_entries_from_file
 from common import load_theory_context
+from derived_refactor_utils import build_exact_duplicate_statement_groups
+from derived_refactor_utils import build_report
+from derived_refactor_utils import candidate_fingerprint
+from derived_refactor_utils import debug_log
+from derived_refactor_utils import detect_no_progress
+from derived_refactor_utils import emit_progress_event
+from derived_refactor_utils import emit_progress_error
+from derived_refactor_utils import emit_progress_finish
+from derived_refactor_utils import emit_progress_start
+from derived_refactor_utils import error_fingerprint
+from derived_refactor_utils import extract_theorem_entries_from_code
+from derived_refactor_utils import load_text
+from derived_refactor_utils import normalize_stop_reason
+from derived_refactor_utils import print_report
+from derived_refactor_utils import resolve_refactor_worker_settings
+from derived_refactor_utils import single_line_excerpt
+from derived_refactor_utils import validate_full_file_refactor_output
+from derived_refactor_utils import verify_refactored_code
 from theorem_reuse_memory import (
     load_theorem_reuse_memory,
     summarize_supporting_theorem_frequency,
 )
-from worker_client import WorkerSettings, invoke_worker_json, load_task_worker_settings, load_worker_settings
+from worker_client import invoke_worker_json
 
 DEFAULT_PREVIEW_OUTPUT = Path("AutomatedTheoryConstruction/Derived.refactored.preview.lean")
-DEFAULT_CONSECUTIVE_NOOP_LIMIT = 2
-DEFAULT_MAX_WALL_CLOCK_SEC = 900
-
-
-def debug_log(message: str) -> None:
-    timestamp = time.strftime("%H:%M:%S")
-    print(f"[{timestamp}] {message}", file=sys.stderr, flush=True)
-
-
-def load_text(path: Path) -> str:
-    if not path.exists():
-        raise ValueError(f"File not found: {path}")
-    return path.read_text(encoding="utf-8")
-
-
-def single_line_excerpt(text: str, limit: int = 240) -> str:
-    normalized = " ".join(text.strip().split())
-    if not normalized:
-        return ""
-    if len(normalized) <= limit:
-        return normalized
-    return normalized[: limit - 3] + "..."
-
-
-def normalize_statement_text(statement: str) -> str:
-    return " ".join(statement.split())
-
-
-def build_exact_duplicate_statement_groups(entries: list[dict[str, str]]) -> list[dict[str, Any]]:
-    grouped: dict[str, list[str]] = {}
-    for entry in entries:
-        theorem_name = str(entry.get("theorem_name", "")).strip()
-        statement = normalize_statement_text(str(entry.get("statement", "")))
-        if not theorem_name or not statement:
-            continue
-        grouped.setdefault(statement, []).append(theorem_name)
-
-    duplicates: list[dict[str, Any]] = []
-    for statement, theorem_names in grouped.items():
-        if len(theorem_names) < 2:
-            continue
-        duplicates.append(
-            {
-                "statement": statement,
-                "theorem_names": theorem_names,
-            }
-        )
-    duplicates.sort(key=lambda item: (len(item["theorem_names"]), item["statement"]), reverse=True)
-    return duplicates
-
-
-def extract_theorem_entries_from_code(derived_file: Path, code: str) -> list[dict[str, str]]:
-    with tempfile.NamedTemporaryFile(
-        mode="w",
-        encoding="utf-8",
-        suffix=".lean",
-        prefix="Derived.refactor.entries.",
-        dir=str(derived_file.parent),
-        delete=False,
-    ) as handle:
-        temp_path = Path(handle.name)
-        handle.write(code + "\n")
-
-    try:
-        return build_derived_entries_from_file(temp_path)
-    finally:
-        temp_path.unlink(missing_ok=True)
-
-
-def validate_refactor_output(payload: dict[str, Any]) -> tuple[str, str, str, list[str], list[str]]:
-    required_keys = {"result", "refactored_code", "summary", "change_notes", "touched_theorems"}
-    if set(payload.keys()) != required_keys:
-        raise ValueError(
-            "refactor output must contain exactly: result, refactored_code, summary, change_notes, touched_theorems"
-        )
-
-    result = payload.get("result")
-    if result not in {"ok", "noop", "stuck"}:
-        raise ValueError("refactor result must be one of: ok, noop, stuck")
-
-    refactored_code = payload.get("refactored_code")
-    summary = payload.get("summary")
-    change_notes = payload.get("change_notes")
-    touched_theorems = payload.get("touched_theorems")
-    if (
-        not isinstance(refactored_code, str)
-        or not isinstance(summary, str)
-        or not isinstance(change_notes, list)
-        or not isinstance(touched_theorems, list)
-    ):
-        raise ValueError("refactor output fields have invalid types")
-    if any(not isinstance(item, str) for item in change_notes):
-        raise ValueError("change_notes must contain only strings")
-    if any(not isinstance(item, str) for item in touched_theorems):
-        raise ValueError("touched_theorems must contain only strings")
-
-    cleaned_code = refactored_code.strip()
-    if result == "stuck":
-        if cleaned_code:
-            raise ValueError("refactored_code must be empty when result=stuck")
-    else:
-        if not cleaned_code:
-            raise ValueError("refactored_code must be non-empty when result is ok or noop")
-        if "namespace AutomatedTheoryConstruction" not in cleaned_code:
-            raise ValueError("refactored_code must contain namespace AutomatedTheoryConstruction")
-        if "end AutomatedTheoryConstruction" not in cleaned_code:
-            raise ValueError("refactored_code must end the AutomatedTheoryConstruction namespace")
-
-    cleaned_touched = [item.strip() for item in touched_theorems if item.strip()]
-    return (
-        result,
-        cleaned_code,
-        summary.strip(),
-        [item.strip() for item in change_notes if item.strip()],
-        cleaned_touched,
-    )
-
-
-def verify_lean_file(file_path: Path, timeout_sec: int | None) -> dict[str, Any]:
-    import subprocess
-
-    cmd = ["lake", "env", "lean", str(file_path)]
-    try:
-        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout_sec, check=False)
-    except subprocess.TimeoutExpired as exc:
-        stderr_text = (exc.stderr or "") if isinstance(exc.stderr, str) else ""
-        stdout_text = (exc.stdout or "") if isinstance(exc.stdout, str) else ""
-        timeout_label = f"{timeout_sec}s" if timeout_sec is not None else "without a limit"
-        return {
-            "success": False,
-            "stderr": f"Lean verification timed out after {timeout_label}\n{stderr_text}".strip(),
-            "stdout": stdout_text,
-        }
-
-    return {
-        "success": proc.returncode == 0,
-        "stderr": proc.stderr,
-        "stdout": proc.stdout,
-    }
-
-
-def verify_refactored_code(derived_file: Path, code: str, timeout_sec: int | None) -> dict[str, Any]:
-    with tempfile.NamedTemporaryFile(
-        mode="w",
-        encoding="utf-8",
-        suffix=".lean",
-        prefix="Derived.refactor.",
-        dir=str(derived_file.parent),
-        delete=False,
-    ) as handle:
-        temp_path = Path(handle.name)
-        handle.write(code + "\n")
-
-    try:
-        result = verify_lean_file(temp_path, timeout_sec=timeout_sec)
-        result["checked_file"] = str(temp_path)
-        return result
-    finally:
-        temp_path.unlink(missing_ok=True)
+DEFAULT_PROGRESS_LOG = Path("AutomatedTheoryConstruction/Derived.refactor.pass1.log.jsonl")
 
 
 def select_focus_theorem_names(
@@ -323,12 +180,12 @@ def run_refactor_derived(
     apply_in_place: bool,
     backup_file: Path | None,
     verify_timeout_sec: int | None,
+    progress_log_file: Path | None,
     worker_settings: WorkerSettings | None = None,
     worker_command: str | None = None,
     worker_timeout: int | None = None,
     target_theorem_name: str | None = None,
-    consecutive_noop_limit: int = 2,
-    max_wall_clock_sec: int | None = 300,
+    max_wall_clock_sec: int | None = None,
 ) -> dict[str, Any]:
     prompt_text = load_text(prompt_file)
     original_code = load_text(derived_file)
@@ -336,38 +193,25 @@ def run_refactor_derived(
     theorem_reuse_memory = load_theorem_reuse_memory(theorem_reuse_memory_file)
     supporting_theorem_frequency = summarize_supporting_theorem_frequency(theorem_reuse_memory)
 
-    if worker_settings is None:
-        base_worker_settings = load_worker_settings(
-            command_override=worker_command,
-            timeout_override=worker_timeout,
-            default_timeout_sec=None,
-        )
-        refactor_base_settings = WorkerSettings(
-            command=base_worker_settings.command,
-            timeout_sec=None,
-            propagate_timeout=False,
-        )
-        worker_settings = load_task_worker_settings(
-            task_name="refactor_derived",
-            base_settings=refactor_base_settings,
-            timeout_override=worker_timeout,
-        )
+    worker_settings = resolve_refactor_worker_settings(
+        worker_settings=worker_settings,
+        worker_command=worker_command,
+        worker_timeout=worker_timeout,
+    )
 
     current_code = original_code
     current_inventory = build_derived_entries_from_file(derived_file)
     previous_refactored_code = ""
     lean_diagnostics = ""
     last_error_excerpt = ""
-    last_worker_meta: dict[str, Any] = {}
     last_summary = ""
     last_change_notes: list[str] = []
     last_touched_theorems: list[str] = []
     refactor_history: list[dict[str, Any]] = []
     accepted_rounds = 0
     total_rounds = 0
-    consecutive_noops = 0
     changed = False
-    stop_reason = "no_candidates"
+    raw_stop_reason = "no_candidates"
     deadline = None if max_wall_clock_sec in (None, 0) else time.monotonic() + max_wall_clock_sec
 
     debug_log(
@@ -377,13 +221,11 @@ def run_refactor_derived(
         f"worker_timeout={'none' if worker_settings.timeout_sec is None else worker_settings.timeout_sec} "
         f"verify_timeout={'none' if verify_timeout_sec is None else verify_timeout_sec}"
     )
+    emit_progress_start(progress_log_file, pass_name="pass_1")
 
     while True:
         if deadline is not None and time.monotonic() >= deadline:
-            stop_reason = "max_wall_clock_reached"
-            break
-        if consecutive_noops >= max(1, consecutive_noop_limit):
-            stop_reason = "consecutive_noop_limit_reached"
+            raw_stop_reason = "budget_exhausted:max_wall_clock_reached"
             break
 
         duplicate_groups = build_exact_duplicate_statement_groups(current_inventory)
@@ -393,15 +235,24 @@ def run_refactor_derived(
             supporting_theorem_frequency=supporting_theorem_frequency,
             target_theorem_name=target_theorem_name,
         )
-        if not current_inventory or not focus_theorem_names:
-            stop_reason = "no_candidates"
+        if not focus_theorem_names:
+            raw_stop_reason = "no_candidates"
             break
 
         total_rounds += 1
         repair_round = 0 if not lean_diagnostics else total_rounds - accepted_rounds - 1
         debug_log(
-            f"Refactor round {total_rounds}: focus={focus_theorem_names} "
-            f"accepted={accepted_rounds} consecutive_noops={consecutive_noops}"
+            f"Refactor round {total_rounds}: focus={focus_theorem_names} accepted={accepted_rounds}"
+        )
+        emit_progress_event(
+            progress_log_file,
+            pass_name="pass_1",
+            phase="round_start",
+            round=total_rounds,
+            result="running",
+            focus_theorem_names=focus_theorem_names,
+            repair_round=repair_round,
+            error_excerpt=last_error_excerpt,
         )
         payload = build_payload(
             derived_file=derived_file,
@@ -422,7 +273,7 @@ def run_refactor_derived(
         )
 
         try:
-            raw_result, worker_meta = invoke_worker_json(
+            raw_result, _worker_meta = invoke_worker_json(
                 settings=worker_settings,
                 task_type="refactor_derived",
                 system_prompt=prompt_text,
@@ -435,30 +286,52 @@ def run_refactor_derived(
             )
         except Exception as exc:
             debug_log(f"Refactor round {total_rounds}: worker failed: {exc}")
-            return {
-                "status": "worker_error",
-                "error": str(exc),
-                "accepted_rounds": accepted_rounds,
-                "total_rounds": total_rounds,
-                "stop_reason": "worker_error",
-                "verify_success": False,
-                "output_file": str(output_file) if output_file is not None else None,
-            }
+            emit_progress_error(
+                progress_log_file,
+                pass_name="pass_1",
+                phase="worker_error",
+                round=total_rounds,
+                stop_reason="worker_error",
+                focus_theorem_names=focus_theorem_names,
+                error_excerpt=single_line_excerpt(str(exc)),
+            )
+            return build_report(
+                "error",
+                "worker_error",
+                stop_detail=str(exc),
+                input_file=derived_file,
+                output_file=output_file,
+                extra={
+                    "accepted_rounds": accepted_rounds,
+                    "total_rounds": total_rounds,
+                    "verify_success": False,
+                },
+            )
 
-        last_worker_meta = worker_meta
-        result, candidate_code, summary, change_notes, touched_theorems = validate_refactor_output(raw_result)
+        result, candidate_code, summary, change_notes, touched_theorems = validate_full_file_refactor_output(
+            raw_result,
+            label="refactor output",
+        )
         last_summary = summary
         last_change_notes = change_notes
         last_touched_theorems = touched_theorems or focus_theorem_names
 
         if result == "stuck":
             debug_log(f"Refactor round {total_rounds}: worker returned stuck")
-            stop_reason = "worker_stuck"
+            emit_progress_event(
+                progress_log_file,
+                pass_name="pass_1",
+                phase="worker_result",
+                round=total_rounds,
+                result="stuck",
+                focus_theorem_names=last_touched_theorems,
+                error_excerpt="worker returned stuck",
+            )
+            raw_stop_reason = "worker_stuck"
             break
 
         if result == "noop" or candidate_code.strip() == current_code.strip():
             debug_log(f"Refactor round {total_rounds}: noop")
-            consecutive_noops += 1
             previous_refactored_code = candidate_code
             lean_diagnostics = ""
             last_error_excerpt = ""
@@ -468,11 +341,38 @@ def run_refactor_derived(
                     "result": "noop",
                     "summary": summary,
                     "touched_theorems": last_touched_theorems,
+                    "candidate_hash": candidate_fingerprint(candidate_code),
+                    "error_fingerprint": "",
                 }
             )
+            emit_progress_event(
+                progress_log_file,
+                pass_name="pass_1",
+                phase="worker_result",
+                round=total_rounds,
+                result="noop",
+                focus_theorem_names=last_touched_theorems,
+                repair_round=repair_round,
+                error_excerpt="",
+            )
+            no_progress, no_progress_reason = detect_no_progress(refactor_history)
+            if no_progress:
+                raw_stop_reason = f"no_progress:{no_progress_reason}"
+                debug_log(f"Refactor round {total_rounds}: stopping ({raw_stop_reason})")
+                break
             continue
 
         debug_log(f"Refactor round {total_rounds}: verifying Lean candidate")
+        emit_progress_event(
+            progress_log_file,
+            pass_name="pass_1",
+            phase="verify_start",
+            round=total_rounds,
+            result="running",
+            focus_theorem_names=last_touched_theorems,
+            repair_round=repair_round,
+            error_excerpt="",
+        )
         verify_result = verify_refactored_code(
             derived_file=derived_file,
             code=candidate_code,
@@ -494,8 +394,25 @@ def run_refactor_derived(
                     "summary": summary,
                     "last_error_excerpt": last_error_excerpt,
                     "touched_theorems": last_touched_theorems,
+                    "candidate_hash": candidate_fingerprint(candidate_code),
+                    "error_fingerprint": error_fingerprint(last_error_excerpt),
                 }
             )
+            emit_progress_event(
+                progress_log_file,
+                pass_name="pass_1",
+                phase="verify_result",
+                round=total_rounds,
+                result="verify_failed",
+                focus_theorem_names=last_touched_theorems,
+                repair_round=repair_round,
+                error_excerpt=last_error_excerpt,
+            )
+            no_progress, no_progress_reason = detect_no_progress(refactor_history)
+            if no_progress:
+                raw_stop_reason = f"no_progress:{no_progress_reason}"
+                debug_log(f"Refactor round {total_rounds}: stopping ({raw_stop_reason})")
+                break
             continue
 
         current_code = candidate_code
@@ -505,7 +422,6 @@ def run_refactor_derived(
         last_error_excerpt = ""
         accepted_rounds += 1
         changed = True
-        consecutive_noops = 0
         refactor_history.append(
             {
                 "round": total_rounds,
@@ -518,6 +434,16 @@ def run_refactor_derived(
         debug_log(
             f"Refactor round {total_rounds}: accepted touched={last_touched_theorems} "
             f"change_notes={change_notes}"
+        )
+        emit_progress_event(
+            progress_log_file,
+            pass_name="pass_1",
+            phase="verify_result",
+            round=total_rounds,
+            result="accepted",
+            focus_theorem_names=last_touched_theorems,
+            repair_round=repair_round,
+            error_excerpt="",
         )
 
     output_to_write = current_code.strip()
@@ -535,39 +461,54 @@ def run_refactor_derived(
         backup_output = None
 
     status = "ok" if changed else "noop"
-    return {
-        "status": status,
-        "accepted_rounds": accepted_rounds,
-        "total_rounds": total_rounds,
-        "stop_reason": stop_reason,
-        "summary": last_summary,
-        "change_notes": last_change_notes,
-        "touched_theorems": last_touched_theorems,
-        "verify_success": True,
-        "output_file": written_output,
-        "backup_file": backup_output,
-        "duplicate_statement_group_count": len(build_exact_duplicate_statement_groups(current_inventory)),
-        "refactor_output_theorem_count": len(current_inventory),
-        "worker_json_parse_attempts": int(last_worker_meta.get("json_parse_attempts", 0) or 0),
-        "worker_raw_parse_fallback_used": bool(last_worker_meta.get("raw_parse_fallback_used", False)),
-        "client_json_parse_attempts": int(last_worker_meta.get("client_json_parse_attempts", 0) or 0),
-        "client_raw_parse_fallback_used": bool(last_worker_meta.get("client_raw_parse_fallback_used", False)),
-    }
+    stop_reason, stop_detail = normalize_stop_reason(raw_stop_reason)
+    emit_progress_finish(
+        progress_log_file,
+        pass_name="pass_1",
+        round=total_rounds,
+        result=status,
+        stop_reason=stop_reason,
+        focus_theorem_names=last_touched_theorems,
+    )
+    return build_report(
+        status,
+        stop_reason,
+        stop_detail=stop_detail,
+        input_file=derived_file,
+        output_file=written_output,
+        extra={
+            "accepted_rounds": accepted_rounds,
+            "total_rounds": total_rounds,
+            "summary": last_summary,
+            "change_notes": last_change_notes,
+            "touched_theorems": last_touched_theorems,
+            "verify_success": True,
+            "backup_file": backup_output,
+            "duplicate_statement_group_count": len(build_exact_duplicate_statement_groups(current_inventory)),
+            "refactor_output_theorem_count": len(current_inventory),
+            "progress_log_file": str(progress_log_file) if progress_log_file is not None else None,
+        },
+    )
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="LLM-guided refactoring for AutomatedTheoryConstruction/Derived.lean")
+    worker_timeout_help = "Per worker subprocess timeout in seconds."
+    verify_timeout_help = "Per Lean verification timeout in seconds."
+    retry_budget_help = "Whole pass 1 wall-clock budget in seconds."
     parser.add_argument("--derived-file", default="AutomatedTheoryConstruction/Derived.lean")
     parser.add_argument("--theory-file", default="AutomatedTheoryConstruction/Theory.lean")
     parser.add_argument("--prompt-file", default="prompts/derived_refactorer.md")
     parser.add_argument("--worker-command")
-    parser.add_argument("--worker-timeout", type=int)
-    parser.add_argument("--verify-timeout", type=int)
+    parser.add_argument("--worker-timeout", type=int, help=worker_timeout_help)
+    parser.add_argument("--verify-timeout", type=int, help=verify_timeout_help)
     parser.add_argument("--output-file")
     parser.add_argument("--apply", action="store_true")
     parser.add_argument("--backup-file")
+    parser.add_argument("--progress-log-file", default=str(DEFAULT_PROGRESS_LOG))
     parser.add_argument("--theorem-reuse-memory-file", default="data/theorem_reuse_memory.json")
     parser.add_argument("--target-theorem-name")
+    parser.add_argument("--max-wall-clock-sec", type=int, help=retry_budget_help)
     args = parser.parse_args()
 
     derived_file = Path(args.derived_file)
@@ -581,6 +522,7 @@ def main() -> None:
     else:
         output_file = DEFAULT_PREVIEW_OUTPUT
     backup_file = Path(args.backup_file) if args.backup_file else None
+    progress_log_file = Path(args.progress_log_file) if args.progress_log_file else None
 
     report = run_refactor_derived(
         derived_file=derived_file,
@@ -591,14 +533,14 @@ def main() -> None:
         apply_in_place=args.apply,
         backup_file=backup_file,
         verify_timeout_sec=args.verify_timeout,
+        progress_log_file=progress_log_file,
         worker_command=args.worker_command,
         worker_timeout=args.worker_timeout,
         target_theorem_name=args.target_theorem_name,
-        consecutive_noop_limit=DEFAULT_CONSECUTIVE_NOOP_LIMIT,
-        max_wall_clock_sec=DEFAULT_MAX_WALL_CLOCK_SEC,
+        max_wall_clock_sec=args.max_wall_clock_sec,
     )
-    print(json.dumps(report, ensure_ascii=False))
-    if report.get("status") == "worker_error":
+    print_report(report)
+    if report.get("status") == "error":
         raise SystemExit(1)
 
 
