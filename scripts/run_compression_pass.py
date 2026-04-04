@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import argparse
+import time
 from pathlib import Path
 
 from apply_derived_compression_plan import run_apply_derived_compression_plan
+from common import write_json_atomic
 from derived_refactor_utils import build_report
-from derived_refactor_utils import emit_progress_finish
-from derived_refactor_utils import emit_progress_start
 from derived_refactor_utils import print_report
 from derived_refactor_utils import write_report
 from plan_derived_compression import run_plan_derived_compression
@@ -20,6 +20,13 @@ DEFAULT_PROGRESS_LOG = Path("AutomatedTheoryConstruction/Derived.compression.exe
 DEFAULT_PLANNER_PROMPT = Path("prompts/derived_compression_planner.md")
 DEFAULT_EXECUTOR_PROMPT = Path("prompts/derived_compression_executor.md")
 DEFAULT_THEOREM_REUSE_MEMORY = Path("data/theorem_reuse_memory.json")
+
+
+def _remaining_wall_clock_sec(deadline: float | None) -> int | None:
+    if deadline is None:
+        return None
+    remaining = int(deadline - time.monotonic())
+    return max(0, remaining)
 
 
 def main() -> None:
@@ -47,99 +54,154 @@ def main() -> None:
     planner_prompt_file = Path(args.planner_prompt_file)
     executor_prompt_file = Path(args.executor_prompt_file)
     theorem_reuse_memory_file = Path(args.theorem_reuse_memory_file)
+    deadline = None if args.max_wall_clock_sec in (None, 0) else time.monotonic() + args.max_wall_clock_sec
 
     try:
-        plan_report = run_plan_derived_compression(
-            input_file=input_file,
-            theory_file=theory_file,
-            prompt_file=planner_prompt_file,
-            theorem_reuse_memory_file=theorem_reuse_memory_file,
-            output_file=plan_file,
-            worker_command=args.worker_command,
-            worker_timeout=args.worker_timeout,
-        )
+        planner_reports: list[dict[str, object]] = []
+        executor_reports: list[dict[str, object]] = []
+        working_input = input_file
+        accepted_cycles = 0
+        last_plan_report: dict[str, object] | None = None
+        last_executor_report: dict[str, object] | None = None
+        final_status = "noop"
+        final_stop_reason = "no_candidates"
+        final_stop_detail = "planner returned no items"
 
-        if plan_report.get("status") == "error":
-            final_report = build_report(
-                "error",
-                str(plan_report.get("stop_reason", "worker_error")),
-                stop_detail=str(plan_report.get("stop_detail", "")),
-                input_file=input_file,
+        while True:
+            remaining_sec = _remaining_wall_clock_sec(deadline)
+            if deadline is not None and remaining_sec == 0:
+                final_status = "stopped" if accepted_cycles > 0 else "noop"
+                final_stop_reason = "budget_exhausted"
+                final_stop_detail = "max_wall_clock_reached before planning a new item"
+                break
+
+            plan_report = run_plan_derived_compression(
+                input_file=working_input,
+                theory_file=theory_file,
+                prompt_file=planner_prompt_file,
+                theorem_reuse_memory_file=theorem_reuse_memory_file,
+                output_file=plan_file,
+                worker_command=args.worker_command,
+                worker_timeout=args.worker_timeout,
+            )
+            planner_reports.append(plan_report)
+            last_plan_report = plan_report
+
+            if plan_report.get("status") == "error":
+                final_report = build_report(
+                    "error",
+                    str(plan_report.get("stop_reason", "worker_error")),
+                    stop_detail=str(plan_report.get("stop_detail", "")),
+                    input_file=input_file,
+                    output_file=output_file,
+                    report_file=report_file,
+                    extra={
+                        "planner_reports": planner_reports,
+                        "executor_reports": executor_reports,
+                        "planner": last_plan_report,
+                        "executor": last_executor_report,
+                        "accepted_cycles": accepted_cycles,
+                        "plan_file": str(plan_file),
+                        "progress_log_file": str(progress_log_file) if progress_log_file is not None else None,
+                    },
+                )
+                write_report(report_file, final_report)
+                print_report(final_report)
+                raise SystemExit(1)
+
+            if int(plan_report.get("item_count", 0) or 0) == 0:
+                final_status = "ok" if accepted_cycles > 0 else "noop"
+                final_stop_reason = "no_candidates"
+                final_stop_detail = "planner returned no items"
+                break
+
+            plan_payload = {
+                "plan_version": 1,
+                "source_file": str(working_input),
+                "summary": str(plan_report.get("summary", "")),
+                "items": [],
+            }
+            try:
+                import json
+
+                loaded_plan = json.loads(plan_file.read_text(encoding="utf-8"))
+                if isinstance(loaded_plan, dict):
+                    plan_payload["plan_version"] = int(loaded_plan.get("plan_version", 1) or 1)
+                    plan_payload["source_file"] = str(loaded_plan.get("source_file", working_input))
+                    plan_payload["summary"] = str(loaded_plan.get("summary", "")).strip()
+                    items = loaded_plan.get("items", [])
+                    if isinstance(items, list) and items:
+                        plan_payload["items"] = [items[0]]
+            except Exception:
+                plan_payload["items"] = []
+
+            if not plan_payload["items"]:
+                final_status = "ok" if accepted_cycles > 0 else "noop"
+                final_stop_reason = "no_candidates"
+                final_stop_detail = "planner returned no usable items"
+                break
+
+            write_json_atomic(plan_file, plan_payload)
+
+            remaining_sec = _remaining_wall_clock_sec(deadline)
+            if deadline is not None and remaining_sec == 0:
+                final_status = "stopped" if accepted_cycles > 0 else "noop"
+                final_stop_reason = "budget_exhausted"
+                final_stop_detail = "max_wall_clock_reached before executing the planned item"
+                break
+
+            executor_report = run_apply_derived_compression_plan(
+                input_file=working_input,
+                plan_file=plan_file,
                 output_file=output_file,
                 report_file=report_file,
-                extra={
-                    "planner": plan_report,
-                    "executor": None,
-                    "plan_file": str(plan_file),
-                    "progress_log_file": str(progress_log_file) if progress_log_file is not None else None,
-                },
+                prompt_file=executor_prompt_file,
+                theorem_reuse_memory_file=theorem_reuse_memory_file,
+                progress_log_file=progress_log_file,
+                verify_timeout_sec=args.verify_timeout,
+                max_wall_clock_sec=remaining_sec,
+                worker_command=args.worker_command,
+                worker_timeout=args.worker_timeout,
             )
-            write_report(report_file, final_report)
-            emit_progress_finish(
-                progress_log_file,
-                pass_name="pass_1.2",
-                round=0,
-                result="error",
-                stop_reason=str(plan_report.get("stop_reason", "worker_error")),
-                error_excerpt=str(plan_report.get("stop_detail", "")),
-            )
-            print_report(final_report)
-            raise SystemExit(1)
+            executor_reports.append(executor_report)
+            last_executor_report = executor_report
 
-        if int(plan_report.get("item_count", 0) or 0) == 0:
-            emit_progress_start(progress_log_file, pass_name="pass_1.2")
-            emit_progress_finish(
-                progress_log_file,
-                pass_name="pass_1.2",
-                round=0,
-                result="noop",
-                stop_reason="no_candidates",
-            )
-            final_report = build_report(
-                "noop",
-                "no_candidates",
-                stop_detail="planner returned no items",
-                input_file=input_file,
-                output_file=output_file,
-                report_file=report_file,
-                extra={
-                    "planner": plan_report,
-                    "executor": None,
-                    "plan_file": str(plan_file),
-                    "progress_log_file": str(progress_log_file) if progress_log_file is not None else None,
-                },
-            )
-            write_report(report_file, final_report)
-            print_report(final_report)
-            return
+            accepted_count = int(executor_report.get("accepted_count", 0) or 0)
+            if str(executor_report.get("status", "")) == "error":
+                final_status = "error"
+                final_stop_reason = str(executor_report.get("stop_reason", "worker_error"))
+                final_stop_detail = str(executor_report.get("stop_detail", ""))
+                break
+            if accepted_count != 1:
+                final_status = str(executor_report.get("status", "ok"))
+                final_stop_reason = str(executor_report.get("stop_reason", "completed"))
+                final_stop_detail = str(executor_report.get("stop_detail", ""))
+                break
 
-        executor_report = run_apply_derived_compression_plan(
-            input_file=input_file,
-            plan_file=plan_file,
-            output_file=output_file,
-            report_file=report_file,
-            prompt_file=executor_prompt_file,
-            theorem_reuse_memory_file=theorem_reuse_memory_file,
-            progress_log_file=progress_log_file,
-            verify_timeout_sec=args.verify_timeout,
-            max_wall_clock_sec=args.max_wall_clock_sec,
-            worker_command=args.worker_command,
-            worker_timeout=args.worker_timeout,
-        )
+            accepted_cycles += 1
+            working_input = output_file
+            final_status = "ok"
+            final_stop_reason = "completed"
+            final_stop_detail = ""
+
         final_report = build_report(
-            str(executor_report.get("status", "ok")),
-            str(executor_report.get("stop_reason", "completed")),
-            stop_detail=str(executor_report.get("stop_detail", "")),
+            final_status,
+            final_stop_reason,
+            stop_detail=final_stop_detail,
             input_file=input_file,
             output_file=output_file,
             report_file=report_file,
             extra={
-                "planner": plan_report,
-                "executor": executor_report,
+                "planner_reports": planner_reports,
+                "executor_reports": executor_reports,
+                "planner": last_plan_report,
+                "executor": last_executor_report,
+                "accepted_cycles": accepted_cycles,
                 "plan_file": str(plan_file),
                 "progress_log_file": str(progress_log_file) if progress_log_file is not None else None,
             },
         )
+        write_report(report_file, final_report)
         print_report(final_report)
     except Exception as exc:
         final_report = build_report(
@@ -157,13 +219,6 @@ def main() -> None:
             },
         )
         write_report(report_file, final_report)
-        emit_progress_finish(
-            progress_log_file,
-            pass_name="pass_1.2",
-            round=0,
-            result="error",
-            stop_reason="worker_error",
-        )
         print_report(final_report)
         raise SystemExit(1)
 

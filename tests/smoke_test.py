@@ -93,11 +93,14 @@ def main() -> None:
 
     problem_id = str(payload.get("problem_id", ""))
     stmt = str(payload.get("stmt", "")).strip()
+    prelude_name = f"smoke_helper_{problem_id}"
+    prelude_code = f"abbrev {prelude_name} : Prop := True" if problem_id else ""
 
     if task_type == "prover_statement":
         result_payload = {
             "problem_id": problem_id,
             "result": "ok" if stmt else "stuck",
+            "statement_prelude_code": prelude_code if stmt else "",
             "lean_statement": stmt,
             "theorem_name_stem": "Smoke_1",
             "docstring_summary": "Smoke proof.",
@@ -116,6 +119,7 @@ def main() -> None:
             "problem_id": problem_id,
             "result": "proof",
             "proof_sketch": "Smoke proof.",
+            "prelude_code": prelude_code,
             "proof_text": "trivial",
             "counterexample_text": "",
         }
@@ -312,6 +316,10 @@ def assert_smoke_outputs(dst_root: Path) -> None:
     derived_text = (dst_root / "AutomatedTheoryConstruction" / "Derived.lean").read_text(encoding="utf-8")
     if "thm_statement_target_000001" not in derived_text or "thm_statement_target_000002" not in derived_text:
         raise RuntimeError("smoke loop did not append solved theorems to Derived.lean")
+    if "abbrev smoke_helper_op_000001 : Prop := True" not in derived_text:
+        raise RuntimeError("smoke loop did not append prelude_code for op_000001")
+    if "abbrev smoke_helper_op_000002 : Prop := True" not in derived_text:
+        raise RuntimeError("smoke loop did not append prelude_code for op_000002")
 
 
 def assert_priority_refresh_report(completed: subprocess.CompletedProcess[str]) -> None:

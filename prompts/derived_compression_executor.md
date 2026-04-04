@@ -21,7 +21,8 @@ Execution policy:
 - Respect `plan_item.kind`.
 - If `repair_round > 0`, repair the current candidate incrementally using `lean_diagnostics`.
 - Preserve theorem order outside `plan_item.local_reorder_region`.
-- `summary_theorem` may add one local summary theorem when `plan_item.new_theorems` requests it.
+- `cluster_sectionize` should only insert a `/-! ## ... -/` heading comment before `plan_item.insert_before`.
+- For `cluster_sectionize`, return `noop` when the matching heading is already present locally.
 - `noop` is valid when no safe local change is available.
 - `change_notes` should mention only concrete local edits.
 

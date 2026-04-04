@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import time
 from pathlib import Path
 from typing import Any
@@ -39,6 +40,8 @@ DEFAULT_REPORT = Path("AutomatedTheoryConstruction/Derived.compression.report.js
 DEFAULT_PROGRESS_LOG = Path("AutomatedTheoryConstruction/Derived.compression.executor.log.jsonl")
 DEFAULT_PROMPT = Path("prompts/derived_compression_executor.md")
 DEFAULT_THEOREM_REUSE_MEMORY = Path("data/theorem_reuse_memory.json")
+
+SECTION_HEADING_PREFIX = "/-! ## "
 
 
 def load_plan(plan_file: Path) -> dict[str, Any]:
@@ -88,12 +91,76 @@ def _allowed_region_for_item(item: dict[str, Any]) -> list[str]:
     if region:
         return region
     names: list[str] = []
-    for key in ("anchor_theorems", "rewrite_targets", "new_theorems"):
+    for key in ("anchor_theorems", "rewrite_targets", "new_theorems", "section_members"):
         for name in item.get(key, []):
             cleaned = str(name).strip()
             if cleaned and cleaned not in names:
                 names.append(cleaned)
+    insert_before = str(item.get("insert_before", "")).strip()
+    if insert_before and insert_before not in names:
+        names.append(insert_before)
     return names
+
+
+def _render_section_heading(title: str) -> str:
+    cleaned = " ".join(str(title).split())
+    if not cleaned:
+        raise ValueError("section heading title must be non-empty")
+    return f"{SECTION_HEADING_PREFIX}{cleaned} -/"
+
+
+def _apply_cluster_sectionize_item(
+    *,
+    derived_code: str,
+    item: dict[str, Any],
+) -> tuple[str, str, str, list[str], list[str]]:
+    section_title = str(item.get("section_title", "")).strip()
+    insert_before = str(item.get("insert_before", "")).strip()
+    section_members = _allowed_region_for_item(item)
+    if not section_title:
+        raise ValueError("cluster_sectionize item is missing section_title")
+    if not insert_before:
+        raise ValueError("cluster_sectionize item is missing insert_before")
+    if len(section_members) < 2:
+        raise ValueError("cluster_sectionize item must target at least two theorems")
+
+    heading_line = _render_section_heading(section_title)
+    lines = derived_code.splitlines(keepends=True)
+    theorem_line_index: int | None = None
+    theorem_pattern = re.compile(rf"^theorem\s+{re.escape(insert_before)}\b")
+    for index, line in enumerate(lines):
+        if theorem_pattern.match(line):
+            theorem_line_index = index
+            break
+    if theorem_line_index is None:
+        raise ValueError(f"cluster_sectionize insert_before target not found: {insert_before}")
+
+    insert_index = theorem_line_index
+    if insert_index > 0 and lines[insert_index - 1].lstrip().startswith("/--"):
+        insert_index -= 1
+
+    heading_check_index = insert_index - 1
+    while heading_check_index >= 0 and not lines[heading_check_index].strip():
+        heading_check_index -= 1
+    if heading_check_index >= 0 and lines[heading_check_index].strip() == heading_line:
+        return (
+            "noop",
+            derived_code.strip(),
+            f"Section heading for {insert_before} already present.",
+            [],
+            section_members,
+        )
+
+    updated_lines = list(lines)
+    updated_lines.insert(insert_index, heading_line + "\n\n")
+    updated_code = "".join(updated_lines).strip()
+    return (
+        "ok",
+        updated_code,
+        f"Inserted section heading before {insert_before}.",
+        [f"Inserted section heading `{section_title}` before `{insert_before}`."],
+        section_members,
+    )
 
 
 def _policy_check(
@@ -226,17 +293,23 @@ def run_apply_derived_compression_plan(
                 error_excerpt=last_error_excerpt,
             )
             try:
-                raw_result, _worker_meta = invoke_worker_json(
-                    settings=worker_settings,
-                    task_type="apply_derived_compression_item",
-                    system_prompt=prompt_text,
-                    payload=payload,
-                    metadata={"item_id": item_id, "repair_round": repair_round},
-                )
-                result, candidate_code, summary, change_notes, touched_theorems = validate_full_file_refactor_output(
-                    raw_result,
-                    label="compression executor output",
-                )
+                if str(item.get("kind", "")).strip() == "cluster_sectionize":
+                    result, candidate_code, summary, change_notes, touched_theorems = _apply_cluster_sectionize_item(
+                        derived_code=current_code,
+                        item=item,
+                    )
+                else:
+                    raw_result, _worker_meta = invoke_worker_json(
+                        settings=worker_settings,
+                        task_type="apply_derived_compression_item",
+                        system_prompt=prompt_text,
+                        payload=payload,
+                        metadata={"item_id": item_id, "repair_round": repair_round},
+                    )
+                    result, candidate_code, summary, change_notes, touched_theorems = validate_full_file_refactor_output(
+                        raw_result,
+                        label="compression executor output",
+                    )
             except Exception as exc:
                 reject_reason = f"worker_error:{single_line_excerpt(str(exc), limit=120)}"
                 emit_progress_error(

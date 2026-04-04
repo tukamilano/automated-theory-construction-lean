@@ -18,14 +18,16 @@ Hard constraints:
 Allowed item kinds:
 - `exact_duplicate_collapse`
 - `proof_retarget`
-- `summary_theorem`
 - `cluster_reorder`
+- `cluster_sectionize`
 
 Planning policy:
 - Prefer exact duplicate groups first.
 - Prefer clusters that would make existing theorem reuse more explicit.
-- If you propose `summary_theorem`, keep it local and make the expected compression benefit explicit.
 - `cluster_reorder` must stay inside a local region.
+- Use `cluster_sectionize` only for a local cluster with at least 2 related theorems.
+- `cluster_sectionize` should insert only a `/-! ## ... -/` heading comment, not a Lean `section ... end`.
+- Do not propose `cluster_sectionize` when an equivalent local heading is already present.
 - If no safe soft-compression item is available, return `noop`.
 
 Output schema:
@@ -35,11 +37,14 @@ Output schema:
   "items": [
     {
       "id": "item_001",
-      "kind": "exact_duplicate_collapse|proof_retarget|summary_theorem|cluster_reorder",
+      "kind": "exact_duplicate_collapse|proof_retarget|cluster_reorder|cluster_sectionize",
       "anchor_theorems": ["theorem_name"],
       "rewrite_targets": ["theorem_name"],
       "new_theorems": ["optional_new_theorem_name"],
       "local_reorder_region": ["theorem_name"],
+      "section_title": "optional short heading for cluster_sectionize",
+      "section_members": ["theorem_name"],
+      "insert_before": "optional theorem_name for cluster_sectionize",
       "expected_benefit": "short reason"
     }
   ]

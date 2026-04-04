@@ -29,6 +29,7 @@ def _prover_statement_result(payload: dict[str, Any]) -> dict[str, Any]:
     return {
         "problem_id": problem_id,
         "result": "ok" if stmt else "stuck",
+        "statement_prelude_code": "",
         "lean_statement": stmt,
         "theorem_name_stem": "statement_target" if stmt else "",
         "docstring_summary": "Mock echoed statement." if stmt else "",
@@ -46,6 +47,7 @@ def _formalize_result(payload: dict[str, Any]) -> dict[str, Any]:
         "problem_id": problem_id,
         "result": requested_result,
         "proof_sketch": str(payload.get("proof_sketch", "")),
+        "prelude_code": "",
         "proof_text": "",
         "counterexample_text": str(payload.get("counterexample_text", "")),
     }
@@ -61,6 +63,7 @@ def _repair_result(payload: dict[str, Any]) -> dict[str, Any]:
         "problem_id": problem_id,
         "result": previous_result,
         "proof_sketch": str(payload.get("previous_proof_sketch", "")),
+        "prelude_code": str(payload.get("previous_prelude_code", "")),
         "proof_text": str(payload.get("previous_proof_text", "")),
         "counterexample_text": str(payload.get("previous_counterexample_text", "")),
     }
@@ -170,7 +173,7 @@ def _apply_derived_compression_item_result(payload: dict[str, Any]) -> dict[str,
     plan_item = payload.get("plan_item", {})
     touched_theorems = []
     if isinstance(plan_item, dict):
-        for key in ("anchor_theorems", "rewrite_targets", "new_theorems"):
+        for key in ("anchor_theorems", "rewrite_targets", "new_theorems", "section_members"):
             raw = plan_item.get(key, [])
             if not isinstance(raw, list):
                 continue
@@ -178,6 +181,9 @@ def _apply_derived_compression_item_result(payload: dict[str, Any]) -> dict[str,
                 cleaned = str(item).strip()
                 if cleaned and cleaned not in touched_theorems:
                     touched_theorems.append(cleaned)
+        insert_before = str(plan_item.get("insert_before", "")).strip()
+        if insert_before and insert_before not in touched_theorems:
+            touched_theorems.append(insert_before)
     return {
         "result": "noop" if derived_code else "stuck",
         "refactored_code": derived_code,

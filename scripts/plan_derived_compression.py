@@ -28,8 +28,8 @@ DEFAULT_THEOREM_REUSE_MEMORY = Path("data/theorem_reuse_memory.json")
 ALLOWED_KINDS = {
     "exact_duplicate_collapse",
     "proof_retarget",
-    "summary_theorem",
     "cluster_reorder",
+    "cluster_sectionize",
 }
 
 
@@ -61,17 +61,28 @@ def validate_plan_output(payload: dict[str, Any]) -> tuple[str, str, list[dict[s
         if kind not in ALLOWED_KINDS:
             raise ValueError(f"planner item kind is invalid: {kind}")
         item_id = str(item.get("id", f"item_{index:03d}")).strip() or f"item_{index:03d}"
-        cleaned_items.append(
-            {
-                "id": item_id,
-                "kind": kind,
-                "anchor_theorems": _clean_string_list(item.get("anchor_theorems", []), max_items=8),
-                "rewrite_targets": _clean_string_list(item.get("rewrite_targets", []), max_items=8),
-                "new_theorems": _clean_string_list(item.get("new_theorems", []), max_items=1),
-                "local_reorder_region": _clean_string_list(item.get("local_reorder_region", []), max_items=8),
-                "expected_benefit": str(item.get("expected_benefit", "")).strip(),
-            }
-        )
+        cleaned_item = {
+            "id": item_id,
+            "kind": kind,
+            "anchor_theorems": _clean_string_list(item.get("anchor_theorems", []), max_items=8),
+            "rewrite_targets": _clean_string_list(item.get("rewrite_targets", []), max_items=8),
+            "new_theorems": _clean_string_list(item.get("new_theorems", []), max_items=1),
+            "local_reorder_region": _clean_string_list(item.get("local_reorder_region", []), max_items=8),
+            "section_title": str(item.get("section_title", "")).strip(),
+            "section_members": _clean_string_list(item.get("section_members", []), max_items=12),
+            "insert_before": str(item.get("insert_before", "")).strip(),
+            "expected_benefit": str(item.get("expected_benefit", "")).strip(),
+        }
+        if kind == "cluster_sectionize":
+            if not cleaned_item["section_title"]:
+                raise ValueError("cluster_sectionize items must provide a non-empty section_title")
+            if not cleaned_item["insert_before"]:
+                raise ValueError("cluster_sectionize items must provide a non-empty insert_before")
+            if len(cleaned_item["section_members"]) < 2:
+                raise ValueError("cluster_sectionize items must provide at least two section_members")
+            if cleaned_item["insert_before"] not in cleaned_item["section_members"]:
+                cleaned_item["section_members"] = [cleaned_item["insert_before"], *cleaned_item["section_members"]]
+        cleaned_items.append(cleaned_item)
 
     if result != "ok" and cleaned_items:
         raise ValueError("planner items must be empty unless result=ok")
