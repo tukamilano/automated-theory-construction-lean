@@ -108,7 +108,7 @@ uv run scripts/run_loop.py
 
 ## Final Three-Stage Refactor For `Derived.lean`
 
-After the main loop has accumulated enough theorems in `AutomatedTheoryConstruction/Derived.lean`, run the final cleanup in three passes.
+After the main loop has accumulated enough theorems in `AutomatedTheoryConstruction/Derived.lean`, run the final cleanup in staged passes.
 
 Pass 1 runs a preview-oriented local refactor sweep over the accumulated `Derived.lean` theorems and writes a preview file:
 
@@ -120,7 +120,7 @@ uv run python scripts/refactor_derived.py \
 
 When `--worker-timeout` is omitted for `scripts/refactor_derived.py`, the refactor worker defaults to no outer timeout. Set `--worker-timeout <seconds>` or `ATC_REFACTOR_DERIVED_WORKER_TIMEOUT` if you want a bound for this pass.
 
-Pass 1.2 keeps the same preview file but applies planned soft compression in place:
+Pass 1.2 keeps the same preview file but applies exact-duplicate collapse in place:
 
 ```bash
 uv run python scripts/run_compression_pass.py \
@@ -128,6 +128,26 @@ uv run python scripts/run_compression_pass.py \
   --output-file AutomatedTheoryConstruction/Derived.refactored.preview.lean \
   --plan-file AutomatedTheoryConstruction/Derived.compression.plan.json \
   --report-file AutomatedTheoryConstruction/Derived.compression.report.json
+```
+
+Pass 1.3 then keeps the same preview file but applies proof-retarget rewrites in place:
+
+```bash
+uv run python scripts/run_proof_retarget_pass.py \
+  --input-file AutomatedTheoryConstruction/Derived.refactored.preview.lean \
+  --output-file AutomatedTheoryConstruction/Derived.refactored.preview.lean \
+  --plan-file AutomatedTheoryConstruction/Derived.proof_retarget.plan.json \
+  --report-file AutomatedTheoryConstruction/Derived.proof_retarget.report.json
+```
+
+Pass 1.4 optionally applies presentation-only shaping in place:
+
+```bash
+uv run python scripts/run_presentation_pass.py \
+  --input-file AutomatedTheoryConstruction/Derived.refactored.preview.lean \
+  --output-file AutomatedTheoryConstruction/Derived.refactored.preview.lean \
+  --plan-file AutomatedTheoryConstruction/Derived.presentation.plan.json \
+  --report-file AutomatedTheoryConstruction/Derived.presentation.report.json
 ```
 
 Pass 1.5 rewrites the preview in place using parseable `tryAtEachStep` suggestions:
@@ -158,6 +178,8 @@ If you use `scripts/atc_cli.py` or `atc.json`, the stage toggles are:
 
 - `runtime.run_refactor_pass_1`
 - `runtime.run_refactor_pass_1_2`
+- `runtime.run_refactor_pass_1_3`
+- `runtime.run_refactor_pass_1_4`
 - `runtime.run_refactor_pass_1_5`
 - `runtime.run_refactor_pass_2`
 
@@ -175,8 +197,14 @@ By default, `scripts/generate_seeds_from_theory.py` initializes a fresh runtime 
 - delete `AutomatedTheoryConstruction/Derived.refactored.preview.lean` if present
 - delete `AutomatedTheoryConstruction/Derived.compression.plan.json` if present
 - delete `AutomatedTheoryConstruction/Derived.compression.report.json` if present
+- delete `AutomatedTheoryConstruction/Derived.proof_retarget.plan.json` if present
+- delete `AutomatedTheoryConstruction/Derived.proof_retarget.report.json` if present
+- delete `AutomatedTheoryConstruction/Derived.presentation.plan.json` if present
+- delete `AutomatedTheoryConstruction/Derived.presentation.report.json` if present
 - delete `AutomatedTheoryConstruction/Derived.refactor.pass1.log.jsonl` if present
 - delete `AutomatedTheoryConstruction/Derived.compression.executor.log.jsonl` if present
+- delete `AutomatedTheoryConstruction/Derived.proof_retarget.executor.log.jsonl` if present
+- delete `AutomatedTheoryConstruction/Derived.presentation.executor.log.jsonl` if present
 - delete `AutomatedTheoryConstruction/Derived.refactored.reviewed.lean` if present
 - run `lake build` for `AutomatedTheoryConstruction.Theory` and `AutomatedTheoryConstruction.Derived`
 
@@ -209,6 +237,7 @@ uv run scripts/run_loop.py \
 The auto main-theorem path uses the same worker stack and supports separate limits through `--main-theorem-formalize-worker-timeout`, `--main-theorem-repair-worker-timeout`, `--main-theorem-verify-timeout`, and `--main-theorem-formalization-retry-budget-sec`.
 
 `scripts/run_pipeline.py` prefers initialization in the seed-generation stage, then runs `scripts/run_loop.py --no-initialize-on-start` to avoid doing the same reset twice.
+When the seed stage does not perform initialization and build, the pipeline now inserts `lake build AutomatedTheoryConstruction.Theory` and `lake build AutomatedTheoryConstruction.Derived` before the main loop so continuation runs do not fail on missing `.olean` artifacts.
 
 ## Worker Configuration
 

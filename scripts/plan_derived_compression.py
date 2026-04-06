@@ -25,7 +25,7 @@ DEFAULT_PROMPT = Path("prompts/derived_compression_planner.md")
 DEFAULT_THEORY = Path("AutomatedTheoryConstruction/Theory.lean")
 DEFAULT_THEOREM_REUSE_MEMORY = Path("data/theorem_reuse_memory.json")
 
-ALLOWED_KINDS = {
+VALID_ITEM_KINDS = {
     "exact_duplicate_collapse",
     "proof_retarget",
     "cluster_reorder",
@@ -40,7 +40,11 @@ def _clean_string_list(raw: Any, *, max_items: int | None = None) -> list[str]:
     return items[:max_items] if max_items is not None else items
 
 
-def validate_plan_output(payload: dict[str, Any]) -> tuple[str, str, list[dict[str, Any]]]:
+def validate_plan_output(
+    payload: dict[str, Any],
+    *,
+    allowed_kinds: set[str],
+) -> tuple[str, str, list[dict[str, Any]]]:
     required_keys = {"result", "summary", "items"}
     if set(payload.keys()) != required_keys:
         raise ValueError("planner output must contain exactly: result, summary, items")
@@ -58,8 +62,10 @@ def validate_plan_output(payload: dict[str, Any]) -> tuple[str, str, list[dict[s
         if not isinstance(item, dict):
             raise ValueError("planner items must contain only objects")
         kind = str(item.get("kind", "")).strip()
-        if kind not in ALLOWED_KINDS:
+        if kind not in VALID_ITEM_KINDS:
             raise ValueError(f"planner item kind is invalid: {kind}")
+        if kind not in allowed_kinds:
+            raise ValueError(f"planner item kind is not allowed for this pass: {kind}")
         item_id = str(item.get("id", f"item_{index:03d}")).strip() or f"item_{index:03d}"
         cleaned_item = {
             "id": item_id,
@@ -121,8 +127,11 @@ def run_plan_derived_compression(
     worker_settings: WorkerSettings | None = None,
     worker_command: str | None = None,
     worker_timeout: int | None = None,
+    allowed_kinds: set[str] | None = None,
 ) -> dict[str, Any]:
     try:
+        if not allowed_kinds:
+            raise ValueError("allowed_kinds must be non-empty")
         prompt_text = load_text(prompt_file)
         derived_code = load_text(input_file)
         _, theory_context = load_theory_context(theory_file)
@@ -157,7 +166,7 @@ def run_plan_derived_compression(
             payload=payload,
             metadata={"input_file": str(input_file)},
         )
-        result, summary, items = validate_plan_output(raw_result)
+        result, summary, items = validate_plan_output(raw_result, allowed_kinds=allowed_kinds)
         plan_payload = {
             "plan_version": 1,
             "source_file": str(input_file),
@@ -211,6 +220,7 @@ def main() -> None:
         output_file=Path(args.output_file),
         worker_command=args.worker_command,
         worker_timeout=args.worker_timeout,
+        allowed_kinds={"exact_duplicate_collapse"},
     )
     print_report(report)
     if report.get("status") == "error":

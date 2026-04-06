@@ -31,6 +31,7 @@ from derived_refactor_utils import verify_refactored_code
 from derived_refactor_utils import write_report
 from theorem_reuse_memory import load_theorem_reuse_memory
 from theorem_reuse_memory import summarize_supporting_theorem_frequency
+from worker_client import WorkerSettings
 from worker_client import invoke_worker_json
 
 
@@ -198,6 +199,8 @@ def run_apply_derived_compression_plan(
     progress_log_file: Path | None,
     verify_timeout_sec: int | None,
     max_wall_clock_sec: int | None,
+    pass_name: str = "pass_1.2",
+    allow_repair: bool = True,
     worker_settings: WorkerSettings | None = None,
     worker_command: str | None = None,
     worker_timeout: int | None = None,
@@ -222,7 +225,7 @@ def run_apply_derived_compression_plan(
     deadline = None if max_wall_clock_sec in (None, 0) else time.monotonic() + max_wall_clock_sec
     raw_stop_reason = "completed"
     stopped = False
-    emit_progress_start(progress_log_file, pass_name="pass_1.2")
+    emit_progress_start(progress_log_file, pass_name=pass_name)
 
     for index, item in enumerate(items, start=1):
         if deadline is not None and time.monotonic() >= deadline:
@@ -243,7 +246,7 @@ def run_apply_derived_compression_plan(
         debug_log(f"Compression item {item_id}: kind={item.get('kind', '')}")
         emit_progress_event(
             progress_log_file,
-            pass_name="pass_1.2",
+            pass_name=pass_name,
             phase="item_start",
             round=index,
             result="running",
@@ -258,7 +261,7 @@ def run_apply_derived_compression_plan(
                 stopped = True
                 emit_progress_event(
                     progress_log_file,
-                    pass_name="pass_1.2",
+                    pass_name=pass_name,
                     phase="budget_stop",
                     round=index,
                     result="stopped",
@@ -284,7 +287,7 @@ def run_apply_derived_compression_plan(
             )
             emit_progress_event(
                 progress_log_file,
-                pass_name="pass_1.2",
+                pass_name=pass_name,
                 phase="repair_round_start",
                 round=index,
                 result="running",
@@ -314,7 +317,7 @@ def run_apply_derived_compression_plan(
                 reject_reason = f"worker_error:{single_line_excerpt(str(exc), limit=120)}"
                 emit_progress_error(
                     progress_log_file,
-                    pass_name="pass_1.2",
+                    pass_name=pass_name,
                     phase="worker_error",
                     round=index,
                     stop_reason="worker_error",
@@ -331,7 +334,7 @@ def run_apply_derived_compression_plan(
                 reject_reason = "worker_stuck"
                 emit_progress_event(
                     progress_log_file,
-                    pass_name="pass_1.2",
+                    pass_name=pass_name,
                     phase="worker_result",
                     round=index,
                     result="stuck",
@@ -356,7 +359,7 @@ def run_apply_derived_compression_plan(
                 last_error_excerpt = ""
                 emit_progress_event(
                     progress_log_file,
-                    pass_name="pass_1.2",
+                    pass_name=pass_name,
                     phase="worker_result",
                     round=index,
                     result="noop",
@@ -368,6 +371,9 @@ def run_apply_derived_compression_plan(
                 no_progress, no_progress_reason = detect_no_progress(item_history)
                 if no_progress:
                     reject_reason = f"no_progress:{no_progress_reason}"
+                    break
+                if not allow_repair:
+                    reject_reason = "repair_disabled:noop"
                     break
                 continue
 
@@ -391,7 +397,7 @@ def run_apply_derived_compression_plan(
                 )
                 emit_progress_event(
                     progress_log_file,
-                    pass_name="pass_1.2",
+                    pass_name=pass_name,
                     phase="policy_result",
                     round=index,
                     result="policy_failed",
@@ -404,11 +410,14 @@ def run_apply_derived_compression_plan(
                 if no_progress:
                     reject_reason = f"no_progress:{no_progress_reason}"
                     break
+                if not allow_repair:
+                    reject_reason = "repair_disabled:policy_failed"
+                    break
                 continue
 
             emit_progress_event(
                 progress_log_file,
-                pass_name="pass_1.2",
+                pass_name=pass_name,
                 phase="verify_start",
                 round=index,
                 result="running",
@@ -434,7 +443,7 @@ def run_apply_derived_compression_plan(
                 )
                 emit_progress_event(
                     progress_log_file,
-                    pass_name="pass_1.2",
+                    pass_name=pass_name,
                     phase="verify_result",
                     round=index,
                     result="verify_failed",
@@ -446,6 +455,9 @@ def run_apply_derived_compression_plan(
                 no_progress, no_progress_reason = detect_no_progress(item_history)
                 if no_progress:
                     reject_reason = f"no_progress:{no_progress_reason}"
+                    break
+                if not allow_repair:
+                    reject_reason = "repair_disabled:verify_failed"
                     break
                 continue
 
@@ -462,7 +474,7 @@ def run_apply_derived_compression_plan(
             )
             emit_progress_event(
                 progress_log_file,
-                pass_name="pass_1.2",
+                pass_name=pass_name,
                 phase="verify_result",
                 round=index,
                 result="accepted",
@@ -515,7 +527,7 @@ def run_apply_derived_compression_plan(
     write_report(report_file, report)
     emit_progress_finish(
         progress_log_file,
-        pass_name="pass_1.2",
+        pass_name=pass_name,
         round=len(executor_items),
         result=status,
         stop_reason=stop_reason,

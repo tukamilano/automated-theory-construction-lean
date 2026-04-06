@@ -59,7 +59,17 @@ Any format is fine as long as the workflow can read it.
 [Derived.refactored.preview.lean]
         ↓
 [scripts/run_compression_pass.py]
-  planned soft compression with incremental repair
+  pass 1.2 exact-duplicate collapse with incremental repair
+        ↓
+[Derived.refactored.preview.lean]
+        ↓
+[scripts/run_proof_retarget_pass.py]
+  pass 1.3 proof-retarget compression with incremental repair
+        ↓
+[Derived.refactored.preview.lean]
+        ↓
+[scripts/run_presentation_pass.py]
+  optional pass 1.4 presentation shaping
         ↓
 [Derived.refactored.preview.lean]
         ↓
@@ -134,6 +144,9 @@ Run the final refactor stages of `Derived.lean`:
 
 ```bash
 uv run python scripts/atc_cli.py refactor
+uv run python scripts/atc_cli.py compress
+uv run python scripts/atc_cli.py retarget
+uv run python scripts/atc_cli.py present
 uv run python scripts/atc_cli.py rewrite
 uv run python scripts/atc_cli.py review
 ```

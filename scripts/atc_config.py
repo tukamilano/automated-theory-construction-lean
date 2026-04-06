@@ -30,10 +30,16 @@ class PathsConfig:
     preview_file: Path
     compression_plan_file: Path
     compression_report_file: Path
+    proof_retarget_plan_file: Path
+    proof_retarget_report_file: Path
+    presentation_plan_file: Path
+    presentation_report_file: Path
     reviewed_file: Path
     review_report_file: Path
     refactor_pass_1_log_file: Path
     compression_executor_log_file: Path
+    proof_retarget_executor_log_file: Path
+    presentation_executor_log_file: Path
     try_at_each_step_raw_output_file: Path
     try_at_each_step_apply_report_file: Path
     data_dir: Path
@@ -69,6 +75,8 @@ class RuntimeConfig:
     run_seed: bool = True
     run_refactor_pass_1: bool = True
     run_refactor_pass_1_2: bool = True
+    run_refactor_pass_1_3: bool = True
+    run_refactor_pass_1_4: bool = False
     run_refactor_pass_1_5: bool = True
     run_refactor_pass_2: bool = True
     run_main_theorem_session: bool = True
@@ -76,6 +84,8 @@ class RuntimeConfig:
     open_problem_failure_threshold: int = 2
     refactor_pass_1_max_wall_clock_sec: int | None = None
     refactor_pass_1_2_max_wall_clock_sec: int | None = None
+    refactor_pass_1_3_max_wall_clock_sec: int | None = None
+    refactor_pass_1_4_max_wall_clock_sec: int | None = None
     prover_retry_budget_sec: int = 120
     formalization_retry_budget_sec: int = 300
     max_same_error_streak: int = 5
@@ -368,6 +378,30 @@ def load_app_config(args: Any) -> tuple[AppConfig, dict[str, str]]:
             default="AutomatedTheoryConstruction/Derived.compression.report.json",
             label="paths.compression_report_file",
         ),
+        proof_retarget_plan_file=choose_path(
+            cli_names=("proof_retarget_plan_file",),
+            file_keys=("paths", "proof_retarget_plan_file"),
+            default="AutomatedTheoryConstruction/Derived.proof_retarget.plan.json",
+            label="paths.proof_retarget_plan_file",
+        ),
+        proof_retarget_report_file=choose_path(
+            cli_names=("proof_retarget_report_file",),
+            file_keys=("paths", "proof_retarget_report_file"),
+            default="AutomatedTheoryConstruction/Derived.proof_retarget.report.json",
+            label="paths.proof_retarget_report_file",
+        ),
+        presentation_plan_file=choose_path(
+            cli_names=("presentation_plan_file",),
+            file_keys=("paths", "presentation_plan_file"),
+            default="AutomatedTheoryConstruction/Derived.presentation.plan.json",
+            label="paths.presentation_plan_file",
+        ),
+        presentation_report_file=choose_path(
+            cli_names=("presentation_report_file",),
+            file_keys=("paths", "presentation_report_file"),
+            default="AutomatedTheoryConstruction/Derived.presentation.report.json",
+            label="paths.presentation_report_file",
+        ),
         reviewed_file=choose_path(
             cli_names=("review_output_file", "reviewed_file"),
             file_keys=("paths", "reviewed_file"),
@@ -391,6 +425,18 @@ def load_app_config(args: Any) -> tuple[AppConfig, dict[str, str]]:
             file_keys=("paths", "compression_executor_log_file"),
             default="AutomatedTheoryConstruction/Derived.compression.executor.log.jsonl",
             label="paths.compression_executor_log_file",
+        ),
+        proof_retarget_executor_log_file=choose_path(
+            cli_names=("proof_retarget_progress_log_file",),
+            file_keys=("paths", "proof_retarget_executor_log_file"),
+            default="AutomatedTheoryConstruction/Derived.proof_retarget.executor.log.jsonl",
+            label="paths.proof_retarget_executor_log_file",
+        ),
+        presentation_executor_log_file=choose_path(
+            cli_names=("presentation_progress_log_file",),
+            file_keys=("paths", "presentation_executor_log_file"),
+            default="AutomatedTheoryConstruction/Derived.presentation.executor.log.jsonl",
+            label="paths.presentation_executor_log_file",
         ),
         try_at_each_step_raw_output_file=choose_path(
             cli_names=("try_at_each_step_raw_output_file",),
@@ -577,6 +623,22 @@ def load_app_config(args: Any) -> tuple[AppConfig, dict[str, str]]:
                 label="runtime.run_refactor_pass_1_2",
             )
         ),
+        run_refactor_pass_1_3=bool(
+            choose_bool(
+                cli_names=("run_refactor_pass_1_3",),
+                file_keys=("runtime", "run_refactor_pass_1_3"),
+                default=True,
+                label="runtime.run_refactor_pass_1_3",
+            )
+        ),
+        run_refactor_pass_1_4=bool(
+            choose_bool(
+                cli_names=("run_refactor_pass_1_4",),
+                file_keys=("runtime", "run_refactor_pass_1_4"),
+                default=False,
+                label="runtime.run_refactor_pass_1_4",
+            )
+        ),
         run_refactor_pass_1_5=bool(
             choose_bool(
                 cli_names=("run_refactor_pass_1_5",),
@@ -604,6 +666,7 @@ def load_app_config(args: Any) -> tuple[AppConfig, dict[str, str]]:
         ),
         run_main_theorem_session=bool(
             choose_bool(
+                cli_names=("run_main_theorem_session",),
                 file_keys=("runtime", "run_main_theorem_session"),
                 default=True,
                 label="runtime.run_main_theorem_session",
@@ -631,6 +694,20 @@ def load_app_config(args: Any) -> tuple[AppConfig, dict[str, str]]:
             default=None,
             minimum=0,
             label="runtime.refactor_pass_1_2_max_wall_clock_sec",
+        ),
+        refactor_pass_1_3_max_wall_clock_sec=choose_int(
+            cli_names=("proof_retarget_max_wall_clock_sec",),
+            file_keys=("runtime", "refactor_pass_1_3_max_wall_clock_sec"),
+            default=None,
+            minimum=0,
+            label="runtime.refactor_pass_1_3_max_wall_clock_sec",
+        ),
+        refactor_pass_1_4_max_wall_clock_sec=choose_int(
+            cli_names=("presentation_max_wall_clock_sec",),
+            file_keys=("runtime", "refactor_pass_1_4_max_wall_clock_sec"),
+            default=None,
+            minimum=0,
+            label="runtime.refactor_pass_1_4_max_wall_clock_sec",
         ),
         prover_retry_budget_sec=int(
             choose_int(

@@ -1,11 +1,10 @@
-# Derived Compression Executor
+# Derived Presentation Executor
 
-You improve `AutomatedTheoryConstruction/Derived.refactored.preview.lean` by applying one planned soft-compression item.
+You improve `AutomatedTheoryConstruction/Derived.refactored.preview.lean` by applying one planned presentation item.
 
 Primary goal:
-- Apply the current `plan_item` with a small local structural edit.
-- Prefer explicit reuse of existing `Derived.lean` theorems.
-- Keep the edit small enough for incremental repair with Lean diagnostics.
+- Apply the current `plan_item` with a small local presentation-only edit.
+- Keep the edit safe enough to verify in one shot.
 
 Hard constraints:
 - Output a full Lean file in `refactored_code`.
@@ -19,7 +18,10 @@ Hard constraints:
 
 Execution policy:
 - Respect `plan_item.kind`.
-- If `repair_round > 0`, repair the current candidate incrementally using `lean_diagnostics`.
+- `cluster_reorder` must preserve theorem order outside `plan_item.local_reorder_region`.
+- `cluster_sectionize` should only insert a `/-! ## ... -/` heading comment before `plan_item.insert_before`.
+- For `cluster_sectionize`, return `noop` when the matching heading is already present locally.
+- Do not rely on iterative repair; prefer safe one-shot edits.
 - `noop` is valid when no safe local change is available.
 - `change_notes` should mention only concrete local edits.
 

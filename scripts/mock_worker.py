@@ -173,7 +173,7 @@ def _apply_derived_compression_item_result(payload: dict[str, Any]) -> dict[str,
     plan_item = payload.get("plan_item", {})
     touched_theorems = []
     if isinstance(plan_item, dict):
-        for key in ("anchor_theorems", "rewrite_targets", "new_theorems", "section_members"):
+        for key in ("anchor_theorems", "rewrite_targets", "new_theorems", "local_reorder_region", "section_members"):
             raw = plan_item.get(key, [])
             if not isinstance(raw, list):
                 continue
