@@ -498,7 +498,7 @@ def main() -> None:
     retry_budget_help = "Whole pass 1 wall-clock budget in seconds."
     parser.add_argument("--derived-file", default="AutomatedTheoryConstruction/Derived.lean")
     parser.add_argument("--theory-file", default="AutomatedTheoryConstruction/Theory.lean")
-    parser.add_argument("--prompt-file", default="prompts/derived_refactorer.md")
+    parser.add_argument("--prompt-file", default="prompts/derived/refactorer.md")
     parser.add_argument("--worker-command")
     parser.add_argument("--worker-timeout", type=int, help=worker_timeout_help)
     parser.add_argument("--verify-timeout", type=int, help=verify_timeout_help)

@@ -1077,6 +1077,21 @@ def load_prompt_text(prompt_file: str) -> str:
     return path.read_text(encoding="utf-8")
 
 
+def select_formalizer_prompt(prompt_map: dict[str, str], *, result: str) -> str:
+    if result == "counterexample":
+        return prompt_map["counterexample"]
+    return prompt_map["proof"]
+
+
+def select_expand_prompt(prompt_map: dict[str, str], *, result: str, verify_success: bool) -> str:
+    if verify_success:
+        if result == "counterexample":
+            return prompt_map["solved_counterexample"]
+        if result == "proof":
+            return prompt_map["solved_proof"]
+    return prompt_map["unsolved"]
+
+
 def formalize_to_scratch(
     theorem_name: str,
     stmt: str,
@@ -2711,8 +2726,8 @@ def attempt_formalization_until_timeout(
     skip_verify: bool,
     formalize_worker_settings: Any,
     repair_worker_settings: Any,
-    formalizer_prompt: str,
-    repair_prompt: str,
+    formalizer_prompts: dict[str, str],
+    repair_prompts: dict[str, str],
     open_rows: list[dict[str, Any]],
     theory_context: str,
     verify_timeout_sec: int | None = 180,
@@ -2767,7 +2782,7 @@ def attempt_formalization_until_timeout(
             proof_lean_started_at = iso_timestamp_now()
             result, proof_sketch, prelude_code, proof_text, counterexample_text = request_initial_formalization(
                 formalize_worker_settings=formalize_worker_settings,
-                formalizer_prompt=formalizer_prompt,
+                formalizer_prompt=select_formalizer_prompt(formalizer_prompts, result=result),
                 problem_id=problem_id,
                 stmt=current_stmt,
                 result=result,
@@ -3130,6 +3145,7 @@ def attempt_formalization_until_timeout(
             "current_scratch_code": scratch_code or "",
             "mathlib_import_in_scratch": True,
         }
+        current_repair_prompt = select_formalizer_prompt(repair_prompts, result=result)
 
         try:
             repair_started_monotonic = time.monotonic()
@@ -3137,7 +3153,7 @@ def attempt_formalization_until_timeout(
             repaired, repair_worker_meta = invoke_worker_json(
                 settings=repair_worker_settings,
                 task_type="repair",
-                system_prompt=repair_prompt,
+                system_prompt=current_repair_prompt,
                 payload=repair_payload,
                 metadata={"problem_id": problem_id, "repair_round": repair_round},
             )
@@ -3576,8 +3592,8 @@ def process_manual_main_theorem(
     if plan_notes:
         theorem_context += f"\n-- Planner notes: {plan_notes}"
 
-    formalizer_prompt = load_prompt_text(formalizer_prompt_file)
-    repair_prompt = load_prompt_text(repair_prompt_file)
+    proof_formalizer_prompt = load_prompt_text(formalizer_prompt_file)
+    proof_repair_prompt = load_prompt_text(repair_prompt_file)
     verify_success, _, result, _, proof_text, counterexample_text, _, verify_error_excerpt, final_stmt = attempt_formalization_until_timeout(
         problem_id=candidate_id,
         theorem_name=theorem_name,
@@ -3590,8 +3606,8 @@ def process_manual_main_theorem(
         skip_verify=skip_verify,
         formalize_worker_settings=formalize_worker_settings,
         repair_worker_settings=repair_worker_settings,
-        formalizer_prompt=formalizer_prompt,
-        repair_prompt=repair_prompt,
+        formalizer_prompts={"proof": proof_formalizer_prompt, "counterexample": proof_formalizer_prompt},
+        repair_prompts={"proof": proof_repair_prompt, "counterexample": proof_repair_prompt},
         open_rows=[normalize_open_problem_row(row) for row in read_jsonl(data_dir / "open_problems.jsonl")],
         theory_context=theorem_context,
         verify_timeout_sec=verify_timeout_sec,
@@ -3936,9 +3952,14 @@ def run_problem_session(
             worker_meta=prover_worker_meta,
         )
 
-    formalizer_prompt = load_prompt_text(args.formalizer_prompt_file)
-    repair_prompt_file = args.repair_prompt_file or args.formalizer_prompt_file
-    repair_prompt = load_prompt_text(repair_prompt_file)
+    formalizer_prompts = {
+        "proof": load_prompt_text(args.formalizer_proof_prompt_file),
+        "counterexample": load_prompt_text(args.formalizer_counterexample_prompt_file),
+    }
+    repair_prompts = {
+        "proof": load_prompt_text(args.repair_proof_prompt_file),
+        "counterexample": load_prompt_text(args.repair_counterexample_prompt_file),
+    }
     formalization_deadline = build_retry_deadline(args.formalization_retry_budget_sec)
     theorem_code = ""
     prelude_code = ""
@@ -3964,8 +3985,8 @@ def run_problem_session(
         skip_verify=args.skip_verify,
         formalize_worker_settings=formalize_worker_settings,
         repair_worker_settings=repair_worker_settings,
-        formalizer_prompt=formalizer_prompt,
-        repair_prompt=repair_prompt,
+        formalizer_prompts=formalizer_prompts,
+        repair_prompts=repair_prompts,
         open_rows=open_rows,
         theory_context=theory_context,
         verify_timeout_sec=180,
@@ -4003,7 +4024,12 @@ def run_problem_session(
         problem_id=problem_id,
         mode="worker",
     )
-    expand_prompt = load_prompt_text(args.expander_prompt_file)
+    expand_prompts = {
+        "unsolved": load_prompt_text(args.expander_unsolved_prompt_file),
+        "solved_proof": load_prompt_text(args.expander_solved_proof_prompt_file),
+        "solved_counterexample": load_prompt_text(args.expander_solved_counterexample_prompt_file),
+    }
+    expand_prompt = select_expand_prompt(expand_prompts, result=result, verify_success=verify_success)
     same_problem_history_tail = load_formalization_memory(memory_path, problem_id)[-8:]
     expand_started_monotonic = time.monotonic()
     expand_started_at = iso_timestamp_now()
@@ -4803,16 +4829,23 @@ def main() -> None:
     args.reset_scratch_on_start = True
     args.reset_derived_on_start = True
     args.theory_file = "AutomatedTheoryConstruction/Theory.lean"
-    args.prover_statement_prompt_file = "prompts/prover_statement_formalizer.md"
-    args.formalizer_prompt_file = "prompts/formalizer_simple.md"
-    args.repair_prompt_file = None
-    args.prioritize_open_problems_prompt_file = "prompts/open_problem_prioritizer.md"
-    args.main_theorem_suggest_prompt_file = "prompts/main_theorem_suggester.md"
-    args.main_theorem_plan_prompt_file = "prompts/main_theorem_planner.md"
-    args.main_theorem_post_expand_prompt_file = "prompts/post_theorem_expander.md"
+    args.prover_statement_prompt_file = "prompts/formalize/prover_statement_formalizer.md"
+    args.formalizer_prompt_file = "prompts/formalize/formalizer_proof.md"
+    args.repair_prompt_file = "prompts/formalize/repair_proof.md"
+    args.formalizer_proof_prompt_file = "prompts/formalize/formalizer_proof.md"
+    args.formalizer_counterexample_prompt_file = "prompts/formalize/formalizer_counterexample.md"
+    args.repair_proof_prompt_file = "prompts/formalize/repair_proof.md"
+    args.repair_counterexample_prompt_file = "prompts/formalize/repair_counterexample.md"
+    args.prioritize_open_problems_prompt_file = "prompts/prioritizer/open_problem_prioritizer.md"
+    args.main_theorem_suggest_prompt_file = "prompts/main_theorem/suggester.md"
+    args.main_theorem_plan_prompt_file = "prompts/main_theorem/planner.md"
+    args.main_theorem_post_expand_prompt_file = "prompts/expander/post_theorem.md"
     # Problem selection is deterministic local logic; the worker handles priority refresh and prover/formalize stages.
-    args.prover_prompt_file = "prompts/prover_simple.md"
-    args.expander_prompt_file = "prompts/new_problem_expander.md"
+    args.prover_prompt_file = "prompts/prover/prover_simple.md"
+    args.expander_prompt_file = "prompts/expander/stuck.md"
+    args.expander_unsolved_prompt_file = "prompts/expander/stuck.md"
+    args.expander_solved_proof_prompt_file = "prompts/expander/solved_proof.md"
+    args.expander_solved_counterexample_prompt_file = "prompts/expander/solved_counterexample.md"
     args.formalization_memory_file = "data/formalization_memory.json"
     args.archived_problems_file = f"data/{ARCHIVED_PROBLEMS_FILENAME}"
     args.reset_formalization_memory_on_start = True

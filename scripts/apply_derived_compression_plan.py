@@ -39,7 +39,7 @@ DEFAULT_INPUT = Path("AutomatedTheoryConstruction/Derived.refactored.preview.lea
 DEFAULT_PLAN = Path("AutomatedTheoryConstruction/Derived.compression.plan.json")
 DEFAULT_REPORT = Path("AutomatedTheoryConstruction/Derived.compression.report.json")
 DEFAULT_PROGRESS_LOG = Path("AutomatedTheoryConstruction/Derived.compression.executor.log.jsonl")
-DEFAULT_PROMPT = Path("prompts/derived_compression_executor.md")
+DEFAULT_PROMPT = Path("prompts/derived/compression_executor.md")
 DEFAULT_THEOREM_REUSE_MEMORY = Path("data/theorem_reuse_memory.json")
 
 SECTION_HEADING_PREFIX = "/-! ## "

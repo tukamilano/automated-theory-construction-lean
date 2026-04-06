@@ -21,7 +21,7 @@ from worker_client import invoke_worker_json
 
 DEFAULT_INPUT = Path("AutomatedTheoryConstruction/Derived.refactored.preview.lean")
 DEFAULT_PLAN = Path("AutomatedTheoryConstruction/Derived.compression.plan.json")
-DEFAULT_PROMPT = Path("prompts/derived_compression_planner.md")
+DEFAULT_PROMPT = Path("prompts/derived/compression_planner.md")
 DEFAULT_THEORY = Path("AutomatedTheoryConstruction/Theory.lean")
 DEFAULT_THEOREM_REUSE_MEMORY = Path("data/theorem_reuse_memory.json")
 

@@ -43,10 +43,10 @@ Open problems may be either Lean-formal statements or semi-formal research promp
 - `scripts/lean_verify.py`: Lean verification wrapper
 - `scripts/state_update.py`: deterministic JSONL state transitions
 - `scripts/append_derived.py`: append verified theorems to `Derived.lean`
-- `prompts/prover_statement_formalizer.md`: statement-formalization prompt
-- `prompts/prover_simple.md`: prover prompt
-- `prompts/formalizer_simple.md`: formalize/repair prompt
-- `prompts/new_problem_expander.md`: expansion prompt
+- `prompts/formalize/prover_statement_formalizer.md`: statement-formalization prompt
+- `prompts/prover/prover_simple.md`: prover prompt
+- `prompts/formalize/*`: formalize and repair prompts
+- `prompts/expander/*`: expansion prompts
 - `AutomatedTheoryConstruction/seeds.jsonl`: currently active seed queue
 - `materials/*`: optional papers, notes, and context files for seed generation
 - `example/*`: reference examples not wired into `run_loop.py`

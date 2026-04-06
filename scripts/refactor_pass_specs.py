@@ -30,8 +30,8 @@ EXACT_DUPLICATE_PASS_SPEC = RefactorPassSpec(
     default_plan=Path("AutomatedTheoryConstruction/Derived.compression.plan.json"),
     default_report=Path("AutomatedTheoryConstruction/Derived.compression.report.json"),
     default_progress_log=Path("AutomatedTheoryConstruction/Derived.compression.executor.log.jsonl"),
-    default_planner_prompt=Path("prompts/derived_compression_planner.md"),
-    default_executor_prompt=Path("prompts/derived_compression_executor.md"),
+    default_planner_prompt=Path("prompts/derived/compression_planner.md"),
+    default_executor_prompt=Path("prompts/derived/compression_executor.md"),
     default_theorem_reuse_memory=Path("data/theorem_reuse_memory.json"),
 )
 
@@ -46,8 +46,8 @@ PROOF_RETARGET_PASS_SPEC = RefactorPassSpec(
     default_plan=Path("AutomatedTheoryConstruction/Derived.proof_retarget.plan.json"),
     default_report=Path("AutomatedTheoryConstruction/Derived.proof_retarget.report.json"),
     default_progress_log=Path("AutomatedTheoryConstruction/Derived.proof_retarget.executor.log.jsonl"),
-    default_planner_prompt=Path("prompts/derived_proof_retarget_planner.md"),
-    default_executor_prompt=Path("prompts/derived_compression_executor.md"),
+    default_planner_prompt=Path("prompts/derived/proof_retarget_planner.md"),
+    default_executor_prompt=Path("prompts/derived/compression_executor.md"),
     default_theorem_reuse_memory=Path("data/theorem_reuse_memory.json"),
 )
 
@@ -62,7 +62,7 @@ PRESENTATION_PASS_SPEC = RefactorPassSpec(
     default_plan=Path("AutomatedTheoryConstruction/Derived.presentation.plan.json"),
     default_report=Path("AutomatedTheoryConstruction/Derived.presentation.report.json"),
     default_progress_log=Path("AutomatedTheoryConstruction/Derived.presentation.executor.log.jsonl"),
-    default_planner_prompt=Path("prompts/derived_presentation_planner.md"),
-    default_executor_prompt=Path("prompts/derived_presentation_executor.md"),
+    default_planner_prompt=Path("prompts/derived/presentation_planner.md"),
+    default_executor_prompt=Path("prompts/derived/presentation_executor.md"),
     default_theorem_reuse_memory=Path("data/theorem_reuse_memory.json"),
 )
