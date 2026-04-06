@@ -15,6 +15,7 @@ Hard constraints:
 Reuse policy:
 - Reuse theorems already listed in `Derived.lean` when applicable.
 - Act as if `import Mathlib` is available and prefer standard Mathlib facts over inventing new local lemmas.
+- Avoid suggesting generated or problem-specific declaration names, especially universe names like `u_op_000044`; prefer short conventional names if an explicit universe is truly needed.
 - Before suggesting a proof direction, check whether the fixed target looks like a standard Mathlib pattern (`Subsingleton`, cancellation, identities, associativity/commutativity consequences, witness-existence, etc.).
 - If a promising direction depends on a known library fact, say so explicitly in `proof_sketch` rather than sketching an axiom-only derivation.
 - Prefer short tactics such as `exact`, `simpa`, `apply`, `intro`, `constructor`, `cases`, `rw`.

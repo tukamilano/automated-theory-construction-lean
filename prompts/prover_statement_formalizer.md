@@ -21,6 +21,7 @@ Formalization policy:
 - Assume `import Mathlib` is available and prefer standard Mathlib vocabulary and structures when formalizing.
 - Reuse names and notation already present in `Theory.lean` and `Derived.lean` when applicable.
 - Prefer explicit quantification and the same notation style already used in this repository.
+- Avoid generated or problem-specific names in declarations, especially universe names like `u_op_000044`; prefer short conventional names such as `u`, `v`, `w`, or avoid explicit `universe` declarations when possible.
 - If `Theory.lean` or `Derived.lean` defines infix/prefix notation or an abbrev for a concept, prefer that shorthand notation in `lean_statement` instead of the expanded form.
 - In particular, if there is a notation declaration such as `infix:50 " ≐ " => Equivalent`, formalize using the shorthand form `x ≐ y`, not `Equivalent x y`.
 - Structural refactoring is allowed when it is needed to make the proposition itself well-formed and reusable. Introduce a new `def`, `abbrev`, `structure`, `inductive`, or short helper `lemma` in `statement_prelude_code` when that removes repeated ad hoc binders or names a reusable concept required by the statement.

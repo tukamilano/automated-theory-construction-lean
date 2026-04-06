@@ -46,6 +46,17 @@ When the current problem is solved and verified (`verify_success = true` and `re
 - Also favor follow-up problems that vary the assumptions or structure of the theory to reveal robustness, thresholds, or failure modes.
 - When appropriate, it is also good to propose a follow-up that analyzes the theory's internal language or expressive structure, provided the statement remains anchored to the active theory.
 
+When the current problem is solved by a verified counterexample (`verify_success = true` and `result = counterexample`):
+- Treat the counterexample as high-value structural information about why the statement fails.
+- Prefer follow-up problems that convert that failure into reusable theory growth rather than merely recording another isolated witness.
+- Favor, when possible:
+  1. the weakest natural additional hypothesis that would make the original statement true
+  2. a sharp non-implication, separation, or failure-of-converse revealed by the counterexample
+  3. a threshold, boundary, or dichotomy statement explaining when the phenomenon fails or reappears
+  4. a structural characterization of objects or models admitting this failure mode
+- Use any explicit witness or mechanism of failure visible in the current logs or same-problem history when available, but do not merely restate the same witness in slightly different packaging.
+- Prefer candidates whose resolution would improve future theorem selection or model understanding, not only produce another nearby example.
+
 Quality checklist for every returned candidate:
 - It should add theory-level information.
 - It should preferably support the current `next_direction`, unless a different candidate is clearly more informative.
@@ -59,6 +70,7 @@ Low-quality candidates to reject:
 - purely one-off example checks whose main value is only local verification
 - ad hoc finite-model existence claims, hand-crafted two- or three-element structures, or case-by-case classification prompts unless the current logs already produced that instance as a necessary witness for a broader theory-level claim
 - statements that merely restate a known witness, counterexample, or already verified pattern in slightly different packaging
+- candidates that only rename, repackage, or lightly vary an already known counterexample without extracting a broader structural lesson
 - narrow local decompositions when a stronger outward-looking follow-up is available
 
 Candidate format constraints:

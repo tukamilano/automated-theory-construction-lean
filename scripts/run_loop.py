@@ -25,6 +25,7 @@ from common import (
     append_jsonl,
     dedupe_problem_rows_by_stmt,
     load_theory_context,
+    merge_archived_problem_rows,
     normalize_open_problem_row,
     normalize_open_problem_priority,
     parse_problem_index,
@@ -356,6 +357,7 @@ def write_theory_state(
     main_bridge: str,
     saturated_areas: list[str],
     next_direction: dict[str, Any],
+    important_verified_counterexamples: list[str],
 ) -> dict[str, Any]:
     existing_payload = load_theory_state(data_dir)
     payload = {
@@ -367,6 +369,7 @@ def write_theory_state(
         "main_bridge": main_bridge,
         "saturated_areas": saturated_areas,
         "next_direction": next_direction,
+        "important_verified_counterexamples": list(important_verified_counterexamples),
         "summary_basis": {
             "derived_theorem_count": derived_theorem_count,
             "open_problem_count": open_problem_count,
@@ -419,6 +422,7 @@ def persist_derived_generation(
             "main_bridge": "",
             "saturated_areas": [],
             "next_direction": {},
+            "important_verified_counterexamples": [],
             "summary_basis": {
                 "derived_theorem_count": 0,
                 "open_problem_count": 0,
@@ -434,6 +438,29 @@ def persist_derived_generation(
 
 def normalize_stmt_text(stmt: str) -> str:
     return " ".join(stmt.split())
+
+
+def collect_important_verified_counterexamples(
+    data_dir: Path,
+    *,
+    max_items: int = 3,
+    max_chars: int = 240,
+) -> list[str]:
+    rows = read_jsonl(data_dir / "counterexamples.jsonl")
+    summaries: list[str] = []
+    seen_stmt_norms: set[str] = set()
+    for row in reversed(rows):
+        stmt = normalize_stmt_text(str(row.get("stmt", "")))
+        if not stmt or stmt in seen_stmt_norms:
+            continue
+        seen_stmt_norms.add(stmt)
+        summary = f"Verified counterexample to: {stmt}"
+        if len(summary) > max_chars:
+            summary = summary[: max_chars - 3] + "..."
+        summaries.append(summary)
+        if len(summaries) >= max_items:
+            break
+    return summaries
 
 
 def open_problem_priority_label(row: dict[str, Any]) -> str:
@@ -1091,6 +1118,28 @@ def formalize_to_scratch(
     return theorem_name, scratch
 
 
+def write_formalization_candidate_to_scratch(
+    *,
+    scratch_file: Path,
+    theorem_name: str,
+    stmt: str,
+    result: str,
+    prelude_code: str,
+    proof_text: str,
+    counterexample_text: str,
+) -> None:
+    _, scratch = formalize_to_scratch(
+        theorem_name=theorem_name,
+        stmt=stmt,
+        mode=result,
+        proof_text=proof_text,
+        counterexample_text=counterexample_text,
+        prelude_code=prelude_code,
+    )
+    scratch_file.parent.mkdir(parents=True, exist_ok=True)
+    scratch_file.write_text(scratch, encoding="utf-8")
+
+
 def validate_solver_statement_with_lean(
     *,
     problem_id: str,
@@ -1218,6 +1267,8 @@ def emit_parse_phase_log(
 
 def is_worker_timeout_error(exc: Exception) -> bool:
     message = str(exc).lower()
+    if "keyboardinterrupt" in message or "exited with code 130" in message or "interrupt_requested" in message:
+        return False
     return "timed out" in message or "timeout" in message
 
 
@@ -1375,6 +1426,9 @@ def append_verified_theorem_from_scratch(
 ) -> str:
     theorem_code = extract_theorem_code_from_scratch(scratch_path)
     if not theorem_code:
+        return ""
+    entry = extract_derived_entry_from_theorem_code(theorem_code)
+    if entry is None or str(entry.get("name", "")).endswith("_is_false"):
         return ""
     appended = append_theorem(
         derived_file,
@@ -2608,14 +2662,16 @@ def force_refresh_open_problem_priorities(
     except (RuntimeError, ValueError) as exc:
         return False, str(exc), {}
 
-    tracked_rows = apply_open_problem_priorities(
-        tracked_rows,
+    refreshed_open_rows = apply_open_problem_priorities(
+        open_rows,
         priority_updates,
     )
-    refreshed_open_rows, refreshed_archived_rows = split_active_and_archived_problem_queues(
-        tracked_rows,
+    refreshed_open_rows, newly_archived_rows = split_active_and_archived_problem_queues(
+        refreshed_open_rows,
         failure_archive_threshold=failure_threshold,
     )
+    refreshed_archived_rows = merge_archived_problem_rows(archived_rows, newly_archived_rows)
+    important_verified_counterexamples = collect_important_verified_counterexamples(data_dir)
     write_jsonl_atomic(open_path, refreshed_open_rows)
     write_jsonl_atomic(archived_path, refreshed_archived_rows)
     theory_state = write_theory_state(
@@ -2630,6 +2686,7 @@ def force_refresh_open_problem_priorities(
         main_bridge=main_bridge,
         saturated_areas=saturated_areas,
         next_direction=next_direction,
+        important_verified_counterexamples=important_verified_counterexamples,
     )
     if theory_state_history_path is not None:
         append_theory_state_history(
@@ -2684,7 +2741,7 @@ def attempt_formalization_until_timeout(
     best_verified_candidate: dict[str, Any] | None = None
 
     if result not in {"proof", "counterexample"}:
-        # Preserve stuck/counterexample exploration history so future timeout handling
+        # Preserve stuck exploration history so future timeout handling
         # can mine subgoal candidates from prior reasoning.
         persisted_history = load_formalization_memory(memory_path, problem_id)
         persisted_history.append(
@@ -2795,6 +2852,36 @@ def attempt_formalization_until_timeout(
     repair_history: list[dict[str, Any]] = list(persisted_history)
     last_error_fingerprint = ""
     same_error_streak = 0
+
+    def restore_best_verified_candidate() -> tuple[bool, str | None, str, str, str, str, list[str], str, str]:
+        assert best_verified_candidate is not None
+        best_result = str(best_verified_candidate["result"])
+        best_stmt = str(best_verified_candidate["stmt"])
+        best_prelude_code = str(best_verified_candidate["prelude_code"])
+        best_proof_text = str(best_verified_candidate["proof_text"])
+        best_counterexample_text = str(best_verified_candidate["counterexample_text"])
+        best_new_problems = list(best_verified_candidate["new_problems"])
+        best_verify_error_excerpt = str(best_verified_candidate["verify_error_excerpt"])
+        write_formalization_candidate_to_scratch(
+            scratch_file=scratch_file,
+            theorem_name=current_theorem_name,
+            stmt=best_stmt,
+            result=best_result,
+            prelude_code=best_prelude_code,
+            proof_text=best_proof_text,
+            counterexample_text=best_counterexample_text,
+        )
+        return (
+            True,
+            current_theorem_name,
+            best_result,
+            best_prelude_code,
+            best_proof_text,
+            best_counterexample_text,
+            best_new_problems,
+            best_verify_error_excerpt,
+            best_stmt,
+        )
 
     while True:
         if phase_logger is not None:
@@ -2941,17 +3028,7 @@ def attempt_formalization_until_timeout(
         if deadline is not None and time.monotonic() >= deadline:
             save_formalization_memory(memory_path, problem_id, repair_history)
             if best_verified_candidate is not None:
-                return (
-                    True,
-                    current_theorem_name,
-                    str(best_verified_candidate["result"]),
-                    str(best_verified_candidate["prelude_code"]),
-                    str(best_verified_candidate["proof_text"]),
-                    str(best_verified_candidate["counterexample_text"]),
-                    list(best_verified_candidate["new_problems"]),
-                    str(best_verified_candidate["verify_error_excerpt"]),
-                    str(best_verified_candidate["stmt"]),
-                )
+                return restore_best_verified_candidate()
             return (
                 verify_success,
                 current_theorem_name,
@@ -3006,17 +3083,7 @@ def attempt_formalization_until_timeout(
         if max_same_error_streak is not None and same_error_streak >= max_same_error_streak:
             save_formalization_memory(memory_path, problem_id, repair_history)
             if best_verified_candidate is not None:
-                return (
-                    True,
-                    current_theorem_name,
-                    str(best_verified_candidate["result"]),
-                    str(best_verified_candidate["prelude_code"]),
-                    str(best_verified_candidate["proof_text"]),
-                    str(best_verified_candidate["counterexample_text"]),
-                    list(best_verified_candidate["new_problems"]),
-                    str(best_verified_candidate["verify_error_excerpt"]),
-                    str(best_verified_candidate["stmt"]),
-                )
+                return restore_best_verified_candidate()
             return (
                 False,
                 current_theorem_name,
@@ -3101,17 +3168,7 @@ def attempt_formalization_until_timeout(
                 verify_error_excerpt = f"repair worker timeout: {exc}"
                 save_formalization_memory(memory_path, problem_id, repair_history)
                 if best_verified_candidate is not None:
-                    return (
-                        True,
-                        current_theorem_name,
-                        str(best_verified_candidate["result"]),
-                        str(best_verified_candidate["prelude_code"]),
-                        str(best_verified_candidate["proof_text"]),
-                        str(best_verified_candidate["counterexample_text"]),
-                        list(best_verified_candidate["new_problems"]),
-                        str(best_verified_candidate["verify_error_excerpt"]),
-                        str(best_verified_candidate["stmt"]),
-                    )
+                    return restore_best_verified_candidate()
                 return (
                     verify_success,
                     theorem_name,
@@ -3146,17 +3203,7 @@ def attempt_formalization_until_timeout(
         if result not in {"proof", "counterexample"}:
             save_formalization_memory(memory_path, problem_id, repair_history)
             if best_verified_candidate is not None:
-                return (
-                    True,
-                    current_theorem_name,
-                    str(best_verified_candidate["result"]),
-                    str(best_verified_candidate["prelude_code"]),
-                    str(best_verified_candidate["proof_text"]),
-                    str(best_verified_candidate["counterexample_text"]),
-                    list(best_verified_candidate["new_problems"]),
-                    str(best_verified_candidate["verify_error_excerpt"]),
-                    str(best_verified_candidate["stmt"]),
-                )
+                return restore_best_verified_candidate()
             return (
                 False,
                 current_theorem_name,
@@ -3789,8 +3836,6 @@ def run_problem_session(
 
     problem_id = str(picked["id"])
     original_stmt = str(picked.get("stmt", ""))
-    with state_lock:
-        started_derived_generation = int(derived_runtime_state.get("generation", 0) or 0)
     initial_theory_context = build_problem_theory_context(base_theory_context, derived_entries_snapshot, original_stmt)
     emit_phase_log(args.phase_logs, "problem_selected", iteration=current_iteration, problem_id=problem_id)
 
@@ -3937,72 +3982,9 @@ def run_problem_session(
         phase_attempts_path=artifact_paths["phase_attempts"],
         compile_metrics=compile_metrics,
     )
-    derived_generation_retry_used = False
-    derived_generation_retry_from = started_derived_generation
-    derived_generation_retry_to = started_derived_generation
-    if not verify_success:
-        with state_lock:
-            current_derived_generation = int(derived_runtime_state.get("generation", 0) or 0)
-            latest_derived_entries_snapshot = [dict(entry) for entry in shared_derived_entries]
-        if current_derived_generation != started_derived_generation:
-            derived_generation_retry_used = True
-            derived_generation_retry_to = current_derived_generation
-            emit_phase_log(
-                args.phase_logs,
-                "derived_generation_mismatch_retry",
-                iteration=current_iteration,
-                problem_id=problem_id,
-                started_generation=started_derived_generation,
-                current_generation=current_derived_generation,
-            )
-            retry_theory_context = build_problem_theory_context(
-                base_theory_context,
-                latest_derived_entries_snapshot,
-                target_stmt,
-            )
-            (
-                verify_success,
-                theorem_name,
-                result,
-                prelude_code,
-                proof_text,
-                counterexample_text,
-                new_problems,
-                verify_error_excerpt,
-                target_stmt,
-            ) = attempt_formalization_until_timeout(
-                problem_id=problem_id,
-                theorem_name=theorem_name or build_theorem_name(problem_id, "statement_target"),
-                stmt=target_stmt,
-                result=result,
-                proof_sketch=proof_sketch,
-                counterexample_text=counterexample_text,
-                new_problems=new_problems,
-                scratch_file=scratch_file,
-                skip_verify=args.skip_verify,
-                formalize_worker_settings=formalize_worker_settings,
-                repair_worker_settings=repair_worker_settings,
-                formalizer_prompt=formalizer_prompt,
-                repair_prompt=repair_prompt,
-                open_rows=open_rows,
-                theory_context=retry_theory_context,
-                verify_timeout_sec=180,
-                formalization_retry_budget_sec=remaining_retry_budget_sec(formalization_deadline),
-                memory_path=memory_path,
-                current_iteration_full_logs=current_iteration_full_logs,
-                initial_prelude_code=prelude_code,
-                initial_proof_text=proof_text,
-                phase_logger=(lambda **fields: emit_phase_log(args.phase_logs, iteration=current_iteration, **fields)),
-                max_same_error_streak=args.max_same_error_streak,
-                run_id=run_id,
-                session_type="loop",
-                iteration=current_iteration,
-                phase_attempts_path=artifact_paths["phase_attempts"],
-                compile_metrics=compile_metrics,
-            )
 
     theorem_context_entries = [dict(entry) for entry in derived_entries_snapshot]
-    if verify_success and result in {"proof", "counterexample"}:
+    if verify_success and result == "proof":
         theorem_code = extract_theorem_code_from_scratch(scratch_file)
         if theorem_code:
             append_derived_entry_cache(theorem_context_entries, theorem_code)
@@ -4093,7 +4075,7 @@ def run_problem_session(
         )
 
     with state_lock:
-        if verify_success and result in {"proof", "counterexample"}:
+        if verify_success and result == "proof":
             derived_count_before_append = len(shared_derived_entries)
             theorem_code = append_verified_theorem_from_scratch(
                 scratch_path=scratch_file,
@@ -4170,10 +4152,6 @@ def run_problem_session(
     report["archived_problem_count"] = len(final_archived_rows)
     report["active_open_problem_count"] = len(final_open_rows)
     report["iteration"] = current_iteration
-    report["started_derived_generation"] = started_derived_generation
-    report["derived_generation_retry_used"] = derived_generation_retry_used
-    report["derived_generation_retry_from"] = derived_generation_retry_from
-    report["derived_generation_retry_to"] = derived_generation_retry_to
 
     return {
         "kind": "problem",
@@ -4412,10 +4390,11 @@ def run_parallel_loop(
                 archived_rows = read_archived_problem_rows(data_dir)
                 tracked_rows = open_rows + archived_rows
                 if tracked_rows:
-                    next_open_rows, next_archived_rows = split_active_and_archived_problem_queues(
-                        tracked_rows,
+                    next_open_rows, newly_archived_rows = split_active_and_archived_problem_queues(
+                        open_rows,
                         failure_archive_threshold=args.open_problem_failure_threshold,
                     )
+                    next_archived_rows = merge_archived_problem_rows(archived_rows, newly_archived_rows)
                     queue_changed = next_open_rows != open_rows or next_archived_rows != archived_rows
                     open_rows = next_open_rows
                     archived_rows = next_archived_rows

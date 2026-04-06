@@ -8,6 +8,7 @@ from common import (
     ARCHIVED_PROBLEMS_FILENAME,
     dedupe_problem_rows_by_stmt,
     is_active_open_problem,
+    merge_archived_problem_rows,
     next_problem_id,
     normalize_open_problem_row,
     partition_open_problem_rows,
@@ -36,10 +37,10 @@ def enqueue_new_problems(
     solved_rows = read_jsonl(solved_path)
     counter_rows = read_jsonl(counterexamples_path)
 
-    tracked_rows = [dict(row) for row in open_rows + archived_rows]
+    tracked_rows = [dict(row) for row in open_rows]
     seen_norms = {
         normalize_stmt(str(row.get("stmt", "")))
-        for row in (tracked_rows + solved_rows + counter_rows)
+        for row in (tracked_rows + archived_rows + solved_rows + counter_rows)
         if row.get("stmt")
     }
     all_ids = [str(row.get("id", "")) for row in open_rows + archived_rows + solved_rows + counter_rows]
@@ -67,10 +68,11 @@ def enqueue_new_problems(
         added_problem_ids.append(new_id)
         added_problem_rows.append(dict(new_row))
 
-    active_rows, archived_rows = partition_open_problem_rows(
+    active_rows, new_archived_rows = partition_open_problem_rows(
         tracked_rows,
         failure_threshold=failure_threshold,
     )
+    archived_rows = merge_archived_problem_rows(archived_rows, new_archived_rows)
     write_jsonl_atomic(open_path, active_rows)
     write_jsonl_atomic(archived_path, archived_rows)
 
@@ -105,19 +107,27 @@ def apply_state_update(
     counter_rows = read_jsonl(counterexamples_path)
 
     target = None
-    remaining_tracked: list[dict[str, Any]] = []
-    for row in open_rows + archived_rows:
+    target_was_archived = False
+    remaining_open_rows: list[dict[str, Any]] = []
+    for row in open_rows:
         if row.get("id") == problem_id and target is None:
             target = dict(row)
         else:
-            remaining_tracked.append(dict(row))
+            remaining_open_rows.append(dict(row))
+
+    if target is None:
+        for row in archived_rows:
+            if row.get("id") == problem_id:
+                target = dict(row)
+                target_was_archived = True
+                break
 
     if target is None:
         raise ValueError(f"problem_id not found in open or archived problem sets: {problem_id}")
 
     seen_norms = {
         normalize_stmt(str(row.get("stmt", "")))
-        for row in (remaining_tracked + solved_rows + counter_rows)
+        for row in (remaining_open_rows + archived_rows + solved_rows + counter_rows)
         if row.get("stmt")
     }
 
@@ -141,7 +151,7 @@ def apply_state_update(
                 **normalized_source_details,
             }
         )
-        remaining_tracked.append(new_row)
+        remaining_open_rows.append(new_row)
         added_problem_ids.append(new_id)
         added_problem_rows.append(dict(new_row))
 
@@ -153,16 +163,16 @@ def apply_state_update(
     target_stmt_norm = normalize_stmt(str(target.get("stmt", "")))
 
     def drop_duplicate_stmt_rows() -> None:
-        nonlocal remaining_tracked, duplicate_stmt_rows_removed
+        nonlocal remaining_open_rows, duplicate_stmt_rows_removed
         if not target_stmt_norm:
             return
         kept_rows: list[dict[str, Any]] = []
-        for row in remaining_tracked:
+        for row in remaining_open_rows:
             if normalize_stmt(str(row.get("stmt", ""))) == target_stmt_norm:
                 duplicate_stmt_rows_removed.append(dict(row))
                 continue
             kept_rows.append(row)
-        remaining_tracked = kept_rows
+        remaining_open_rows = kept_rows
 
     if verify_success and result == "proof":
         if not theorem_name:
@@ -188,15 +198,19 @@ def apply_state_update(
         drop_duplicate_stmt_rows()
         moved_to = "counterexample"
     else:
-        target["failure_count"] = int(target.get("failure_count", 0) or 0) + 1
-        remaining_tracked.append(target)
-        if not is_active_open_problem(target, failure_threshold=failure_threshold):
+        if target_was_archived:
             moved_to = "archived"
+        else:
+            target["failure_count"] = int(target.get("failure_count", 0) or 0) + 1
+            remaining_open_rows.append(target)
+            if not is_active_open_problem(target, failure_threshold=failure_threshold):
+                moved_to = "archived"
 
-    active_rows, archived_rows = partition_open_problem_rows(
-        dedupe_problem_rows_by_stmt(remaining_tracked),
+    active_rows, new_archived_rows = partition_open_problem_rows(
+        dedupe_problem_rows_by_stmt(remaining_open_rows),
         failure_threshold=failure_threshold,
     )
+    archived_rows = merge_archived_problem_rows(archived_rows, new_archived_rows)
     write_jsonl_atomic(open_path, active_rows)
     write_jsonl_atomic(archived_path, archived_rows)
     write_jsonl_atomic(solved_path, solved_rows)
