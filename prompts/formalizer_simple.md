@@ -24,6 +24,9 @@ Formalization policy:
 - In `Scratch.lean`, prefer proving goals by reusing relevant results from `Derived.lean`; only re-derive from axioms when no listed theorem fits.
 - Structural refactoring is allowed and encouraged when it makes the statement or proof shape more natural. Introduce a new `def`, `abbrev`, `structure`, `inductive`, or short helper `lemma` in `prelude_code` when that removes repeated ad hoc reasoning or names a reusable concept.
 - Only introduce `prelude_code` when it improves reuse or makes the theorem statement/proof materially cleaner. Do not add cosmetic aliases, duplicate existing concepts, or one-off declarations that do not help future proofs.
+- For `proof`, helper definitions in `prelude_code` are allowed when they materially simplify the proof or create a reusable local concept.
+- For `counterexample`, raw Lean new definitions in `prelude_code` are disallowed by default. Do not introduce fresh `def`, `abbrev`, `structure`, `class`, or `inductive` declarations unless they are genuinely necessary for the refutation.
+- For `counterexample`, prefer reusing existing theory objects, specializing the quantified statement to a known instance, or giving a direct contradiction argument before considering any new local declarations.
 - `prelude_code` must not include `import`, `namespace`, `section`, `axiom`, or `theorem`; keep the target theorem itself in `proof_text`.
 - When constructing a local `SemigroupLike01` instance inside tactic code, prefer a staged layout: first define the local type and any witness elements, then define the structure value, and only then install it with `letI`. Avoid writing the whole local model in one dense step.
 - Do not use `where`-style syntax for local instances inside proofs.
