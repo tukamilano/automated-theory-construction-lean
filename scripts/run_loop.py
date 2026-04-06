@@ -1445,6 +1445,7 @@ def append_verified_theorem_from_scratch(
     entry = extract_derived_entry_from_theorem_code(theorem_code)
     if entry is None or str(entry.get("name", "")).endswith("_is_false"):
         return ""
+    original_content = derived_file.read_text(encoding="utf-8") if derived_file.exists() else ""
     appended = append_theorem(
         derived_file,
         theorem_code,
@@ -1452,6 +1453,20 @@ def append_verified_theorem_from_scratch(
         docstring,
     )
     if appended:
+        # Keep Derived's compiled artifacts in sync so downstream scratch checks
+        # can resolve newly appended theorem names reliably.
+        build_proc = subprocess.run(
+            ["lake", "build", "AutomatedTheoryConstruction.Derived"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if build_proc.returncode != 0:
+            derived_file.write_text(original_content, encoding="utf-8")
+            stderr = (build_proc.stderr or "").strip()
+            stdout = (build_proc.stdout or "").strip()
+            excerpt = stderr or stdout or "lake build AutomatedTheoryConstruction.Derived failed without output"
+            raise RuntimeError(f"Failed to rebuild Derived after appending theorem: {excerpt}")
         append_derived_entry_cache(derived_entries, theorem_code)
     return theorem_code
 

@@ -1,0 +1,41 @@
+{
+  "derived_generation": 1,
+  "important_verified_counterexamples": [],
+  "main_bridge": "The main missing bridge is a reusable characterization of joint-union independence in terms of iterated componentwise conditional independence.",
+  "next_direction": {
+    "guidance": "Prioritize broad lemmas that rewrite independence of unions into staged independence of components, especially across the semigraphoid-to-graphoid boundary.",
+    "label": "union_to_component_characterizations",
+    "rationale": "Most visible high-value targets fit this pattern, and it is the most promising route to reusable bridges, monotonicity consequences, and sharper structural separation."
+  },
+  "saturated_areas": [
+    "One-off discrete-model emptiness edge cases",
+    "Isolated nonemptiness equivalences detached from the main union-bridge program"
+  ],
+  "summary_basis": {
+    "archived_problem_count": 1,
+    "derived_theorem_count": 0,
+    "open_problem_count": 4
+  },
+  "theory_kind": "Abstract conditional independence theory for semigraphoids and graphoids",
+  "theory_summary": {
+    "current_picture": "This currently looks like the very start of a set-based conditional independence theory for semigraphoids and graphoids, with no verified derived lemmas yet. The visible problem queue is already concentrated around one main theme: rewriting independence of a large union into structured independence statements for smaller pieces, then exploiting those bridges to derive monotonicity and collapse phenomena. The graphoid-only target indicates that the theory is likely to split into a semigraphoid core and a stronger characterization layer that genuinely uses graphoid strength.",
+    "missing_pieces": [
+      "A canonical reusable bridge from independence of a union to componentwise conditional independences",
+      "Clear converses and boundary statements showing what fails without full graphoid strength",
+      "A small monotonicity library propagating independence through subset relations"
+    ],
+    "recurring_patterns": [
+      "Equivalences between independence of a union and staged independence of its parts",
+      "Repeated use of decomposition, weak union, contraction, and symmetry over set unions",
+      "Attempts to separate semigraphoid-provable facts from stronger graphoid-only characterizations"
+    ],
+    "representative_results": [
+      "No derived theorems are visible yet; the leading targets are union-splitting equivalences.",
+      "A general shrink-monotonicity lemma for shrinking both independent arguments is being targeted in semigraphoids.",
+      "A collapse criterion from independence against Set.univ to total independence is also in the queue."
+    ]
+  },
+  "updated_at_iteration": 2,
+  "updated_at_run_id": "20260406-223826-loop",
+  "version": 1
+}

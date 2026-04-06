@@ -1,0 +1,5 @@
+{"id":"op_000001","stmt":"∀ (α : Type*) (G : SemiGraphoid α) (X X' Y Y' Z : Set α), X ⊆ X' → Y ⊆ Y' → G.Indep X' Y' Z → G.Indep X Y Z","src":"seed","priority":"unknown","priority_rationale":"","failure_count":0}
+{"id":"op_000002","stmt":"∀ (α : Type*) (G : SemiGraphoid α), (∀ X Z : Set α, G.Indep X Set.univ Z) → ∀ X Y Z : Set α, G.Indep X Y Z","src":"seed","priority":"unknown","priority_rationale":"","failure_count":0}
+{"id":"op_000003","stmt":"∀ (α : Type*) (G : SemiGraphoid α) (X Y W V Z : Set α), G.Indep X ((Y ∪ W) ∪ V) Z ↔ (G.Indep X Y Z ∧ G.Indep X W (Y ∪ Z) ∧ G.Indep X V ((Y ∪ W) ∪ Z))","src":"seed","priority":"unknown","priority_rationale":"","failure_count":0}
+{"id":"op_000004","stmt":"∀ (α : Type*) (G : Graphoid α) (X Y W Z : Set α), G.Indep X (Y ∪ W) Z ↔ (G.Indep X Y (Z ∪ W) ∧ G.Indep X W (Z ∪ Y))","src":"seed","priority":"unknown","priority_rationale":"","failure_count":0}
+{"id":"op_000005","stmt":"∀ (α : Type*), (∃ X Y Z : Set α, ¬ (SemiGraphoid.discrete α).Indep X Y Z) ↔ Nonempty α","src":"seed","priority":"unknown","priority_rationale":"","failure_count":0}

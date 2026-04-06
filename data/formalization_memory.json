@@ -1,1 +1,61 @@
-{}
+{
+  "op_000012": [
+    {
+      "result": "proof",
+      "verify_success": false,
+      "proof_sketch": "Reorder the triple union and apply weak union separately to obtain the three conditional independences. For the converse, use intersection on the `W` and `V` hypotheses to derive `G.Indep X (W ∪ V) (Z ∪ Y)`, then intersect that with the `Y` hypothesis and rewrite unions back to the target form.",
+      "prelude_code": "",
+      "proof_text": "intro α G X Y W V Z\nconstructor\n· intro h\n  have hY : G.Indep X Y (Set.union Z (Set.union W V)) := by\n    have h' : G.Indep X (Set.union Y (Set.union W V)) Z := by\n      simpa [Set.union_assoc, Set.union_left_comm, Set.union_comm] using h\n    exact G.weak_union X Y (Set.union W V) Z h'\n  have hW : G.Indep X W (Set.union Z (Set.union Y V)) := by\n    have h' : G.Indep X (Set.union W (Set.union Y V)) Z := by\n      simpa [Set.union_assoc, Set.union_left_comm, Set.union_comm] using h\n    exact G.weak_union X W (Set.union Y V) Z h'\n  have hV : G.Indep X V (Set.union Z (Set.union Y W)) := by\n    have h' : G.Indep X (Set.union V (Set.union Y W)) Z := by\n      simpa [Set.union_assoc, Set.union_left_comm, Set.union_comm] using h\n    exact G.weak_union X V (Set.union Y W) Z h'\n  exact ⟨hY, ⟨hW, hV⟩⟩\n· rintro ⟨hY, ⟨hW, hV⟩⟩\n  have hW' : G.Indep X W (Set.union (Set.union Z Y) V) := by\n    simpa [Set.union_assoc, Set.union_left_comm, Set.union_comm] using hW\n  have hV' : G.Indep X V (Set.union (Set.union Z Y) W) := by\n    simpa [Set.union_assoc, Set.union_left_comm, Set.union_comm] using hV\n  have hWV : G.Indep X (Set.union W V) (Set.union Z Y) :=\n    G.intersection X W V (Set.union Z Y) hW' hV'\n  have hYWV : G.Indep X (Set.union Y (Set.union W V)) Z :=\n    G.intersection X Y (Set.union W V) Z hY hWV\n  simpa [Set.union_assoc] using hYWV",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.loop.lean:15:8: error: Type mismatch: After simplification, term",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.loop.lean:15:8: error: Type mismatch: After simplification, term | h | has type",
+      "new_problems": []
+    }
+  ],
+  "op_000003": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∀ (α : Type*) (G : SemiGraphoid α) (X Y W V Z : Set α), G.Indep X ((Y ∪ W) ∪ V) Z ↔ (G.Indep X Y Z ∧ G.Indep X W (Y ∪ Z) ∧ G.Indep X V ((Y ∪ W) ∪ Z))",
+      "formalized_statement": "∀ (α : Type*) (G : SemiGraphoid α) (X Y W V Z : Set α), G.Indep X ((Y ∪ W) ∪ V) Z ↔ (G.Indep X Y Z ∧ G.Indep X W (Y ∪ Z) ∧ G.Indep X V ((Y ∪ W) ∪ Z))",
+      "statement_formalization_notes": "The input statement is already a valid Lean proposition over the existing `SemiGraphoid` structure.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "Rewrite the outer union with `G.indep_union_iff X (Y ∪ W) V Z`, then rewrite the resulting `G.Indep X (Y ∪ W) Z` term with `G.indep_union_iff X Y W Z`. The goal becomes a reassociation of conjunctions.",
+      "prelude_code": "",
+      "proof_text": "intro α G X Y W V Z\nrw [G.indep_union_iff X (Y ∪ W) V Z, G.indep_union_iff X Y W Z]\nconstructor\n· rintro ⟨⟨hY, hW⟩, hV⟩\n  exact ⟨hY, hW, hV⟩\n· rintro ⟨hY, hW, hV⟩\n  exact ⟨⟨hY, hW⟩, hV⟩",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "no_diagnostics",
+      "new_problems": []
+    }
+  ],
+  "op_000001": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∀ (α : Type*) (G : SemiGraphoid α) (X X' Y Y' Z : Set α), X ⊆ X' → Y ⊆ Y' → G.Indep X' Y' Z → G.Indep X Y Z",
+      "statement_prelude_code": "",
+      "formalized_statement": "∀ (α : Type*) (G : SemiGraphoid α) (X X' Y Y' Z : Set α), X ⊆ X' → Y ⊆ Y' → G.Indep X' Y' Z → G.Indep X Y Z",
+      "theorem_name_stem": "indep_of_subset_of_subset",
+      "docstring_summary": "Independence descends to smaller left and right sets.",
+      "statement_formalization_notes": "Retained the original direct formalization; it is a valid Lean proposition under the repository scratch wrapper.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    }
+  ]
+}

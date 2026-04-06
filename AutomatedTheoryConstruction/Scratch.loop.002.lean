@@ -1,15 +1,11 @@
 import Mathlib
 import AutomatedTheoryConstruction.Theory
+import AutomatedTheoryConstruction.Derived
 
 set_option autoImplicit false
 
 namespace AutomatedTheoryConstruction
 
--- Verified theorems are appended here by scripts/append_derived.py.
--- Keep any short theorem docstrings/comments here instead of a separate metadata index.
-
-
-/-- Independence from a three-way union splits into successive semigraphoid conditions. -/
 theorem thm_indep_three_union_iff_000003 : ∀ (α : Type*) (G : SemiGraphoid α) (X Y W V Z : Set α), G.Indep X ((Y ∪ W) ∪ V) Z ↔ (G.Indep X Y Z ∧ G.Indep X W (Y ∪ Z) ∧ G.Indep X V ((Y ∪ W) ∪ Z)) := by
   intro α G X Y W V Z
   rw [G.indep_union_iff X (Y ∪ W) V Z, G.indep_union_iff X Y W Z]

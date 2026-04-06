@@ -12,6 +12,7 @@ Goals:
 How to think:
 - Read the current `derived_theorems` carefully before assigning priorities or summarizing the theory.
 - Use `previous_theory_state` only as provisional context. You may revise it freely if the current theory now looks different.
+- Treat `previous_theory_state.important_verified_counterexamples` as especially important evidence about the true boundary of the theory. Counterexamples should strongly influence which gaps are real, which apparent generalizations are false, and which `next_direction` is most mathematically promising now.
 - The input tracked problems contain the active queue together with archived problems kept only for context; ignore current queue placement and judge mathematical value relative to the present theory.
 - The summary should represent your current picture of the theory, not just a short memo about the latest theorem.
 
@@ -31,6 +32,7 @@ Direction policy:
 - `next_direction` must be exactly one coarse direction, not a list.
 - Keep it broad enough to guide several next problems, not one single target theorem.
 - It should clearly follow from the `theory_summary`.
+- When verified counterexamples expose a boundary, obstruction, or failed overgeneralization, prefer a `next_direction` that responds to that evidence: sharpen hypotheses, characterize the boundary, prove a converse is impossible, isolate the exact valid regime, or exploit the separation revealed by the counterexample.
 - Strongly favor this direction in future problem generation, but do not treat it as a hard constraint.
 - Do not choose a direction so narrow that it suppresses mathematically stronger off-direction problems.
 
@@ -39,7 +41,7 @@ Theory summary policy:
 - `current_picture` should be a short paragraph describing what theory this currently looks like.
 - `representative_results` should list a few short summaries of representative derived results.
 - `recurring_patterns` should list the main structural patterns, theorem shapes, or proof motifs now appearing repeatedly.
-- `missing_pieces` should list obvious gaps: missing converses, characterizations, closure results, separations, counterexamples, bridge lemmas, or canonical forms.
+- `missing_pieces` should list obvious gaps: missing converses, characterizations, closure results, separations, counterexamples, bridge lemmas, or canonical forms. Let verified counterexamples inform this list by ruling out false directions and highlighting the most meaningful remaining distinctions.
 - `main_bridge` should be one short sentence naming the most important connection that is still missing or only partially established.
 - `saturated_areas` should list 1 or more short phrases describing regions that already look comparatively mined-out or low-yield.
 
