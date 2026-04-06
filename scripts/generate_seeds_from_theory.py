@@ -220,16 +220,16 @@ def build_prompt(
     extra_block = f"- Additional guidance: {extra_instruction.strip()}\n" if extra_instruction.strip() else ""
     theory_files_rule = "- Do not restate declarations already present in the theory files listed above.\n"
     theory_summary_block = ""
+    counterexample_block = ""
     next_direction_block = ""
     state = dict(theory_state or {})
-    theory_kind = str(state.get("theory_kind", "")).strip()
+    theory_snapshot = str(state.get("theory_snapshot", "")).strip()
     summary = state.get("theory_summary")
-    main_bridge = str(state.get("main_bridge", "")).strip()
-    saturated_areas = state.get("saturated_areas", [])
     direction = state.get("next_direction")
-    if theory_kind:
-        theory_summary_block += f"- Current theory kind: {theory_kind}\n"
-    if isinstance(summary, dict):
+    important_counterexamples = state.get("important_verified_counterexamples", [])
+    if theory_snapshot:
+        theory_summary_block += f"- Current theory snapshot: {theory_snapshot}\n"
+    elif isinstance(summary, dict):
         current_picture = str(summary.get("current_picture", "")).strip()
         missing_pieces = summary.get("missing_pieces", [])
         normalized_missing = [
@@ -241,12 +241,16 @@ def build_prompt(
             theory_summary_block += f"- Current theory picture: {current_picture}\n"
         if normalized_missing:
             theory_summary_block += f"- Current missing pieces: {'; '.join(normalized_missing[:4])}\n"
-    if main_bridge:
-        theory_summary_block += f"- Main bridge to pursue: {main_bridge}\n"
-    if isinstance(saturated_areas, list):
-        normalized_saturated = [str(item).strip() for item in saturated_areas if str(item).strip()]
-        if normalized_saturated:
-            theory_summary_block += f"- Areas that already look relatively saturated: {'; '.join(normalized_saturated[:3])}\n"
+    if isinstance(important_counterexamples, list):
+        normalized_counterexamples = [str(item).strip() for item in important_counterexamples if str(item).strip()]
+        if normalized_counterexamples:
+            counterexample_block += (
+                "- Important verified counterexamples to respect: "
+                f"{'; '.join(normalized_counterexamples[:3])}\n"
+            )
+            counterexample_block += (
+                "- Use these counterexamples as boundary evidence: avoid proposing false overgeneralizations, and prefer sharpened hypotheses, exact regimes, or separation statements when they look stronger.\n"
+            )
     if isinstance(direction, dict):
         guidance = str(direction.get("guidance", "")).strip()
         rationale = str(direction.get("rationale", "")).strip()
@@ -280,7 +284,7 @@ Mathematical scope:
 - Reuse exact symbol names from the source files. Do not invent new definitions or predicates.
 - Quantify every extra variable or witness explicitly inside the proposition.
 - Keep assumptions minimal but sufficient.
-{theory_summary_block}{next_direction_block}
+{theory_summary_block}{counterexample_block}{next_direction_block}
 
 Quality filter:
 {theory_files_rule}{derived_rule}- Do not propose a theorem that is already present in the read files up to cosmetic rewrites, alpha-renaming, trivial reassociation of binders, or other shallow reformulations.

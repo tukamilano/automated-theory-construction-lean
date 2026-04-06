@@ -63,10 +63,7 @@ def test_priority_refresh_keeps_archived_rows_archived() -> None:
                             "rationale": "this would revive archived rows if the bug regressed",
                         },
                     ],
-                    "test_theory",
-                    {"current_picture": "test"},
-                    "bridge",
-                    [],
+                    "test snapshot",
                     {"label": "test", "guidance": "test", "rationale": "test"},
                     {"worker": "archive_write_only_test"},
                 )

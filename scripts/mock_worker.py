@@ -91,15 +91,7 @@ def _prioritize_open_problems_result(payload: dict[str, Any]) -> dict[str, Any]:
             for item in tracked_problems
             if isinstance(item, dict) and str(item.get("problem_id", "")).strip()
         ],
-        "theory_kind": "mock exploratory theory with no reliable structural interpretation",
-        "theory_summary": {
-            "current_picture": "Mock theory state: no global interpretation available.",
-            "representative_results": ["Mock worker did not inspect derived theorems."],
-            "recurring_patterns": ["No recurring pattern analysis available in mock mode."],
-            "missing_pieces": ["No theory gap analysis available in mock mode."],
-        },
-        "main_bridge": "Connect local mock problem solving to a reusable structural picture before specializing further.",
-        "saturated_areas": ["mock-mode local priority refresh heuristics"],
+        "theory_snapshot": "Mock theory state: no reliable global interpretation is available, so only a minimal exploratory snapshot is recorded.",
         "next_direction": {
             "label": "mock_direction",
             "guidance": "Prefer neutral exploratory problems in mock mode.",
