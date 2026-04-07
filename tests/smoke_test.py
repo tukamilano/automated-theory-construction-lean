@@ -97,12 +97,13 @@ def main() -> None:
     prelude_code = f"abbrev {prelude_name} : Prop := True" if problem_id else ""
 
     if task_type == "prover_statement":
+        theorem_stem = f"statement_target_{problem_id}_smoke" if problem_id else "statement_target"
         result_payload = {
             "problem_id": problem_id,
             "result": "ok" if stmt else "stuck",
             "statement_prelude_code": prelude_code if stmt else "",
             "lean_statement": stmt,
-            "theorem_name_stem": "Smoke_1",
+            "theorem_name_stem": theorem_stem,
             "docstring_summary": "Smoke proof.",
             "notes": "mock_proof_worker: echoed statement",
         }
@@ -120,7 +121,7 @@ def main() -> None:
             "result": "proof",
             "proof_sketch": "Smoke proof.",
             "prelude_code": prelude_code,
-            "proof_text": "trivial",
+            "proof_text": "aesop",
             "counterexample_text": "",
         }
     elif task_type in {"expand", "post_theorem_expand"}:
@@ -306,7 +307,7 @@ def assert_smoke_outputs(dst_root: Path) -> None:
         raise RuntimeError(f"expected 2 solved problems, got {len(solved_rows)}")
 
     derived_text = (dst_root / "AutomatedTheoryConstruction" / "Derived.lean").read_text(encoding="utf-8")
-    if "thm_statement_target_000001" not in derived_text or "thm_statement_target_000002" not in derived_text:
+    if "thm_statement_target_op_000001_smoke_000001" not in derived_text or "thm_statement_target_op_000002_smoke_000002" not in derived_text:
         raise RuntimeError("smoke loop did not append solved theorems to Derived.lean")
     if "abbrev smoke_helper_op_000001 : Prop := True" not in derived_text:
         raise RuntimeError("smoke loop did not append prelude_code for op_000001")
