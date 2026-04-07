@@ -3,9 +3,11 @@ from __future__ import annotations
 import argparse
 import shutil
 import sys
-import tempfile
 from pathlib import Path
 
+from derived_refactor_utils import build_report
+from derived_refactor_utils import print_report
+from derived_refactor_utils import write_report
 from llm_exec import build_exec_command
 from llm_exec import resolve_provider
 from llm_exec import run_llm_exec
@@ -13,6 +15,7 @@ from llm_exec import run_llm_exec
 
 DEFAULT_INPUT = Path("AutomatedTheoryConstruction/Derived.refactored.preview.lean")
 DEFAULT_OUTPUT = Path("AutomatedTheoryConstruction/Derived.refactored.reviewed.lean")
+DEFAULT_REPORT = Path("AutomatedTheoryConstruction/Derived.refactored.reviewed.report.json")
 DEFAULT_POLICY = Path(".codex/skills/lean-review-refactor-policy/SKILL.md")
 DEFAULT_LEAN_RULE = Path(".codex/skills/lean-rule/SKILL.md")
 DEFAULT_MATHLIB_USAGE = Path(".codex/skills/mathlib-usage/SKILL.md")
@@ -49,19 +52,19 @@ Task:
 - Do not redesign the theorem inventory.
 - Prefer review-focused cleanup only: localize `classical`, remove brittle proof steps, tidy `have` structure, remove `by exact`, and prefer stable rewrites / `simpa` / short `calc` blocks.
 - For main-theorem-style results, prefer rewriting proofs to explicitly reuse existing `Derived.lean` theorems when that can be done without changing statements.
+- If two theorems have the same statement, prefer reducing the duplication by rewriting the later proof into an explicit alias/delegation to the earlier theorem rather than keeping two independent proofs.
 - Do not introduce `sorry`.
 - Do not add or remove global instances, `[simp]` attributes, notation, coercions, or transparency changes.
 {verify_step}{final_step}
 When finished, give a short summary of the non-semantic cleanup you made and whether the final Lean check passed.
 """
-
-
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="Thin wrapper around the configured LLM CLI for review-polishing Derived Lean files."
     )
     parser.add_argument("--input-file", default=str(DEFAULT_INPUT))
     parser.add_argument("--output-file", default=str(DEFAULT_OUTPUT))
+    parser.add_argument("--report-file", default=str(DEFAULT_REPORT))
     parser.add_argument("--provider")
     parser.add_argument("--model")
     parser.add_argument("--sandbox", default="workspace-write")
@@ -75,16 +78,37 @@ def main() -> int:
 
     input_file = Path(args.input_file)
     output_file = Path(args.output_file)
+    report_file = Path(args.report_file)
     provider = resolve_provider(args.provider)
     policy_file = Path(args.policy_file)
     lean_rule_file = Path(args.lean_rule_file)
     mathlib_usage_file = Path(args.mathlib_usage_file)
 
     if not input_file.exists():
-        raise SystemExit(f"Input file not found: {input_file}")
+        report = build_report(
+            "error",
+            "input_missing",
+            stop_detail=f"input file not found: {input_file}",
+            input_file=input_file,
+            output_file=output_file,
+            report_file=report_file,
+        )
+        write_report(report_file, report)
+        print_report(report)
+        return 1
     for path in (policy_file, lean_rule_file, mathlib_usage_file):
         if not path.exists():
-            raise SystemExit(f"Guidance file not found: {path}")
+            report = build_report(
+                "error",
+                "guidance_missing",
+                stop_detail=f"guidance file not found: {path}",
+                input_file=input_file,
+                output_file=output_file,
+                report_file=report_file,
+            )
+            write_report(report_file, report)
+            print_report(report)
+            return 1
 
     output_file.parent.mkdir(parents=True, exist_ok=True)
     if not args.skip_copy:
@@ -99,10 +123,6 @@ def main() -> int:
         mathlib_usage_file=mathlib_usage_file,
     )
 
-    with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", delete=False, suffix=".txt") as handle:
-        handle.write(prompt)
-        prompt_path = Path(handle.name)
-
     cmd = build_exec_command(
         provider=provider,
         sandbox=args.sandbox,
@@ -110,9 +130,24 @@ def main() -> int:
     )
 
     if args.dry_run:
-        sys.stdout.write("Command:\n")
-        sys.stdout.write(" ".join(cmd) + "\n\n")
-        sys.stdout.write(f"Prompt file: {prompt_path}\n")
+        report = build_report(
+            "noop",
+            "dry_run",
+            stop_detail="dry-run requested",
+            input_file=input_file,
+            output_file=output_file,
+            report_file=report_file,
+            extra={
+                "provider": provider,
+                "model": args.model or "",
+                "sandbox": args.sandbox,
+                "verify_requested": not args.no_verify,
+                "skip_copy": bool(args.skip_copy),
+                "command": cmd,
+            },
+        )
+        write_report(report_file, report)
+        print_report(report)
         return 0
 
     try:
@@ -121,11 +156,57 @@ def main() -> int:
             prompt=prompt,
             sandbox=args.sandbox,
             model=args.model,
-            capture_output=False,
+            capture_output=True,
         )
-        return completed.returncode
-    finally:
-        prompt_path.unlink(missing_ok=True)
+    except Exception as exc:
+        report = build_report(
+            "error",
+            "worker_error",
+            stop_detail=str(exc),
+            input_file=input_file,
+            output_file=output_file,
+            report_file=report_file,
+            extra={
+                "provider": provider,
+                "model": args.model or "",
+                "sandbox": args.sandbox,
+                "verify_requested": not args.no_verify,
+                "skip_copy": bool(args.skip_copy),
+            },
+        )
+        write_report(report_file, report)
+        print_report(report)
+        return 1
+
+    if completed.stdout:
+        sys.stdout.write(completed.stdout)
+        sys.stdout.flush()
+    if completed.stderr:
+        sys.stderr.write(completed.stderr)
+        sys.stderr.flush()
+
+    status = "ok" if completed.returncode == 0 else "error"
+    report = build_report(
+        status,
+        "completed" if completed.returncode == 0 else "worker_error",
+        stop_detail="" if completed.returncode == 0 else f"review command exited with code {completed.returncode}",
+        input_file=input_file,
+        output_file=output_file,
+        report_file=report_file,
+        extra={
+            "provider": provider,
+            "model": args.model or "",
+            "sandbox": args.sandbox,
+            "verify_requested": not args.no_verify,
+            "skip_copy": bool(args.skip_copy),
+            "returncode": completed.returncode,
+            "stdout_excerpt": (completed.stdout or "").splitlines()[-20:],
+            "stderr_excerpt": (completed.stderr or "").splitlines()[-20:],
+        },
+    )
+    write_report(report_file, report)
+    print_report(report)
+    return completed.returncode
 
 
 if __name__ == "__main__":

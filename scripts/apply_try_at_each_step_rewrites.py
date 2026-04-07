@@ -271,6 +271,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Run tryAtEachStep on a Lean file and aggressively apply parseable `Try this:` rewrites."
     )
+    verify_timeout_help = "Per Lean verification timeout in seconds."
     parser.add_argument("--input-file", default="AutomatedTheoryConstruction/Derived.refactored.preview.lean")
     parser.add_argument("--output-file")
     parser.add_argument("--raw-output-file", default="AutomatedTheoryConstruction/Derived.tryAtEachStep.json")
@@ -280,7 +281,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--tactic", default="with_reducible exact?")
     parser.add_argument("--backup-file")
-    parser.add_argument("--verify-timeout", type=int)
+    parser.add_argument("--verify-timeout", type=int, help=verify_timeout_help)
     parser.add_argument("--dry-run", action="store_true")
     return parser.parse_args()
 
@@ -298,7 +299,9 @@ def main() -> int:
 
     if args.dry_run:
         report = {
-            "status": "dry_run",
+            "status": "noop",
+            "stop_reason": "dry_run",
+            "stop_detail": "dry-run requested",
             "input_file": str(input_file),
             "output_file": str(output_file),
             "raw_output_file": str(raw_output_file),
@@ -322,7 +325,9 @@ def main() -> int:
     )
     if not try_ok:
         report = {
-            "status": "try_at_each_step_failed",
+            "status": "error",
+            "stop_reason": "try_at_each_step_failed",
+            "stop_detail": "tryAtEachStep command failed",
             "input_file": str(input_file),
             "output_file": str(output_file),
             "raw_output_file": str(raw_output_file),
@@ -338,7 +343,9 @@ def main() -> int:
     raw_results = load_json(raw_output_file)
     if not isinstance(raw_results, list):
         report = {
-            "status": "invalid_try_at_each_step_output",
+            "status": "error",
+            "stop_reason": "invalid_try_at_each_step_output",
+            "stop_detail": "raw output was not a JSON list",
             "raw_output_file": str(raw_output_file),
         }
         dump_json(apply_report_file, report)
@@ -435,9 +442,11 @@ def main() -> int:
 
     output_file.write_text(current_text, encoding="utf-8")
     final_ok, final_verify_log = verify_lean_file(output_file, timeout_sec=args.verify_timeout)
-    status = "ok" if final_ok else "final_verify_failed"
+    status = "ok" if final_ok else "error"
     report = {
         "status": status,
+        "stop_reason": "completed" if final_ok else "verify_failed",
+        "stop_detail": "" if final_ok else "final rewritten file failed verification",
         "input_file": str(input_file),
         "output_file": str(output_file),
         "raw_output_file": str(raw_output_file),

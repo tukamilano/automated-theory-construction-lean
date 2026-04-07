@@ -54,16 +54,16 @@ def write_smoke_seed_file(dst_root: Path) -> None:
             "id": "op_000001",
             "stmt": "∀ {α : Type _}, True",
             "src": "smoke",
-            "priority": "medium",
-            "priority_rationale": "smoke fixture",
+            "priority": "unknown",
+            "priority_rationale": "",
             "failure_count": 0,
         },
         {
             "id": "op_000002",
             "stmt": "∀ {α : Type _} [Inhabited α], True ∧ True",
             "src": "smoke",
-            "priority": "medium",
-            "priority_rationale": "smoke fixture",
+            "priority": "unknown",
+            "priority_rationale": "",
             "failure_count": 0,
         },
     ]
@@ -93,11 +93,14 @@ def main() -> None:
 
     problem_id = str(payload.get("problem_id", ""))
     stmt = str(payload.get("stmt", "")).strip()
+    prelude_name = f"smoke_helper_{problem_id}"
+    prelude_code = f"abbrev {prelude_name} : Prop := True" if problem_id else ""
 
     if task_type == "prover_statement":
         result_payload = {
             "problem_id": problem_id,
             "result": "ok" if stmt else "stuck",
+            "statement_prelude_code": prelude_code if stmt else "",
             "lean_statement": stmt,
             "theorem_name_stem": "Smoke_1",
             "docstring_summary": "Smoke proof.",
@@ -116,6 +119,7 @@ def main() -> None:
             "problem_id": problem_id,
             "result": "proof",
             "proof_sketch": "Smoke proof.",
+            "prelude_code": prelude_code,
             "proof_text": "trivial",
             "counterexample_text": "",
         }
@@ -123,6 +127,15 @@ def main() -> None:
         result_payload = {
             "problem_id": problem_id,
             "candidates": [],
+        }
+    elif task_type == "refactor_derived":
+        derived_code = str(payload.get("derived_code", "")).strip()
+        result_payload = {
+            "result": "noop",
+            "refactored_code": derived_code,
+            "summary": "mock_proof_worker: no refactor changes",
+            "change_notes": [],
+            "touched_theorems": [],
         }
     elif task_type == "prioritize_open_problems":
         tracked_problems = payload.get("tracked_problems", [])
@@ -138,6 +151,12 @@ def main() -> None:
                 for item in tracked_problems
                 if isinstance(item, dict) and str(item.get("problem_id", "")).strip()
             ],
+            "theory_snapshot": "Mock smoke theory: the active queue is being solved directly, so the snapshot only records that the fixture is intentionally biased toward immediate solvability.",
+            "next_direction": {
+                "label": "smoke_direction",
+                "guidance": "Prefer continuing the direct-solvability smoke fixture path.",
+                "rationale": "The smoke worker is intentionally configured to solve the queued problems immediately.",
+            },
         }
     elif task_type == "main_theorem_suggest":
         result_payload = {
@@ -189,6 +208,7 @@ def run_smoke_loop(
     max_iterations: int = 2,
     parallel_sessions: int = 2,
     priority_refresh_theorem_interval: int = 0,
+    timeout_sec: int = 420,
 ) -> subprocess.CompletedProcess[str]:
     cmd = [
         sys.executable,
@@ -213,7 +233,7 @@ def run_smoke_loop(
             check=False,
             capture_output=True,
             text=True,
-            timeout=180,
+            timeout=timeout_sec,
         )
     except subprocess.TimeoutExpired as exc:
         raise RuntimeError(
@@ -234,6 +254,8 @@ def assert_smoke_outputs(dst_root: Path) -> None:
     data_dir = dst_root / "data"
     if not (data_dir / "open_problems.jsonl").exists():
         raise RuntimeError("smoke loop did not create data/open_problems.jsonl")
+    if not (data_dir / "theory_state.json").exists():
+        raise RuntimeError("smoke loop did not create data/theory_state.json")
     if not (dst_root / "AutomatedTheoryConstruction" / "Scratch.lean").exists():
         raise RuntimeError("smoke loop did not create Scratch.lean")
     if not (dst_root / "AutomatedTheoryConstruction" / "Scratch.loop.lean").exists():
@@ -248,8 +270,25 @@ def assert_smoke_outputs(dst_root: Path) -> None:
         raise RuntimeError("smoke loop did not create a run summary")
 
     summary = json.loads(summary_paths[-1].read_text(encoding="utf-8"))
-    if summary.get("status") != "max_iterations_reached":
+    if summary.get("status") not in {"max_iterations_reached", "no_open_problems"}:
         raise RuntimeError(f"unexpected smoke summary status: {summary.get('status')}")
+    theory_state_history_path = summary_paths[-1].with_name("theory_state_history.jsonl")
+    if not theory_state_history_path.exists():
+        raise RuntimeError("smoke loop did not create runs/<run_id>/theory_state_history.jsonl")
+    theory_state = json.loads((data_dir / "theory_state.json").read_text(encoding="utf-8"))
+    if theory_state.get("next_direction", {}).get("label") != "smoke_direction":
+        raise RuntimeError(f"unexpected theory_state next_direction: {theory_state}")
+    theory_state_history_rows = [
+        json.loads(line)
+        for line in theory_state_history_path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    if not theory_state_history_rows:
+        raise RuntimeError("theory_state_history.jsonl is empty")
+    if theory_state_history_rows[0].get("theory_state", {}).get("summary_basis", {}).get("derived_theorem_count") != 0:
+        raise RuntimeError(f"unexpected initial theory_state history head: {theory_state_history_rows[0]}")
+    if theory_state_history_rows[-1].get("theory_state", {}).get("next_direction", {}).get("label") != "smoke_direction":
+        raise RuntimeError(f"unexpected theory_state history tail: {theory_state_history_rows[-1]}")
 
     open_rows = [
         json.loads(line)
@@ -269,6 +308,10 @@ def assert_smoke_outputs(dst_root: Path) -> None:
     derived_text = (dst_root / "AutomatedTheoryConstruction" / "Derived.lean").read_text(encoding="utf-8")
     if "thm_statement_target_000001" not in derived_text or "thm_statement_target_000002" not in derived_text:
         raise RuntimeError("smoke loop did not append solved theorems to Derived.lean")
+    if "abbrev smoke_helper_op_000001 : Prop := True" not in derived_text:
+        raise RuntimeError("smoke loop did not append prelude_code for op_000001")
+    if "abbrev smoke_helper_op_000002 : Prop := True" not in derived_text:
+        raise RuntimeError("smoke loop did not append prelude_code for op_000002")
 
 
 def assert_priority_refresh_report(completed: subprocess.CompletedProcess[str]) -> None:

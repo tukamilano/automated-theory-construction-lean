@@ -80,6 +80,7 @@ Use these only for small first-order goals; avoid relying on them as the main st
 ### Algebraic normalization
 
 - Prefer `ring_nf` for polynomial-style normalization.
+- `ring` / `ring_nf` work primarily in commutative rings. For noncommutative rings, abelian groups, or modules, consider `noncomm_ring`, `abel`, or `module` instead.
 - Use `field_simp` only where denominator management is required.
 - Use `linear_combination` when a linear relation should close the goal.
 

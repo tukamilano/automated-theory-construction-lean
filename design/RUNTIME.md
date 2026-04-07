@@ -18,14 +18,15 @@ So the current implementation is not yet a generic multi-theory runner. To chang
 
 Each iteration runs the following stages:
 
-1. Pick the next open problem deterministically.
-2. If the problem is not already Lean-formal, try `prover_statement` to turn it into a Lean-ready statement.
-3. Run `prover` to choose `proof`, `counterexample`, or `stuck`.
-4. Run `formalize`, then `lake env lean AutomatedTheoryConstruction/Scratch.lean`.
-5. If verification fails, run `repair` until the retry budget is exhausted.
-6. If verification succeeds, append the theorem body from `Scratch.lean` into `Derived.lean`.
-7. Run `expand` to suggest additional problems.
-8. Apply deterministic state updates to `open`, `solved`, and `counterexamples`.
+1. Refresh tracked problem priorities when needed, and update the lightweight global theory view in `data/theory_state.json`.
+2. Pick the next open problem deterministically.
+3. If the problem is not already Lean-formal, try `prover_statement` to turn it into a Lean-ready statement.
+4. Run `prover` to choose `proof`, `counterexample`, or `stuck`.
+5. Run `formalize`, then `lake env lean AutomatedTheoryConstruction/Scratch.lean`.
+6. If verification fails, run `repair` until the retry budget is exhausted.
+7. If verification succeeds, append the theorem body from `Scratch.lean` into `Derived.lean`.
+8. Run `expand` to suggest additional problems, biased by the current `next_direction` when available.
+9. Apply deterministic state updates to `open`, `solved`, and `counterexamples`.
 
 Open problems may be either Lean-formal statements or semi-formal research prompts. If a problem cannot be formalized, it stays open.
 
@@ -42,12 +43,12 @@ Open problems may be either Lean-formal statements or semi-formal research promp
 - `scripts/lean_verify.py`: Lean verification wrapper
 - `scripts/state_update.py`: deterministic JSONL state transitions
 - `scripts/append_derived.py`: append verified theorems to `Derived.lean`
-- `prompts/prover_statement_formalizer.md`: statement-formalization prompt
-- `prompts/prover_simple.md`: prover prompt
-- `prompts/formalizer_simple.md`: formalize/repair prompt
-- `prompts/new_problem_expander.md`: expansion prompt
+- `AutomatedTheoryConstruction/research_agenda.md`: user-edited external value guidance for what kinds of problems are worth generating
+- `prompts/formalize/prover_statement_formalizer.md`: statement-formalization prompt
+- `prompts/prover/prover_simple.md`: prover prompt
+- `prompts/formalize/*`: formalize and repair prompts
+- `prompts/expander/*`: expansion prompts
 - `AutomatedTheoryConstruction/seeds.jsonl`: currently active seed queue
-- `materials/*`: optional papers, notes, and context files for seed generation
 - `example/*`: reference examples not wired into `run_loop.py`
 
 ## Seed Generation Only
@@ -60,10 +61,10 @@ uv run python scripts/generate_seeds_from_theory.py \
   --seed-count 4
 ```
 
+- `AutomatedTheoryConstruction/research_agenda.md` is read automatically and acts as persistent external value guidance.
 - Repeat `--context-file` to provide multiple files.
 - The output path defaults to `AutomatedTheoryConstruction/seeds.jsonl`.
 - Seed generation reads the `Theory.lean` entry file together with its repo-local imported theory modules, so splitting the theory under `AutomatedTheoryConstruction/Theory/` is supported.
-- `materials/` is just a convenient place to keep these materials in the repo; any file path works.
 - By default, this command first resets the active runtime state, clears archived/solved/counterexample state, resets `Scratch.lean` and `Derived.lean`, rebuilds the stable Lean targets, and then generates fresh seeds against that reset state.
 - As part of that reset, the previous `AutomatedTheoryConstruction/seeds.jsonl` is removed before new seeds are generated.
 - After seed generation finishes, the new `AutomatedTheoryConstruction/seeds.jsonl` is copied into `data/open_problems.jsonl`.
@@ -83,6 +84,7 @@ uv run python scripts/run_pipeline.py \
 ```
 
 - Repeat `--article-file` when you want multiple context files.
+- `AutomatedTheoryConstruction/research_agenda.md` is also read automatically during seed generation and later priority refresh / expansion steps.
 - `--dry-run` prints the underlying commands without executing them.
 - The wrapper uses the fixed active runtime files: `AutomatedTheoryConstruction/Theory.lean`, `AutomatedTheoryConstruction/seeds.jsonl`, and `AutomatedTheoryConstruction/Derived.lean`.
 - `AutomatedTheoryConstruction/Theory.lean` may in turn import local theory files under `AutomatedTheoryConstruction/Theory/`.
@@ -93,7 +95,7 @@ Dry run with the mock worker:
 
 ```bash
 ATC_WORKER_COMMAND="uv run scripts/mock_worker.py" \
-uv run scripts/run_loop.py --enable-worker
+uv run scripts/run_loop.py
 ```
 
 Run with the Codex worker:
@@ -102,14 +104,14 @@ Run with the Codex worker:
 ATC_WORKER_COMMAND="uv run scripts/codex_worker.py" \
 ATC_WORKER_TIMEOUT=420 \
 ATC_CODEX_TIMEOUT=390 \
-uv run scripts/run_loop.py --enable-worker
+uv run scripts/run_loop.py
 ```
 
 ## Final Three-Stage Refactor For `Derived.lean`
 
-After the main loop has accumulated enough theorems in `AutomatedTheoryConstruction/Derived.lean`, run the final cleanup in three passes.
+After the main loop has accumulated enough theorems in `AutomatedTheoryConstruction/Derived.lean`, run the final cleanup in staged passes.
 
-Pass 1 performs the main structural refactor and writes a preview file:
+Pass 1 runs a preview-oriented local refactor sweep over the accumulated `Derived.lean` theorems and writes a preview file:
 
 ```bash
 uv run python scripts/refactor_derived.py \
@@ -118,6 +120,36 @@ uv run python scripts/refactor_derived.py \
 ```
 
 When `--worker-timeout` is omitted for `scripts/refactor_derived.py`, the refactor worker defaults to no outer timeout. Set `--worker-timeout <seconds>` or `ATC_REFACTOR_DERIVED_WORKER_TIMEOUT` if you want a bound for this pass.
+
+Pass 1.2 keeps the same preview file but applies exact-duplicate collapse in place:
+
+```bash
+uv run python scripts/run_compression_pass.py \
+  --input-file AutomatedTheoryConstruction/Derived.refactored.preview.lean \
+  --output-file AutomatedTheoryConstruction/Derived.refactored.preview.lean \
+  --plan-file AutomatedTheoryConstruction/Derived.compression.plan.json \
+  --report-file AutomatedTheoryConstruction/Derived.compression.report.json
+```
+
+Pass 1.3 then keeps the same preview file but applies proof-retarget rewrites in place:
+
+```bash
+uv run python scripts/run_proof_retarget_pass.py \
+  --input-file AutomatedTheoryConstruction/Derived.refactored.preview.lean \
+  --output-file AutomatedTheoryConstruction/Derived.refactored.preview.lean \
+  --plan-file AutomatedTheoryConstruction/Derived.proof_retarget.plan.json \
+  --report-file AutomatedTheoryConstruction/Derived.proof_retarget.report.json
+```
+
+Pass 1.4 optionally applies presentation-only shaping in place:
+
+```bash
+uv run python scripts/run_presentation_pass.py \
+  --input-file AutomatedTheoryConstruction/Derived.refactored.preview.lean \
+  --output-file AutomatedTheoryConstruction/Derived.refactored.preview.lean \
+  --plan-file AutomatedTheoryConstruction/Derived.presentation.plan.json \
+  --report-file AutomatedTheoryConstruction/Derived.presentation.report.json
+```
 
 Pass 1.5 rewrites the preview in place using parseable `tryAtEachStep` suggestions:
 
@@ -146,6 +178,9 @@ uv run python scripts/direct_refactor_derived.py --skip-copy
 If you use `scripts/atc_cli.py` or `atc.json`, the stage toggles are:
 
 - `runtime.run_refactor_pass_1`
+- `runtime.run_refactor_pass_1_2`
+- `runtime.run_refactor_pass_1_3`
+- `runtime.run_refactor_pass_1_4`
 - `runtime.run_refactor_pass_1_5`
 - `runtime.run_refactor_pass_2`
 
@@ -161,6 +196,16 @@ By default, `scripts/generate_seeds_from_theory.py` initializes a fresh runtime 
 - reset `AutomatedTheoryConstruction/Scratch.lean`
 - reset `AutomatedTheoryConstruction/Derived.lean`
 - delete `AutomatedTheoryConstruction/Derived.refactored.preview.lean` if present
+- delete `AutomatedTheoryConstruction/Derived.compression.plan.json` if present
+- delete `AutomatedTheoryConstruction/Derived.compression.report.json` if present
+- delete `AutomatedTheoryConstruction/Derived.proof_retarget.plan.json` if present
+- delete `AutomatedTheoryConstruction/Derived.proof_retarget.report.json` if present
+- delete `AutomatedTheoryConstruction/Derived.presentation.plan.json` if present
+- delete `AutomatedTheoryConstruction/Derived.presentation.report.json` if present
+- delete `AutomatedTheoryConstruction/Derived.refactor.pass1.log.jsonl` if present
+- delete `AutomatedTheoryConstruction/Derived.compression.executor.log.jsonl` if present
+- delete `AutomatedTheoryConstruction/Derived.proof_retarget.executor.log.jsonl` if present
+- delete `AutomatedTheoryConstruction/Derived.presentation.executor.log.jsonl` if present
 - delete `AutomatedTheoryConstruction/Derived.refactored.reviewed.lean` if present
 - run `lake build` for `AutomatedTheoryConstruction.Theory` and `AutomatedTheoryConstruction.Derived`
 
@@ -174,7 +219,7 @@ If you want to continue from the current runtime state and keep accumulated theo
 ATC_WORKER_COMMAND="uv run scripts/codex_worker.py" \
 ATC_WORKER_TIMEOUT=420 \
 ATC_CODEX_TIMEOUT=390 \
-uv run scripts/run_loop.py --enable-worker --no-initialize-on-start
+uv run scripts/run_loop.py --no-initialize-on-start
 ```
 
 If you want the loop to consider adding a main theorem whenever `Derived.lean` has gained another `N` verified theorems, set `--main-theorem-interval N`. For example:
@@ -184,7 +229,6 @@ ATC_WORKER_COMMAND="uv run scripts/codex_worker.py" \
 ATC_WORKER_TIMEOUT=420 \
 ATC_CODEX_TIMEOUT=390 \
 uv run scripts/run_loop.py \
-  --enable-worker \
   --no-initialize-on-start \
   --main-theorem-interval 10 \
   --main-theorem-formalize-worker-timeout 900 \
@@ -194,6 +238,7 @@ uv run scripts/run_loop.py \
 The auto main-theorem path uses the same worker stack and supports separate limits through `--main-theorem-formalize-worker-timeout`, `--main-theorem-repair-worker-timeout`, `--main-theorem-verify-timeout`, and `--main-theorem-formalization-retry-budget-sec`.
 
 `scripts/run_pipeline.py` prefers initialization in the seed-generation stage, then runs `scripts/run_loop.py --no-initialize-on-start` to avoid doing the same reset twice.
+When the seed stage does not perform initialization and build, the pipeline now inserts `lake build AutomatedTheoryConstruction.Theory` and `lake build AutomatedTheoryConstruction.Derived` before the main loop so continuation runs do not fail on missing `.olean` artifacts.
 
 ## Worker Configuration
 
@@ -269,6 +314,8 @@ You can also override the same settings through CLI flags such as:
 
 Open problem priorities are refreshed by a dedicated worker prompt whenever unevaluated `unknown` problems exist, and otherwise after `Derived.lean` has gained enough new theorems during the current run, by default every `5` additional verified theorems. Priorities are refreshed across the full tracked problem set: the active `open` queue plus `archived` problems kept only for priority context.
 
+The same refresh step also updates a lightweight global theory view. The worker summarizes the current theory, revises the previous summary when needed, and chooses one coarse `next_direction`. This direction is a strong preference for future seed generation and follow-up problem generation, but not a hard constraint. External value guidance lives in `AutomatedTheoryConstruction/research_agenda.md`; it is passed to seed generation, prioritization, and expansion, and a compact summary of the current agenda is also recorded in `data/theory_state.json` so later stages can see which external priorities shaped the current theory view.
+
 `data/open_problems.jsonl` stores only the active solver queue. Any tracked problem whose priority is `low`, or whose `failure_count` has reached the failure threshold, by default `2`, is moved to `data/archived_problems.jsonl`. Archived problems are not solver-eligible, but they remain visible during future priority refreshes so the worker can judge new and active problems against older low-value or repeatedly failed statements.
 
 ## Runtime Artifacts
@@ -280,8 +327,10 @@ The loop stores its state in `data/`:
 - `data/solved_problems.jsonl`
 - `data/counterexamples.jsonl`
 - `data/formalization_memory.json`
+- `data/theory_state.json`
 
 `data/formalization_memory.json` stores same-problem history across statement formalization, formalization, and repair attempts.
+`data/theory_state.json` stores the latest global theory summary, one coarse `next_direction`, and a compact summary of the current `AutomatedTheoryConstruction/research_agenda.md`.
 
 ## Lean Module Contract
 

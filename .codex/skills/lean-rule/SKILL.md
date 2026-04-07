@@ -80,7 +80,7 @@ When multiple skills are relevant, resolve priority as:
 - Do not treat a remaining `sorry` as an acceptable stopping point in Lean proof implementation; verify with `rg -n '\bsorry\b'` before stopping.
 - For subgoals, avoid `simp [*]` and huge `simp` sets; prefer `rw` / `simpa` / `simp only` / `simp_rw`.
 - Do not chain fragile `rw` right after `simp`; insert `have h : ... := by ...` then `simpa using h` if needed.
-- Use `ring_nf` for commutative normalization, `field_simp` in tiny helpers for denominators, `fun_prop` / `measurability` for regularity, `positivity` / `finiteness` for sign/finitedness.
+- Use `ring_nf` for commutative normalization. `ring` / `ring_nf` work primarily in commutative rings; for noncommutative rings, abelian groups, or modules, consider `noncomm_ring`, `abel`, or `module` instead. Use `field_simp` in tiny helpers for denominators, `fun_prop` / `measurability` for regularity, `positivity` / `finiteness` for sign/finitedness.
 - `grind` / `aesop` are fine for small first-order goals; avoid them as main weapons for measure/integral/CFC/spectrum goals.
 
 ## Role definition

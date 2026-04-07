@@ -28,7 +28,18 @@ class PathsConfig:
     scratch_file: Path
     seeds_file: Path
     preview_file: Path
+    compression_plan_file: Path
+    compression_report_file: Path
+    proof_retarget_plan_file: Path
+    proof_retarget_report_file: Path
+    presentation_plan_file: Path
+    presentation_report_file: Path
     reviewed_file: Path
+    review_report_file: Path
+    refactor_pass_1_log_file: Path
+    compression_executor_log_file: Path
+    proof_retarget_executor_log_file: Path
+    presentation_executor_log_file: Path
     try_at_each_step_raw_output_file: Path
     try_at_each_step_apply_report_file: Path
     data_dir: Path
@@ -63,11 +74,21 @@ class RuntimeConfig:
     parallel_sessions: int = 1
     run_seed: bool = True
     run_refactor_pass_1: bool = True
+    run_refactor_pass_1_2: bool = True
+    run_refactor_pass_1_3: bool = True
+    run_refactor_pass_1_4: bool = False
     run_refactor_pass_1_5: bool = True
     run_refactor_pass_2: bool = True
     run_main_theorem_session: bool = True
     try_at_each_step_tactic: str = "with_reducible exact?"
     open_problem_failure_threshold: int = 2
+    refactor_pass_1_max_wall_clock_sec: int | None = None
+    refactor_pass_1_2_max_wall_clock_sec: int | None = None
+    refactor_pass_1_3_max_wall_clock_sec: int | None = None
+    refactor_pass_1_4_max_wall_clock_sec: int | None = None
+    prover_retry_budget_sec: int = 120
+    formalization_retry_budget_sec: int = 300
+    max_same_error_streak: int = 5
     priority_refresh_theorem_interval: int = 5
     main_theorem_interval: int = 0
     main_theorem_formalize_worker_timeout: int | None = None
@@ -345,11 +366,77 @@ def load_app_config(args: Any) -> tuple[AppConfig, dict[str, str]]:
             default="AutomatedTheoryConstruction/Derived.refactored.preview.lean",
             label="paths.preview_file",
         ),
+        compression_plan_file=choose_path(
+            cli_names=("compression_plan_file",),
+            file_keys=("paths", "compression_plan_file"),
+            default="AutomatedTheoryConstruction/Derived.compression.plan.json",
+            label="paths.compression_plan_file",
+        ),
+        compression_report_file=choose_path(
+            cli_names=("compression_report_file",),
+            file_keys=("paths", "compression_report_file"),
+            default="AutomatedTheoryConstruction/Derived.compression.report.json",
+            label="paths.compression_report_file",
+        ),
+        proof_retarget_plan_file=choose_path(
+            cli_names=("proof_retarget_plan_file",),
+            file_keys=("paths", "proof_retarget_plan_file"),
+            default="AutomatedTheoryConstruction/Derived.proof_retarget.plan.json",
+            label="paths.proof_retarget_plan_file",
+        ),
+        proof_retarget_report_file=choose_path(
+            cli_names=("proof_retarget_report_file",),
+            file_keys=("paths", "proof_retarget_report_file"),
+            default="AutomatedTheoryConstruction/Derived.proof_retarget.report.json",
+            label="paths.proof_retarget_report_file",
+        ),
+        presentation_plan_file=choose_path(
+            cli_names=("presentation_plan_file",),
+            file_keys=("paths", "presentation_plan_file"),
+            default="AutomatedTheoryConstruction/Derived.presentation.plan.json",
+            label="paths.presentation_plan_file",
+        ),
+        presentation_report_file=choose_path(
+            cli_names=("presentation_report_file",),
+            file_keys=("paths", "presentation_report_file"),
+            default="AutomatedTheoryConstruction/Derived.presentation.report.json",
+            label="paths.presentation_report_file",
+        ),
         reviewed_file=choose_path(
             cli_names=("review_output_file", "reviewed_file"),
             file_keys=("paths", "reviewed_file"),
             default="AutomatedTheoryConstruction/Derived.refactored.reviewed.lean",
             label="paths.reviewed_file",
+        ),
+        review_report_file=choose_path(
+            cli_names=("review_report_file",),
+            file_keys=("paths", "review_report_file"),
+            default="AutomatedTheoryConstruction/Derived.refactored.reviewed.report.json",
+            label="paths.review_report_file",
+        ),
+        refactor_pass_1_log_file=choose_path(
+            cli_names=("refactor_progress_log_file",),
+            file_keys=("paths", "refactor_pass_1_log_file"),
+            default="AutomatedTheoryConstruction/Derived.refactor.pass1.log.jsonl",
+            label="paths.refactor_pass_1_log_file",
+        ),
+        compression_executor_log_file=choose_path(
+            cli_names=("compression_progress_log_file",),
+            file_keys=("paths", "compression_executor_log_file"),
+            default="AutomatedTheoryConstruction/Derived.compression.executor.log.jsonl",
+            label="paths.compression_executor_log_file",
+        ),
+        proof_retarget_executor_log_file=choose_path(
+            cli_names=("proof_retarget_progress_log_file",),
+            file_keys=("paths", "proof_retarget_executor_log_file"),
+            default="AutomatedTheoryConstruction/Derived.proof_retarget.executor.log.jsonl",
+            label="paths.proof_retarget_executor_log_file",
+        ),
+        presentation_executor_log_file=choose_path(
+            cli_names=("presentation_progress_log_file",),
+            file_keys=("paths", "presentation_executor_log_file"),
+            default="AutomatedTheoryConstruction/Derived.presentation.executor.log.jsonl",
+            label="paths.presentation_executor_log_file",
         ),
         try_at_each_step_raw_output_file=choose_path(
             cli_names=("try_at_each_step_raw_output_file",),
@@ -528,6 +615,30 @@ def load_app_config(args: Any) -> tuple[AppConfig, dict[str, str]]:
                 label="runtime.run_refactor_pass_1",
             )
         ),
+        run_refactor_pass_1_2=bool(
+            choose_bool(
+                cli_names=("run_refactor_pass_1_2",),
+                file_keys=("runtime", "run_refactor_pass_1_2"),
+                default=True,
+                label="runtime.run_refactor_pass_1_2",
+            )
+        ),
+        run_refactor_pass_1_3=bool(
+            choose_bool(
+                cli_names=("run_refactor_pass_1_3",),
+                file_keys=("runtime", "run_refactor_pass_1_3"),
+                default=True,
+                label="runtime.run_refactor_pass_1_3",
+            )
+        ),
+        run_refactor_pass_1_4=bool(
+            choose_bool(
+                cli_names=("run_refactor_pass_1_4",),
+                file_keys=("runtime", "run_refactor_pass_1_4"),
+                default=False,
+                label="runtime.run_refactor_pass_1_4",
+            )
+        ),
         run_refactor_pass_1_5=bool(
             choose_bool(
                 cli_names=("run_refactor_pass_1_5",),
@@ -555,6 +666,7 @@ def load_app_config(args: Any) -> tuple[AppConfig, dict[str, str]]:
         ),
         run_main_theorem_session=bool(
             choose_bool(
+                cli_names=("run_main_theorem_session",),
                 file_keys=("runtime", "run_main_theorem_session"),
                 default=True,
                 label="runtime.run_main_theorem_session",
@@ -567,6 +679,61 @@ def load_app_config(args: Any) -> tuple[AppConfig, dict[str, str]]:
                 default=2,
                 minimum=0,
                 label="runtime.open_problem_failure_threshold",
+            )
+        ),
+        refactor_pass_1_max_wall_clock_sec=choose_int(
+            cli_names=("refactor_max_wall_clock_sec",),
+            file_keys=("runtime", "refactor_pass_1_max_wall_clock_sec"),
+            default=None,
+            minimum=0,
+            label="runtime.refactor_pass_1_max_wall_clock_sec",
+        ),
+        refactor_pass_1_2_max_wall_clock_sec=choose_int(
+            cli_names=("compression_max_wall_clock_sec",),
+            file_keys=("runtime", "refactor_pass_1_2_max_wall_clock_sec"),
+            default=None,
+            minimum=0,
+            label="runtime.refactor_pass_1_2_max_wall_clock_sec",
+        ),
+        refactor_pass_1_3_max_wall_clock_sec=choose_int(
+            cli_names=("proof_retarget_max_wall_clock_sec",),
+            file_keys=("runtime", "refactor_pass_1_3_max_wall_clock_sec"),
+            default=None,
+            minimum=0,
+            label="runtime.refactor_pass_1_3_max_wall_clock_sec",
+        ),
+        refactor_pass_1_4_max_wall_clock_sec=choose_int(
+            cli_names=("presentation_max_wall_clock_sec",),
+            file_keys=("runtime", "refactor_pass_1_4_max_wall_clock_sec"),
+            default=None,
+            minimum=0,
+            label="runtime.refactor_pass_1_4_max_wall_clock_sec",
+        ),
+        prover_retry_budget_sec=int(
+            choose_int(
+                cli_names=("prover_retry_budget_sec",),
+                file_keys=("runtime", "prover_retry_budget_sec"),
+                default=120,
+                minimum=0,
+                label="runtime.prover_retry_budget_sec",
+            )
+        ),
+        formalization_retry_budget_sec=int(
+            choose_int(
+                cli_names=("formalization_retry_budget_sec",),
+                file_keys=("runtime", "formalization_retry_budget_sec"),
+                default=300,
+                minimum=0,
+                label="runtime.formalization_retry_budget_sec",
+            )
+        ),
+        max_same_error_streak=int(
+            choose_int(
+                cli_names=("max_same_error_streak",),
+                file_keys=("runtime", "max_same_error_streak"),
+                default=5,
+                minimum=1,
+                label="runtime.max_same_error_streak",
             )
         ),
         priority_refresh_theorem_interval=int(

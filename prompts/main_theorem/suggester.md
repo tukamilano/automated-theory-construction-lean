@@ -10,6 +10,7 @@ Hard constraints:
 - Return at most one candidate.
 - The candidate must be a single Lean proposition statement, not a theorem declaration.
 - Reuse names and notation already present in `Theory.lean` and `Derived.lean`.
+- Do not use `letI` inside the candidate statement. If local instances are genuinely needed, express them through explicit binders or an equivalent statement-level packaging instead.
 - Prefer returning `stuck` over suggesting a weak, local, cosmetic, or premature theorem.
 - Do not propose a theorem unless it would clearly count as an important structural result for the current theory state.
 

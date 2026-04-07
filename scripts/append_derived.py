@@ -8,6 +8,7 @@ from import_inference import infer_minimal_imports, render_import_block
 
 
 THEOREM_NAME_PATTERN = re.compile(r"\btheorem\s+([A-Za-z0-9_']+)\b")
+THEOREM_DECL_PATTERN = re.compile(r"(^|\n)\s*theorem\s+([A-Za-z0-9_']+)\b", re.MULTILINE)
 LEAN_DECL_NAME_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_']*$")
 LEAN_IMPORT_PATTERN = re.compile(r"^import\s+([A-Za-z0-9_.']+)\s*$", re.MULTILINE)
 DOCSTRING_MAX_CHARS = 240
@@ -135,6 +136,23 @@ def ensure_imports(content: str, required_imports: list[str]) -> str:
     return prefix + render_import_block(missing_imports) + content[namespace_match.start() :]
 
 
+def split_prelude_and_theorem_block(
+    theorem_code: str,
+    theorem_name: str,
+) -> tuple[str, str]:
+    for match in THEOREM_DECL_PATTERN.finditer(theorem_code):
+        if match.group(2).strip() != theorem_name:
+            continue
+        theorem_start = match.start(0)
+        if match.group(1):
+            theorem_start += len(match.group(1))
+        prelude = theorem_code[:theorem_start].rstrip()
+        theorem_block = theorem_code[theorem_start:].strip()
+        if theorem_block:
+            return prelude, theorem_block
+    return "", theorem_code.strip()
+
+
 def append_theorem(
     derived_file: Path,
     theorem_code: str,
@@ -163,7 +181,10 @@ def append_theorem(
 
     if not re.search(rf"\btheorem\s+{re.escape(theorem_name)}\b", content):
         rendered_docstring = render_docstring(docstring or "")
-        blocks_to_add.append(rendered_docstring + theorem_code.strip())
+        prelude_block, theorem_block = split_prelude_and_theorem_block(theorem_code, theorem_name)
+        if prelude_block:
+            blocks_to_add.append(prelude_block)
+        blocks_to_add.append(rendered_docstring + theorem_block)
     if not blocks_to_add:
         return False
 

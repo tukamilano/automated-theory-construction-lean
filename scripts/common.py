@@ -147,6 +147,22 @@ def dedupe_problem_rows_by_stmt(rows: list[dict[str, Any]]) -> list[dict[str, An
     return deduped
 
 
+def merge_archived_problem_rows(
+    existing_rows: list[dict[str, Any]],
+    new_rows: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    merged_rows: list[dict[str, Any]] = []
+    seen_ids: set[str] = set()
+    for row in existing_rows + new_rows:
+        normalized = normalize_open_problem_row(row)
+        problem_id = str(normalized.get("id", "")).strip()
+        if not problem_id or problem_id in seen_ids:
+            continue
+        seen_ids.add(problem_id)
+        merged_rows.append(normalized)
+    return merged_rows
+
+
 def read_archived_problem_rows(data_dir: Path) -> list[dict[str, Any]]:
     paths = [
         data_dir / ARCHIVED_PROBLEMS_FILENAME,

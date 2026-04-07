@@ -12,9 +12,24 @@ DEFAULT_THEORY = Path("AutomatedTheoryConstruction/Theory.lean")
 DEFAULT_DERIVED = Path("AutomatedTheoryConstruction/Derived.lean")
 DEFAULT_SEEDS = Path("AutomatedTheoryConstruction/seeds.jsonl")
 DEFAULT_PREVIEW = Path("AutomatedTheoryConstruction/Derived.refactored.preview.lean")
+DEFAULT_COMPRESSION_PLAN = Path("AutomatedTheoryConstruction/Derived.compression.plan.json")
+DEFAULT_COMPRESSION_REPORT = Path("AutomatedTheoryConstruction/Derived.compression.report.json")
+DEFAULT_REFACTOR_PROGRESS_LOG = Path("AutomatedTheoryConstruction/Derived.refactor.pass1.log.jsonl")
+DEFAULT_COMPRESSION_PROGRESS_LOG = Path("AutomatedTheoryConstruction/Derived.compression.executor.log.jsonl")
+DEFAULT_PROOF_RETARGET_PLAN = Path("AutomatedTheoryConstruction/Derived.proof_retarget.plan.json")
+DEFAULT_PROOF_RETARGET_REPORT = Path("AutomatedTheoryConstruction/Derived.proof_retarget.report.json")
+DEFAULT_PROOF_RETARGET_PROGRESS_LOG = Path("AutomatedTheoryConstruction/Derived.proof_retarget.executor.log.jsonl")
+DEFAULT_PRESENTATION_PLAN = Path("AutomatedTheoryConstruction/Derived.presentation.plan.json")
+DEFAULT_PRESENTATION_REPORT = Path("AutomatedTheoryConstruction/Derived.presentation.report.json")
+DEFAULT_PRESENTATION_PROGRESS_LOG = Path("AutomatedTheoryConstruction/Derived.presentation.executor.log.jsonl")
 DEFAULT_REVIEWED = Path("AutomatedTheoryConstruction/Derived.refactored.reviewed.lean")
+DEFAULT_REVIEW_REPORT = Path("AutomatedTheoryConstruction/Derived.refactored.reviewed.report.json")
 DEFAULT_TRY_AT_EACH_STEP_RAW = Path("AutomatedTheoryConstruction/Derived.tryAtEachStep.json")
 DEFAULT_TRY_AT_EACH_STEP_REPORT = Path("AutomatedTheoryConstruction/Derived.tryAtEachStep.apply_report.json")
+LEAN_BUILD_TARGETS = (
+    "AutomatedTheoryConstruction.Theory",
+    "AutomatedTheoryConstruction.Derived",
+)
 
 
 def append_optional_flag(cmd: list[str], flag: str, value: str | int | None) -> None:
@@ -115,7 +130,6 @@ def build_loop_command(args: argparse.Namespace) -> list[str]:
         "run",
         "python",
         "scripts/run_loop.py",
-        "--enable-worker",
         "--no-initialize-on-start",
     ]
     if not args.phase_logs:
@@ -139,6 +153,9 @@ def build_loop_command(args: argparse.Namespace) -> list[str]:
     append_optional_flag(cmd, "--prioritize-open-problems-worker-timeout", args.prioritize_open_problems_worker_timeout)
     append_optional_flag(cmd, "--priority-refresh-theorem-interval", args.priority_refresh_theorem_interval)
     append_optional_flag(cmd, "--open-problem-failure-threshold", args.open_problem_failure_threshold)
+    append_optional_flag(cmd, "--prover-retry-budget-sec", args.prover_retry_budget_sec)
+    append_optional_flag(cmd, "--formalization-retry-budget-sec", args.formalization_retry_budget_sec)
+    append_optional_flag(cmd, "--max-same-error-streak", args.max_same_error_streak)
     if args.run_main_theorem_session:
         append_optional_flag(cmd, "--main-theorem-interval", args.main_theorem_interval)
     else:
@@ -180,6 +197,92 @@ def build_refactor_command(args: argparse.Namespace) -> list[str]:
     append_optional_flag(cmd, "--worker-command", refactor_worker_command)
     append_optional_flag(cmd, "--worker-timeout", refactor_worker_timeout)
     append_optional_flag(cmd, "--verify-timeout", args.refactor_verify_timeout)
+    append_optional_flag(cmd, "--progress-log-file", args.refactor_progress_log_file)
+    append_optional_flag(cmd, "--max-wall-clock-sec", args.refactor_max_wall_clock_sec)
+    return cmd
+
+
+def build_compress_command(args: argparse.Namespace) -> list[str]:
+    cmd = [
+        "uv",
+        "run",
+        "python",
+        "scripts/run_compression_pass.py",
+        "--input-file",
+        args.preview_file,
+        "--output-file",
+        args.preview_file,
+        "--theory-file",
+        str(DEFAULT_THEORY),
+        "--plan-file",
+        args.compression_plan_file,
+        "--report-file",
+        args.compression_report_file,
+        "--progress-log-file",
+        args.compression_progress_log_file,
+    ]
+    refactor_worker_command = args.refactor_worker_command or args.worker_command
+    refactor_worker_timeout = args.refactor_worker_timeout
+    append_optional_flag(cmd, "--worker-command", refactor_worker_command)
+    append_optional_flag(cmd, "--worker-timeout", refactor_worker_timeout)
+    append_optional_flag(cmd, "--verify-timeout", args.refactor_verify_timeout)
+    append_optional_flag(cmd, "--max-wall-clock-sec", args.compression_max_wall_clock_sec)
+    return cmd
+
+
+def build_proof_retarget_command(args: argparse.Namespace) -> list[str]:
+    cmd = [
+        "uv",
+        "run",
+        "python",
+        "scripts/run_proof_retarget_pass.py",
+        "--input-file",
+        args.preview_file,
+        "--output-file",
+        args.preview_file,
+        "--theory-file",
+        str(DEFAULT_THEORY),
+        "--plan-file",
+        args.proof_retarget_plan_file,
+        "--report-file",
+        args.proof_retarget_report_file,
+        "--progress-log-file",
+        args.proof_retarget_progress_log_file,
+    ]
+    refactor_worker_command = args.refactor_worker_command or args.worker_command
+    refactor_worker_timeout = args.refactor_worker_timeout
+    append_optional_flag(cmd, "--worker-command", refactor_worker_command)
+    append_optional_flag(cmd, "--worker-timeout", refactor_worker_timeout)
+    append_optional_flag(cmd, "--verify-timeout", args.refactor_verify_timeout)
+    append_optional_flag(cmd, "--max-wall-clock-sec", args.proof_retarget_max_wall_clock_sec)
+    return cmd
+
+
+def build_presentation_command(args: argparse.Namespace) -> list[str]:
+    cmd = [
+        "uv",
+        "run",
+        "python",
+        "scripts/run_presentation_pass.py",
+        "--input-file",
+        args.preview_file,
+        "--output-file",
+        args.preview_file,
+        "--theory-file",
+        str(DEFAULT_THEORY),
+        "--plan-file",
+        args.presentation_plan_file,
+        "--report-file",
+        args.presentation_report_file,
+        "--progress-log-file",
+        args.presentation_progress_log_file,
+    ]
+    refactor_worker_command = args.refactor_worker_command or args.worker_command
+    refactor_worker_timeout = args.refactor_worker_timeout
+    append_optional_flag(cmd, "--worker-command", refactor_worker_command)
+    append_optional_flag(cmd, "--worker-timeout", refactor_worker_timeout)
+    append_optional_flag(cmd, "--verify-timeout", args.refactor_verify_timeout)
+    append_optional_flag(cmd, "--max-wall-clock-sec", args.presentation_max_wall_clock_sec)
     return cmd
 
 
@@ -193,6 +296,8 @@ def build_review_command_with_input(args: argparse.Namespace, *, input_file: str
         input_file,
         "--output-file",
         args.review_output_file,
+        "--report-file",
+        args.review_report_file,
         "--sandbox",
         args.review_sandbox,
     ]
@@ -227,9 +332,16 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
             "Generate seeds from the active Theory.lean entry module, its local imports, and context files, run the loop, "
-            "then run the three Derived refactor passes."
+            "then run the Derived refactor / pass 1.2 / pass 1.3 / optional pass 1.4 / rewrite / review passes."
         )
     )
+    worker_timeout_help = "Per worker subprocess timeout in seconds."
+    verify_timeout_help = "Per Lean verification timeout in seconds."
+    retry_budget_help = "Whole retry-loop budget in seconds."
+    refactor_budget_help = "Whole pass 1 wall-clock budget in seconds."
+    compression_budget_help = "Whole pass 1.2 wall-clock budget in seconds."
+    proof_retarget_budget_help = "Whole pass 1.3 wall-clock budget in seconds."
+    presentation_budget_help = "Whole pass 1.4 wall-clock budget in seconds."
     parser.add_argument(
         "--article-file",
         dest="context_files",
@@ -254,38 +366,59 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--phase-logs", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--skip-loop-verify", action="store_true")
     parser.add_argument("--worker-command")
-    parser.add_argument("--worker-timeout", type=int)
+    parser.add_argument("--worker-timeout", type=int, help=worker_timeout_help)
     parser.add_argument("--prover-worker-command")
-    parser.add_argument("--prover-worker-timeout", type=int)
+    parser.add_argument("--prover-worker-timeout", type=int, help=worker_timeout_help)
     parser.add_argument("--prover-statement-worker-command")
-    parser.add_argument("--prover-statement-worker-timeout", type=int)
+    parser.add_argument("--prover-statement-worker-timeout", type=int, help=worker_timeout_help)
     parser.add_argument("--formalize-worker-command")
-    parser.add_argument("--formalize-worker-timeout", type=int)
+    parser.add_argument("--formalize-worker-timeout", type=int, help=worker_timeout_help)
     parser.add_argument("--repair-worker-command")
-    parser.add_argument("--repair-worker-timeout", type=int)
+    parser.add_argument("--repair-worker-timeout", type=int, help=worker_timeout_help)
     parser.add_argument("--prioritize-open-problems-worker-command")
-    parser.add_argument("--prioritize-open-problems-worker-timeout", type=int)
+    parser.add_argument("--prioritize-open-problems-worker-timeout", type=int, help=worker_timeout_help)
     parser.add_argument("--priority-refresh-theorem-interval", type=int)
     parser.add_argument("--open-problem-failure-threshold", type=int)
+    parser.add_argument("--refactor-max-wall-clock-sec", type=int, help=refactor_budget_help)
+    parser.add_argument("--compression-max-wall-clock-sec", type=int, help=compression_budget_help)
+    parser.add_argument("--proof-retarget-max-wall-clock-sec", type=int, help=proof_retarget_budget_help)
+    parser.add_argument("--presentation-max-wall-clock-sec", type=int, help=presentation_budget_help)
+    parser.add_argument("--prover-retry-budget-sec", type=int, help=retry_budget_help)
+    parser.add_argument("--formalization-retry-budget-sec", type=int, help=retry_budget_help)
+    parser.add_argument("--max-same-error-streak", type=int)
     parser.add_argument("--main-theorem-interval", type=int)
-    parser.add_argument("--main-theorem-formalize-worker-timeout", type=int)
-    parser.add_argument("--main-theorem-repair-worker-timeout", type=int)
-    parser.add_argument("--main-theorem-verify-timeout", type=int)
-    parser.add_argument("--main-theorem-formalization-retry-budget-sec", type=int)
+    parser.add_argument("--main-theorem-formalize-worker-timeout", type=int, help=worker_timeout_help)
+    parser.add_argument("--main-theorem-repair-worker-timeout", type=int, help=worker_timeout_help)
+    parser.add_argument("--main-theorem-verify-timeout", type=int, help=verify_timeout_help)
+    parser.add_argument("--main-theorem-formalization-retry-budget-sec", type=int, help=retry_budget_help)
     parser.add_argument("--refactor-worker-command")
-    parser.add_argument("--refactor-worker-timeout", type=int)
-    parser.add_argument("--refactor-verify-timeout", type=int)
+    parser.add_argument("--refactor-worker-timeout", type=int, help=worker_timeout_help)
+    parser.add_argument("--refactor-verify-timeout", type=int, help=verify_timeout_help)
     parser.add_argument("--preview-file", default=str(DEFAULT_PREVIEW))
+    parser.add_argument("--compression-plan-file", default=str(DEFAULT_COMPRESSION_PLAN))
+    parser.add_argument("--compression-report-file", default=str(DEFAULT_COMPRESSION_REPORT))
+    parser.add_argument("--proof-retarget-plan-file", default=str(DEFAULT_PROOF_RETARGET_PLAN))
+    parser.add_argument("--proof-retarget-report-file", default=str(DEFAULT_PROOF_RETARGET_REPORT))
+    parser.add_argument("--presentation-plan-file", default=str(DEFAULT_PRESENTATION_PLAN))
+    parser.add_argument("--presentation-report-file", default=str(DEFAULT_PRESENTATION_REPORT))
+    parser.add_argument("--refactor-progress-log-file", default=str(DEFAULT_REFACTOR_PROGRESS_LOG))
+    parser.add_argument("--compression-progress-log-file", default=str(DEFAULT_COMPRESSION_PROGRESS_LOG))
+    parser.add_argument("--proof-retarget-progress-log-file", default=str(DEFAULT_PROOF_RETARGET_PROGRESS_LOG))
+    parser.add_argument("--presentation-progress-log-file", default=str(DEFAULT_PRESENTATION_PROGRESS_LOG))
     parser.add_argument("--review-output-file", default=str(DEFAULT_REVIEWED))
+    parser.add_argument("--review-report-file", default=str(DEFAULT_REVIEW_REPORT))
     parser.add_argument("--try-at-each-step-raw-output-file", default=str(DEFAULT_TRY_AT_EACH_STEP_RAW))
     parser.add_argument("--try-at-each-step-apply-report-file", default=str(DEFAULT_TRY_AT_EACH_STEP_REPORT))
     parser.add_argument("--try-at-each-step-tactic", default="with_reducible exact?")
-    parser.add_argument("--try-at-each-step-verify-timeout", type=int)
+    parser.add_argument("--try-at-each-step-verify-timeout", type=int, help=verify_timeout_help)
     parser.add_argument("--review-model")
     parser.add_argument("--review-sandbox", default="workspace-write")
     parser.add_argument("--no-review-verify", action="store_true")
     parser.add_argument("--run-seed", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--run-refactor-pass-1", action=argparse.BooleanOptionalAction, default=True)
+    parser.add_argument("--run-refactor-pass-1_2", action=argparse.BooleanOptionalAction, default=True)
+    parser.add_argument("--run-refactor-pass-1_3", action=argparse.BooleanOptionalAction, default=True)
+    parser.add_argument("--run-refactor-pass-1_4", action=argparse.BooleanOptionalAction, default=False)
     parser.add_argument("--run-refactor-pass-1_5", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--run-refactor-pass-2", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--run-main-theorem-session", action=argparse.BooleanOptionalAction, default=True)
@@ -300,7 +433,18 @@ def main() -> int:
         cleanup_pipeline_artifacts(
             [
                 args.preview_file,
+                args.compression_plan_file,
+                args.compression_report_file,
+                args.proof_retarget_plan_file,
+                args.proof_retarget_report_file,
+                args.presentation_plan_file,
+                args.presentation_report_file,
+                args.refactor_progress_log_file,
+                args.compression_progress_log_file,
+                args.proof_retarget_progress_log_file,
+                args.presentation_progress_log_file,
                 args.review_output_file,
+                args.review_report_file,
                 args.try_at_each_step_raw_output_file,
                 args.try_at_each_step_apply_report_file,
             ]
@@ -309,14 +453,29 @@ def main() -> int:
     seed_cmd = build_seed_command(args)
     loop_cmd = build_loop_command(args)
     refactor_cmd = build_refactor_command(args)
+    compress_cmd = build_compress_command(args)
+    proof_retarget_cmd = build_proof_retarget_command(args)
+    presentation_cmd = build_presentation_command(args)
     rewrite_input = args.preview_file
     rewrite_output = args.preview_file
     review_input = args.preview_file
+    can_run_pass_1_2 = True
+    can_run_pass_1_3 = True
+    can_run_pass_1_4 = True
 
     if args.run_seed:
         require_success("seed-generation", run_stage("seed-generation", seed_cmd, dry_run=args.dry_run))
     else:
         print("[pipeline] seed-generation: skipped (--no-run-seed)", file=sys.stderr, flush=True)
+
+    # Seed initialization is the only stage that already runs the stable Lean prebuild.
+    if not (args.run_seed and args.initialize_on_start):
+        for target in LEAN_BUILD_TARGETS:
+            stage_name = f"lean-prebuild:{target}"
+            require_success(
+                stage_name,
+                run_stage(stage_name, ["lake", "build", target], dry_run=args.dry_run, capture_output=True),
+            )
 
     require_success("main-loop", run_stage("main-loop", loop_cmd, dry_run=args.dry_run))
 
@@ -331,6 +490,9 @@ def main() -> int:
             rewrite_input = str(DEFAULT_DERIVED)
             rewrite_output = args.preview_file
             review_input = str(DEFAULT_DERIVED)
+            can_run_pass_1_2 = False
+            can_run_pass_1_3 = False
+            can_run_pass_1_4 = False
         else:
             require_success("refactor-pass-1", refactor_result)
     else:
@@ -338,6 +500,56 @@ def main() -> int:
         rewrite_input = str(DEFAULT_DERIVED)
         rewrite_output = args.preview_file
         review_input = str(DEFAULT_DERIVED)
+        can_run_pass_1_2 = False
+        can_run_pass_1_3 = False
+        can_run_pass_1_4 = False
+
+    if args.run_refactor_pass_1_2 and can_run_pass_1_2:
+        compress_result = run_stage("refactor-pass-1_2", compress_cmd, dry_run=args.dry_run, capture_output=True)
+        if compress_result is None or compress_result.returncode == 0:
+            review_input = args.preview_file
+        else:
+            print(
+                "[pipeline] refactor-pass-1_2 failed; keeping preview input from pass 1",
+                file=sys.stderr,
+                flush=True,
+            )
+    else:
+        reason = "--no-run-refactor-pass-1_2" if not args.run_refactor_pass_1_2 else "pass 1 preview unavailable"
+        print(f"[pipeline] refactor-pass-1_2: skipped ({reason})", file=sys.stderr, flush=True)
+
+    if args.run_refactor_pass_1_3 and can_run_pass_1_3:
+        proof_retarget_result = run_stage(
+            "refactor-pass-1_3",
+            proof_retarget_cmd,
+            dry_run=args.dry_run,
+            capture_output=True,
+        )
+        if proof_retarget_result is None or proof_retarget_result.returncode == 0:
+            review_input = args.preview_file
+        else:
+            print(
+                "[pipeline] refactor-pass-1_3 failed; keeping preview input before proof retargeting",
+                file=sys.stderr,
+                flush=True,
+            )
+    else:
+        reason = "--no-run-refactor-pass-1_3" if not args.run_refactor_pass_1_3 else "pass 1 preview unavailable"
+        print(f"[pipeline] refactor-pass-1_3: skipped ({reason})", file=sys.stderr, flush=True)
+
+    if args.run_refactor_pass_1_4 and can_run_pass_1_4:
+        presentation_result = run_stage("refactor-pass-1_4", presentation_cmd, dry_run=args.dry_run, capture_output=True)
+        if presentation_result is None or presentation_result.returncode == 0:
+            review_input = args.preview_file
+        else:
+            print(
+                "[pipeline] refactor-pass-1_4 failed; keeping preview input before presentation shaping",
+                file=sys.stderr,
+                flush=True,
+            )
+    else:
+        reason = "--no-run-refactor-pass-1_4" if not args.run_refactor_pass_1_4 else "pass 1 preview unavailable"
+        print(f"[pipeline] refactor-pass-1_4: skipped ({reason})", file=sys.stderr, flush=True)
 
     if args.run_refactor_pass_1_5:
         rewrite_cmd = build_rewrite_command(args, input_file=rewrite_input, output_file=rewrite_output)
@@ -369,9 +581,20 @@ def main() -> int:
         f"- seeds: {DEFAULT_SEEDS}\n"
         f"- derived: {DEFAULT_DERIVED}\n"
         f"- refactor preview: {args.preview_file}\n"
+        f"- pass 1.2 plan: {args.compression_plan_file}\n"
+        f"- pass 1.2 report: {args.compression_report_file}\n"
+        f"- pass 1.3 plan: {args.proof_retarget_plan_file}\n"
+        f"- pass 1.3 report: {args.proof_retarget_report_file}\n"
+        f"- pass 1.4 plan: {args.presentation_plan_file}\n"
+        f"- pass 1.4 report: {args.presentation_report_file}\n"
+        f"- pass 1 log: {args.refactor_progress_log_file}\n"
+        f"- pass 1.2 log: {args.compression_progress_log_file}\n"
+        f"- pass 1.3 log: {args.proof_retarget_progress_log_file}\n"
+        f"- pass 1.4 log: {args.presentation_progress_log_file}\n"
         f"- tryAtEachStep raw: {args.try_at_each_step_raw_output_file}\n"
         f"- tryAtEachStep report: {args.try_at_each_step_apply_report_file}\n"
-        f"- reviewed output: {args.review_output_file}",
+        f"- reviewed output: {args.review_output_file}\n"
+        f"- review report: {args.review_report_file}",
         file=sys.stderr,
         flush=True,
     )
