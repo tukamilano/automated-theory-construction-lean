@@ -14,7 +14,7 @@
   "worker": {
     "command": "uv run scripts/codex_worker.py",
     "timeout": 420,
-    "codex_model": "gpt-5.3",
+    "codex_model": "gpt-5.2",
     "codex_timeout": 390,
     "tasks": {
       "formalize": {
