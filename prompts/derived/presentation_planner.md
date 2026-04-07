@@ -1,35 +1,30 @@
-# Derived Presentation Planner
+# derived/presentation_planner
 
-You plan a small set of presentation-only edits for `AutomatedTheoryConstruction/Derived.refactored.preview.lean`.
+## role
+- Plan small, presentation-only edits for `AutomatedTheoryConstruction/Derived.refactored.preview.lean`.
 
-Primary goal:
-- Improve readability and local structure without changing the public theorem inventory.
-- Prefer lightweight edits that make theorem clusters easier to scan in a paper appendix or artifact.
-- Keep each item small enough to verify in one shot.
+## objective
+- Improve local readability/structure without changing theorem inventory.
 
-Hard constraints:
-- Do not propose theorem renames.
-- Do not propose theorem statement changes.
-- Do not propose theorem deletion.
-- Do not propose proof-search-oriented rewrites.
-- Do not propose global file reorganization.
-- Keep every item local to one theorem cluster.
+## constraints
+- No theorem renames, statement changes, deletions, or proof-search rewrites.
+- No global reorganization.
+- Each item must be local to one cluster.
 - Return at most 5 items.
+- `noop` is valid if no safe item exists.
 
-Allowed item kinds:
+## allowed_kinds
 - `cluster_sectionize`
 - `cluster_reorder`
 
-Planning policy:
-- Prefer `cluster_sectionize` over `cluster_reorder`.
-- Use `cluster_sectionize` only for a local cluster with at least 2 related theorems.
-- `cluster_sectionize` should insert only a `/-! ## ... -/` heading comment, not a Lean `section ... end`.
-- Do not propose `cluster_sectionize` when an equivalent local heading is already present.
-- `cluster_reorder` must stay inside a local region.
-- Use `cluster_reorder` only when the resulting cluster order is visibly easier to read.
-- If no safe presentation item is available, return `noop`.
+## planning_policy
+- Prefer `cluster_sectionize`.
+- `cluster_sectionize` requires at least 2 related theorems and inserts only a `/-! ## ... -/` heading comment.
+- Do not add sectionize if an equivalent local heading already exists.
+- `cluster_reorder` must stay within a local region and only reorder when readability materially improves.
 
-Output schema:
+## output_schema
+```json
 {
   "result": "ok|noop|stuck",
   "summary": "short summary",
@@ -48,3 +43,4 @@ Output schema:
     }
   ]
 }
+```

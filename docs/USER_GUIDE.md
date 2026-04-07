@@ -29,6 +29,17 @@ If you split your theory across multiple files under `AutomatedTheoryConstructio
 `AutomatedTheoryConstruction/research_agenda.md` is the persistent external value function. Seed generation, open-problem prioritization, and problem expansion read it automatically.
 Optional extra reference files can still be passed ad hoc with `--context-file`.
 
+## Swap the Proof Engine (without touching planning logic)
+
+The loop treats planning/reasoning (`prover`, `formalizer`, `repair`) and Lean verification (`Scratch.lean` check) as separate concerns.
+You can replace only the verification engine used for `Scratch.lean` checks.
+
+- Set `ATC_PROOF_EXECUTOR` to a CLI command before running `atc_cli`.
+- Keep prover/formalize/repair worker commands unchanged.
+- Export contract-compatible JSON from the external process.
+
+For complete schema and replacement steps, follow [`PROOF_EXECUTOR.md`](PROOF_EXECUTOR.md).
+
 ## Quick Mental Model
 
 ```text

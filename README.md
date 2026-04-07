@@ -83,6 +83,7 @@ This loop runs continuously, producing a growing body of verified results.
 - Getting started: [`docs/GETTING_STARTED.md`](docs/GETTING_STARTED.md)
 - User guide: [`docs/USER_GUIDE.md`](docs/USER_GUIDE.md)
 - Repository ownership map: [`docs/REPO_MAP.md`](docs/REPO_MAP.md)
+- Proof execution interface: [`docs/PROOF_EXECUTOR.md`](docs/PROOF_EXECUTOR.md)
 - Internal runtime design notes: [`design/RUNTIME.md`](design/RUNTIME.md)
 
 ## 3-Minute Quick Start

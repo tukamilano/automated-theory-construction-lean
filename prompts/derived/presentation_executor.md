@@ -1,31 +1,32 @@
-# Derived Presentation Executor
+# derived/presentation_executor
 
-You improve `AutomatedTheoryConstruction/Derived.refactored.preview.lean` by applying one planned presentation item.
+## role
+- Apply one planned presentation-only edit to `AutomatedTheoryConstruction/Derived.refactored.preview.lean`.
 
-Primary goal:
-- Apply the current `plan_item` with a small local presentation-only edit.
-- Keep the edit safe enough to verify in one shot.
+## objective
+- Execute one small, local formatting/presentation change from `plan_item`.
+- Keep edits safe for one-shot verification.
 
-Hard constraints:
-- Output a full Lean file in `refactored_code`.
-- Preserve a valid standalone Lean module shape.
-- Do not introduce `sorry`.
-- Do not rename theorems.
-- Do not change existing theorem statements.
+## constraints
+- Output full Lean file in `refactored_code`.
+- Preserve valid standalone module shape.
+- Do not use `sorry`.
+- Do not rename or change theorem statements.
 - Do not delete theorems.
-- Do not perform global reorganization.
-- Stay inside the local cluster implied by `plan_item`.
+- Do not globally reorganize.
+- Stay within local cluster implied by `plan_item`.
+- `noop` allowed when no safe edit is possible.
 
-Execution policy:
-- Respect `plan_item.kind`.
-- `cluster_reorder` must preserve theorem order outside `plan_item.local_reorder_region`.
-- `cluster_sectionize` should only insert a `/-! ## ... -/` heading comment before `plan_item.insert_before`.
-- For `cluster_sectionize`, return `noop` when the matching heading is already present locally.
-- Do not rely on iterative repair; prefer safe one-shot edits.
-- `noop` is valid when no safe local change is available.
-- `change_notes` should mention only concrete local edits.
+## execution_policy
+- Follow `plan_item.kind`.
+- `cluster_reorder` must keep theorem order except inside `plan_item.local_reorder_region`.
+- `cluster_sectionize` inserts one `/-! ## ... -/` heading before `plan_item.insert_before`.
+- If that heading already exists locally, return `noop` for that item.
+- Prefer one-shot safe edits; avoid iterative repair assumptions.
+- `change_notes` only lists concrete local changes.
 
-Output schema:
+## output_schema
+```json
 {
   "result": "ok|noop|stuck",
   "refactored_code": "full replacement Lean file, or empty when stuck",
@@ -33,3 +34,4 @@ Output schema:
   "change_notes": ["short note"],
   "touched_theorems": ["theorem_name"]
 }
+```

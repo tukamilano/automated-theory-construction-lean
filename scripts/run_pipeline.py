@@ -328,72 +328,72 @@ def build_rewrite_command(args: argparse.Namespace, *, input_file: str, output_f
     return cmd
 
 
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description=(
-            "Generate seeds from the active Theory.lean entry module, its local imports, and context files, run the loop, "
-            "then run the Derived refactor / pass 1.2 / pass 1.3 / optional pass 1.4 / rewrite / review passes."
-        )
-    )
-    worker_timeout_help = "Per worker subprocess timeout in seconds."
-    verify_timeout_help = "Per Lean verification timeout in seconds."
-    retry_budget_help = "Whole retry-loop budget in seconds."
-    refactor_budget_help = "Whole pass 1 wall-clock budget in seconds."
-    compression_budget_help = "Whole pass 1.2 wall-clock budget in seconds."
-    proof_retarget_budget_help = "Whole pass 1.3 wall-clock budget in seconds."
-    presentation_budget_help = "Whole pass 1.4 wall-clock budget in seconds."
+def _add_context_flags(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--article-file",
+        "--context-file",
         dest="context_files",
         action="append",
         default=[],
         help="Extra article/context file to read during seed generation. Repeatable.",
     )
-    parser.add_argument(
-        "--context-file",
-        dest="context_files",
-        action="append",
-        help="Alias of --article-file.",
-    )
-    parser.add_argument("--seed-count", type=int, default=4)
-    parser.add_argument("--seed-src", default="seed")
-    parser.add_argument("--seed-extra-instruction", default="")
-    parser.add_argument("--seed-model")
-    parser.add_argument("--seed-sandbox", default="read-only")
-    parser.add_argument("--initialize-on-start", action=argparse.BooleanOptionalAction, default=True)
+
+
+def _add_loop_flags(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--max-iterations", type=int)
     parser.add_argument("--parallel-sessions", type=int, default=1)
-    parser.add_argument("--phase-logs", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--skip-loop-verify", action="store_true")
+
+
+def _add_initialize_phase_flags(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--initialize-on-start", action=argparse.BooleanOptionalAction, default=True)
+    parser.add_argument("--phase-logs", action=argparse.BooleanOptionalAction, default=True)
+
+
+def _add_main_worker_flags(parser: argparse.ArgumentParser, *, worker_timeout_help: str) -> None:
     parser.add_argument("--worker-command")
     parser.add_argument("--worker-timeout", type=int, help=worker_timeout_help)
-    parser.add_argument("--prover-worker-command")
-    parser.add_argument("--prover-worker-timeout", type=int, help=worker_timeout_help)
-    parser.add_argument("--prover-statement-worker-command")
-    parser.add_argument("--prover-statement-worker-timeout", type=int, help=worker_timeout_help)
-    parser.add_argument("--formalize-worker-command")
-    parser.add_argument("--formalize-worker-timeout", type=int, help=worker_timeout_help)
-    parser.add_argument("--repair-worker-command")
-    parser.add_argument("--repair-worker-timeout", type=int, help=worker_timeout_help)
-    parser.add_argument("--prioritize-open-problems-worker-command")
-    parser.add_argument("--prioritize-open-problems-worker-timeout", type=int, help=worker_timeout_help)
-    parser.add_argument("--priority-refresh-theorem-interval", type=int)
-    parser.add_argument("--open-problem-failure-threshold", type=int)
-    parser.add_argument("--refactor-max-wall-clock-sec", type=int, help=refactor_budget_help)
-    parser.add_argument("--compression-max-wall-clock-sec", type=int, help=compression_budget_help)
-    parser.add_argument("--proof-retarget-max-wall-clock-sec", type=int, help=proof_retarget_budget_help)
-    parser.add_argument("--presentation-max-wall-clock-sec", type=int, help=presentation_budget_help)
+    task_prefixes = ("prover", "prover-statement", "formalize", "repair", "prioritize-open-problems")
+    for prefix in task_prefixes:
+        parser.add_argument(f"--{prefix}-worker-command")
+        parser.add_argument(f"--{prefix}-worker-timeout", type=int, help=worker_timeout_help)
+    parser.add_argument("--refactor-worker-command")
+    parser.add_argument("--refactor-worker-timeout", type=int, help=worker_timeout_help)
+
+
+def _add_budget_flags(parser: argparse.ArgumentParser) -> None:
+    retry_budget_help = "Whole retry-loop budget in seconds."
+    parser.add_argument("--refactor-max-wall-clock-sec", type=int, help="Whole pass 1 wall-clock budget in seconds.")
+    parser.add_argument("--compression-max-wall-clock-sec", type=int, help="Whole pass 1.2 wall-clock budget in seconds.")
+    parser.add_argument("--proof-retarget-max-wall-clock-sec", type=int, help="Whole pass 1.3 wall-clock budget in seconds.")
+    parser.add_argument("--presentation-max-wall-clock-sec", type=int, help="Whole pass 1.4 wall-clock budget in seconds.")
     parser.add_argument("--prover-retry-budget-sec", type=int, help=retry_budget_help)
     parser.add_argument("--formalization-retry-budget-sec", type=int, help=retry_budget_help)
-    parser.add_argument("--max-same-error-streak", type=int)
+    parser.add_argument("--main-theorem-formalization-retry-budget-sec", type=int, help=retry_budget_help)
+
+
+def _add_loop_tuning_flags(parser: argparse.ArgumentParser, *, worker_timeout_help: str, verify_timeout_help: str) -> None:
+    parser.add_argument("--priority-refresh-theorem-interval", type=int)
+    parser.add_argument("--open-problem-failure-threshold", type=int)
     parser.add_argument("--main-theorem-interval", type=int)
     parser.add_argument("--main-theorem-formalize-worker-timeout", type=int, help=worker_timeout_help)
     parser.add_argument("--main-theorem-repair-worker-timeout", type=int, help=worker_timeout_help)
     parser.add_argument("--main-theorem-verify-timeout", type=int, help=verify_timeout_help)
-    parser.add_argument("--main-theorem-formalization-retry-budget-sec", type=int, help=retry_budget_help)
-    parser.add_argument("--refactor-worker-command")
-    parser.add_argument("--refactor-worker-timeout", type=int, help=worker_timeout_help)
-    parser.add_argument("--refactor-verify-timeout", type=int, help=verify_timeout_help)
+    parser.add_argument("--max-same-error-streak", type=int)
+
+
+def _add_pass_toggles(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--run-seed", action=argparse.BooleanOptionalAction, default=True)
+    parser.add_argument("--run-refactor-pass-1", action=argparse.BooleanOptionalAction, default=True)
+    parser.add_argument("--run-refactor-pass-1_2", action=argparse.BooleanOptionalAction, default=True)
+    parser.add_argument("--run-refactor-pass-1_3", action=argparse.BooleanOptionalAction, default=True)
+    parser.add_argument("--run-refactor-pass-1_4", action=argparse.BooleanOptionalAction, default=False)
+    parser.add_argument("--run-refactor-pass-1_5", action=argparse.BooleanOptionalAction, default=True)
+    parser.add_argument("--run-refactor-pass-2", action=argparse.BooleanOptionalAction, default=True)
+    parser.add_argument("--run-main-theorem-session", action=argparse.BooleanOptionalAction, default=True)
+
+
+def _add_path_flags(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--preview-file", default=str(DEFAULT_PREVIEW))
     parser.add_argument("--compression-plan-file", default=str(DEFAULT_COMPRESSION_PLAN))
     parser.add_argument("--compression-report-file", default=str(DEFAULT_COMPRESSION_REPORT))
@@ -409,19 +409,44 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--review-report-file", default=str(DEFAULT_REVIEW_REPORT))
     parser.add_argument("--try-at-each-step-raw-output-file", default=str(DEFAULT_TRY_AT_EACH_STEP_RAW))
     parser.add_argument("--try-at-each-step-apply-report-file", default=str(DEFAULT_TRY_AT_EACH_STEP_REPORT))
+
+
+def _add_rewrite_and_review_flags(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--try-at-each-step-tactic", default="with_reducible exact?")
-    parser.add_argument("--try-at-each-step-verify-timeout", type=int, help=verify_timeout_help)
+    parser.add_argument("--try-at-each-step-verify-timeout", type=int, help="Per Lean verification timeout in seconds.")
     parser.add_argument("--review-model")
     parser.add_argument("--review-sandbox", default="workspace-write")
     parser.add_argument("--no-review-verify", action="store_true")
-    parser.add_argument("--run-seed", action=argparse.BooleanOptionalAction, default=True)
-    parser.add_argument("--run-refactor-pass-1", action=argparse.BooleanOptionalAction, default=True)
-    parser.add_argument("--run-refactor-pass-1_2", action=argparse.BooleanOptionalAction, default=True)
-    parser.add_argument("--run-refactor-pass-1_3", action=argparse.BooleanOptionalAction, default=True)
-    parser.add_argument("--run-refactor-pass-1_4", action=argparse.BooleanOptionalAction, default=False)
-    parser.add_argument("--run-refactor-pass-1_5", action=argparse.BooleanOptionalAction, default=True)
-    parser.add_argument("--run-refactor-pass-2", action=argparse.BooleanOptionalAction, default=True)
-    parser.add_argument("--run-main-theorem-session", action=argparse.BooleanOptionalAction, default=True)
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description=(
+            "Generate seeds from the active Theory.lean entry module, its local imports, and context files, run the loop, "
+            "then run the Derived refactor / pass 1.2 / pass 1.3 / optional pass 1.4 / rewrite / review passes."
+        )
+    )
+    worker_timeout_help = "Per worker subprocess timeout in seconds."
+    verify_timeout_help = "Per Lean verification timeout in seconds."
+    _add_context_flags(parser)
+    parser.add_argument("--seed-count", type=int, default=4)
+    parser.add_argument("--seed-src", default="seed")
+    parser.add_argument("--seed-extra-instruction", default="")
+    parser.add_argument("--seed-model")
+    parser.add_argument("--seed-sandbox", default="read-only")
+    _add_initialize_phase_flags(parser)
+    _add_loop_flags(parser)
+    _add_main_worker_flags(parser, worker_timeout_help=worker_timeout_help)
+    parser.add_argument("--refactor-verify-timeout", type=int, help=verify_timeout_help)
+    _add_loop_tuning_flags(
+        parser,
+        worker_timeout_help=worker_timeout_help,
+        verify_timeout_help=verify_timeout_help,
+    )
+    _add_budget_flags(parser)
+    _add_path_flags(parser)
+    _add_rewrite_and_review_flags(parser)
+    _add_pass_toggles(parser)
     parser.add_argument("--dry-run", action="store_true")
     return parser.parse_args()
 

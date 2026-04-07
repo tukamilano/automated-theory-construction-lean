@@ -28,6 +28,8 @@ Each iteration runs the following stages:
 8. Run `expand` to suggest additional problems, biased by the current `next_direction` when available.
 9. Apply deterministic state updates to `open`, `solved`, and `counterexamples`.
 
+Verification in step 5 uses the `scripts/lean_verify.py` entrypoint. If `ATC_PROOF_EXECUTOR` is set, it delegates the actual check to that command instead of running `lake env lean` locally.
+
 Open problems may be either Lean-formal statements or semi-formal research prompts. If a problem cannot be formalized, it stays open.
 
 ## Repository Layout

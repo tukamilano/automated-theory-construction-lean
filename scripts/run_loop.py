@@ -14,6 +14,17 @@ from pathlib import Path
 from typing import Callable
 from typing import Any
 
+from proof_packets import (
+    FormalizerRequestPacket,
+    FormalizerResponsePacket,
+    ProverRequestPacket,
+    ProverResponsePacket,
+    RepairRequestPacket,
+    SolverStatementRequestPacket,
+    normalize_formalizer_payload,
+    normalize_prover_payload,
+)
+
 from append_derived import (
     append_theorem,
     build_derived_entries_from_file,
@@ -598,7 +609,10 @@ def pick_next_available_problem(
     return None
 
 
-def validate_prover_output(payload: dict[str, Any], expected_problem_id: str) -> tuple[str, str, str, list[str]]:
+def validate_prover_output(
+    payload: dict[str, Any],
+    expected_problem_id: str,
+) -> ProverResponsePacket:
     required_keys = {"problem_id", "result", "proof_sketch", "counterexample_text", "new_problems"}
     if set(payload.keys()) != required_keys:
         raise ValueError("prover output keys mismatch required contract")
@@ -624,8 +638,15 @@ def validate_prover_output(payload: dict[str, Any], expected_problem_id: str) ->
     if any((not isinstance(item, str)) for item in new_problems_value):
         raise ValueError("new_problems must contain only strings")
 
-    new_problems = []
-    return result, proof_sketch, counterexample_text, new_problems
+    new_problems = list(new_problems_value)
+    return ProverResponsePacket(
+        problem_id=problem_id,
+        result=result,
+        proof_sketch=proof_sketch,
+        counterexample_text=counterexample_text,
+        new_problems=new_problems,
+        raw_payload=dict(payload),
+    )
 
 
 def validate_theorem_name_stem(stem: str) -> str:
@@ -733,7 +754,10 @@ def validate_prover_statement_output(payload: dict[str, Any], expected_problem_i
     )
 
 
-def validate_formalizer_output(payload: dict[str, Any], expected_problem_id: str) -> tuple[str, str, str, str, str]:
+def validate_formalizer_output(
+    payload: dict[str, Any],
+    expected_problem_id: str,
+) -> FormalizerResponsePacket:
     allowed_key_sets = [
         {"problem_id", "result", "proof_sketch", "proof_text", "counterexample_text"},
         {"problem_id", "result", "proof_sketch", "prelude_code", "proof_text", "counterexample_text"},
@@ -764,7 +788,17 @@ def validate_formalizer_output(payload: dict[str, Any], expected_problem_id: str
     ):
         raise ValueError("formalizer proof_sketch, prelude_code, proof_text and counterexample_text must be strings")
 
-    return result, proof_sketch, prelude_code, proof_text, counterexample_text
+    return normalize_formalizer_payload(
+        {
+            "problem_id": problem_id,
+            "result": result,
+            "proof_sketch": proof_sketch,
+            "prelude_code": prelude_code,
+            "proof_text": proof_text,
+            "counterexample_text": counterexample_text,
+        },
+        expected_problem_id,
+    )
 
 
 def validate_expand_output(payload: dict[str, Any], expected_problem_id: str) -> list[dict[str, str]]:
@@ -1654,11 +1688,41 @@ def build_problem_theory_context(
     return context
 
 
-def analyze_lean_failure(stderr: str, stdout: str) -> dict[str, Any]:
-    text = (stderr or "") + "\n" + (stdout or "")
+def analyze_lean_failure(
+    stderr: str,
+    stdout: str,
+    *,
+    verify_result: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    error = verify_result or {}
+    if verify_result is not None:
+        text = ""
+        direct_categories = []
+        cat_value = error.get("error_category")
+        if isinstance(cat_value, str):
+            direct_categories.extend([item.strip() for item in cat_value.split(",") if item.strip()])
+        elif isinstance(cat_value, list):
+            direct_categories.extend([str(item).strip() for item in cat_value if str(item).strip()])
+
+        diagnostics = error.get("diagnostics")
+        if diagnostics is None:
+            diagnostics = (stderr or "") + "\n" + (stdout or "")
+        elif isinstance(diagnostics, list):
+            diagnostics = "\n".join(str(item).strip() for item in diagnostics if str(item).strip())
+        else:
+            diagnostics = str(diagnostics)
+        text = diagnostics
+    else:
+        direct_categories = []
+        text = (stderr or "") + "\n" + (stdout or "")
+
     lines = [line.strip() for line in text.splitlines() if line.strip()]
     top_lines = lines[:12]
     categories: list[str] = []
+
+    for category in direct_categories:
+        if category and category not in categories:
+            categories.append(category)
 
     if "Type mismatch" in text:
         categories.append("type_mismatch")
@@ -1672,10 +1736,26 @@ def analyze_lean_failure(stderr: str, stdout: str) -> dict[str, Any]:
         categories.append("unknown_tactic")
     if "Application type mismatch" in text:
         categories.append("application_type_mismatch")
+    normalized_categories: list[str] = []
+    for item in categories:
+        if item and item not in normalized_categories:
+            normalized_categories.append(item)
+    categories = normalized_categories
+
     if not categories:
         categories.append("other")
 
-    fingerprint = " | ".join(top_lines[:3]) if top_lines else "no_diagnostics"
+    fingerprint_source = [line for line in top_lines if line]
+    if not fingerprint_source:
+        fingerprint_source = ["no_diagnostics"]
+    if error.get("executor_metadata"):
+        metadata = error.get("executor_metadata")
+        if isinstance(metadata, dict):
+            toolchain = str(metadata.get("toolchain", "")).strip()
+            if toolchain:
+                fingerprint_source.append(f"toolchain={toolchain}")
+
+    fingerprint = " | ".join(fingerprint_source[:3]) if fingerprint_source else "no_diagnostics"
     return {
         "fingerprint": fingerprint,
         "categories": categories,
@@ -1901,24 +1981,26 @@ def query_prover_with_retries(
     max_same_error_streak: int | None = None,
 ) -> tuple[str, str, str, list[str], int, dict[str, Any]]:
     deadline = build_retry_deadline(prover_retry_budget_sec)
-    last_result = "stuck"
-    last_proof_sketch = ""
-    last_counterexample_text = ""
-    last_new_problems: list[str] = []
-    last_worker_meta: dict[str, Any] = {}
     last_response_fingerprint = ""
     same_response_streak = 0
     attempt = 0
+    last_response = ProverResponsePacket(
+        problem_id=problem_id,
+        result="stuck",
+        proof_sketch="",
+        counterexample_text="",
+        new_problems=[],
+    )
 
     while True:
         if deadline is not None and attempt > 0 and time.monotonic() >= deadline:
             break
         attempt += 1
-        payload: dict[str, Any] = {
-            "problem_id": problem_id,
-            "stmt": stmt,
-            "original_stmt": original_stmt,
-            "derived_theorems": [
+        prover_request = ProverRequestPacket(
+            problem_id=problem_id,
+            stmt=stmt,
+            original_stmt=original_stmt,
+            derived_theorems=[
                 {
                     "name": str(entry.get("name", "")).strip(),
                     "statement": str(entry.get("statement", "")).strip(),
@@ -1926,20 +2008,21 @@ def query_prover_with_retries(
                 for entry in derived_theorems
                 if str(entry.get("name", "")).strip() and str(entry.get("statement", "")).strip()
             ],
-            "theory_context": theory_context,
-            "same_problem_history_tail": same_problem_history_tail,
-            "retry_round": attempt - 1,
-        }
-        if attempt > 1:
-            payload["retry_instruction"] = (
+            theory_context=theory_context,
+            same_problem_history_tail=same_problem_history_tail,
+            retry_round=attempt - 1,
+            retry_instruction=(
                 "Previous attempt returned stuck. Try a different angle. "
                 "If you still cannot prove or refute, return at least one concrete "
                 "counterexample candidate in counterexample_text."
             )
-            payload["previous_result"] = last_result
-            payload["previous_proof_sketch"] = last_proof_sketch
-            payload["previous_counterexample_text"] = last_counterexample_text
-            payload["previous_new_problems"] = last_new_problems
+            if attempt > 1
+            else "",
+            previous_result=last_response.result,
+            previous_proof_sketch=last_response.proof_sketch,
+            previous_counterexample_text=last_response.counterexample_text,
+            previous_new_problems=list(last_response.new_problems),
+        )
 
         try:
             debug_log(f"Calling prover for problem {problem_id}, attempt {attempt}")
@@ -1949,7 +2032,7 @@ def query_prover_with_retries(
                 settings=worker_settings,
                 task_type="prover",
                 system_prompt=prover_prompt,
-                payload=payload,
+                payload=prover_request.to_payload(),
                 metadata={"problem_id": problem_id, "attempt": attempt},
             )
             last_worker_meta = worker_meta
@@ -1994,7 +2077,9 @@ def query_prover_with_retries(
                 )
                 return "stuck", timeout_sketch, "", timeout_subgoals, attempt, last_worker_meta
             raise
-        result, proof_sketch, counterexample_text, new_problems = validate_prover_output(prover_payload, problem_id)
+        prover_response = validate_prover_output(prover_payload, problem_id).with_attempt(attempt)
+        prover_response = prover_response.with_worker_meta(last_worker_meta)
+        result, proof_sketch, counterexample_text, new_problems = prover_response.as_tuple()[:4]
         append_phase_attempt_record(
             phase_attempts_path,
             run_id=run_id,
@@ -2010,10 +2095,7 @@ def query_prover_with_retries(
             result=result,
         )
 
-        last_result = result
-        last_proof_sketch = proof_sketch
-        last_counterexample_text = counterexample_text
-        last_new_problems = new_problems
+        last_response = prover_response
 
         if result != "stuck":
             return result, proof_sketch, counterexample_text, new_problems, attempt, last_worker_meta
@@ -2033,10 +2115,10 @@ def query_prover_with_retries(
             break
 
     return (
-        last_result,
-        last_proof_sketch,
-        last_counterexample_text,
-        last_new_problems,
+        last_response.result,
+        last_response.proof_sketch,
+        last_response.counterexample_text,
+        list(last_response.new_problems),
         attempt,
         last_worker_meta,
     )
@@ -2056,22 +2138,22 @@ def request_initial_formalization(
     current_iteration_full_logs: list[dict[str, Any]],
     same_problem_history_tail: list[dict[str, Any]],
 ) -> tuple[str, str, str, str, str]:
-    formalize_payload: dict[str, Any] = {
-        "problem_id": problem_id,
-        "stmt": stmt,
-        "result": result,
-        "proof_sketch": proof_sketch,
-        "counterexample_text": counterexample_text,
-        "theory_context": theory_context,
-        "open_problems": open_rows,
-        "same_problem_history_tail": same_problem_history_tail,
-        "mathlib_allowed": True,
-    }
+    formalizer_request = FormalizerRequestPacket(
+        problem_id=problem_id,
+        stmt=stmt,
+        result=result,
+        proof_sketch=proof_sketch,
+        counterexample_text=counterexample_text,
+        theory_context=theory_context,
+        open_rows=open_rows,
+        same_problem_history_tail=same_problem_history_tail,
+        mathlib_allowed=True,
+    )
     formalized, formalize_worker_meta = invoke_worker_json(
         settings=formalize_worker_settings,
         task_type="formalize",
         system_prompt=formalizer_prompt,
-        payload=formalize_payload,
+        payload=formalizer_request.to_payload(),
         metadata={"problem_id": problem_id},
     )
     append_current_iteration_log(
@@ -2080,7 +2162,8 @@ def request_initial_formalization(
         index=1,
         worker_meta=formalize_worker_meta,
     )
-    return validate_formalizer_output(formalized, problem_id)
+    formalizer_response = validate_formalizer_output(formalized, problem_id)
+    return formalizer_response.as_tuple()
 
 
 def request_prover_statement_formalization(
@@ -2104,40 +2187,30 @@ def request_prover_statement_formalization(
     lean_diagnostics: str = "",
     repair_history_tail: list[dict[str, Any]] | None = None,
 ) -> tuple[str, str, str, str, str, str, dict[str, Any]]:
-    statement_payload: dict[str, Any] = {
-        "problem_id": problem_id,
-        "stmt": stmt,
-        "theory_context": theory_context,
-        "open_problems": open_rows,
-        "repair_round": repair_round,
-    }
-    if retry_instruction:
-        statement_payload["retry_instruction"] = retry_instruction
-    if previous_statement_prelude_code:
-        statement_payload["previous_statement_prelude_code"] = previous_statement_prelude_code
-    if previous_lean_statement:
-        statement_payload["previous_lean_statement"] = previous_lean_statement
-    if previous_theorem_name_stem:
-        statement_payload["previous_theorem_name_stem"] = previous_theorem_name_stem
-    if previous_docstring_summary:
-        statement_payload["previous_docstring_summary"] = previous_docstring_summary
-    if previous_notes:
-        statement_payload["previous_notes"] = previous_notes
-    if lean_error_excerpt:
-        statement_payload["lean_error_excerpt"] = lean_error_excerpt
-    if lean_error_top_lines:
-        statement_payload["lean_error_top_lines"] = list(lean_error_top_lines)
-    if lean_diagnostics:
-        statement_payload["lean_diagnostics"] = lean_diagnostics
-    if repair_history_tail:
-        statement_payload["repair_history_tail"] = list(repair_history_tail)
-    formalized, worker_meta = invoke_worker_json(
-        settings=worker_settings,
-        task_type="prover_statement",
-        system_prompt=prover_statement_prompt,
-        payload=statement_payload,
-        metadata={"problem_id": problem_id},
+    statement_payload = SolverStatementRequestPacket(
+        problem_id=problem_id,
+        stmt=stmt,
+        theory_context=theory_context,
+        open_rows=open_rows,
+        repair_round=repair_round,
+        retry_instruction=retry_instruction,
+        previous_statement_prelude_code=previous_statement_prelude_code,
+        previous_lean_statement=previous_lean_statement,
+        previous_theorem_name_stem=previous_theorem_name_stem,
+        previous_docstring_summary=previous_docstring_summary,
+        previous_notes=previous_notes,
+        lean_error_excerpt=lean_error_excerpt,
+        lean_error_top_lines=lean_error_top_lines or [],
+        lean_diagnostics=lean_diagnostics,
+        repair_history_tail=repair_history_tail or [],
     )
+    formalized, worker_meta = invoke_worker_json(
+            settings=worker_settings,
+            task_type="prover_statement",
+            system_prompt=prover_statement_prompt,
+            payload=statement_payload.to_payload(),
+            metadata={"problem_id": problem_id},
+        )
     append_current_iteration_log(
         current_iteration_full_logs,
         stage="prover_statement",
@@ -2340,7 +2413,11 @@ def resolve_solver_statement(
         lean_stderr = str(verify_result.get("stderr", "")).strip()
         lean_stdout = str(verify_result.get("stdout", "")).strip()
         lean_excerpt = (lean_stderr or lean_stdout).splitlines()[0] if (lean_stderr or lean_stdout) else "Lean statement validation failed"
-        error_analysis = analyze_lean_failure(lean_stderr, lean_stdout)
+        error_analysis = analyze_lean_failure(
+            lean_stderr,
+            lean_stdout,
+            verify_result=verify_result,
+        )
         error_fingerprint = str(error_analysis.get("fingerprint", "no_diagnostics"))
         failure_signature = f"{normalize_stmt_text(formalized_stmt)} || {error_fingerprint}"
         last_failure_signature, same_failure_streak = update_same_fingerprint_streak(
@@ -2920,6 +2997,7 @@ def attempt_formalization_until_timeout(
             verify_error_analysis = analyze_lean_failure(
                 verify_stderr_text,
                 verify_stdout_text,
+                verify_result=verify_result,
             )
             append_phase_attempt_record(
                 phase_attempts_path,
@@ -3089,34 +3167,26 @@ def attempt_formalization_until_timeout(
                 repair_round=repair_round,
                 error_fingerprint=error_fingerprint,
             )
-        repair_payload: dict[str, Any] = {
-            "problem_id": problem_id,
-            "stmt": current_stmt,
-            "theory_context": theory_context,
-            "new_problem_generation_policy": {
-                "prefer_subgoals_when_stuck": True,
-                "avoid_generalization_when_stuck": True,
-                "prefer_intermediate_lemmas": True,
-                "avoid_direct_axiom_instantiation": True,
-                "avoid_variable_renaming_only": True,
-                "target_novelty": "medium_or_high",
-            },
-            "retry_instruction": retry_instruction,
-            "error_fingerprint": error_fingerprint,
-            "error_categories": error_categories,
-            "previous_result": result,
-            "previous_proof_sketch": proof_sketch,
-            "previous_prelude_code": prelude_code,
-            "previous_proof_text": proof_text,
-            "previous_counterexample_text": counterexample_text,
-            "previous_new_problems": new_problems,
-            "repair_history_tail": repair_history[-8:],
-            "lean_error_excerpt": verify_error_excerpt,
-            "lean_error_top_lines": lean_error_top_lines,
-            "lean_diagnostics": "\n".join(lean_diagnostics.splitlines()[:60]),
-            "current_scratch_code": scratch_code or "",
-            "mathlib_import_in_scratch": True,
-        }
+        repair_request = RepairRequestPacket(
+            problem_id=problem_id,
+            stmt=current_stmt,
+            theory_context=theory_context,
+            retry_instruction=retry_instruction,
+            error_fingerprint=error_fingerprint,
+            error_categories=error_categories,
+            previous_result=result,
+            previous_proof_sketch=proof_sketch,
+            previous_prelude_code=prelude_code,
+            previous_proof_text=proof_text,
+            previous_counterexample_text=counterexample_text,
+            previous_new_problems=list(new_problems),
+            repair_history_tail=repair_history[-8:],
+            lean_error_excerpt=verify_error_excerpt,
+            lean_error_top_lines=lean_error_top_lines,
+            lean_diagnostics="\n".join(lean_diagnostics.splitlines()[:60]),
+            current_scratch_code=scratch_code or "",
+            mathlib_import_in_scratch=True,
+        )
         current_repair_prompt = select_formalizer_prompt(repair_prompts, result=result)
 
         try:
@@ -3126,7 +3196,7 @@ def attempt_formalization_until_timeout(
                 settings=repair_worker_settings,
                 task_type="repair",
                 system_prompt=current_repair_prompt,
-                payload=repair_payload,
+                payload=repair_request.to_payload(),
                 metadata={"problem_id": problem_id, "repair_round": repair_round},
             )
             append_current_iteration_log(
@@ -3184,7 +3254,10 @@ def attempt_formalization_until_timeout(
             result="ok",
         )
         try:
-            result, proof_sketch, prelude_code, proof_text, counterexample_text = validate_formalizer_output(repaired, problem_id)
+            result, proof_sketch, prelude_code, proof_text, counterexample_text = validate_formalizer_output(
+                repaired,
+                problem_id,
+            ).as_tuple()
         except ValueError as exc:
             verify_error_excerpt = f"repair output invalid: {exc}"
             continue
@@ -4747,13 +4820,18 @@ def next_main_theorem_trigger_count(current_count: int, interval: int) -> int | 
     return ((current_count // interval) + 1) * interval
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser(description="Run the minimal prototype loop.")
-    worker_timeout_help = "Per worker subprocess timeout in seconds."
-    verify_timeout_help = "Per Lean verification timeout in seconds."
-    retry_budget_help = "Whole retry-loop budget in seconds."
-    parser.add_argument("--initialize-on-start", action=argparse.BooleanOptionalAction, default=True)
-    parser.add_argument("--phase-logs", action=argparse.BooleanOptionalAction, default=True)
+def _add_initialize_phase_flags(parser: argparse.ArgumentParser, *, default: bool | None) -> None:
+    parser.add_argument("--initialize-on-start", action=argparse.BooleanOptionalAction, default=default)
+    parser.add_argument("--phase-logs", action=argparse.BooleanOptionalAction, default=default)
+
+
+def _add_loop_tuning_flags(
+    parser: argparse.ArgumentParser,
+    *,
+    worker_timeout_help: str,
+    verify_timeout_help: str,
+    retry_budget_help: str,
+) -> None:
     parser.add_argument("--max-iterations", type=int)
     parser.add_argument("--worker-command")
     parser.add_argument("--worker-timeout", type=int, help=worker_timeout_help)
@@ -4779,6 +4857,20 @@ def main() -> None:
         help=retry_budget_help,
     )
     parser.add_argument("--priority-refresh-theorem-interval", type=int, default=5)
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Run the minimal prototype loop.")
+    worker_timeout_help = "Per worker subprocess timeout in seconds."
+    verify_timeout_help = "Per Lean verification timeout in seconds."
+    retry_budget_help = "Whole retry-loop budget in seconds."
+    _add_initialize_phase_flags(parser, default=True)
+    _add_loop_tuning_flags(
+        parser,
+        worker_timeout_help=worker_timeout_help,
+        verify_timeout_help=verify_timeout_help,
+        retry_budget_help=retry_budget_help,
+    )
     args = parser.parse_args()
     if args.max_iterations is not None and args.max_iterations < 0:
         raise ValueError("--max-iterations must be >= 0")

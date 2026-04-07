@@ -32,6 +32,7 @@ This file explains which parts of the repository users are expected to edit and 
 | Path | Main owner | Manual edits | Purpose |
 | --- | --- | --- | --- |
 | `scripts/` | Shared | Advanced only | Orchestration, worker wrappers, verification, and state updates |
+| `scripts/lean_verify.py` | Advanced | Usually do not edit directly | Verification execution entrypoint; set `ATC_PROOF_EXECUTOR` instead of editing code for custom checkers |
 | `Makefile` | Shared | Allowed | Thin wrapper around the CLI |
 | `tests/` | Shared | Allowed | Smoke tests and repo-level checks |
 | `README.md` | Shared | Allowed | User-facing entry point |
