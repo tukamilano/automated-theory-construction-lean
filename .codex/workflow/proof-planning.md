@@ -31,6 +31,7 @@ This guide covers two scenarios:
 8. Always write multiplication `*` explicitly.
 9. Avoid chained inequalities; split with `∧` if needed.
 10. In replanning, preserve proven parts and split stuck goals into smaller `have`s.
+11. Prefer notation-first style when writing seeds, expansions, and claims.
 
 ## Part 1: Initial Planning
 

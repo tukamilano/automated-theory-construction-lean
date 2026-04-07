@@ -59,6 +59,7 @@ Verification path:
 - Prefer `simp only [...]` over broad `simp [*]` in fragile goals.
 - Keep imports minimal; `import Mathlib` is allowed when needed.
 - Use explicit `*` and `^` notation.
+- Prefer notation-first style for seeds, expansions, and claims when using abbreviations.
 
 ## Mathlib usage
 
