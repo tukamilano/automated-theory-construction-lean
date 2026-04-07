@@ -1,1 +1,40 @@
-{}
+{
+  "op_000001": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∀ (box reft : Prop → Prop), (∀ P Q : Prop, (P → Q) → box P → box Q) → (∀ P Q : Prop, (P → Q) → reft Q → reft P) → reft False → (∀ P Q : Prop, (P → box Q) → (P → reft Q) → (P → reft True)) → (∀ P : Prop, reft P → box (reft P)) → (∃ P : Prop, P ↔ reft P) → ¬¬ reft True",
+      "formalized_statement": "∀ (box reft : Prop → Prop), (∀ P Q : Prop, (P → Q) → box P → box Q) → (∀ P Q : Prop, (P → Q) → reft Q → reft P) → reft False → (∀ P Q : Prop, (P → box Q) → (P → reft Q) → (P → reft True)) → (∀ P : Prop, reft P → box (reft P)) → (∃ P : Prop, P ↔ reft P) → ¬¬ reft True",
+      "statement_formalization_notes": "Direct transcription of the given statement using standard Prop connectives and quantifiers.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": false,
+      "proof_sketch": "Pick a fixed point P ↔ reft P. From P derive box P via reft P and box-monotonicity. Use the bridge axiom to get P → reft True. Show ¬¬P by contradicting ¬P using reft False and contravariance, then conclude ¬¬ reft True by reducing ¬ reft True to ¬P.",
+      "prelude_code": "",
+      "proof_text": "intro box reft hbox hcontra hRF hbridge hboxreft hex\nrcases hex with ⟨P, hP⟩\nhave hPmp : P → reft P := fun p => hP.mp p\nhave hPmpr : reft P → P := fun rp => hP.mpr rp\nhave hPb : P → box P := by\n  intro p\n  have rp : reft P := hPmp p\n  have bRP : box (reft P) := hboxreft P rp\n  exact hbox (reft P) P hPmpr bRP\nhave hPT : P → reft True := hbridge P P hPb hPmp\nhave nnP : ¬¬ P := by\n  intro nP\n  have rp : reft P := (hcontra P False nP) hRF\n  exact nP (hPmpr rp)\nintro nRT\nhave nP : ¬ P := fun p => nRT (hPT p)\nexact nnP nP",
+      "counterexample_text": "",
+      "lean_error_excerpt": "Lean verification failed",
+      "lean_error_fingerprint": "no_diagnostics",
+      "new_problems": []
+    },
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "Use the fixed point ⟨P, P ↔ reft P⟩. From P get reft P, then box (reft P), and by box-monotonicity obtain box P. Plugging (P→box P) and (P→reft P) into the bridge axiom yields P→reft True. Show ¬¬P by assuming ¬P, using contravariance with (P→False) and reft False to derive reft P, hence P, contradiction. Finally assume ¬ reft True to get ¬P from P→reft True, contradict ¬¬P.",
+      "prelude_code": "",
+      "proof_text": "intro box reft hbox hcontra hRF hbridge hboxreft hex\ncases hex with\n| intro P hP =>\n  have hPmp : P → reft P := fun p => hP.mp p\n  have hPmpr : reft P → P := fun rp => hP.mpr rp\n  have hPb : P → box P := by\n    intro p\n    have rp : reft P := hPmp p\n    have bRP : box (reft P) := hboxreft P rp\n    exact hbox (reft P) P hPmpr bRP\n  have hPT : P → reft True := hbridge P P hPb hPmp\n  have nnP : ¬¬ P := by\n    intro nP\n    have rp : reft P := (hcontra P False nP) hRF\n    exact nP (hPmpr rp)\n  intro nRT\n  have nP : ¬ P := fun p => nRT (hPT p)\n  exact nnP nP",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "no_diagnostics",
+      "new_problems": []
+    }
+  ]
+}

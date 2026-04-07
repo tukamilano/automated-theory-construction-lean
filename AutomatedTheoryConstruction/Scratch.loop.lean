@@ -1,15 +1,11 @@
 import Mathlib
 import AutomatedTheoryConstruction.Theory
+import AutomatedTheoryConstruction.Derived
 
 set_option autoImplicit false
 
 namespace AutomatedTheoryConstruction
 
--- Verified theorems are appended here by scripts/append_derived.py.
--- Keep any short theorem docstrings/comments here instead of a separate metadata index.
-
-
-/-- A refutability fixed point and transfer axioms imply double negation of reft True. -/
 theorem thm_fixedpoint_implies_nn_reft_true_000001 : ∀ (box reft : Prop → Prop), (∀ P Q : Prop, (P → Q) → box P → box Q) → (∀ P Q : Prop, (P → Q) → reft Q → reft P) → reft False → (∀ P Q : Prop, (P → box Q) → (P → reft Q) → (P → reft True)) → (∀ P : Prop, reft P → box (reft P)) → (∃ P : Prop, P ↔ reft P) → ¬¬ reft True := by
   intro box reft hbox hcontra hRF hbridge hboxreft hex
   cases hex with
