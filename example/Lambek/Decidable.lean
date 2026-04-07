@@ -1,3 +1,7 @@
+local prefix:65 "☉" => Tp.atom
+local infixr:60 " ⧹ " => Tp.ldiv
+local infixl:60 " ⧸ " => Tp.rdiv
+
 import Mathlib.Data.Bool.Basic
 import example.Lambek.Basic
 
@@ -59,7 +63,7 @@ def candidates (Γ : List Tp) : List Cand :=
         (splits R).map (fun (Δ, Λ) => .rdiv L B A Δ Λ)
     | A ⧹ B =>
         (splits L).map (fun (Γ, Δ) => .ldiv Γ Δ A B R)
-    | # _ => [])
+    | ☉ _ => [])
 
 @[grind =>]
 lemma candidates_list_degree (h : c ∈ candidates Γ) :
@@ -110,9 +114,9 @@ def prove1 (Γ : List Tp) (A : Tp) : Bool :=
     (candidates Γ).attach.any (fun ⟨c, _hc⟩ =>
       match c with
       | .rdiv L B A' Δ Λ =>
-        prove1 Δ A' && prove1 (L ++ [B] ++ Λ) (# s)
+        prove1 Δ A' && prove1 (L ++ [B] ++ Λ) (☉ s)
       | .ldiv Λ Δ A' B R =>
-        prove1 Δ A' && prove1 (Λ ++ [B] ++ R) (# s))
+        prove1 Δ A' && prove1 (Λ ++ [B] ++ R) (☉ s))
   | Tp.ldiv A' B =>
     Γ ≠ [] && prove1 ([A'] ++ Γ) B
   | Tp.rdiv B A' =>
@@ -133,10 +137,10 @@ def proveAux : Nat → List Tp → Tp → Bool
           match c with
           | .rdiv L B A' Δ Λ =>
               proveAux n Δ A' &&
-              proveAux n (L ++ [B] ++ Λ) (# s)
+              proveAux n (L ++ [B] ++ Λ) (☉ s)
           | .ldiv Γ₁ Δ A' B R =>
               proveAux n Δ A' &&
-              proveAux n (Γ₁ ++ [B] ++ R) (# s))
+              proveAux n (Γ₁ ++ [B] ++ R) (☉ s))
     | Tp.ldiv A' B =>
         (Γ ≠ []) && proveAux n ([A'] ++ Γ) B
     | Tp.rdiv B A' =>
@@ -196,12 +200,12 @@ lemma proveAux_complete (h : prove1 Γ A) : prove2 Γ A := by
         constructor
         · have h_le :
             list_degree Δ + tp_degree A' + 1 ≤
-              list_degree Γ + tp_degree (# s) := by
+              list_degree Γ + tp_degree (☉ s) := by
             grind
           exact proveAux_mono_le h_le (by grind)
         · have h_le :
-            list_degree (L ++ [B] ++ Λ) + tp_degree (# s) + 1 ≤
-              list_degree Γ + tp_degree (# s) := by
+            list_degree (L ++ [B] ++ Λ) + tp_degree (☉ s) + 1 ≤
+              list_degree Γ + tp_degree (☉ s) := by
             grind
           exact proveAux_mono_le h_le (by grind)
       | ldiv Γ₁ Δ A' B R =>
@@ -209,12 +213,12 @@ lemma proveAux_complete (h : prove1 Γ A) : prove2 Γ A := by
         constructor
         · have h_le :
             list_degree Δ + tp_degree A' + 1 ≤
-              list_degree Γ + tp_degree (# s) := by
+              list_degree Γ + tp_degree (☉ s) := by
             grind
           exact proveAux_mono_le h_le (by grind)
         · have h_le :
-            list_degree (Γ₁ ++ [B] ++ R) + tp_degree (# s) + 1 ≤
-              list_degree Γ + tp_degree (# s) := by
+            list_degree (Γ₁ ++ [B] ++ R) + tp_degree (☉ s) + 1 ≤
+              list_degree Γ + tp_degree (☉ s) := by
             grind
           exact proveAux_mono_le h_le (by grind)
   case case2 Γ A' B h_rec =>

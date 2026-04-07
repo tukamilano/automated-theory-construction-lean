@@ -9,11 +9,11 @@ inductive Tp where
   | rdiv (B A : String)  : Tp
   deriving Repr, DecidableEq
 
-prefix:65 "#" => Tp.atom
+local prefix:65 "☉" => Tp.atom
 
-infixr:60 " ⧹ " => Tp.ldiv
+local infixr:60 " ⧹ " => Tp.ldiv
 
-infixl:60 " ⧸ " => Tp.rdiv
+local infixl:60 " ⧸ " => Tp.rdiv
 
 @[grind =]
 def tp_degree : Tp → Nat

@@ -10,9 +10,9 @@ inductive Tp where
   | rdiv (A B : Tp)      : Tp
   deriving Repr, DecidableEq
 
-prefix:65 "#" => Tp.atom
-infixr:60 " ⧹ " => Tp.ldiv
-infixl:60 " ⧸ " => Tp.rdiv
+local prefix:65 "☉" => Tp.atom
+local infixr:60 " ⧹ " => Tp.ldiv
+local infixl:60 " ⧸ " => Tp.rdiv
 
 @[grind intro]
 inductive Sequent : List Tp → Tp → Prop where
@@ -38,7 +38,7 @@ infixl:50 " ⇒ " => Sequent
 
 @[grind =]
 def tp_degree : Tp → Nat
-  | # _     => 1
+  | ☉ _     => 1
   | A ⧹ B   => tp_degree A + tp_degree B + 1
   | A ⧸ B   => tp_degree A + tp_degree B + 1
 

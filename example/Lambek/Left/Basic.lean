@@ -8,9 +8,9 @@ inductive Tp where
   | ldiv (A B : Tp) : Tp
   deriving Repr, DecidableEq
 
-prefix:65 "#" => Tp.atom
+local prefix:65 "☉" => Tp.atom
 
-infixr:60 " ⧹ " => Tp.ldiv
+local infixr:60 " ⧹ " => Tp.ldiv
 
 def Tp.toProductFree : Tp → _root_.Mathling.Lambek.ProductFree.Tp
   | .atom name => _root_.Mathling.Lambek.ProductFree.Tp.atom name
