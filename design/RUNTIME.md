@@ -43,12 +43,12 @@ Open problems may be either Lean-formal statements or semi-formal research promp
 - `scripts/lean_verify.py`: Lean verification wrapper
 - `scripts/state_update.py`: deterministic JSONL state transitions
 - `scripts/append_derived.py`: append verified theorems to `Derived.lean`
+- `AutomatedTheoryConstruction/research_agenda.md`: user-edited external value guidance for what kinds of problems are worth generating
 - `prompts/formalize/prover_statement_formalizer.md`: statement-formalization prompt
 - `prompts/prover/prover_simple.md`: prover prompt
 - `prompts/formalize/*`: formalize and repair prompts
 - `prompts/expander/*`: expansion prompts
 - `AutomatedTheoryConstruction/seeds.jsonl`: currently active seed queue
-- `materials/*`: optional papers, notes, and context files for seed generation
 - `example/*`: reference examples not wired into `run_loop.py`
 
 ## Seed Generation Only
@@ -61,10 +61,10 @@ uv run python scripts/generate_seeds_from_theory.py \
   --seed-count 4
 ```
 
+- `AutomatedTheoryConstruction/research_agenda.md` is read automatically and acts as persistent external value guidance.
 - Repeat `--context-file` to provide multiple files.
 - The output path defaults to `AutomatedTheoryConstruction/seeds.jsonl`.
 - Seed generation reads the `Theory.lean` entry file together with its repo-local imported theory modules, so splitting the theory under `AutomatedTheoryConstruction/Theory/` is supported.
-- `materials/` is just a convenient place to keep these materials in the repo; any file path works.
 - By default, this command first resets the active runtime state, clears archived/solved/counterexample state, resets `Scratch.lean` and `Derived.lean`, rebuilds the stable Lean targets, and then generates fresh seeds against that reset state.
 - As part of that reset, the previous `AutomatedTheoryConstruction/seeds.jsonl` is removed before new seeds are generated.
 - After seed generation finishes, the new `AutomatedTheoryConstruction/seeds.jsonl` is copied into `data/open_problems.jsonl`.
@@ -84,6 +84,7 @@ uv run python scripts/run_pipeline.py \
 ```
 
 - Repeat `--article-file` when you want multiple context files.
+- `AutomatedTheoryConstruction/research_agenda.md` is also read automatically during seed generation and later priority refresh / expansion steps.
 - `--dry-run` prints the underlying commands without executing them.
 - The wrapper uses the fixed active runtime files: `AutomatedTheoryConstruction/Theory.lean`, `AutomatedTheoryConstruction/seeds.jsonl`, and `AutomatedTheoryConstruction/Derived.lean`.
 - `AutomatedTheoryConstruction/Theory.lean` may in turn import local theory files under `AutomatedTheoryConstruction/Theory/`.
@@ -313,7 +314,7 @@ You can also override the same settings through CLI flags such as:
 
 Open problem priorities are refreshed by a dedicated worker prompt whenever unevaluated `unknown` problems exist, and otherwise after `Derived.lean` has gained enough new theorems during the current run, by default every `5` additional verified theorems. Priorities are refreshed across the full tracked problem set: the active `open` queue plus `archived` problems kept only for priority context.
 
-The same refresh step also updates a lightweight global theory view. The worker summarizes the current theory, revises the previous summary when needed, and chooses one coarse `next_direction`. This direction is a strong preference for future seed generation and follow-up problem generation, but not a hard constraint.
+The same refresh step also updates a lightweight global theory view. The worker summarizes the current theory, revises the previous summary when needed, and chooses one coarse `next_direction`. This direction is a strong preference for future seed generation and follow-up problem generation, but not a hard constraint. External value guidance lives in `AutomatedTheoryConstruction/research_agenda.md`; it is passed to seed generation, prioritization, and expansion, and a compact summary of the current agenda is also recorded in `data/theory_state.json` so later stages can see which external priorities shaped the current theory view.
 
 `data/open_problems.jsonl` stores only the active solver queue. Any tracked problem whose priority is `low`, or whose `failure_count` has reached the failure threshold, by default `2`, is moved to `data/archived_problems.jsonl`. Archived problems are not solver-eligible, but they remain visible during future priority refreshes so the worker can judge new and active problems against older low-value or repeatedly failed statements.
 
@@ -329,7 +330,7 @@ The loop stores its state in `data/`:
 - `data/theory_state.json`
 
 `data/formalization_memory.json` stores same-problem history across statement formalization, formalization, and repair attempts.
-`data/theory_state.json` stores the latest global theory summary and one coarse `next_direction`.
+`data/theory_state.json` stores the latest global theory summary, one coarse `next_direction`, and a compact summary of the current `AutomatedTheoryConstruction/research_agenda.md`.
 
 ## Lean Module Contract
 

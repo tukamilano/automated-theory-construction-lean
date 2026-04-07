@@ -8,7 +8,7 @@ This file explains which parts of the repository users are expected to edit and 
 | --- | --- | --- | --- |
 | `AutomatedTheoryConstruction/Theory.lean` | User | Recommended | Public entry point for the active theory |
 | `AutomatedTheoryConstruction/Theory/*.lean` | User | Recommended | Supporting definitions and lemmas imported by `Theory.lean` |
-| `materials/` | User | Recommended | Seed-generation reference materials such as PDF or Markdown files |
+| `AutomatedTheoryConstruction/research_agenda.md` | User | Recommended | Persistent value guidance for what kinds of problems the system should prefer |
 | `AutomatedTheoryConstruction/seeds.jsonl` | User / AI | Allowed | Initial open problems; may be user-provided or regenerated |
 | `prompts/*.md` | User | Allowed | Worker prompt behavior and output guidance |
 | `atc.json` | User | Allowed | Runtime configuration |
@@ -24,7 +24,7 @@ This file explains which parts of the repository users are expected to edit and 
 | `data/solved_problems.jsonl` | AI | Not recommended | Solved problem log |
 | `data/counterexamples.jsonl` | AI | Not recommended | Counterexample log |
 | `data/formalization_memory.json` | AI | Not recommended | Retry/history memory |
-| `data/theory_state.json` | AI | Not recommended | Latest global theory summary and current next-direction bias |
+| `data/theory_state.json` | AI | Not recommended | Latest global theory summary, current next-direction bias, and compact research-agenda summary |
 | `data/runs/` | AI | Do not edit | Run artifacts and logs |
 
 ## Shared Or Advanced
@@ -54,7 +54,7 @@ If you want to know where to start:
 
 1. Edit `AutomatedTheoryConstruction/Theory.lean`.
 2. Add local theory files under `AutomatedTheoryConstruction/Theory/` if needed.
-3. Put papers, notes, or drafts in `materials/`.
+3. Edit `AutomatedTheoryConstruction/research_agenda.md`.
 4. Run `make build` and then `make check-scratch`.
 
 If you are trying to customize the system rather than the theory:

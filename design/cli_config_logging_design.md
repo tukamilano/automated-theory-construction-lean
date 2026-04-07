@@ -148,7 +148,7 @@ Example:
 
 ```bash
 uv run python scripts/atc_cli.py seed \
-  --context-file materials/context.tex \
+  --context-file path/to/context.tex \
   --seed-count 4
 ```
 
@@ -177,7 +177,7 @@ Example:
 
 ```bash
 uv run python scripts/atc_cli.py pipeline \
-  --context-file materials/context.tex \
+  --context-file path/to/context.tex \
   --max-iterations 40
 ```
 

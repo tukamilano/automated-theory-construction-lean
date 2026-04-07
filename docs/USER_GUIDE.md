@@ -10,7 +10,7 @@ If you are new to this repository, begin with these paths:
 
 - `AutomatedTheoryConstruction/Theory.lean`
 - `AutomatedTheoryConstruction/Theory/*.lean`
-- `materials/`
+- `AutomatedTheoryConstruction/research_agenda.md`
 
 If you want the ownership map for generated files and advanced paths, see [`REPO_MAP.md`](REPO_MAP.md).
 
@@ -20,18 +20,19 @@ To switch from the bundled example to your own theory, edit:
 
 - `AutomatedTheoryConstruction/Theory.lean`
 - `AutomatedTheoryConstruction/Theory/*.lean` as needed for local theory submodules
+- `AutomatedTheoryConstruction/research_agenda.md` to define what kinds of problems are worth generating
 - `AutomatedTheoryConstruction/seeds.jsonl` if you want to provide your own initial problems
 
 `Theory.lean` remains the public entry point. If your theory grows beyond one file, keep the imports there and move detailed definitions or helper lemmas under `AutomatedTheoryConstruction/Theory/`.
 If you split your theory across multiple files under `AutomatedTheoryConstruction/Theory/`, add the corresponding `import` lines to `AutomatedTheoryConstruction/Theory.lean`.
 
-For seed-generation context, put notes, drafts, papers, or problem sketches under `materials/`.
-Any format is fine as long as the workflow can read it.
+`AutomatedTheoryConstruction/research_agenda.md` is the persistent external value function. Seed generation, open-problem prioritization, and problem expansion read it automatically.
+Optional extra reference files can still be passed ad hoc with `--context-file`.
 
 ## Quick Mental Model
 
 ```text
-[Theory.lean (+ optional Theory/*.lean)] + [materials/]
+[Theory.lean (+ optional Theory/*.lean)] + [AutomatedTheoryConstruction/research_agenda.md]
         ↓
 [scripts/generate_seeds_from_theory.py]
   generate initial open problems
@@ -116,7 +117,6 @@ Regenerate seeds from the current theory:
 
 ```bash
 uv run python scripts/atc_cli.py seed \
-  --context-file materials/example.md \
   --seed-count 4
 ```
 
@@ -136,7 +136,6 @@ Run the one-shot pipeline from seed generation through refactor:
 
 ```bash
 uv run python scripts/atc_cli.py pipeline \
-  --context-file materials/example.md \
   --max-iterations 40
 ```
 
@@ -154,9 +153,9 @@ uv run python scripts/atc_cli.py review
 Equivalent `Makefile` shortcuts remain available:
 
 ```bash
-make seed SEED_ARGS="--context-file materials/example.md --seed-count 4"
+make seed SEED_ARGS="--seed-count 4"
 make loop LOOP_ARGS="--max-iterations 40"
-make pipeline PIPELINE_ARGS="--context-file materials/example.md --max-iterations 40"
+make pipeline PIPELINE_ARGS="--max-iterations 40"
 make refactor
 make rewrite
 make review

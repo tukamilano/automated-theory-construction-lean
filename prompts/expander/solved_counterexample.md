@@ -11,6 +11,7 @@ Policy:
 - Do not output proof text or theorem names.
 - If `original_stmt` is present, use it as background context for phrasing and intent, while treating `stmt` as the exact formal target of the current attempt.
 - Keep candidates anchored to the active theory.
+- Use `research_agenda` as external value guidance when choosing among plausible structural lessons, but do not let it justify duplicate or mathematically weak candidates.
 - Read `current_iteration_full_logs` first and mine the current prover/formalize/repair attempts, current result, verification outcome, and same-problem history for natural follow-up problems.
 - Before returning any candidate, compare it against `open_problems`, `existing_new_problems`, relevant verified theorems in `theory_context`, and statements already present in `Derived.lean`; drop anything already present or a clear duplicate.
 

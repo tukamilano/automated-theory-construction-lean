@@ -18,6 +18,9 @@ from common import (
 from llm_exec import build_exec_command
 from llm_exec import resolve_provider
 from llm_exec import run_llm_exec
+from research_agenda import DEFAULT_RESEARCH_AGENDA_PATH
+from research_agenda import format_research_agenda_prompt_block
+from research_agenda import load_research_agenda
 from run_loop import (
     DERIVED_TEMPLATE,
     SCRATCH_TEMPLATE,
@@ -36,6 +39,7 @@ DEFAULT_DATA_DIR = Path("data")
 DEFAULT_SCRATCH = Path("AutomatedTheoryConstruction/Scratch.lean")
 DEFAULT_FORMALIZATION_MEMORY = Path("data/formalization_memory.json")
 DEFAULT_ARCHIVED = Path("data/archived_problems.jsonl")
+DEFAULT_RESEARCH_AGENDA = DEFAULT_REPO_ROOT / DEFAULT_RESEARCH_AGENDA_PATH
 
 
 def _preview_file_for(derived_file: Path) -> Path:
@@ -202,6 +206,7 @@ def build_prompt(
     seed_count: int,
     extra_instruction: str,
     theory_state: dict[str, Any] | None = None,
+    research_agenda: dict[str, Any] | None = None,
 ) -> str:
     if not theory_files:
         raise ValueError("theory_files must be non-empty")
@@ -222,25 +227,13 @@ def build_prompt(
     theory_summary_block = ""
     counterexample_block = ""
     next_direction_block = ""
+    research_agenda_block = format_research_agenda_prompt_block(research_agenda)
     state = dict(theory_state or {})
     theory_snapshot = str(state.get("theory_snapshot", "")).strip()
-    summary = state.get("theory_summary")
     direction = state.get("next_direction")
     important_counterexamples = state.get("important_verified_counterexamples", [])
     if theory_snapshot:
         theory_summary_block += f"- Current theory snapshot: {theory_snapshot}\n"
-    elif isinstance(summary, dict):
-        current_picture = str(summary.get("current_picture", "")).strip()
-        missing_pieces = summary.get("missing_pieces", [])
-        normalized_missing = [
-            str(item).strip()
-            for item in missing_pieces
-            if str(item).strip()
-        ] if isinstance(missing_pieces, list) else []
-        if current_picture:
-            theory_summary_block += f"- Current theory picture: {current_picture}\n"
-        if normalized_missing:
-            theory_summary_block += f"- Current missing pieces: {'; '.join(normalized_missing[:4])}\n"
     if isinstance(important_counterexamples, list):
         normalized_counterexamples = [str(item).strip() for item in important_counterexamples if str(item).strip()]
         if normalized_counterexamples:
@@ -284,7 +277,7 @@ Mathematical scope:
 - Reuse exact symbol names from the source files. Do not invent new definitions or predicates.
 - Quantify every extra variable or witness explicitly inside the proposition.
 - Keep assumptions minimal but sufficient.
-{theory_summary_block}{counterexample_block}{next_direction_block}
+{theory_summary_block}{counterexample_block}{next_direction_block}{research_agenda_block}
 
 Quality filter:
 {theory_files_rule}{derived_rule}- Do not propose a theorem that is already present in the read files up to cosmetic rewrites, alpha-renaming, trivial reassociation of binders, or other shallow reformulations.
@@ -460,6 +453,7 @@ def main() -> int:
     else:
         effective_derived = None
     effective_theory_state = load_theory_state((repo_root / DEFAULT_DATA_DIR).resolve())
+    effective_research_agenda = load_research_agenda(DEFAULT_RESEARCH_AGENDA)
 
     prompt = build_prompt(
         theory_files=theory_files,
@@ -468,6 +462,7 @@ def main() -> int:
         seed_count=args.seed_count,
         extra_instruction=args.extra_instruction,
         theory_state=effective_theory_state,
+        research_agenda=effective_research_agenda,
     )
     schema = build_output_schema(args.seed_count)
 

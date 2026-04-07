@@ -37,6 +37,9 @@ from common import (
 )
 from import_inference import infer_minimal_imports, render_import_block
 from lean_verify import verify_scratch
+from research_agenda import DEFAULT_RESEARCH_AGENDA_PATH
+from research_agenda import load_research_agenda
+from research_agenda import summarize_research_agenda_for_state
 from state_update import apply_state_update, enqueue_new_problems
 from theorem_reuse_memory import append_theorem_reuse_memory_entry
 from worker_client import invoke_worker_json, load_task_worker_settings, load_worker_settings
@@ -84,12 +87,17 @@ DEFAULT_PROVER_RETRY_BUDGET_SEC = 120
 DEFAULT_FORMALIZATION_RETRY_BUDGET_SEC = 300
 DEFAULT_MAIN_THEOREM_FORMALIZATION_RETRY_BUDGET_SEC = 3600
 DEFAULT_MAX_SAME_ERROR_STREAK = 5
+REPO_ROOT = Path(__file__).resolve().parent.parent
 
 
 def build_retry_deadline(budget_sec: int | None) -> float | None:
     if budget_sec is None:
         return None
     return time.monotonic() + max(1, budget_sec)
+
+
+def load_current_research_agenda() -> dict[str, Any]:
+    return load_research_agenda(REPO_ROOT / DEFAULT_RESEARCH_AGENDA_PATH)
 
 
 def remaining_retry_budget_sec(deadline: float | None) -> int | None:
@@ -355,6 +363,7 @@ def write_theory_state(
     theory_snapshot: str,
     next_direction: dict[str, Any],
     important_verified_counterexamples: list[str],
+    research_agenda_summary: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     existing_payload = load_theory_state(data_dir)
     payload = {
@@ -364,6 +373,7 @@ def write_theory_state(
         "theory_snapshot": theory_snapshot,
         "next_direction": next_direction,
         "important_verified_counterexamples": list(important_verified_counterexamples),
+        "research_agenda": dict(research_agenda_summary or {}),
         "summary_basis": {
             "derived_theorem_count": derived_theorem_count,
             "open_problem_count": open_problem_count,
@@ -414,6 +424,7 @@ def persist_derived_generation(
             "theory_snapshot": "",
             "next_direction": {},
             "important_verified_counterexamples": [],
+            "research_agenda": {},
             "summary_basis": {
                 "derived_theorem_count": 0,
                 "open_problem_count": 0,
@@ -1874,6 +1885,7 @@ def query_prover_with_retries(
     problem_id: str,
     stmt: str,
     original_stmt: str,
+    derived_theorems: list[dict[str, str]],
     open_rows: list[dict[str, Any]],
     prover_retry_budget_sec: int | None,
     theory_context: str,
@@ -1904,6 +1916,14 @@ def query_prover_with_retries(
             "problem_id": problem_id,
             "stmt": stmt,
             "original_stmt": original_stmt,
+            "derived_theorems": [
+                {
+                    "name": str(entry.get("name", "")).strip(),
+                    "statement": str(entry.get("statement", "")).strip(),
+                }
+                for entry in derived_theorems
+                if str(entry.get("name", "")).strip() and str(entry.get("statement", "")).strip()
+            ],
             "theory_context": theory_context,
             "same_problem_history_tail": same_problem_history_tail,
             "retry_round": attempt - 1,
@@ -2438,6 +2458,7 @@ def request_expand_candidates(
         "current_iteration_full_logs": list(current_iteration_full_logs),
         "same_problem_history_tail": same_problem_history_tail,
         "theory_state": dict(theory_state or {}),
+        "research_agenda": load_current_research_agenda(),
         "expand_generation_policy": {
             "prefer_subgoals_for_unsolved": True,
             "avoid_generalization_for_unsolved": True,
@@ -2573,6 +2594,7 @@ def request_open_problem_priorities(
             "low": "Cosmetic variant, shallow restatement, or currently low-utility statement given the present Derived.lean.",
         },
         "previous_theory_state": dict(previous_theory_state or {}),
+        "research_agenda": load_current_research_agenda(),
     }
     prioritized, worker_meta = invoke_worker_json(
         settings=worker_settings,
@@ -2610,6 +2632,7 @@ def force_refresh_open_problem_priorities(
     prioritizer_prompt = load_prompt_text(prioritizer_prompt_file)
     previous_theory_state = load_theory_state(data_dir)
     try:
+        current_research_agenda = load_current_research_agenda()
         (
             priority_updates,
             theory_snapshot,
@@ -2648,6 +2671,7 @@ def force_refresh_open_problem_priorities(
         theory_snapshot=theory_snapshot,
         next_direction=next_direction,
         important_verified_counterexamples=important_verified_counterexamples,
+        research_agenda_summary=summarize_research_agenda_for_state(current_research_agenda),
     )
     if theory_state_history_path is not None:
         append_theory_state_history(
@@ -3857,6 +3881,17 @@ def run_problem_session(
         derived_entries_snapshot,
         target_stmt,
     )
+    prover_derived_theorems = [
+        {
+            "name": str(entry.get("name", "")).strip(),
+            "statement": str(entry.get("statement", "")).strip(),
+        }
+        for entry in shortlist_relevant_derived_entries(
+            derived_entries_snapshot,
+            target_stmt,
+            max_entries=3,
+        )
+    ]
 
     prover_attempts_used = 1
     proof_sketch = ""
@@ -3878,6 +3913,7 @@ def run_problem_session(
             problem_id=problem_id,
             stmt=solver_stmt,
             original_stmt=original_stmt,
+            derived_theorems=prover_derived_theorems,
             open_rows=open_rows,
             prover_retry_budget_sec=args.prover_retry_budget_sec,
             theory_context=theory_context,

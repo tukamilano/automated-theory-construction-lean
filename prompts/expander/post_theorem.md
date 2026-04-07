@@ -13,6 +13,7 @@ Hard constraints:
 Priority policy:
 - Prefer direct structural consequences, converses, sharpenings, classification results, or natural corollaries that use the new theorem in a non-trivial way.
 - Favor statements that are likely to reshape current problem priorities in light of the new theorem.
+- Use `research_agenda` as external value guidance when choosing among plausible follow-up families, but do not let it justify weak or duplicate candidates.
 - Reject shallow one-line corollaries unless they unlock a genuinely different theorem family.
 - Compare against `open_problems` and visible `Derived.lean` statements; drop semantic duplicates.
 
