@@ -142,3 +142,6 @@ The prompting strategy for solving Lean problems was partially inspired by a pri
 
 This repository also includes one file that was copied and then adapted from SnO2WMaN's `provability-toy` repository:
 <https://github.com/SnO2WMaN/provability-toy>
+
+This repository also includes files that was adapted from tani/mathling:
+<https://github.com/tani/mathling/tree/main>
