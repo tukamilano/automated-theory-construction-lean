@@ -11,7 +11,6 @@
 - `proof_sketch` must be 3–8 sentences.
 - Treat `stmt` as the canonical target; do not replace or rewrite it.
 - `original_stmt`, if present, is background-only.
-- Always output `new_problems: []`.
 
 ## reuse_rules
 - Prefer theorems in `Derived.lean` and the provided `derived_theorems` list.
@@ -30,7 +29,6 @@
   "problem_id": "<match input>",
   "result": "proof|counterexample|stuck",
   "proof_sketch": "short reasoning",
-  "counterexample_text": "model intuition",
-  "new_problems": []
+  "counterexample_text": "model intuition"
 }
 ```

@@ -13,6 +13,7 @@ from common import (
     LEGACY_PRUNED_OPEN_PROBLEMS_FILENAME,
     dedupe_problem_rows_by_stmt,
     load_theory_context,
+    read_jsonl,
     write_jsonl_atomic,
 )
 from llm_exec import build_exec_command
@@ -207,6 +208,7 @@ def build_prompt(
     extra_instruction: str,
     theory_state: dict[str, Any] | None = None,
     research_agenda: dict[str, Any] | None = None,
+    recent_opportunities: list[dict[str, Any]] | None = None,
 ) -> str:
     if not theory_files:
         raise ValueError("theory_files must be non-empty")
@@ -227,11 +229,18 @@ def build_prompt(
     theory_summary_block = ""
     counterexample_block = ""
     next_direction_block = ""
+    theory_frontier_block = ""
+    opportunity_block = ""
     research_agenda_block = format_research_agenda_prompt_block(research_agenda)
     state = dict(theory_state or {})
     theory_snapshot = str(state.get("theory_snapshot", "")).strip()
     direction = state.get("next_direction")
     important_counterexamples = state.get("important_verified_counterexamples", [])
+    desired_summary_changes = state.get("desired_summary_changes", [])
+    current_bottlenecks = state.get("current_bottlenecks", [])
+    overexplored_patterns = state.get("overexplored_patterns", [])
+    missing_bridges = state.get("missing_bridges", [])
+    agenda_pressure = state.get("agenda_pressure", [])
     if theory_snapshot:
         theory_summary_block += f"- Current theory snapshot: {theory_snapshot}\n"
     if isinstance(important_counterexamples, list):
@@ -258,6 +267,60 @@ def build_prompt(
             next_direction_block += (
                 "- This direction is a strong preference, not a hard constraint. Keep some diversity and allow a small number of clearly stronger problems outside it.\n"
             )
+    if isinstance(desired_summary_changes, list):
+        normalized_summary_changes = [str(item).strip() for item in desired_summary_changes if str(item).strip()]
+        if normalized_summary_changes:
+            theory_frontier_block += (
+                "- Prefer problems whose resolution would change the theory summary in one of these ways: "
+                f"{'; '.join(normalized_summary_changes[:4])}\n"
+            )
+    if isinstance(current_bottlenecks, list):
+        normalized_bottlenecks = [str(item).strip() for item in current_bottlenecks if str(item).strip()]
+        if normalized_bottlenecks:
+            theory_frontier_block += (
+                "- Current bottlenecks to address: "
+                f"{'; '.join(normalized_bottlenecks[:4])}\n"
+            )
+    if isinstance(missing_bridges, list):
+        normalized_missing_bridges = [str(item).strip() for item in missing_bridges if str(item).strip()]
+        if normalized_missing_bridges:
+            theory_frontier_block += (
+                "- Missing bridges worth targeting: "
+                f"{'; '.join(normalized_missing_bridges[:4])}\n"
+            )
+    if isinstance(overexplored_patterns, list):
+        normalized_overexplored_patterns = [str(item).strip() for item in overexplored_patterns if str(item).strip()]
+        if normalized_overexplored_patterns:
+            theory_frontier_block += (
+                "- Strongly down-rank problems that fit these overexplored patterns unless they unlock a broader structural step: "
+                f"{'; '.join(normalized_overexplored_patterns[:4])}\n"
+            )
+    if isinstance(agenda_pressure, list):
+        normalized_agenda_pressure = [str(item).strip() for item in agenda_pressure if str(item).strip()]
+        if normalized_agenda_pressure:
+            theory_frontier_block += (
+                "- Additional progress pressure from the current theory state: "
+                f"{'; '.join(normalized_agenda_pressure[:4])}\n"
+            )
+    if isinstance(recent_opportunities, list):
+        rendered_opportunities: list[str] = []
+        for item in recent_opportunities:
+            if not isinstance(item, dict):
+                continue
+            opportunity = item.get("opportunity")
+            if not isinstance(opportunity, dict):
+                continue
+            statement = str(opportunity.get("statement", "")).strip()
+            kind = str(opportunity.get("kind", "")).strip()
+            unlocks = str(opportunity.get("unlocks", "")).strip()
+            if not statement or not kind or not unlocks:
+                continue
+            rendered_opportunities.append(f"{kind}: {statement} [unlocks: {unlocks}]")
+        if rendered_opportunities:
+            opportunity_block += (
+                "- Recent post-solve opportunities (signal only, not mandatory targets): "
+                f"{'; '.join(rendered_opportunities[:3])}\n"
+            )
 
     return f"""Read these files before generating seeds:
 {chr(10).join(read_lines)}
@@ -271,18 +334,21 @@ Task:
 - Each candidate must be one standalone Lean proposition string suitable for the `stmt` field in `seeds.jsonl`.
 
 Mathematical scope:
+- Treat `theory_state` and `research_agenda` as primary guidance for what counts as meaningful progress.
 - Prefer statements that materially sharpen or extend the visible theory: structural consequences, converses or separations, existence or uniqueness claims, impossibility claims, fixpoint consequences, or useful intermediate lemmas.
+- Prefer problems that would change the theory summary, address a bottleneck, or connect currently separate parts of the theory.
 - Do not default to immediate one-line corollaries or cosmetic rewrites of visible lemmas.
 - Use only objects, notation, classes, predicates, and constructions that already exist in the files above.
 - Reuse exact symbol names from the source files. Do not invent new definitions or predicates.
 - Quantify every extra variable or witness explicitly inside the proposition.
 - Keep assumptions minimal but sufficient.
-{theory_summary_block}{counterexample_block}{next_direction_block}{research_agenda_block}
+{theory_summary_block}{counterexample_block}{next_direction_block}{theory_frontier_block}{opportunity_block}{research_agenda_block}
 
 Quality filter:
 {theory_files_rule}{derived_rule}- Do not propose a theorem that is already present in the read files up to cosmetic rewrites, alpha-renaming, trivial reassociation of binders, or other shallow reformulations.
 - Do not propose propositions that are vacuous, purely definitional unfoldings, or trivial preorder facts.
 - Avoid seeds that differ only by notation changes, variable renaming, or tiny local rewrites.
+- Strongly avoid safe peripheral extensions that fit known overexplored patterns unless they are the clearest route to a broader organizing result.
 - Keep the seeds mathematically diverse when possible.
 - Make each proposition read like something that could be pasted directly into a theorem statement in Lean.
 {extra_block}
@@ -337,6 +403,20 @@ def validate_seed_payload(payload: dict[str, Any], seed_count: int) -> list[str]
     return seeds
 
 
+def build_batch_generator_rows(*, seeds: list[str], seed_src: str) -> list[dict[str, Any]]:
+    return [
+        {
+            "id": f"op_{index:06d}",
+            "stmt": stmt,
+            "src": seed_src,
+            "priority": "unknown",
+            "priority_rationale": "",
+            "failure_count": 0,
+        }
+        for index, stmt in enumerate(seeds, 1)
+    ]
+
+
 def run_llm(
     *,
     prompt: str,
@@ -380,7 +460,7 @@ def run_llm(
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Generate seeds.jsonl from a Theory.lean entry module using the configured LLM CLI."
+        description="Generate a batch of open-problem candidates from a Theory.lean entry module using the configured LLM CLI."
     )
     parser.add_argument("--theory-file", default=str(DEFAULT_THEORY))
     parser.add_argument("--derived-file", default=str(DEFAULT_DERIVED))
@@ -454,6 +534,7 @@ def main() -> int:
         effective_derived = None
     effective_theory_state = load_theory_state((repo_root / DEFAULT_DATA_DIR).resolve())
     effective_research_agenda = load_research_agenda(DEFAULT_RESEARCH_AGENDA)
+    recent_opportunities = read_jsonl((repo_root / DEFAULT_DATA_DIR / "post_solve_opportunities.jsonl").resolve())[-12:]
 
     prompt = build_prompt(
         theory_files=theory_files,
@@ -463,6 +544,7 @@ def main() -> int:
         extra_instruction=args.extra_instruction,
         theory_state=effective_theory_state,
         research_agenda=effective_research_agenda,
+        recent_opportunities=recent_opportunities,
     )
     schema = build_output_schema(args.seed_count)
 
@@ -491,24 +573,17 @@ def main() -> int:
     payload = _extract_json_object(raw_output)
     seeds = validate_seed_payload(payload, args.seed_count)
 
-    rows = [
-        {
-            "id": f"op_{index:06d}",
-            "stmt": stmt,
-            "src": args.seed_src,
-            "priority": "unknown",
-            "priority_rationale": "",
-            "failure_count": 0,
-        }
-        for index, stmt in enumerate(seeds, 1)
-    ]
+    rows = build_batch_generator_rows(
+        seeds=seeds,
+        seed_src=args.seed_src,
+    )
     write_jsonl_atomic(output_file, rows)
     if args.initialize_runtime_state:
         sync_open_problems_from_seed_rows(
             data_dir=(repo_root / DEFAULT_DATA_DIR).resolve(),
             rows=rows,
         )
-    sys.stdout.write(f"Wrote {len(rows)} seeds to {output_file}\n")
+    sys.stdout.write(f"Wrote {len(rows)} batch-generated problems to {output_file}\n")
     if args.initialize_runtime_state:
         sys.stdout.write("Reset runtime state before seed generation and loaded the regenerated seeds into open problems.\n")
     return 0

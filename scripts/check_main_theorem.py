@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import threading
 from pathlib import Path
 
 from common import load_theory_context
@@ -95,17 +96,30 @@ def main() -> None:
         repair_prompt_file="prompts/formalize/repair_proof.md",
         suggest_prompt_file="prompts/main_theorem/suggester.md",
         plan_prompt_file="prompts/main_theorem/planner.md",
-        post_expand_prompt_file="prompts/expander/post_theorem.md",
         prioritize_open_problems_worker_settings=prioritize_open_problems_worker_settings,
         prioritize_open_problems_prompt_file="prompts/prioritizer/open_problem_prioritizer.md",
+        theory_file=Path("AutomatedTheoryConstruction/Theory.lean"),
+        repo_root=Path(__file__).resolve().parent.parent,
+        batch_generator_seed_count=4,
+        batch_generator_open_target_min=2,
         current_iteration=0,
         skip_verify=args.skip_verify,
         verify_timeout_sec=verify_timeout_sec,
         formalization_retry_budget_sec=formalization_retry_budget_sec,
         max_same_error_streak=args.max_same_error_streak,
-        post_expand_count=5,
         failure_threshold=args.open_problem_failure_threshold,
         phase_logs=True,
+        run_id="manual-main-theorem-check",
+        phase_attempts_path=Path("data/manual_main_theorem_phase_attempts.jsonl"),
+        compile_metrics={
+            "compile_attempt_count": 0,
+            "compile_success_count": 0,
+            "solved_per_run": 0,
+            "time_to_first_green_ms": None,
+            "wall_clock_to_last_solve_ms": None,
+        },
+        state_lock=threading.Lock(),
+        derived_runtime_state={"generation": 0},
     )
     print(report)
 

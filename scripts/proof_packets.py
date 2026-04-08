@@ -41,7 +41,6 @@ class ProverRequestPacket:
     previous_result: str = ""
     previous_proof_sketch: str = ""
     previous_counterexample_text: str = ""
-    previous_new_problems: list[str] = field(default_factory=list)
 
     def to_payload(self) -> dict[str, Any]:
         payload: dict[str, Any] = {
@@ -61,8 +60,6 @@ class ProverRequestPacket:
             payload["previous_proof_sketch"] = self.previous_proof_sketch
         if self.previous_counterexample_text:
             payload["previous_counterexample_text"] = self.previous_counterexample_text
-        if self.previous_new_problems:
-            payload["previous_new_problems"] = list(self.previous_new_problems)
         return payload
 
 
@@ -72,7 +69,6 @@ class ProverResponsePacket:
     result: str
     proof_sketch: str
     counterexample_text: str
-    new_problems: list[str] = field(default_factory=list)
     attempt: int = 0
     worker_meta: dict[str, Any] = field(default_factory=dict)
     raw_payload: dict[str, Any] = field(default_factory=dict)
@@ -83,12 +79,11 @@ class ProverResponsePacket:
     def with_worker_meta(self, worker_meta: dict[str, Any]) -> "ProverResponsePacket":
         return replace(self, worker_meta=worker_meta)
 
-    def as_tuple(self) -> tuple[str, str, str, list[str], int, dict[str, Any]]:
+    def as_tuple(self) -> tuple[str, str, str, int, dict[str, Any]]:
         return (
             self.result,
             self.proof_sketch,
             self.counterexample_text,
-            list(self.new_problems),
             self.attempt,
             self.worker_meta,
         )
@@ -211,7 +206,6 @@ class RepairRequestPacket:
     previous_prelude_code: str
     previous_proof_text: str
     previous_counterexample_text: str
-    previous_new_problems: list[str]
     repair_history_tail: list[dict[str, Any]]
     lean_error_excerpt: str
     lean_error_top_lines: list[str]
@@ -243,7 +237,6 @@ class RepairRequestPacket:
             "previous_prelude_code": self.previous_prelude_code,
             "previous_proof_text": self.previous_proof_text,
             "previous_counterexample_text": self.previous_counterexample_text,
-            "previous_new_problems": list(self.previous_new_proofs),
             "repair_history_tail": list(self.repair_history_tail),
             "lean_error_excerpt": self.lean_error_excerpt,
             "lean_error_top_lines": list(self.lean_error_top_lines),
@@ -252,22 +245,16 @@ class RepairRequestPacket:
             "mathlib_import_in_scratch": self.mathlib_import_in_scratch,
         }
 
-    @property
-    def previous_new_proofs(self) -> list[str]:
-        return list(self.previous_new_problems)
-
 
 def normalize_prover_payload(payload: dict[str, Any], expected_problem_id: str) -> ProverResponsePacket:
     result = str(payload.get("result", "")).strip()
     proof_sketch = _coerce_text(payload.get("proof_sketch"))
     counterexample_text = _coerce_text(payload.get("counterexample_text"))
-    new_problems = _as_str_list(payload.get("new_problems", []))
     return ProverResponsePacket(
         problem_id=expected_problem_id,
         result=result,
         proof_sketch=proof_sketch,
         counterexample_text=counterexample_text,
-        new_problems=new_problems[:2],
         raw_payload=dict(payload),
     )
 
@@ -322,7 +309,6 @@ def build_repair_request_from_state(**kwargs: Any) -> RepairRequestPacket:
         previous_prelude_code=kwargs.get("previous_prelude_code", "") or "",
         previous_proof_text=kwargs.get("previous_proof_text", "") or "",
         previous_counterexample_text=kwargs.get("previous_counterexample_text", "") or "",
-        previous_new_problems=_as_str_list(kwargs.get("previous_new_problems", [])),
         repair_history_tail=_coerce_rows(kwargs.get("repair_history_tail", [])),
         lean_error_excerpt=kwargs.get("lean_error_excerpt", "") or "",
         lean_error_top_lines=_as_str_list(kwargs.get("lean_error_top_lines", [])),

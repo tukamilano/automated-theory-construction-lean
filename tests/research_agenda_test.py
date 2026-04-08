@@ -140,14 +140,19 @@ def test_worker_payloads_include_research_agenda() -> None:
                             "guidance": "Prefer bridge lemmas.",
                             "rationale": "They match the active agenda.",
                         },
+                        "desired_summary_changes": [],
+                        "current_bottlenecks": [],
+                        "overexplored_patterns": [],
+                        "missing_bridges": [],
+                        "agenda_pressure": [],
                     },
                     {"worker": "research_agenda_test"},
                 )
-            if task_type == "expand":
+            if task_type == "post_solve_opportunity":
                 return (
                     {
-                        "problem_id": "op_000001",
-                        "candidates": [],
+                        "source_id": "op_000001",
+                        "opportunity": None,
                     },
                     {"worker": "research_agenda_test"},
                 )
@@ -163,18 +168,17 @@ def test_worker_payloads_include_research_agenda() -> None:
             current_iteration=1,
             previous_theory_state={},
         )
-        run_loop.request_expand_candidates(
+        run_loop.request_post_solve_opportunity(
             worker_settings={},
-            expand_prompt="unused",
-            task_type="expand",
-            problem_id="op_000001",
+            prompt="unused",
+            source_id="op_000001",
+            source_kind="open_problem",
             stmt="True",
             original_stmt="True",
             result="stuck",
             verify_success=False,
             theory_context="",
             open_rows=[],
-            existing_new_problems=[],
             verify_error_excerpt="",
             current_iteration_full_logs=[],
             same_problem_history_tail=[],
@@ -184,7 +188,7 @@ def test_worker_payloads_include_research_agenda() -> None:
         run_loop.invoke_worker_json = original_invoke_worker_json
         run_loop.load_current_research_agenda = original_load_current_research_agenda
 
-    for task_type in ("prioritize_open_problems", "expand"):
+    for task_type in ("prioritize_open_problems", "post_solve_opportunity"):
         payload = captured_payloads.get(task_type)
         if payload is None:
             raise RuntimeError(f"missing captured payload for {task_type}")
@@ -238,6 +242,13 @@ def test_force_refresh_writes_research_agenda_to_theory_state() -> None:
                         "label": "bridge_clusters",
                         "guidance": "Prefer bridge lemmas.",
                         "rationale": "They match the active agenda.",
+                    },
+                    {
+                        "desired_summary_changes": [],
+                        "current_bottlenecks": [],
+                        "overexplored_patterns": [],
+                        "missing_bridges": [],
+                        "agenda_pressure": [],
                     },
                     {"worker": "research_agenda_test"},
                 )

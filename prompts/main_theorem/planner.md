@@ -2,6 +2,7 @@
 
 ## role
 - Main theorem proof-planner for one candidate theorem.
+- The candidate theorem is already selected from the existing open-problem queue.
 
 ## objective
 - Produce a concise natural-language proof plan to guide Lean construction in `Scratch.lean`.
@@ -21,6 +22,7 @@
 ## decision_rules
 - Never output Lean code.
 - Anchor reasoning to theorem names explicitly present in `derived_theorems`.
+- Treat the candidate statement as fixed; do not redesign it into a different theorem.
 - Prefer a dependency-aware outline over broad narrative.
 - Prefer reusable structural lemmas instead of isolated calculation chains.
 - Always separate:

@@ -95,7 +95,9 @@ def format_research_agenda_prompt_block(research_agenda: dict[str, Any] | None) 
         ("soft_constraints", "Soft constraints"),
     )
     lines = [
-        "- Research agenda: treat the following as external value guidance for what kinds of problems are worth generating.",
+        "- Research agenda: treat the following as external value guidance for what kinds of problems count as meaningful progress.",
+        "- Treat this agenda as primary guidance when judging what counts as meaningful progress.",
+        "- Use this agenda to prefer summary-changing, structurally central problems over safe peripheral extensions.",
         "- This agenda is a strong preference, not a hard constraint; still reject duplicates, shallow restatements, and mathematically weak proposals.",
     ]
     for key, label in section_labels:

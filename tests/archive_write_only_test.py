@@ -65,6 +65,13 @@ def test_priority_refresh_keeps_archived_rows_archived() -> None:
                     ],
                     "test snapshot",
                     {"label": "test", "guidance": "test", "rationale": "test"},
+                    {
+                        "desired_summary_changes": [],
+                        "current_bottlenecks": [],
+                        "overexplored_patterns": [],
+                        "missing_bridges": [],
+                        "agenda_pressure": [],
+                    },
                     {"worker": "archive_write_only_test"},
                 )
 
@@ -122,7 +129,6 @@ def test_state_update_does_not_remove_archived_rows() -> None:
             result="proof",
             verify_success=True,
             theorem_name="archived_problem_proved",
-            new_problems=[],
             failure_threshold=2,
             current_iteration=1,
         )

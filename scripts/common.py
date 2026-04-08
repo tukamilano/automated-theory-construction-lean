@@ -103,6 +103,17 @@ def normalize_open_problem_row(row: dict[str, Any]) -> dict[str, Any]:
 
     src = str(normalized.get("src", "generated") or "generated").strip() or "generated"
     normalized["src"] = src
+    normalized["mode"] = str(normalized.get("mode", "local_support") or "local_support").strip() or "local_support"
+    normalized["summary_delta"] = str(normalized.get("summary_delta", "") or "").strip()
+    normalized["bottleneck_hit"] = str(normalized.get("bottleneck_hit", "") or "").strip()
+    normalized["agenda_alignment"] = str(normalized.get("agenda_alignment", "") or "").strip()
+    normalized["why_not_peripheral"] = str(normalized.get("why_not_peripheral", "") or "").strip()
+    normalized["unlocks"] = str(normalized.get("unlocks", "") or "").strip()
+    parent_problem_ids = normalized.get("parent_problem_ids", [])
+    if isinstance(parent_problem_ids, list):
+        normalized["parent_problem_ids"] = [str(item).strip() for item in parent_problem_ids if str(item).strip()]
+    else:
+        normalized["parent_problem_ids"] = []
     normalized["priority"] = normalize_open_problem_priority(normalized.get("priority"))
     normalized["priority_rationale"] = str(normalized.get("priority_rationale", "") or "").strip()
     normalized["failure_count"] = _coerce_nonnegative_int(normalized.get("failure_count"), 0)

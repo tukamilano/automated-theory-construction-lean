@@ -19,7 +19,6 @@ def _prover_result(payload: dict[str, Any]) -> dict[str, Any]:
         "result": "stuck",
         "proof_sketch": "mock_worker: no proof attempt",
         "counterexample_text": "mock_worker: no proof generated",
-        "new_problems": [],
     }
 
 
@@ -97,6 +96,11 @@ def _prioritize_open_problems_result(payload: dict[str, Any]) -> dict[str, Any]:
             "guidance": "Prefer neutral exploratory problems in mock mode.",
             "rationale": "Mock worker does not compute a real global direction.",
         },
+        "desired_summary_changes": [],
+        "current_bottlenecks": [],
+        "overexplored_patterns": [],
+        "missing_bridges": [],
+        "agenda_pressure": [],
     }
 
 
@@ -132,6 +136,13 @@ def _post_theorem_expand_result(payload: dict[str, Any]) -> dict[str, Any]:
     return {
         "problem_id": problem_id,
         "candidates": [],
+    }
+
+
+def _post_solve_opportunity_result(payload: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "source_id": str(payload.get("source_id", "")).strip(),
+        "opportunity": None,
     }
 
 
@@ -211,6 +222,8 @@ def main() -> None:
             result_payload = _main_theorem_plan_result(payload)
         elif task_type == "post_theorem_expand":
             result_payload = _post_theorem_expand_result(payload)
+        elif task_type == "post_solve_opportunity":
+            result_payload = _post_solve_opportunity_result(payload)
         elif task_type == "refactor_derived":
             result_payload = _refactor_derived_result(payload)
         elif task_type == "plan_derived_compression":
