@@ -1,1 +1,0 @@
-{"id":"op_000007","stmt":"∀ {Γ : List Tp} {A : Tp}, (∀ x ∈ Γ, is_atom x) → (Γ ⇒ A ↔ ∃ s : String, Γ = [#s] ∧ A = #s)","run_id":"20260408-193151-loop","iteration":5,"session_type":"loop"}

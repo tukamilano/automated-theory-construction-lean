@@ -1,7 +1,0 @@
-{"id":"op_000001","stmt":"∀ {Γ Δ : List Tp} {A B : Tp}, Γ ⇒ (B ⧸ A) → Δ ⇒ A → Γ ++ Δ ⇒ B","src":"seed","priority":"unknown","priority_rationale":"","failure_count":0}
-{"id":"op_000002","stmt":"∀ {Γ Δ : List Tp} {A B : Tp}, Γ ⇒ (A ⧹ B) → Δ ⇒ A → Δ ++ Γ ⇒ B","src":"seed","priority":"unknown","priority_rationale":"","failure_count":0}
-{"id":"op_000003","stmt":"∀ {Γ Δ : List Tp} {A B C : Tp}, Γ ⇒ (C ⧸ B) → Δ ⇒ (B ⧸ A) → Γ ++ Δ ⇒ (C ⧸ A)","src":"seed","priority":"unknown","priority_rationale":"","failure_count":0}
-{"id":"op_000004","stmt":"∀ {Γ Δ : List Tp} {A B C : Tp}, Γ ⇒ (A ⧹ B) → Δ ⇒ (C ⧹ A) → Δ ++ Γ ⇒ (C ⧹ B)","src":"seed","priority":"unknown","priority_rationale":"","failure_count":0}
-{"id":"op_000005","stmt":"∀ {Γ Δ Λ : List Tp} {A B C : Tp}, Γ ⇒ (A ⧹ B) → Δ ++ [B] ++ Λ ⇒ C → Δ ++ [A] ++ Γ ++ Λ ⇒ C","src":"seed","priority":"unknown","priority_rationale":"","failure_count":0}
-{"id":"op_000006","stmt":"∀ {Γ Δ Λ : List Tp} {A B C : Tp}, Γ ⇒ (B ⧸ A) → Δ ++ [B] ++ Λ ⇒ C → Δ ++ Γ ++ [A] ++ Λ ⇒ C","src":"seed","priority":"unknown","priority_rationale":"","failure_count":0}
-{"id":"op_000007","stmt":"∀ {Γ : List Tp} {A : Tp}, (∀ x ∈ Γ, is_atom x) → (Γ ⇒ A ↔ ∃ s : String, Γ = [#s] ∧ A = #s)","src":"seed","priority":"unknown","priority_rationale":"","failure_count":0}
