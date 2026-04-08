@@ -1,0 +1,12 @@
+import AutomatedTheoryConstruction.Lambek.Basic
+import AutomatedTheoryConstruction.Lambek.Decidable
+import AutomatedTheoryConstruction.Lambek.Shallow.Basic
+import AutomatedTheoryConstruction.Lambek.Shallow.Decidable
+import AutomatedTheoryConstruction.Lambek.Left.Basic
+import AutomatedTheoryConstruction.Lambek.Left.Decidable
+import AutomatedTheoryConstruction.Lambek.Left.Shallow.Basic
+import AutomatedTheoryConstruction.Lambek.Left.Shallow.Decidable
+import AutomatedTheoryConstruction.Lambek.Right.Basic
+import AutomatedTheoryConstruction.Lambek.Right.Decidable
+import AutomatedTheoryConstruction.Lambek.Right.Shallow.Basic
+import AutomatedTheoryConstruction.Lambek.Right.Shallow.Decidable
