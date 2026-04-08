@@ -47,6 +47,7 @@ from common import (
     write_json_atomic,
     write_jsonl_atomic,
 )
+from guidance import build_guidance_context, unpack_guidance_context
 from import_inference import infer_minimal_imports, render_import_block
 from lean_verify import verify_scratch
 from research_agenda import DEFAULT_RESEARCH_AGENDA_PATH
@@ -110,6 +111,13 @@ def build_retry_deadline(budget_sec: int | None) -> float | None:
 
 def load_current_research_agenda() -> dict[str, Any]:
     return load_research_agenda(REPO_ROOT / DEFAULT_RESEARCH_AGENDA_PATH)
+
+
+def load_current_guidance(data_dir: Path) -> dict[str, dict[str, Any]]:
+    return build_guidance_context(
+        theory_state=load_theory_state(data_dir),
+        research_agenda=load_current_research_agenda(),
+    )
 
 
 def remaining_retry_budget_sec(deadline: float | None) -> int | None:
@@ -2388,8 +2396,9 @@ def request_post_solve_opportunity(
     verify_error_excerpt: str,
     current_iteration_full_logs: list[dict[str, Any]],
     same_problem_history_tail: list[dict[str, Any]],
-    theory_state: dict[str, Any] | None = None,
+    guidance: dict[str, Any],
 ) -> tuple[dict[str, str] | None, dict[str, Any]]:
+    theory_state, research_agenda = unpack_guidance_context(guidance)
     payload: dict[str, Any] = {
         "source_id": source_id,
         "source_kind": source_kind,
@@ -2402,8 +2411,8 @@ def request_post_solve_opportunity(
         "verify_error_excerpt": verify_error_excerpt,
         "current_iteration_full_logs": list(current_iteration_full_logs),
         "same_problem_history_tail": same_problem_history_tail,
-        "theory_state": dict(theory_state or {}),
-        "research_agenda": load_current_research_agenda(),
+        "theory_state": theory_state,
+        "research_agenda": research_agenda,
     }
     response, worker_meta = invoke_worker_json(
         settings=worker_settings,
@@ -2433,8 +2442,9 @@ def request_main_theorem_suggestion(
     theory_context: str,
     tracked_rows: list[dict[str, Any]],
     current_iteration: int,
-    theory_state: dict[str, Any] | None = None,
+    guidance: dict[str, Any],
 ) -> tuple[tuple[str, str, str, str, str, list[str], list[str]], dict[str, Any]]:
+    theory_state, research_agenda = unpack_guidance_context(guidance)
     prioritized_rows = [row for row in tracked_rows if open_problem_priority_label(row) == "high"]
     candidate_rows = prioritized_rows or tracked_rows
     payload: dict[str, Any] = {
@@ -2462,7 +2472,8 @@ def request_main_theorem_suggestion(
             }
             for row in candidate_rows[:40]
         ],
-        "theory_state": dict(theory_state or {}),
+        "theory_state": theory_state,
+        "research_agenda": research_agenda,
     }
     response, worker_meta = invoke_worker_json(
         settings=worker_settings,
@@ -2516,8 +2527,9 @@ def request_open_problem_priorities(
     tracked_rows: list[dict[str, Any]],
     derived_entries: list[dict[str, str]],
     current_iteration: int,
-    previous_theory_state: dict[str, Any] | None = None,
+    guidance: dict[str, Any],
 ) -> tuple[list[dict[str, str]], str, dict[str, str], dict[str, list[str]], dict[str, Any]]:
+    previous_theory_state, research_agenda = unpack_guidance_context(guidance)
     expected_problem_ids = [str(row.get("id", "")) for row in tracked_rows]
     priority_payload: dict[str, Any] = {
         "current_iteration": current_iteration,
@@ -2541,8 +2553,8 @@ def request_open_problem_priorities(
             "medium": "Natural local extension with plausible reuse for one or two nearby problems.",
             "low": "Cosmetic variant, shallow restatement, or currently low-utility statement given the present Derived.lean.",
         },
-        "previous_theory_state": dict(previous_theory_state or {}),
-        "research_agenda": load_current_research_agenda(),
+        "previous_theory_state": previous_theory_state,
+        "research_agenda": research_agenda,
     }
     prioritized, worker_meta = invoke_worker_json(
         settings=worker_settings,
@@ -2578,9 +2590,8 @@ def force_refresh_open_problem_priorities(
         return False, "", {}
 
     prioritizer_prompt = load_prompt_text(prioritizer_prompt_file)
-    previous_theory_state = load_theory_state(data_dir)
+    guidance = load_current_guidance(data_dir)
     try:
-        current_research_agenda = load_current_research_agenda()
         (
             priority_updates,
             theory_snapshot,
@@ -2593,7 +2604,7 @@ def force_refresh_open_problem_priorities(
             tracked_rows=tracked_rows,
             derived_entries=derived_entries,
             current_iteration=current_iteration,
-            previous_theory_state=previous_theory_state,
+            guidance=guidance,
         )
     except (RuntimeError, ValueError) as exc:
         return False, str(exc), {}
@@ -2620,7 +2631,7 @@ def force_refresh_open_problem_priorities(
         theory_snapshot=theory_snapshot,
         next_direction=next_direction,
         important_verified_counterexamples=important_verified_counterexamples,
-        research_agenda_summary=summarize_research_agenda_for_state(current_research_agenda),
+        research_agenda_summary=summarize_research_agenda_for_state(guidance["research_agenda"]),
         theory_frontier=theory_frontier,
     )
     if theory_state_history_path is not None:
@@ -3408,7 +3419,7 @@ def run_manual_main_theorem_check(
             theory_context=base_theory_context,
             tracked_rows=tracked_rows,
             current_iteration=current_iteration,
-            theory_state=load_theory_state(data_dir),
+            guidance=load_current_guidance(data_dir),
         )
     except (RuntimeError, ValueError) as exc:
         append_phase_attempt_record(
@@ -3802,7 +3813,7 @@ def process_manual_main_theorem(
                 verify_error_excerpt="",
                 current_iteration_full_logs=current_iteration_full_logs,
                 same_problem_history_tail=load_formalization_memory(formalization_memory_path, candidate_id)[-8:],
-                theory_state=load_theory_state(data_dir),
+                guidance=load_current_guidance(data_dir),
             )
             append_jsonl(
                 data_dir / "post_solve_opportunities.jsonl",
@@ -4082,7 +4093,7 @@ def run_problem_session(
             verify_error_excerpt=verify_error_excerpt,
             current_iteration_full_logs=current_iteration_full_logs,
             same_problem_history_tail=same_problem_history_tail,
-            theory_state=load_theory_state(data_dir),
+            guidance=load_current_guidance(data_dir),
         )
         append_phase_attempt_record(
             artifact_paths["phase_attempts"],

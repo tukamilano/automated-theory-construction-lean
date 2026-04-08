@@ -16,6 +16,7 @@ from common import (
     read_jsonl,
     write_jsonl_atomic,
 )
+from guidance import build_guidance_context, unpack_guidance_context
 from llm_exec import build_exec_command
 from llm_exec import resolve_provider
 from llm_exec import run_llm_exec
@@ -206,12 +207,12 @@ def build_prompt(
     context_files: list[Path],
     seed_count: int,
     extra_instruction: str,
-    theory_state: dict[str, Any] | None = None,
-    research_agenda: dict[str, Any] | None = None,
+    guidance: dict[str, Any],
     recent_opportunities: list[dict[str, Any]] | None = None,
 ) -> str:
     if not theory_files:
         raise ValueError("theory_files must be non-empty")
+    theory_state, research_agenda = unpack_guidance_context(guidance)
 
     read_lines = [f"- {path.resolve()}" for path in theory_files]
     if derived_file is not None:
@@ -232,7 +233,7 @@ def build_prompt(
     theory_frontier_block = ""
     opportunity_block = ""
     research_agenda_block = format_research_agenda_prompt_block(research_agenda)
-    state = dict(theory_state or {})
+    state = dict(theory_state)
     theory_snapshot = str(state.get("theory_snapshot", "")).strip()
     direction = state.get("next_direction")
     important_counterexamples = state.get("important_verified_counterexamples", [])
@@ -337,9 +338,13 @@ Mathematical scope:
 - Treat `theory_state` and `research_agenda` as primary guidance for what counts as meaningful progress.
 - Prefer statements that materially sharpen or extend the visible theory: structural consequences, converses or separations, existence or uniqueness claims, impossibility claims, fixpoint consequences, or useful intermediate lemmas.
 - Prefer problems that would change the theory summary, address a bottleneck, or connect currently separate parts of the theory.
+- Also allow locally scoped but sharp lemmas when they isolate a real obstruction, threshold, criterion, normal form, or reusable reduction step that would materially simplify a blocked proof path.
 - Do not default to immediate one-line corollaries or cosmetic rewrites of visible lemmas.
 - Use only objects, notation, classes, predicates, and constructions that already exist in the files above.
 - Reuse exact symbol names from the source files. Do not invent new definitions or predicates.
+- Prefer notation-first Lean statements when the theory already defines notation or abbreviations.
+- For example, prefer `x ≐ y`, `⊠x`, `□x`, `¬⊬ x`, `GödelFixpoint`, and `HenkinFixpoint` over expanded forms like `ACR.Equivalent x y`, `ACR.Reft.reft x`, or other unnecessarily fully-qualified operator names.
+- Avoid mixed-style statements that partially use notation but still spell out operator definitions by path when notation is already available.
 - Quantify every extra variable or witness explicitly inside the proposition.
 - Keep assumptions minimal but sufficient.
 {theory_summary_block}{counterexample_block}{next_direction_block}{theory_frontier_block}{opportunity_block}{research_agenda_block}
@@ -348,6 +353,7 @@ Quality filter:
 {theory_files_rule}{derived_rule}- Do not propose a theorem that is already present in the read files up to cosmetic rewrites, alpha-renaming, trivial reassociation of binders, or other shallow reformulations.
 - Do not propose propositions that are vacuous, purely definitional unfoldings, or trivial preorder facts.
 - Avoid seeds that differ only by notation changes, variable renaming, or tiny local rewrites.
+- A local lemma is acceptable when it has sharp content and clear reuse or bottleneck-relief value; do not reject it merely because it is not theory-global.
 - Strongly avoid safe peripheral extensions that fit known overexplored patterns unless they are the clearest route to a broader organizing result.
 - Keep the seeds mathematically diverse when possible.
 - Make each proposition read like something that could be pasted directly into a theorem statement in Lean.
@@ -532,8 +538,10 @@ def main() -> int:
         effective_derived: Path | None = derived_file
     else:
         effective_derived = None
-    effective_theory_state = load_theory_state((repo_root / DEFAULT_DATA_DIR).resolve())
-    effective_research_agenda = load_research_agenda(DEFAULT_RESEARCH_AGENDA)
+    effective_guidance = build_guidance_context(
+        theory_state=load_theory_state((repo_root / DEFAULT_DATA_DIR).resolve()),
+        research_agenda=load_research_agenda(DEFAULT_RESEARCH_AGENDA),
+    )
     recent_opportunities = read_jsonl((repo_root / DEFAULT_DATA_DIR / "post_solve_opportunities.jsonl").resolve())[-12:]
 
     prompt = build_prompt(
@@ -542,8 +550,7 @@ def main() -> int:
         context_files=context_files,
         seed_count=args.seed_count,
         extra_instruction=args.extra_instruction,
-        theory_state=effective_theory_state,
-        research_agenda=effective_research_agenda,
+        guidance=effective_guidance,
         recent_opportunities=recent_opportunities,
     )
     schema = build_output_schema(args.seed_count)

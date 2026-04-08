@@ -21,6 +21,9 @@
 - Assume `import Mathlib` is available.
 - Prefer existing names/notation from `Theory.lean` and `Derived.lean`.
 - Prefer explicit quantification and repository notation style.
+- Prefer notation-first statements when the repository already provides notation or abbreviations.
+- In particular, prefer forms like `x ≐ y`, `⊠x`, `□x`, `¬⊬ x`, `GödelFixpoint`, and `HenkinFixpoint` over expanded forms like `ACR.Equivalent x y`, `ACR.Reft.reft x`, `ACR.Prov.prov x`, or unnecessary fully-qualified operator paths.
+- Avoid mixing expanded operator names with notation in the same proposition unless full qualification is required for correctness.
 - Do not use `letI` in the proposition.
 - Do not introduce generated names (`u_op_000044` etc.); prefer short conventional names.
 - For existential witness packages, use nested existential binders and ordinary binders for introduced elements.

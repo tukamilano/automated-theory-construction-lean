@@ -11,6 +11,7 @@
 
 - Weakest-assumption theorems for existence of fixed points of operators or operator words built from `□` and `⊠`.
 - Classification results separating existence, uniqueness up to equivalence, multiplicity, periodicity, and stabilization behavior of such fixed points.
+- Systematic test cases for concrete operator words under varied assumptions, such as asking how the fixed-point behavior changes for `(□⊠)^n` as `n` varies, and comparing existence, uniqueness, periodicity, and stabilization across structural settings.
 - Sharp boundary theorems identifying which structural assumptions are really responsible for constructing the desired fixed points.
 - Counterexamples showing that fixed-point existence for one operator does not automatically transfer to nearby operators or presentations.
 - Formal developments that reorganize the story into reusable abstractions for constructing fixed points, not only deriving consequences from them.

@@ -35,16 +35,21 @@
 
 ## priority_criteria
 - For each existing open problem, ask: if this problem were solved now, how much would it improve the current theory frontier?
-- `high` when a problem:
-  - would likely rewrite the theory summary,
-  - addresses a core bottleneck or missing bridge,
-  - gives a characterization/criterion/converse/boundary/reusable bridge,
-  - or is structurally central despite slight direction mismatch.
-- `medium` for natural local extensions or plausible support lemmas that still help with a listed bottleneck, bridge, or agenda target.
-- `low` for cosmetic variants, shallow restatements, obvious weakenings, or already-covered statements.
+- Use a strict scale: `high` should be rare, and it is acceptable for most problems to be `low`.
+- When uncertain between two labels, choose the lower one.
+- `high` only when a problem is very likely to cause summary-level change now, not merely because it looks interesting or agenda-aligned.
+- `high` only when the problem would likely rewrite the theory summary and clearly does at least one of the following:
+  - resolves a core bottleneck or a major missing bridge,
+  - gives a sharp characterization/criterion/converse/boundary result,
+  - creates a reusable bridge that should reprioritize several other problems.
+- Do not use `high` for merely natural next lemmas, local strengthenings, or statements that only look potentially useful.
+- `medium` for nontrivial but still limited progress: a useful local extension, support lemma, partial bridge, or locally sharp lemma that helps with a listed bottleneck, bridge, or agenda target without clearly changing the top-level summary.
+- A locally sharp lemma should usually be `medium` rather than `low` when it isolates a real obstruction, threshold, criterion, normal form, or reusable reduction step that would materially shorten or derisk a current proof path.
+- `low` as the default for anything mainly local but blunt, speculative, duplicate-adjacent, weakly motivated, cosmetic, shallow, obviously weakened, already-covered, or only marginally useful in the current theory state.
 - Never downgrade central problems just for slight direction mismatch.
 - Never upgrade weak or duplicate problems just because they match agenda words.
 - Strongly down-rank problems that fit an overexplored pattern and do not create clear summary-level change.
+- If the benefit seems confined to one nearby proof path, prefer `low` unless there is explicit evidence that the lemma is sharply formulated and would materially unblock or compress that path.
 
 ## direction_policy
 - `next_direction` must be one coarse direction with keys:

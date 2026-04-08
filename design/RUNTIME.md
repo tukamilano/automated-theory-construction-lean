@@ -32,6 +32,20 @@ Verification in step 5 uses the `scripts/lean_verify.py` entrypoint. If `ATC_PRO
 
 Open problems may be either Lean-formal statements or semi-formal research prompts. If a problem cannot be formalized, it stays open.
 
+## Guidance Model
+
+Runtime guidance uses two inputs together:
+
+- `AutomatedTheoryConstruction/research_agenda.md`: long-horizon value guidance describing what counts as meaningful progress.
+- `data/theory_state.json`: short-horizon frontier state describing what matters now.
+
+These play different roles and should be read together:
+
+- `research_agenda.md`: what counts as progress
+- `theory_state.json`: what matters now
+
+Problem generation, open-problem prioritization, and follow-up opportunity proposal should therefore always consume both inputs together. Neither file should be treated as a sufficient standalone source for value judgments at runtime.
+
 ## Repository Layout
 
 - `AutomatedTheoryConstruction/Theory.lean`: base theory entry module

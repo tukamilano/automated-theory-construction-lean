@@ -12,6 +12,7 @@ sys.path.insert(0, str(REPO_ROOT / "scripts"))
 
 import generate_seeds_from_theory
 import run_loop
+from guidance import build_guidance_context
 from research_agenda import DEFAULT_RESEARCH_AGENDA_PATH
 from research_agenda import LEGACY_RESEARCH_AGENDA_PATH
 from research_agenda import empty_research_agenda
@@ -85,14 +86,16 @@ def test_seed_prompt_includes_research_agenda_guidance() -> None:
         context_files=[],
         seed_count=2,
         extra_instruction="",
-        theory_state={},
-        research_agenda={
-            "themes": ["bridge theorem clusters"],
-            "valued_problem_types": ["classification results"],
-            "anti_goals": ["cosmetic rewrites"],
-            "canonical_targets": ["exact boundary results"],
-            "soft_constraints": ["stay close to the active theory"],
-        },
+        guidance=build_guidance_context(
+            theory_state={},
+            research_agenda={
+                "themes": ["bridge theorem clusters"],
+                "valued_problem_types": ["classification results"],
+                "anti_goals": ["cosmetic rewrites"],
+                "canonical_targets": ["exact boundary results"],
+                "soft_constraints": ["stay close to the active theory"],
+            },
+        ),
     )
     required_snippets = (
         "Research agenda: treat the following as external value guidance",
@@ -156,6 +159,20 @@ def test_worker_payloads_include_research_agenda() -> None:
                     },
                     {"worker": "research_agenda_test"},
                 )
+            if task_type == "main_theorem_suggest":
+                return (
+                    {
+                        "candidate_id": "mt_manual",
+                        "result": "stuck",
+                        "selected_problem_id": "",
+                        "theorem_name_stem": "",
+                        "docstring_summary": "",
+                        "rationale": "agenda-aligned but not yet ready",
+                        "supporting_theorems": [],
+                        "missing_lemmas": [],
+                    },
+                    {"worker": "research_agenda_test"},
+                )
             raise RuntimeError(f"unexpected task_type: {task_type}")
 
         run_loop.invoke_worker_json = fake_invoke_worker_json
@@ -166,7 +183,7 @@ def test_worker_payloads_include_research_agenda() -> None:
             tracked_rows=[{"id": "op_000001", "stmt": "True", "src": "seed"}],
             derived_entries=[],
             current_iteration=1,
-            previous_theory_state={},
+            guidance=build_guidance_context(theory_state={}, research_agenda=agenda),
         )
         run_loop.request_post_solve_opportunity(
             worker_settings={},
@@ -182,18 +199,33 @@ def test_worker_payloads_include_research_agenda() -> None:
             verify_error_excerpt="",
             current_iteration_full_logs=[],
             same_problem_history_tail=[],
-            theory_state={},
+            guidance=build_guidance_context(theory_state={}, research_agenda=agenda),
+        )
+        run_loop.request_main_theorem_suggestion(
+            worker_settings={},
+            suggester_prompt="unused",
+            candidate_id="mt_manual",
+            derived_entries=[],
+            theory_context="",
+            tracked_rows=[{"id": "op_000001", "stmt": "True", "src": "seed"}],
+            current_iteration=1,
+            guidance=build_guidance_context(theory_state={}, research_agenda=agenda),
         )
     finally:
         run_loop.invoke_worker_json = original_invoke_worker_json
         run_loop.load_current_research_agenda = original_load_current_research_agenda
 
-    for task_type in ("prioritize_open_problems", "post_solve_opportunity"):
+    for task_type in ("prioritize_open_problems", "post_solve_opportunity", "main_theorem_suggest"):
         payload = captured_payloads.get(task_type)
         if payload is None:
             raise RuntimeError(f"missing captured payload for {task_type}")
         if payload.get("research_agenda") != agenda:
             raise RuntimeError(f"missing research_agenda in {task_type} payload: {payload}")
+        if payload.get("theory_state") != {} and task_type != "prioritize_open_problems":
+            raise RuntimeError(f"unexpected theory_state in {task_type} payload: {payload}")
+    priority_payload = captured_payloads.get("prioritize_open_problems", {})
+    if priority_payload.get("previous_theory_state") != {}:
+        raise RuntimeError(f"unexpected previous_theory_state in prioritize_open_problems payload: {priority_payload}")
 
 
 def test_force_refresh_writes_research_agenda_to_theory_state() -> None:
