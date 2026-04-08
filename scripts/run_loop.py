@@ -3331,6 +3331,7 @@ def initialize_runtime_state(
     write_jsonl_atomic(archived_problems_file, [])
     write_jsonl_atomic(data_dir / "solved_problems.jsonl", [])
     write_jsonl_atomic(data_dir / "counterexamples.jsonl", [])
+    write_jsonl_atomic(data_dir / "post_solve_opportunities.jsonl", [])
     (data_dir / LEGACY_DEFERRED_PROBLEMS_FILENAME).unlink(missing_ok=True)
     (data_dir / LEGACY_PRUNED_OPEN_PROBLEMS_FILENAME).unlink(missing_ok=True)
     theory_state_path(data_dir).unlink(missing_ok=True)

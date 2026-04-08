@@ -110,6 +110,43 @@ def test_seed_prompt_includes_research_agenda_guidance() -> None:
             raise RuntimeError(f"missing agenda snippet in seed prompt: {snippet}\n{prompt}")
 
 
+def test_runtime_initialization_clears_post_solve_opportunities() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmp_path = Path(tmpdir)
+        data_dir = tmp_path / "data"
+        seeds_file = tmp_path / "seeds.jsonl"
+        scratch_file = tmp_path / "Scratch.lean"
+        derived_file = tmp_path / "Derived.lean"
+        formalization_memory_file = data_dir / "formalization_memory.json"
+        archived_problems_file = data_dir / "archived_problems.jsonl"
+        opportunities_file = data_dir / "post_solve_opportunities.jsonl"
+
+        write_jsonl_atomic(
+            seeds_file,
+            [{"id": "op_000001", "stmt": "True", "src": "seed"}],
+        )
+        write_jsonl_atomic(
+            opportunities_file,
+            [{"source_id": "old", "source_kind": "open_problem", "solve_result": "proof", "iteration": 1, "opportunity": None}],
+        )
+
+        run_loop.initialize_runtime_state(
+            data_dir=data_dir,
+            seeds_file=seeds_file,
+            scratch_file=scratch_file,
+            reset_scratch=False,
+            derived_file=derived_file,
+            derived_cleanup_files=(),
+            reset_derived=False,
+            formalization_memory_file=formalization_memory_file,
+            reset_formalization_memory=False,
+            archived_problems_file=archived_problems_file,
+        )
+
+        if run_loop.read_jsonl(opportunities_file) != []:
+            raise RuntimeError("post_solve_opportunities.jsonl was not cleared on initialization")
+
+
 def test_worker_payloads_include_research_agenda() -> None:
     agenda = {
         "themes": ["bridge theorem clusters"],
@@ -315,6 +352,7 @@ def main() -> int:
     test_load_research_agenda_missing_file_is_empty()
     test_load_research_agenda_falls_back_to_legacy_root_file()
     test_seed_prompt_includes_research_agenda_guidance()
+    test_runtime_initialization_clears_post_solve_opportunities()
     test_worker_payloads_include_research_agenda()
     test_force_refresh_writes_research_agenda_to_theory_state()
     print("research agenda test passed")
