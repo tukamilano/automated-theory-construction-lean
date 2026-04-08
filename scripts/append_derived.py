@@ -52,6 +52,10 @@ def render_docstring(text: str) -> str:
     return f"/-- {cleaned} -/\n"
 
 
+def normalize_block_text(text: str) -> str:
+    return "\n".join(line.rstrip() for line in text.strip().splitlines())
+
+
 def iter_theorem_headers(derived_file: Path, max_theorems: int | None = None) -> list[tuple[str, str]]:
     if not derived_file.exists():
         return []
@@ -182,7 +186,8 @@ def append_theorem(
     if not re.search(rf"\btheorem\s+{re.escape(theorem_name)}\b", content):
         rendered_docstring = render_docstring(docstring or "")
         prelude_block, theorem_block = split_prelude_and_theorem_block(theorem_code, theorem_name)
-        if prelude_block:
+        normalized_content = normalize_block_text(content)
+        if prelude_block and normalize_block_text(prelude_block) not in normalized_content:
             blocks_to_add.append(prelude_block)
         blocks_to_add.append(rendered_docstring + theorem_block)
     if not blocks_to_add:

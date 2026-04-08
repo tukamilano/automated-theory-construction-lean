@@ -8,7 +8,7 @@ inductive Tp where
   | rdiv (B : String) (A : String) : Tp
   deriving Repr, DecidableEq
 
-local prefix:65 "☉" => Tp.atom
+local prefix:65 "#" => Tp.atom
 
 local infixl:60 " ⧸ " => Tp.rdiv
 

@@ -92,7 +92,6 @@ def main() -> None:
         raise ValueError("payload must be a JSON object")
 
     problem_id = str(payload.get("problem_id", ""))
-    source_id = str(payload.get("source_id", ""))
     stmt = str(payload.get("stmt", "")).strip()
     prelude_name = f"smoke_helper_{problem_id}"
     prelude_code = f"abbrev {prelude_name} : Prop := True" if problem_id else ""
@@ -124,10 +123,10 @@ def main() -> None:
             "proof_text": "aesop",
             "counterexample_text": "",
         }
-    elif task_type == "post_solve_opportunity":
+    elif task_type in {"expand", "post_theorem_expand"}:
         result_payload = {
-            "source_id": source_id,
-            "opportunity": None,
+            "problem_id": problem_id,
+            "candidates": [],
         }
     elif task_type == "refactor_derived":
         derived_code = str(payload.get("derived_code", "")).strip()
@@ -168,7 +167,7 @@ def main() -> None:
         result_payload = {
             "candidate_id": str(payload.get("candidate_id", "")),
             "result": "stuck",
-            "selected_problem_id": "",
+            "statement": "",
             "theorem_name_stem": "",
             "docstring_summary": "",
             "rationale": "mock_proof_worker: no main theorem suggestion",

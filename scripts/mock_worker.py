@@ -139,13 +139,6 @@ def _post_theorem_expand_result(payload: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _post_solve_opportunity_result(payload: dict[str, Any]) -> dict[str, Any]:
-    return {
-        "source_id": str(payload.get("source_id", "")).strip(),
-        "opportunity": None,
-    }
-
-
 def _refactor_derived_result(payload: dict[str, Any]) -> dict[str, Any]:
     derived_code = str(payload.get("derived_code", "")).strip()
     focus_theorem_names = [
@@ -222,8 +215,6 @@ def main() -> None:
             result_payload = _main_theorem_plan_result(payload)
         elif task_type == "post_theorem_expand":
             result_payload = _post_theorem_expand_result(payload)
-        elif task_type == "post_solve_opportunity":
-            result_payload = _post_solve_opportunity_result(payload)
         elif task_type == "refactor_derived":
             result_payload = _refactor_derived_result(payload)
         elif task_type == "plan_derived_compression":

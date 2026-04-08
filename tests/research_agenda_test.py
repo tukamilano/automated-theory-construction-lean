@@ -55,6 +55,34 @@ def test_parse_research_agenda_markdown_extracts_sections() -> None:
         raise RuntimeError(f"unexpected soft constraints: {payload}")
 
 
+def test_parse_research_agenda_markdown_handles_numbered_headings_and_ignores_paragraphs() -> None:
+    payload = parse_research_agenda_markdown(
+        """# Research Agenda
+
+## 1. Themes
+
+Introductory paragraph that should not become an item.
+
+* **Bridge theorem clusters**
+  Supporting explanation that should not become a separate item.
+* **Boundary criteria**
+  > Example paragraph that should also be ignored.
+
+## 2. Valued Problem Types
+
+Within this agenda, solutions to problems of the following kinds are especially valuable.
+
+1. **Classification results**
+   Extended explanation that should not become a second item.
+2. **Separation statements**
+"""
+    )
+    if payload["themes"] != ["Bridge theorem clusters", "Boundary criteria"]:
+        raise RuntimeError(f"unexpected numbered-heading themes: {payload}")
+    if payload["valued_problem_types"] != ["Classification results", "Separation statements"]:
+        raise RuntimeError(f"unexpected numbered-heading valued problem types: {payload}")
+
+
 def test_load_research_agenda_missing_file_is_empty() -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         payload = load_research_agenda(Path(tmpdir) / DEFAULT_RESEARCH_AGENDA_PATH)
@@ -110,7 +138,7 @@ def test_seed_prompt_includes_research_agenda_guidance() -> None:
             raise RuntimeError(f"missing agenda snippet in seed prompt: {snippet}\n{prompt}")
 
 
-def test_runtime_initialization_clears_post_solve_opportunities() -> None:
+def test_runtime_initialization_clears_generation_sidecar_files() -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp_path = Path(tmpdir)
         data_dir = tmp_path / "data"
@@ -119,15 +147,40 @@ def test_runtime_initialization_clears_post_solve_opportunities() -> None:
         derived_file = tmp_path / "Derived.lean"
         formalization_memory_file = data_dir / "formalization_memory.json"
         archived_problems_file = data_dir / "archived_problems.jsonl"
-        opportunities_file = data_dir / "post_solve_opportunities.jsonl"
+        expand_candidates_file = data_dir / "expand_candidates.jsonl"
+        theorem_reuse_memory_file = data_dir / "theorem_reuse_memory.json"
 
         write_jsonl_atomic(
             seeds_file,
             [{"id": "op_000001", "stmt": "True", "src": "seed"}],
         )
         write_jsonl_atomic(
-            opportunities_file,
-            [{"source_id": "old", "source_kind": "open_problem", "solve_result": "proof", "iteration": 1, "opportunity": None}],
+            expand_candidates_file,
+            [{"id": "op_000099", "stmt": "False", "src": "expand", "priority": "high", "priority_rationale": "old", "failure_count": 0}],
+        )
+        theorem_reuse_memory_file.write_text(
+            json.dumps(
+                {
+                    "entries": [
+                        {
+                            "candidate_id": "mt_old",
+                            "theorem_name": "old_theorem",
+                            "statement": "True",
+                            "docstring_summary": "",
+                            "rationale": "",
+                            "plan_summary": "",
+                            "supporting_theorems": [],
+                            "intermediate_lemmas": [],
+                            "iteration": 1,
+                            "appended_to_derived": True,
+                        }
+                    ]
+                },
+                ensure_ascii=False,
+                indent=2,
+            )
+            + "\n",
+            encoding="utf-8",
         )
 
         run_loop.initialize_runtime_state(
@@ -143,8 +196,11 @@ def test_runtime_initialization_clears_post_solve_opportunities() -> None:
             archived_problems_file=archived_problems_file,
         )
 
-        if run_loop.read_jsonl(opportunities_file) != []:
-            raise RuntimeError("post_solve_opportunities.jsonl was not cleared on initialization")
+        if run_loop.read_jsonl(expand_candidates_file) != []:
+            raise RuntimeError("expand_candidates.jsonl was not cleared on initialization")
+        theorem_reuse_payload = json.loads(theorem_reuse_memory_file.read_text(encoding="utf-8"))
+        if theorem_reuse_payload != {"entries": []}:
+            raise RuntimeError("theorem_reuse_memory.json was not cleared on initialization")
 
 
 def test_worker_payloads_include_research_agenda() -> None:
@@ -188,11 +244,11 @@ def test_worker_payloads_include_research_agenda() -> None:
                     },
                     {"worker": "research_agenda_test"},
                 )
-            if task_type == "post_solve_opportunity":
+            if task_type == "expand":
                 return (
                     {
-                        "source_id": "op_000001",
-                        "opportunity": None,
+                        "problem_id": "op_000001",
+                        "candidates": [],
                     },
                     {"worker": "research_agenda_test"},
                 )
@@ -201,7 +257,7 @@ def test_worker_payloads_include_research_agenda() -> None:
                     {
                         "candidate_id": "mt_manual",
                         "result": "stuck",
-                        "selected_problem_id": "",
+                        "statement": "",
                         "theorem_name_stem": "",
                         "docstring_summary": "",
                         "rationale": "agenda-aligned but not yet ready",
@@ -222,21 +278,23 @@ def test_worker_payloads_include_research_agenda() -> None:
             current_iteration=1,
             guidance=build_guidance_context(theory_state={}, research_agenda=agenda),
         )
-        run_loop.request_post_solve_opportunity(
+        run_loop.request_expand_candidates(
             worker_settings={},
-            prompt="unused",
-            source_id="op_000001",
-            source_kind="open_problem",
+            expand_prompt="unused",
+            task_type="expand",
+            problem_id="op_000001",
             stmt="True",
             original_stmt="True",
             result="stuck",
             verify_success=False,
             theory_context="",
             open_rows=[],
+            existing_new_problems=[],
             verify_error_excerpt="",
             current_iteration_full_logs=[],
             same_problem_history_tail=[],
-            guidance=build_guidance_context(theory_state={}, research_agenda=agenda),
+            theory_state={},
+            max_candidates=2,
         )
         run_loop.request_main_theorem_suggestion(
             worker_settings={},
@@ -252,7 +310,7 @@ def test_worker_payloads_include_research_agenda() -> None:
         run_loop.invoke_worker_json = original_invoke_worker_json
         run_loop.load_current_research_agenda = original_load_current_research_agenda
 
-    for task_type in ("prioritize_open_problems", "post_solve_opportunity", "main_theorem_suggest"):
+    for task_type in ("prioritize_open_problems", "expand", "main_theorem_suggest"):
         payload = captured_payloads.get(task_type)
         if payload is None:
             raise RuntimeError(f"missing captured payload for {task_type}")
@@ -349,10 +407,11 @@ def test_force_refresh_writes_research_agenda_to_theory_state() -> None:
 
 def main() -> int:
     test_parse_research_agenda_markdown_extracts_sections()
+    test_parse_research_agenda_markdown_handles_numbered_headings_and_ignores_paragraphs()
     test_load_research_agenda_missing_file_is_empty()
     test_load_research_agenda_falls_back_to_legacy_root_file()
     test_seed_prompt_includes_research_agenda_guidance()
-    test_runtime_initialization_clears_post_solve_opportunities()
+    test_runtime_initialization_clears_generation_sidecar_files()
     test_worker_payloads_include_research_agenda()
     test_force_refresh_writes_research_agenda_to_theory_state()
     print("research agenda test passed")

@@ -1,0 +1,70 @@
+{
+  "agenda_pressure": [
+    "Favor durable metatheorems over additional local slash identities",
+    "Keep separability-style characterizations active now that transport infrastructure exists",
+    "Prefer problems that clarify reducibility, admissibility, or exact boundaries over cosmetic symmetry completion"
+  ],
+  "current_bottlenecks": [
+    "No verified theorem packages the replacement lemmas into a general admissibility or reduction principle",
+    "No boundary result constrains how much derivability survives under atomic or otherwise restricted hypotheses",
+    "Current open composition lemmas look too local to improve the global theory summary on their own"
+  ],
+  "derived_generation": 4,
+  "desired_summary_changes": [
+    "Turn contextual replacement into a clearer cut-like or substitution-style reducibility principle",
+    "Add a sharp boundary characterization for derivability in constrained regimes",
+    "Explain how left- and right-division transport interact in reusable higher-level proof patterns"
+  ],
+  "important_verified_counterexamples": [],
+  "missing_bridges": [
+    "From contextual replacement theorems to an explicit general substitution or cut-like admissibility statement",
+    "From slash transport behavior to derivability criteria in restricted syntactic classes",
+    "From local application/composition facts to a unified account of structural reducibility"
+  ],
+  "next_direction": {
+    "guidance": "Prioritize results that either sharpen the new context-transport backbone into clearer reducibility principles or add boundary characterizations for restricted derivability regimes.",
+    "label": "boundary_and_reduction_sharpening",
+    "rationale": "The core transport bridge is now verified on both slash sides, so the biggest remaining summary gains come from either compressing that bridge into stronger reusable reduction principles or pairing it with a sharp derivability boundary such as the atomic regime; there is no counterexample pressure forcing a narrower impossibility-focused direction yet."
+  },
+  "overexplored_patterns": [
+    "One-step slash composition lemmas that only combine nearby derived rules",
+    "Symmetric left/right closure variants without a new criterion or reduction mechanism",
+    "Problems whose payoff stays inside a single append-based proof path"
+  ],
+  "research_agenda": {
+    "anti_goals": [
+      "Cosmetic rewrites",
+      "Unprincipled proliferation of structural rules",
+      "One-off examples",
+      "Unproductive negative statements"
+    ],
+    "canonical_targets": [
+      "A deeper understanding of completeness for $L$",
+      "The boundary between cut elimination and decidability in extensions",
+      "The interface with categorial grammar"
+    ],
+    "soft_constraints": [
+      "Closeness to established notation and theory",
+      "Temporal durability"
+    ],
+    "themes": [
+      "Structural correspondences between language hierarchies and logical systems",
+      "Extraction of logical rules and complexity"
+    ],
+    "valued_problem_types": [
+      "Provability relations among structural rules (reducibility)",
+      "Discovery of invertibility",
+      "Separability",
+      "Proofs of metatheorems"
+    ]
+  },
+  "summary_basis": {
+    "archived_problem_count": 2,
+    "derived_theorem_count": 3,
+    "open_problem_count": 2
+  },
+  "theory_snapshot": "The theory now has a genuine metatheoretic backbone: both left- and right-division judgments can be transported into larger ambient sequents through verified context-replacement theorems, and right division also has a direct append-application rule. The main frontier is no longer basic slash-to-context transport, but rather understanding what stronger reusable principles follow from these transport results and where their limits are. A secondary gap is the absence of any verified boundary theorem for restricted regimes such as atom-only contexts. There are still no verified counterexamples, so the summary is constrained more by missing characterizations than by known impossibility boundaries.",
+  "updated_at_iteration": 4,
+  "updated_at_run_id": "20260408-193151-loop",
+  "version": 1
+}

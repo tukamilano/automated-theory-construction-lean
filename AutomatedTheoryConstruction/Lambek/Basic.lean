@@ -10,9 +10,12 @@ inductive Tp where
   | rdiv (A B : Tp)      : Tp
   deriving Repr, DecidableEq
 
-local prefix:65 "☉" => Tp.atom
-local infixr:60 " ⧹ " => Tp.ldiv
-local infixl:60 " ⧸ " => Tp.rdiv
+scoped prefix:65 "#" => Tp.atom
+scoped infixr:60 " ⧹ " => Tp.ldiv
+scoped infixl:60 " ⧸ " => Tp.rdiv
+scoped infixr:60 " \\ " => Tp.ldiv
+scoped infixl:60 " / " => Tp.rdiv
+open scoped Mathling.Lambek.ProductFree
 
 @[grind intro]
 inductive Sequent : List Tp → Tp → Prop where
@@ -34,11 +37,11 @@ inductive Sequent : List Tp → Tp → Prop where
       Sequent (Γ ++ [B] ++ Λ) C →
       Sequent (Γ ++ Δ ++ [A ⧹ B] ++ Λ) C
 
-infixl:50 " ⇒ " => Sequent
+scoped infixl:50 " ⇒ " => Sequent
 
 @[grind =]
 def tp_degree : Tp → Nat
-  | ☉ _     => 1
+  | # _     => 1
   | A ⧹ B   => tp_degree A + tp_degree B + 1
   | A ⧸ B   => tp_degree A + tp_degree B + 1
 

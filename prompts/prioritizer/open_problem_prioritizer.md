@@ -6,7 +6,7 @@
 
 ## objective
 - Assign exactly one label (`high`/`medium`/`low`) to every tracked problem.
-- Provide a short structural `theory_snapshot` (2–5 sentences).
+- Provide a short structural `theory_snapshot` (2-5 sentences).
 - Choose exactly one broad `next_direction` label.
 - Maintain explicit frontier lists describing what would count as summary-changing progress.
 
@@ -33,6 +33,12 @@
 - Treat `previous_theory_state.important_verified_counterexamples` as high-impact boundary evidence.
 - Treat `previous_theory_state.overexplored_patterns` as negative evidence unless a problem clearly unlocks a broader structural step.
 
+## tracked_problem_source_policy
+- `tracked_problems` may include items with `source_kind = open|archived|expand_candidate`.
+- Evaluate every item by the same standard: if this statement were solved now, how much would it improve the current theory frontier?
+- Do not give special credit to `expand_candidate` merely because it was newly generated.
+- Do not rescue weak generated statements by inflating their priority.
+
 ## priority_criteria
 - For each existing open problem, ask: if this problem were solved now, how much would it improve the current theory frontier?
 - Use a strict scale: `high` should be rare, and it is acceptable for most problems to be `low`.
@@ -40,7 +46,7 @@
 - `high` only when a problem is very likely to cause summary-level change now, not merely because it looks interesting or agenda-aligned.
 - `high` only when the problem would likely rewrite the theory summary and clearly does at least one of the following:
   - resolves a core bottleneck or a major missing bridge,
-  - gives a sharp characterization/criterion/converse/boundary result,
+  - gives a sharp characterization, criterion, converse, or boundary result,
   - creates a reusable bridge that should reprioritize several other problems.
 - Do not use `high` for merely natural next lemmas, local strengthenings, or statements that only look potentially useful.
 - `medium` for nontrivial but still limited progress: a useful local extension, support lemma, partial bridge, or locally sharp lemma that helps with a listed bottleneck, bridge, or agenda target without clearly changing the top-level summary.
@@ -51,21 +57,32 @@
 - Strongly down-rank problems that fit an overexplored pattern and do not create clear summary-level change.
 - If the benefit seems confined to one nearby proof path, prefer `low` unless there is explicit evidence that the lemma is sharply formulated and would materially unblock or compress that path.
 
+## expand_candidate_policy
+- Treat `expand_candidate` items as promotion candidates, not as already-admitted queue items.
+- Promote an `expand_candidate` to practical queue relevance only when it clearly outperforms ordinary queue items on summary-level effect.
+- An `expand_candidate` should usually be `low` if it is merely a local support lemma, even when its generator rationale sounds plausible.
+- Use the candidate's `why_not_peripheral`, `theory_state_links`, and `agenda_links` only as evidence to evaluate, not as reasons to skip independent judgment.
+
+## stricter_high_policy
+- `high` should be rare.
+- For `expand_candidate`, use `high` only when the statement would likely rewrite the theory summary now and is clearly stronger or more central than the best existing queue item.
+- If uncertain between `medium` and `high` for an `expand_candidate`, choose `medium`.
+
 ## direction_policy
 - `next_direction` must be one coarse direction with keys:
   - `label` (snake_case)
   - `guidance` (one sentence)
   - `rationale` (short reason including counterexample evidence when available)
 - Direction should be broad enough to cover multiple next problems.
-- If strong counterexamples exist, prefer directions that tighten hypotheses, characterize boundaries, or show impossibility/converse failures.
+- If strong counterexamples exist, prefer directions that tighten hypotheses, characterize boundaries, or show impossibility or converse failures.
 - Do not choose an overly narrow direction that suppresses strong off-direction opportunities.
 
 ## theory_snapshot_policy
 - Must be structural and forward-looking, not a chronological log.
 - Include:
   1. current central structure,
-  2. main gap/frontier,
-  3. verified boundary/counterexample constraints when present.
+  2. main gap or frontier,
+  3. verified boundary or counterexample constraints when present.
 
 ## frontier_lists_policy
 - Return all of these lists with short English items:
@@ -84,6 +101,8 @@
 ## output_policy
 - Output only rankings plus updated theory-state fields.
 - Never output new candidate statements.
+- You are not generating new problems.
+- Your job is to rank and judge the currently provided statements only.
 
 ## output_schema
 Return exactly this JSON object only:

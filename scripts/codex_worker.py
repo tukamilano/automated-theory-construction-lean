@@ -291,7 +291,6 @@ def main() -> None:
             "formalize",
             "repair",
             "expand",
-            "post_solve_opportunity",
             "refactor_derived",
             "plan_derived_compression",
             "apply_derived_compression_item",

@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import argparse
-import json
 import sys
 import tempfile
 from pathlib import Path
 from typing import Any
+import json
 
 from common import (
     ARCHIVED_PROBLEMS_FILENAME,
@@ -116,7 +116,8 @@ def reset_runtime_before_seed_generation(
     write_jsonl_atomic(archived_problems_file, [])
     write_jsonl_atomic(data_dir / "solved_problems.jsonl", [])
     write_jsonl_atomic(data_dir / "counterexamples.jsonl", [])
-    write_jsonl_atomic(data_dir / "post_solve_opportunities.jsonl", [])
+    write_jsonl_atomic(data_dir / "expand_candidates.jsonl", [])
+    (data_dir / "theorem_reuse_memory.json").write_text('{"entries": []}\n', encoding="utf-8")
     (data_dir / LEGACY_DEFERRED_PROBLEMS_FILENAME).unlink(missing_ok=True)
     (data_dir / LEGACY_PRUNED_OPEN_PROBLEMS_FILENAME).unlink(missing_ok=True)
     theory_state_path(data_dir).unlink(missing_ok=True)
@@ -309,18 +310,15 @@ def build_prompt(
         for item in recent_opportunities:
             if not isinstance(item, dict):
                 continue
-            opportunity = item.get("opportunity")
-            if not isinstance(opportunity, dict):
+            statement = str(item.get("stmt", "")).strip()
+            mode = str(item.get("mode", "")).strip() or "expand_candidate"
+            unlocks = str(item.get("unlocks", "")).strip() or str(item.get("summary_delta", "")).strip()
+            if not statement or not unlocks:
                 continue
-            statement = str(opportunity.get("statement", "")).strip()
-            kind = str(opportunity.get("kind", "")).strip()
-            unlocks = str(opportunity.get("unlocks", "")).strip()
-            if not statement or not kind or not unlocks:
-                continue
-            rendered_opportunities.append(f"{kind}: {statement} [unlocks: {unlocks}]")
+            rendered_opportunities.append(f"{mode}: {statement} [signal: {unlocks}]")
         if rendered_opportunities:
             opportunity_block += (
-                "- Recent post-solve opportunities (signal only, not mandatory targets): "
+                "- Recent expand candidates (signal only, not mandatory targets): "
                 f"{'; '.join(rendered_opportunities[:3])}\n"
             )
 
@@ -543,7 +541,7 @@ def main() -> int:
         theory_state=load_theory_state((repo_root / DEFAULT_DATA_DIR).resolve()),
         research_agenda=load_research_agenda(DEFAULT_RESEARCH_AGENDA),
     )
-    recent_opportunities = read_jsonl((repo_root / DEFAULT_DATA_DIR / "post_solve_opportunities.jsonl").resolve())[-12:]
+    recent_opportunities = read_jsonl((repo_root / DEFAULT_DATA_DIR / "expand_candidates.jsonl").resolve())[-12:]
 
     prompt = build_prompt(
         theory_files=theory_files,
