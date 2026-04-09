@@ -1185,9 +1185,9 @@ def validate_main_theorem_plan_output(
 
 def load_prompt_text(prompt_file: str) -> str:
     path = Path(prompt_file)
-    if not path.exists():
-        raise ValueError(f"Prompt file not found: {prompt_file}")
-    return path.read_text(encoding="utf-8")
+    from prompt_loader import load_prompt_file
+
+    return load_prompt_file(path)
 
 
 def select_formalizer_prompt(prompt_map: dict[str, str], *, result: str) -> str:
@@ -5422,11 +5422,13 @@ def main() -> None:
         task_name="formalize",
         base_settings=worker_settings,
         timeout_override=args.main_theorem_formalize_worker_timeout,
+        codex_timeout_override=args.main_theorem_formalize_worker_timeout,
     )
     main_theorem_repair_worker_settings = load_task_worker_settings(
         task_name="repair",
         base_settings=worker_settings,
         timeout_override=args.main_theorem_repair_worker_timeout,
+        codex_timeout_override=args.main_theorem_repair_worker_timeout,
     )
     prioritize_open_problems_worker_settings = load_task_worker_settings(
         task_name="prioritize_open_problems",

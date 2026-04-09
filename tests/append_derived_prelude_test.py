@@ -80,6 +80,42 @@ theorem thm_tmp_dup : True := by
         if dup_content.count("open scoped Mathling.Lambek.ProductFree") != 1:
             raise RuntimeError("duplicate scoped prelude open was appended to Derived")
 
+        mixed_prelude_theorem = """
+open Mathling.Lambek.ProductFree
+open scoped Mathling.Lambek.ProductFree
+
+def tmpSupport : Nat := 1
+
+theorem thm_tmp_support : tmpSupport = 1 := by
+  rfl
+""".strip()
+        derived_path.write_text(
+            "import Mathlib\n"
+            "import AutomatedTheoryConstruction.Theory\n\n"
+            "namespace AutomatedTheoryConstruction\n\n"
+            "open Mathling.Lambek.ProductFree\n"
+            "open scoped Mathling.Lambek.ProductFree\n\n"
+            "end AutomatedTheoryConstruction\n",
+            encoding="utf-8",
+        )
+        appended_mixed = append_theorem(
+            derived_path,
+            mixed_prelude_theorem,
+            "thm_tmp_support",
+            "",
+        )
+        if not appended_mixed:
+            raise RuntimeError("append_theorem unexpectedly returned False for mixed prelude case")
+        mixed_content = derived_path.read_text(encoding="utf-8")
+        if mixed_content.count("open Mathling.Lambek.ProductFree") != 1:
+            raise RuntimeError("mixed prelude appended a duplicate open directive")
+        if mixed_content.count("open scoped Mathling.Lambek.ProductFree") != 1:
+            raise RuntimeError("mixed prelude appended a duplicate scoped open directive")
+        if "def tmpSupport : Nat := 1" not in mixed_content:
+            raise RuntimeError("mixed prelude support definition was not appended")
+        if "theorem thm_tmp_support : tmpSupport = 1 := by" not in mixed_content:
+            raise RuntimeError("mixed prelude theorem was not appended")
+
     print("append derived prelude test passed")
     return 0
 

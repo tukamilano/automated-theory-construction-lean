@@ -8,10 +8,7 @@
 - Keep all edits small and executor-friendly.
 
 ## constraints
-- Do not rename theorems.
-- Do not change theorem statements.
-- Do not delete theorems.
-- Do not reorganize file globally.
+<!-- INCLUDE: ../shared/derived_local_edit_constraints.md -->
 - Keep each item within one theorem cluster.
 - Return at most 5 items.
 - `noop` is valid if no safe item exists.

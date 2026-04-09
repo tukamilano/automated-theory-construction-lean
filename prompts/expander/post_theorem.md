@@ -18,7 +18,6 @@
 When `verify_success = true` and `result = proof`:
 - Start from the newly proved main theorem and ask what it reclassifies, sharpens, or makes newly thinkable.
 - Prefer structural consequences, converses, sharpenings, classifications, boundary results, and reusable corollaries that genuinely use the new theorem.
-- Favor follow-ups likely to shift future priorities.
 
 ## verified_counterexample_policy
 When `verify_success = true` and `result = counterexample`:
@@ -31,6 +30,8 @@ When `verify_success = true` and `result = counterexample`:
 - Use `theory_state` and `research_agenda` as primary value guidance after local plausibility is established.
 - Reject weak, duplicate, cosmetic, or merely nearby statements.
 - Return candidates in concise, theorem-sized form: one core claim per candidate, avoiding verbose scaffolding.
+<!-- INCLUDE: ../shared/expand_soft_diversity.md -->
+- Around a newly resolved main theorem, prefer covering `converse`, `boundary`, `separation`, and `criterion` before adding multiple candidates from the same family.
 - De-duplicate against:
   - `open_problems`
   - visible `Derived.lean` statements

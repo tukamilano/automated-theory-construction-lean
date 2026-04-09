@@ -132,6 +132,11 @@ def test_seed_prompt_includes_research_agenda_guidance() -> None:
         "Anti-goals: cosmetic rewrites",
         "Canonical targets: exact boundary results",
         "Soft constraints: stay close to the active theory",
+        "Treat diversity as a tie-breaker among multiple strong candidates",
+        "When multiple strong seeds are available, prefer a diverse spread across theorem role, statement shape, and proof value.",
+        "`generalization`, `converse`, `boundary`, `separation`, `criterion`, `reusable_lemma`",
+        "Treat each candidate by its dominant role only.",
+        "Do not sacrifice the strongest candidate merely to increase role spread.",
     )
     for snippet in required_snippets:
         if snippet not in prompt:

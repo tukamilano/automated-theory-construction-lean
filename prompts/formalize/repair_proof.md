@@ -37,6 +37,4 @@
 ## prelude_rules
 - `prelude_code` only for verification-critical shaping, not cosmetic cleanup.
 - No `import`, `namespace`, `section`, `axiom`, `theorem`.
-- For local `SemigroupLike01` construction: define type/witnesses, then structure fields, then `letI`; avoid dense one-shot blocks and avoid `where` in tactics.
-- For `∀ {α} [SemigroupLike01 α], ...`, install instance with `letI` then apply `h (α := T)`.
-- Field names are fixed: `mul`, `ax_left_idempotent`, `ax_right_absorb_duplicate`, `ax_middle_swap`.
+<!-- INCLUDE: ../shared/formalize_semigrouplike01.md -->

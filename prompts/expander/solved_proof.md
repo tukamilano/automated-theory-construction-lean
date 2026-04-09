@@ -47,6 +47,10 @@ When `verify_success = true` and `result = counterexample`:
 - Prefer candidates that explain when the original statement becomes true, or that isolate the obstruction in a reusable way.
 - Reject candidates that merely restate that the original statement is false without extracting a sharper structural lesson.
 
+## soft_diversity_policy
+- Apply the same diversity policy after verified proofs and verified counterexamples.
+<!-- INCLUDE: ../shared/expand_soft_diversity.md -->
+
 ## candidate_quality_checks
 For every returned candidate:
 - It must add theory-level information, not only repackage the current theorem.

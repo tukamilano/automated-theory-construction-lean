@@ -10,6 +10,7 @@ from common import write_json_atomic
 from derived_refactor_utils import build_exact_duplicate_statement_groups
 from derived_refactor_utils import build_report
 from derived_refactor_utils import debug_log
+from derived_refactor_utils import load_prompt_text
 from derived_refactor_utils import load_text
 from derived_refactor_utils import print_report
 from derived_refactor_utils import resolve_refactor_worker_settings
@@ -132,7 +133,7 @@ def run_plan_derived_compression(
     try:
         if not allowed_kinds:
             raise ValueError("allowed_kinds must be non-empty")
-        prompt_text = load_text(prompt_file)
+        prompt_text = load_prompt_text(prompt_file)
         derived_code = load_text(input_file)
         _, theory_context = load_theory_context(theory_file)
         theorem_inventory = build_derived_entries_from_file(input_file)

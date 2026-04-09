@@ -1,6 +1,0 @@
-{"id":"op_000005","stmt":"∀ {Γ : List Tp} {A : Tp}, (Γ ⇒ A) → tp_degree A ≤ list_degree Γ","run_id":"20260409-174042-loop","iteration":2,"session_type":"loop"}
-{"id":"op_000002","stmt":"∀ {A B : Tp}, ([A] ⇒ B) ↔ A = B","run_id":"20260409-174042-loop","iteration":1,"session_type":"loop"}
-{"id":"op_000009","stmt":"∀ {s : String} {A : Tp}, ([# s] ⇒ A) → ∃ Δ : List Tp, Δ ⇒ # s ∧ A = (# s ⧸ foldl Tp.ldiv (# s) Δ) ∨ A = (foldr Tp.rdiv (# s) Δ)","run_id":"20260409-174042-loop","iteration":3,"session_type":"loop"}
-{"id":"op_000010","stmt":"∀ {Γ : List Tp} {A : Tp}, (Γ ⇒ A) → atom_count A ≤ atom_count_list Γ","run_id":"20260409-174042-loop","iteration":4,"session_type":"loop"}
-{"id":"op_000021","stmt":"∀ {Γ : List Tp} {A : Tp} {t : String}, (Γ ⇒ A) → occurs_atom t A → ∃ B ∈ Γ, occurs_atom t B","run_id":"20260409-174042-loop","iteration":12,"session_type":"loop"}
-{"id":"op_000041","stmt":"Prove exact completeness of the support closure by showing `∀ (Γ : List Tp) (A : Tp), SupportClosure Γ A ↔ (Γ ⇒ A)`.","run_id":"20260409-174042-loop","iteration":22,"session_type":"loop"}

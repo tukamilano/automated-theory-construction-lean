@@ -10,8 +10,7 @@
 ## constraints
 - Output full Lean file in `refactored_code` with valid module shape.
 - No `sorry`.
-- No theorem renames, statement changes, deletions.
-- No global file reorganization.
+<!-- INCLUDE: ../shared/derived_local_edit_constraints.md -->
 - Preserve order outside touched local cluster.
 
 ## strategy

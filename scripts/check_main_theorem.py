@@ -71,11 +71,13 @@ def main() -> None:
             task_name="formalize",
             base_settings=worker_settings,
             timeout_override=args.formalize_worker_timeout,
+            codex_timeout_override=args.formalize_worker_timeout,
         )
         repair_worker_settings = load_task_worker_settings(
             task_name="repair",
             base_settings=worker_settings,
             timeout_override=args.repair_worker_timeout,
+            codex_timeout_override=args.repair_worker_timeout,
         )
         prioritize_open_problems_worker_settings = load_task_worker_settings(
             task_name="prioritize_open_problems",

@@ -8,7 +8,7 @@
 - Focus on direct rewrites where a theorem can be proved from shape-compatible support results.
 
 ## constraints
-- No theorem renames, statement changes, deletions, or global reorganization.
+<!-- INCLUDE: ../shared/derived_local_edit_constraints.md -->
 - Each item stays local to one theorem cluster.
 - Return at most 5 items.
 - `noop` is valid if no safe target exists.

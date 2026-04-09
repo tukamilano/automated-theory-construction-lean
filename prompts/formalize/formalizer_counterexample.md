@@ -33,6 +33,4 @@
 - By default avoid new `def`/`abbrev`/`structure`/`class`/`inductive` in `prelude_code`.
 - Allowed only when essential for refutation.
 - No `import`, `namespace`, `section`, `axiom`, `theorem` in prelude.
-- For `SemigroupLike01` local instances in tactics: build type/witnesses first, structure fields next, then `letI`; avoid `where`.
-- For `∀ {α} [SemigroupLike01 α], ...`, install instance with `letI`, then use `h (α := T)`.
-- Use repository field names exactly: `mul`, `ax_left_idempotent`, `ax_right_absorb_duplicate`, `ax_middle_swap`.
+<!-- INCLUDE: ../shared/formalize_semigrouplike01.md -->

@@ -18,6 +18,7 @@ from derived_refactor_utils import emit_progress_finish
 from derived_refactor_utils import emit_progress_start
 from derived_refactor_utils import error_fingerprint
 from derived_refactor_utils import extract_theorem_entries_from_code
+from derived_refactor_utils import load_prompt_text
 from derived_refactor_utils import load_text
 from derived_refactor_utils import normalize_stop_reason
 from derived_refactor_utils import print_report
@@ -187,7 +188,7 @@ def run_refactor_derived(
     target_theorem_name: str | None = None,
     max_wall_clock_sec: int | None = None,
 ) -> dict[str, Any]:
-    prompt_text = load_text(prompt_file)
+    prompt_text = load_prompt_text(prompt_file)
     original_code = load_text(derived_file)
     _, theory_context = load_theory_context(theory_file)
     theorem_reuse_memory = load_theorem_reuse_memory(theorem_reuse_memory_file)

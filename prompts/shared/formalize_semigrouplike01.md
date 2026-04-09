@@ -1,0 +1,3 @@
+- For local `SemigroupLike01` setup, define type/witnesses first, then structure fields, then install with `letI`; avoid `where` in tactic code.
+- For statements `∀ {α} [SemigroupLike01 α], ...`, install the instance with `letI` before using `h (α := T)`.
+- Use repository field names exactly: `mul`, `ax_left_idempotent`, `ax_right_absorb_duplicate`, `ax_middle_swap`.

@@ -354,7 +354,13 @@ Quality filter:
 - Avoid seeds that differ only by notation changes, variable renaming, or tiny local rewrites.
 - A local lemma is acceptable when it has sharp content and clear reuse or bottleneck-relief value; do not reject it merely because it is not theory-global.
 - Strongly avoid safe peripheral extensions that fit known overexplored patterns unless they are the clearest route to a broader organizing result.
-- Keep the seeds mathematically diverse when possible.
+- Treat diversity as a tie-breaker among multiple strong candidates, not as a goal that overrides quality, novelty, or agenda fit.
+- When multiple strong seeds are available, prefer a diverse spread across theorem role, statement shape, and proof value.
+- Use these fixed role buckets when reasoning about spread: `generalization`, `converse`, `boundary`, `separation`, `criterion`, `reusable_lemma`.
+- Treat each candidate by its dominant role only.
+- Do not count shallow variants from the same family as distinct candidates for diversity purposes.
+- Avoid returning several seeds that share the same dominant role, the same obstruction, the same repair idea, or the same near-neighbor statement unless those are clearly the strongest options.
+- Do not sacrifice the strongest candidate merely to increase role spread.
 - Make each proposition read like something that could be pasted directly into a theorem statement in Lean.
 {extra_block}
 Output contract:

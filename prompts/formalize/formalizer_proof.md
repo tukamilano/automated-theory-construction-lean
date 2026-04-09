@@ -35,9 +35,7 @@
 - `prelude_code` is optional and only for genuinely helpful declarations (no `import`, `namespace`, `section`, `axiom`, `theorem`).
 - Keep it material: avoid cosmetic aliases or one-off helper names.
 - If structural cleanup helps the proof, introduce `def`/`abbrev`/`structure`/`inductive`/short helper lemmas when reusable.
-- For local `SemigroupLike01` setup, define components in stages, then `letI` install. Do not use `where` in tactic code for local instances.
-- For statements `∀ {α} [SemigroupLike01 α], ...`, prefer `letI` before `h (α := T)`.
-- Use repository field names exactly: `mul`, `ax_left_idempotent`, `ax_right_absorb_duplicate`, `ax_middle_swap`.
+<!-- INCLUDE: ../shared/formalize_semigrouplike01.md -->
 
 ## output_behavior
 - If a valid direction remains: keep `result` as `proof`.

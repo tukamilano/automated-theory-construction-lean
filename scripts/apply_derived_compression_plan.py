@@ -21,6 +21,7 @@ from derived_refactor_utils import emit_progress_finish
 from derived_refactor_utils import emit_progress_start
 from derived_refactor_utils import error_fingerprint
 from derived_refactor_utils import extract_theorem_entries_from_code
+from derived_refactor_utils import load_prompt_text
 from derived_refactor_utils import load_text
 from derived_refactor_utils import normalize_stop_reason
 from derived_refactor_utils import print_report
@@ -205,7 +206,7 @@ def run_apply_derived_compression_plan(
     worker_command: str | None = None,
     worker_timeout: int | None = None,
 ) -> dict[str, Any]:
-    prompt_text = load_text(prompt_file)
+    prompt_text = load_prompt_text(prompt_file)
     current_code = load_text(input_file)
     current_inventory = build_derived_entries_from_file(input_file)
     original_inventory = list(current_inventory)

@@ -1,0 +1,6 @@
+- When multiple strong candidates are available, prefer a diverse spread across dominant roles: `generalization`, `converse`, `boundary`, `separation`, `criterion`, `reusable_lemma`.
+- Treat each candidate by one dominant role only.
+- Prefer a spread across theorem role, statement shape, and proof value when the candidates are otherwise comparably strong.
+- Do not count shallow variants from the same family as meaningfully distinct.
+- Do not return multiple candidates that repeat the same obstruction, the same repair idea, or the same near-neighbor statement unless those are clearly the strongest options.
+- Do not sacrifice the strongest candidate merely to create role spread.

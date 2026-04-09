@@ -7,8 +7,8 @@
 - Improve local readability/structure without changing theorem inventory.
 
 ## constraints
-- No theorem renames, statement changes, deletions, or proof-search rewrites.
-- No global reorganization.
+<!-- INCLUDE: ../shared/derived_local_edit_constraints.md -->
+- No proof-search rewrites.
 - Each item must be local to one cluster.
 - Return at most 5 items.
 - `noop` is valid if no safe item exists.

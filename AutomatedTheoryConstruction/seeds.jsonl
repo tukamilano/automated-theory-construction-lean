@@ -1,7 +1,0 @@
-{"id":"op_000001","stmt":"∀ {Γ : List Tp} {A : Tp}, (∀ x ∈ Γ, is_atom x) → (Γ ⇒ A) → ∃ s : String, Γ = [# s] ∧ A = # s","src":"seed","priority":"unknown","priority_rationale":"","failure_count":0}
-{"id":"op_000002","stmt":"∀ {A B : Tp}, ([A] ⇒ B) ↔ A = B","src":"seed","priority":"unknown","priority_rationale":"","failure_count":0}
-{"id":"op_000003","stmt":"∀ {Γ Δ : List Tp} {A B C : Tp}, (Γ ⇒ A ⧹ B) → (Δ ⇒ B ⧹ C) → (Γ ++ Δ ⇒ A ⧹ C)","src":"seed","priority":"unknown","priority_rationale":"","failure_count":0}
-{"id":"op_000004","stmt":"∀ {Γ Δ : List Tp} {A B C : Tp}, (Δ ⇒ C ⧸ B) → (Γ ⇒ B ⧸ A) → (Δ ++ Γ ⇒ C ⧸ A)","src":"seed","priority":"unknown","priority_rationale":"","failure_count":0}
-{"id":"op_000005","stmt":"∀ {Γ : List Tp} {A : Tp}, (Γ ⇒ A) → tp_degree A ≤ list_degree Γ","src":"seed","priority":"unknown","priority_rationale":"","failure_count":0}
-{"id":"op_000006","stmt":"∀ {Γ : List Tp} {A : Tp}, proveAux (list_degree Γ + tp_degree A) Γ A ↔ (Γ ⇒ A)","src":"seed","priority":"unknown","priority_rationale":"","failure_count":0}
-{"id":"op_000007","stmt":"∀ {Γ : List Tp} {s : String}, (Γ ⇒ # s) → Γ = [# s] ∨ ∃ c : Cand, c ∈ candidates Γ ∧ match c with | Cand.rdiv L B A Δ Λ => (Δ ⇒ A) ∧ (L ++ [B] ++ Λ ⇒ # s) | Cand.ldiv Γ₁ Δ A B R => (Δ ⇒ A) ∧ (Γ₁ ++ [B] ++ R ⇒ # s)","src":"seed","priority":"unknown","priority_rationale":"","failure_count":0}

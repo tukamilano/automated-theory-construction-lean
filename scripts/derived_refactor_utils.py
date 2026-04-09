@@ -10,6 +10,7 @@ from typing import Any
 from append_derived import build_derived_entries_from_file
 from common import append_jsonl
 from common import write_json_atomic
+from prompt_loader import load_prompt_file
 from worker_client import WorkerSettings
 from worker_client import load_task_worker_settings
 from worker_client import load_worker_settings
@@ -187,6 +188,10 @@ def load_text(path: Path) -> str:
     if not path.exists():
         raise ValueError(f"File not found: {path}")
     return path.read_text(encoding="utf-8")
+
+
+def load_prompt_text(path: Path) -> str:
+    return load_prompt_file(path)
 
 
 def single_line_excerpt(text: str, limit: int = 240) -> str:
@@ -369,6 +374,8 @@ def resolve_refactor_worker_settings(
         command=base_worker_settings.command,
         timeout_sec=None,
         propagate_timeout=False,
+        codex_timeout_sec=base_worker_settings.codex_timeout_sec,
+        propagate_codex_timeout=base_worker_settings.propagate_codex_timeout,
     )
     return load_task_worker_settings(
         task_name="refactor_derived",

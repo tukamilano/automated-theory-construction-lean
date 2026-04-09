@@ -11,9 +11,7 @@
 - Output full Lean file in `refactored_code`.
 - Preserve valid standalone module shape.
 - Do not use `sorry`.
-- Do not rename or change theorem statements.
-- Do not delete theorems.
-- Do not globally reorganize.
+<!-- INCLUDE: ../shared/derived_local_edit_constraints.md -->
 - Stay within local cluster implied by `plan_item`.
 - `noop` allowed when no safe edit is possible.
 

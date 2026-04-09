@@ -40,7 +40,6 @@
 - Do not rescue weak generated statements by inflating their priority.
 
 ## priority_criteria
-- For each existing open problem, ask: if this problem were solved now, how much would it improve the current theory frontier?
 - Use a strict scale: `high` should be rare, and it is acceptable for most problems to be `low`.
 - When uncertain between two labels, choose the lower one.
 - `high` only when a problem is very likely to cause summary-level change now, not merely because it looks interesting or agenda-aligned.
@@ -61,10 +60,7 @@
 - Treat `expand_candidate` items as promotion candidates, not as already-admitted queue items.
 - Promote an `expand_candidate` to practical queue relevance only when it clearly outperforms ordinary queue items on summary-level effect.
 - An `expand_candidate` should usually be `low` if it is merely a local support lemma, even when its generator rationale sounds plausible.
- - Use `theory_state_links` and `agenda_links` only as evidence to evaluate, not as reasons to skip independent judgment.
-
-## stricter_high_policy
-- `high` should be rare.
+- Use `theory_state_links` and `agenda_links` only as evidence to evaluate, not as reasons to skip independent judgment.
 - For `expand_candidate`, use `high` only when the statement would likely rewrite the theory summary now and is clearly stronger or more central than the best existing queue item.
 - If uncertain between `medium` and `high` for an `expand_candidate`, choose `medium`.
 
