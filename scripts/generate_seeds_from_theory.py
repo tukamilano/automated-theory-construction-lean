@@ -116,8 +116,8 @@ def reset_runtime_before_seed_generation(
     write_jsonl_atomic(archived_problems_file, [])
     write_jsonl_atomic(data_dir / "solved_problems.jsonl", [])
     write_jsonl_atomic(data_dir / "counterexamples.jsonl", [])
-    write_jsonl_atomic(data_dir / "expand_candidates.jsonl", [])
     (data_dir / "theorem_reuse_memory.json").write_text('{"entries": []}\n', encoding="utf-8")
+    (data_dir / "expand_candidates.jsonl").unlink(missing_ok=True)
     (data_dir / LEGACY_DEFERRED_PROBLEMS_FILENAME).unlink(missing_ok=True)
     (data_dir / LEGACY_PRUNED_OPEN_PROBLEMS_FILENAME).unlink(missing_ok=True)
     theory_state_path(data_dir).unlink(missing_ok=True)
@@ -312,10 +312,10 @@ def build_prompt(
                 continue
             statement = str(item.get("stmt", "")).strip()
             mode = str(item.get("mode", "")).strip() or "expand_candidate"
-            unlocks = str(item.get("unlocks", "")).strip() or str(item.get("summary_delta", "")).strip()
-            if not statement or not unlocks:
+            signal = str(item.get("summary_delta", "")).strip()
+            if not statement or not signal:
                 continue
-            rendered_opportunities.append(f"{mode}: {statement} [signal: {unlocks}]")
+            rendered_opportunities.append(f"{mode}: {statement} [signal: {signal}]")
         if rendered_opportunities:
             opportunity_block += (
                 "- Recent expand candidates (signal only, not mandatory targets): "
@@ -541,7 +541,7 @@ def main() -> int:
         theory_state=load_theory_state((repo_root / DEFAULT_DATA_DIR).resolve()),
         research_agenda=load_research_agenda(DEFAULT_RESEARCH_AGENDA),
     )
-    recent_opportunities = read_jsonl((repo_root / DEFAULT_DATA_DIR / "expand_candidates.jsonl").resolve())[-12:]
+    recent_opportunities = read_jsonl((repo_root / DEFAULT_DATA_DIR / "open_problems.jsonl").resolve())[-12:]
 
     prompt = build_prompt(
         theory_files=theory_files,

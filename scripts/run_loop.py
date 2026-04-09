@@ -77,6 +77,11 @@ SCRATCH_TEMPLATE = (
     "end AutomatedTheoryConstruction\n"
 )
 
+SCRATCH_OPEN_DECLS = (
+    "open Mathling.Lambek.ProductFree\n"
+    "open scoped Mathling.Lambek.ProductFree\n\n"
+)
+
 DERIVED_TEMPLATE = (
     "import Mathlib\n"
     "import AutomatedTheoryConstruction.Theory\n\n"
@@ -117,7 +122,7 @@ BATCH_GENERATOR_OPEN_TARGET_MIN = 2
 
 THEOREM_NAME_STEM_PATTERN = re.compile(r"^[a-z][a-z0-9_]*$")
 THEOREM_NAME_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_']*$")
-DERIVED_THEOREM_HEADER_PATTERN = re.compile(r"\btheorem\s+([A-Za-z0-9_']+)\s*:\s*(.+?)\s*:=", re.DOTALL)
+DERIVED_THEOREM_HEADER_PATTERN = re.compile(r"\btheorem\s+([A-Za-z0-9_']+)\s*:")
 UNUSED_VARIABLE_WARNING_PATTERN = re.compile(r"unused variable\s+`([^`]+)`", re.IGNORECASE)
 OPEN_PROBLEM_PRIORITY_ORDER = {
     "high": 0,
@@ -502,20 +507,9 @@ def normalize_stmt_text(stmt: str) -> str:
     return " ".join(stmt.split())
 
 
-EXPAND_CANDIDATES_FILENAME = "expand_candidates.jsonl"
 MAX_EXPAND_CANDIDATES_PER_SOLVED_PROOF = 2
 MAX_EXPAND_CANDIDATES_PER_MAIN_THEOREM = 5
-MAX_EXPAND_PROMOTIONS_PER_REFRESH = 2
 
-
-def expand_candidates_path(data_dir: Path) -> Path:
-    return data_dir / EXPAND_CANDIDATES_FILENAME
-
-
-def read_expand_candidate_rows(data_dir: Path) -> list[dict[str, Any]]:
-    return dedupe_problem_rows_by_stmt(
-        [normalize_open_problem_row(row) for row in read_jsonl(expand_candidates_path(data_dir))]
-    )
 
 
 def append_expand_candidates(
@@ -533,20 +527,19 @@ def append_expand_candidates(
     archived_rows = read_archived_problem_rows(data_dir)
     solved_rows = read_jsonl(data_dir / "solved_problems.jsonl")
     counter_rows = read_jsonl(data_dir / "counterexamples.jsonl")
-    existing_expand_rows = read_expand_candidate_rows(data_dir)
 
     seen_norms = {
         normalize_stmt_text(str(row.get("stmt", "")))
-        for row in (open_rows + archived_rows + solved_rows + counter_rows + existing_expand_rows)
+        for row in (open_rows + archived_rows + solved_rows + counter_rows)
         if str(row.get("stmt", "")).strip()
     }
     all_ids = [
         str(row.get("id", ""))
-        for row in (open_rows + archived_rows + solved_rows + counter_rows + existing_expand_rows)
+        for row in (open_rows + archived_rows + solved_rows + counter_rows)
     ]
 
     added_rows: list[dict[str, Any]] = []
-    next_rows = list(existing_expand_rows)
+    next_rows = list(open_rows)
     for item in statements_with_rationale:
         stmt = str(item.get("statement", "")).strip()
         rationale = str(item.get("rationale", "")).strip()
@@ -575,27 +568,8 @@ def append_expand_candidates(
         added_rows.append(dict(new_row))
 
     if added_rows:
-        write_jsonl_atomic(expand_candidates_path(data_dir), dedupe_problem_rows_by_stmt(next_rows))
+        write_jsonl_atomic(data_dir / "open_problems.jsonl", dedupe_problem_rows_by_stmt(next_rows))
     return added_rows
-
-
-def promote_expand_candidates(
-    *,
-    open_rows: list[dict[str, Any]],
-    expand_rows: list[dict[str, Any]],
-    promotion_limit: int = MAX_EXPAND_PROMOTIONS_PER_REFRESH,
-) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-    promoted_rows: list[dict[str, Any]] = []
-    remaining_rows: list[dict[str, Any]] = []
-    for row in expand_rows:
-        normalized = normalize_open_problem_row(row)
-        if len(promoted_rows) < promotion_limit and open_problem_priority_label(normalized) == "high":
-            normalized["source_kind"] = "open"
-            promoted_rows.append(dict(normalized))
-            open_rows.append(dict(normalized))
-        else:
-            remaining_rows.append(dict(normalized))
-    return promoted_rows, remaining_rows
 
 
 def collect_important_verified_counterexamples(
@@ -623,6 +597,24 @@ def collect_important_verified_counterexamples(
 
 def open_problem_priority_label(row: dict[str, Any]) -> str:
     return normalize_open_problem_priority(row.get("priority"))
+
+
+def is_solver_eligible_open_problem(row: dict[str, Any]) -> bool:
+    return open_problem_priority_label(row) in {"high", "medium"}
+
+
+def has_available_solver_eligible_problem(
+    open_rows: list[dict[str, Any]],
+    *,
+    reserved_problem_ids: set[str],
+) -> bool:
+    for row in open_rows:
+        problem_id = str(row.get("id", "")).strip()
+        if not problem_id or problem_id in reserved_problem_ids:
+            continue
+        if is_solver_eligible_open_problem(row):
+            return True
+    return False
 
 
 def open_problem_sort_key(
@@ -679,28 +671,8 @@ def apply_open_problem_priorities(
     return updated_rows
 
 
-def should_refresh_open_problem_priorities(
-    *,
-    derived_theorem_count: int,
-    last_refresh_theorem_count: int,
-    refresh_interval: int,
-) -> bool:
-    if refresh_interval <= 0:
-        return False
-    return derived_theorem_count - last_refresh_theorem_count >= refresh_interval
-
-
 def needs_bootstrap_priority_refresh(open_rows: list[dict[str, Any]]) -> bool:
     return any(open_problem_priority_label(row) == "unknown" for row in open_rows)
-
-
-def should_force_refresh_before_main_theorem(
-    *,
-    tracked_rows: list[dict[str, Any]],
-    derived_theorem_count: int,
-    last_refresh_theorem_count: int,
-) -> bool:
-    return bool(tracked_rows) and last_refresh_theorem_count != derived_theorem_count
 
 
 def normalize_docstring_summary(text: str, max_chars: int = 240) -> str:
@@ -743,6 +715,8 @@ def pick_next_available_problem(
     for row in open_rows:
         problem_id = str(row.get("id", "")).strip()
         if not problem_id or problem_id in reserved_problem_ids:
+            continue
+        if not is_solver_eligible_open_problem(row):
             continue
         return row
     return None
@@ -1242,6 +1216,7 @@ def formalize_to_scratch(
         "import AutomatedTheoryConstruction.Derived\n\n"
         "set_option autoImplicit false\n\n"
         "namespace AutomatedTheoryConstruction\n\n"
+        f"{SCRATCH_OPEN_DECLS}"
         f"{prelude_block}"
         f"{theorem}\n"
         "end AutomatedTheoryConstruction\n"
@@ -1391,15 +1366,60 @@ def extract_derived_theorem_entries(
 
 
 def extract_derived_entry_from_theorem_code(theorem_code: str) -> dict[str, str] | None:
-    match = DERIVED_THEOREM_HEADER_PATTERN.search(theorem_code)
-    if match is None:
+    theorem_code = theorem_code.strip()
+    if not theorem_code:
         return None
 
-    theorem_name = str(match.group(1)).strip()
-    statement = normalize_stmt_text(str(match.group(2)).strip())
+    matches = list(DERIVED_THEOREM_HEADER_PATTERN.finditer(theorem_code))
+    if not matches:
+        return None
+
+    theorem_name = ""
+    statement = ""
+    for match in matches:
+        candidate_name = str(match.group(1)).strip()
+        if not candidate_name:
+            continue
+        start = match.end()
+        separator_index = -1
+        paren_depth = 0
+        bracket_depth = 0
+        brace_depth = 0
+
+        for index in range(start, len(theorem_code) - 1):
+            ch = theorem_code[index]
+            nxt = theorem_code[index + 1]
+            if ch == "(":
+                paren_depth += 1
+            elif ch == ")":
+                paren_depth = max(paren_depth - 1, 0)
+            elif ch == "[":
+                bracket_depth += 1
+            elif ch == "]":
+                bracket_depth = max(bracket_depth - 1, 0)
+            elif ch == "{":
+                brace_depth += 1
+            elif ch == "}":
+                brace_depth = max(brace_depth - 1, 0)
+            elif (
+                ch == ":"
+                and nxt == "="
+                and paren_depth == 0
+                and bracket_depth == 0
+                and brace_depth == 0
+            ):
+                separator_index = index
+                break
+
+        if separator_index < 0:
+            continue
+        candidate_statement = normalize_stmt_text(theorem_code[start:separator_index].strip())
+        if candidate_statement:
+            theorem_name = candidate_name
+            statement = candidate_statement
+
     if not theorem_name or not statement:
         return None
-
     return {
         "name": theorem_name,
         "statement": statement,
@@ -1420,14 +1440,19 @@ def append_derived_entry_cache(
 
 def extract_theorem_code_from_scratch(scratch_path: Path) -> str:
     scratch_code = scratch_path.read_text(encoding="utf-8")
-    theorem_body_match = re.search(
-        r"namespace AutomatedTheoryConstruction\n\n(.*)\nend AutomatedTheoryConstruction",
+    namespace_match = re.search(
+        r"namespace\s+AutomatedTheoryConstruction\b",
         scratch_code,
-        re.DOTALL,
     )
-    if theorem_body_match is None:
-        return ""
-    return theorem_body_match.group(1).strip()
+    if namespace_match is None:
+        debug_log(f"Could not find AutomatedTheoryConstruction namespace in {scratch_path}")
+        return scratch_code.strip()
+    namespace_tail = scratch_code[namespace_match.end() :]
+    end_match = re.search(r"\nend\s+AutomatedTheoryConstruction", namespace_tail)
+    if end_match is None:
+        debug_log(f"Could not find namespace end marker in {scratch_path}")
+        return namespace_tail.strip()
+    return namespace_tail[: end_match.start()].strip()
 
 
 def append_verified_theorem_from_scratch(
@@ -1439,9 +1464,21 @@ def append_verified_theorem_from_scratch(
 ) -> str:
     theorem_code = extract_theorem_code_from_scratch(scratch_path)
     if not theorem_code:
+        debug_log(f"extract_theorem_code_from_scratch returned empty for {scratch_path}")
+        return ""
+    if text_contains_sorry(theorem_code):
+        debug_log(f"Refusing to append theorem containing sorry from {scratch_path}")
         return ""
     entry = extract_derived_entry_from_theorem_code(theorem_code)
-    if entry is None:
+    theorem_name = str(entry.get("name", "")).strip() if isinstance(entry, dict) else ""
+    if not theorem_name:
+        theorem_matches = list(DERIVED_THEOREM_HEADER_PATTERN.finditer(theorem_code))
+        if not theorem_matches:
+            debug_log(f"Could not extract theorem entry from {scratch_path}")
+            return ""
+        theorem_name = str(theorem_matches[-1].group(1)).strip()
+    if not theorem_name:
+        debug_log(f"Could not extract theorem name from {scratch_path}")
         return ""
     # Serialize Derived.lean mutations with Lean verification/import traffic.
     with LEAN_VERIFY_LOCK:
@@ -1450,7 +1487,7 @@ def append_verified_theorem_from_scratch(
             appended = append_theorem(
                 derived_file,
                 theorem_code,
-                None,
+                theorem_name,
                 docstring,
             )
             if appended:
@@ -1469,7 +1506,17 @@ def append_verified_theorem_from_scratch(
                     excerpt = stderr or stdout or "lake build AutomatedTheoryConstruction.Derived failed without output"
                     raise RuntimeError(f"Failed to rebuild Derived after appending theorem: {excerpt}")
                 append_derived_entry_cache(derived_entries, theorem_code)
-    return theorem_code
+                return theorem_code
+            derived_content = derived_file.read_text(encoding="utf-8") if derived_file.exists() else ""
+            if re.search(rf"\btheorem\s+{re.escape(theorem_name)}\b", derived_content):
+                debug_log(
+                    f"Derived.lean already contains theorem {theorem_name}; treating as already-appended from scratch {scratch_path}"
+                )
+                return theorem_code
+            debug_log(
+                f"append_theorem reported no-op for {theorem_name} from {scratch_path}; Derived.lean not changed"
+            )
+    return ""
 
 
 def commit_verified_theorem_and_generation(
@@ -1520,6 +1567,8 @@ def store_expand_candidates_and_refresh(
     repo_root: Path,
     batch_generator_seed_count: int,
     batch_generator_open_target_min: int,
+    allow_backfill: bool = True,
+    phase_logger: Callable[..., None] | None = None,
 ) -> dict[str, Any]:
     stored_expand_rows = append_expand_candidates(
         data_dir=data_dir,
@@ -1528,6 +1577,63 @@ def store_expand_candidates_and_refresh(
         source_problem_id=source_problem_id,
         source_kind=source_kind,
     )
+
+    refresh_result = refresh_open_problem_state(
+        data_dir=data_dir,
+        prioritize_worker_settings=prioritize_worker_settings,
+        prioritizer_prompt_file=prioritizer_prompt_file,
+        derived_entries=derived_entries,
+        current_iteration=current_iteration,
+        failure_threshold=failure_threshold,
+        run_id=run_id,
+        theory_state_history_path=theory_state_history_path,
+        theory_file=theory_file,
+        derived_file=derived_file,
+        repo_root=repo_root,
+        batch_generator_seed_count=batch_generator_seed_count,
+        batch_generator_open_target_min=batch_generator_open_target_min,
+        allow_backfill=allow_backfill,
+        phase_logger=phase_logger,
+    )
+    refresh_result["stored_expand_rows"] = stored_expand_rows
+    return refresh_result
+
+
+def refresh_open_problem_state(
+    *,
+    data_dir: Path,
+    prioritize_worker_settings: Any,
+    prioritizer_prompt_file: str,
+    derived_entries: list[dict[str, str]],
+    current_iteration: int,
+    failure_threshold: int,
+    run_id: str,
+    theory_state_history_path: Path | None,
+    theory_file: Path,
+    derived_file: Path,
+    repo_root: Path,
+    batch_generator_seed_count: int,
+    batch_generator_open_target_min: int,
+    reserved_problem_ids: set[str] | None = None,
+    allow_backfill: bool = True,
+    phase_logger: Callable[..., None] | None = None,
+) -> dict[str, Any]:
+    if allow_backfill:
+        backfill_ran, backfill_error, backfill_report = backfill_open_problems_if_needed(
+            data_dir=data_dir,
+            theory_file=theory_file,
+            derived_file=derived_file,
+            repo_root=repo_root,
+            batch_generator_seed_count=batch_generator_seed_count,
+            batch_generator_open_target_min=batch_generator_open_target_min,
+            reserved_problem_ids=reserved_problem_ids,
+            phase_logger=phase_logger,
+        )
+    else:
+        backfill_ran, backfill_error, backfill_report = False, "", {
+            "batch_generator_added_problem_rows": [],
+            "batch_generator_error": "",
+        }
     priority_refresh_ran, priority_refresh_error, priority_refresh_worker_meta = force_refresh_open_problem_priorities(
         data_dir=data_dir,
         worker_settings=prioritize_worker_settings,
@@ -1538,18 +1644,9 @@ def store_expand_candidates_and_refresh(
         run_id=run_id,
         theory_state_history_path=theory_state_history_path,
     )
-    backfill_ran, backfill_error, backfill_report = backfill_open_problems_if_needed(
-        data_dir=data_dir,
-        theory_file=theory_file,
-        derived_file=derived_file,
-        repo_root=repo_root,
-        batch_generator_seed_count=batch_generator_seed_count,
-        batch_generator_open_target_min=batch_generator_open_target_min,
-    )
     return {
-        "stored_expand_rows": stored_expand_rows,
         "priority_refresh_ran": bool(priority_refresh_ran or backfill_ran),
-        "priority_refresh_error": str(priority_refresh_error or backfill_error or ""),
+        "priority_refresh_error": str(backfill_error or priority_refresh_error or ""),
         "priority_refresh_failed": bool(not priority_refresh_ran and bool(priority_refresh_error)),
         "priority_refresh_report": {
             "worker_meta": priority_refresh_worker_meta,
@@ -1867,12 +1964,16 @@ def analyze_lean_failure(
     }
 
 
+def text_contains_sorry(text: str) -> bool:
+    return bool(re.search(r"\bsorry\b", text))
+
+
 def file_contains_sorry(path: Path) -> bool:
     try:
         content = path.read_text(encoding="utf-8")
     except Exception:
         return False
-    return bool(re.search(r"\bsorry\b", content))
+    return text_contains_sorry(content)
 
 
 def extract_unused_variable_names(stderr: str, stdout: str) -> list[str]:
@@ -2081,6 +2182,7 @@ def query_prover_with_retries(
     last_response_fingerprint = ""
     same_response_streak = 0
     attempt = 0
+    last_worker_meta: dict[str, Any] = {}
     last_response = ProverResponsePacket(
         problem_id=problem_id,
         result="stuck",
@@ -2092,6 +2194,7 @@ def query_prover_with_retries(
         if deadline is not None and attempt > 0 and time.monotonic() >= deadline:
             break
         attempt += 1
+        attempt_worker_meta: dict[str, Any] = {}
         prover_request = ProverRequestPacket(
             problem_id=problem_id,
             stmt=stmt,
@@ -2130,6 +2233,7 @@ def query_prover_with_retries(
                 payload=prover_request.to_payload(),
                 metadata={"problem_id": problem_id, "attempt": attempt},
             )
+            attempt_worker_meta = worker_meta
             last_worker_meta = worker_meta
             append_current_iteration_log(
                 current_iteration_full_logs,
@@ -2164,7 +2268,7 @@ def query_prover_with_retries(
                     "Treating this iteration as stuck so the problem remains open. "
                     f"Details: {exc}"
                 )
-                return "stuck", timeout_sketch, "", attempt, last_worker_meta
+                return "stuck", timeout_sketch, "", attempt, attempt_worker_meta
             raise
         prover_response = validate_prover_output(prover_payload, problem_id).with_attempt(attempt)
         prover_response = prover_response.with_worker_meta(last_worker_meta)
@@ -2685,9 +2789,6 @@ def request_main_theorem_suggestion(
                 "failure_count": int(row.get("failure_count", 0) or 0),
                 "mode": str(row.get("mode", "")),
                 "summary_delta": str(row.get("summary_delta", "")),
-                "bottleneck_hit": str(row.get("bottleneck_hit", "")),
-                "agenda_alignment": str(row.get("agenda_alignment", "")),
-                "why_not_peripheral": str(row.get("why_not_peripheral", "")),
             }
             for row in tracked_rows[:40]
         ],
@@ -2761,10 +2862,6 @@ def request_open_problem_priorities(
                 "queue_status": str(row.get("queue_status", row.get("source_kind", "open"))),
                 "mode": str(row.get("mode", "")),
                 "summary_delta": str(row.get("summary_delta", "")),
-                "bottleneck_hit": str(row.get("bottleneck_hit", "")),
-                "agenda_alignment": str(row.get("agenda_alignment", "")),
-                "why_not_peripheral": str(row.get("why_not_peripheral", "")),
-                "unlocks": str(row.get("unlocks", "")),
             }
             for row in tracked_rows
         ],
@@ -2810,13 +2907,16 @@ def force_refresh_open_problem_priorities(
 ) -> tuple[bool, str, dict[str, Any]]:
     open_path = data_dir / "open_problems.jsonl"
     archived_path = data_dir / ARCHIVED_PROBLEMS_FILENAME
-    expand_path = expand_candidates_path(data_dir)
     open_rows = [normalize_open_problem_row(row) for row in read_jsonl(open_path)]
     archived_rows = read_archived_problem_rows(data_dir)
-    expand_rows = read_expand_candidate_rows(data_dir)
-    tracked_rows = [dict(row, queue_status="open", source_kind="open") for row in open_rows]
-    tracked_rows.extend(dict(row, queue_status="archived", source_kind="archived") for row in archived_rows)
-    tracked_rows.extend(dict(row, queue_status="expand_candidate", source_kind="expand_candidate") for row in expand_rows)
+    tracked_rows = [
+        dict(row, queue_status="open", source_kind=str(row.get("source_kind", "open") or "open"))
+        for row in open_rows
+    ]
+    tracked_rows.extend(
+        dict(row, queue_status="archived", source_kind=str(row.get("source_kind", "archived") or "archived"))
+        for row in archived_rows
+    )
     if not tracked_rows:
         return False, "", {}
 
@@ -2842,16 +2942,11 @@ def force_refresh_open_problem_priorities(
 
     refreshed_open_rows = apply_open_problem_priorities(open_rows, priority_updates)
     refreshed_archived_rows = apply_open_problem_priorities(archived_rows, priority_updates)
-    refreshed_expand_rows = apply_open_problem_priorities(expand_rows, priority_updates)
     refreshed_open_rows, newly_archived_rows = split_active_and_archived_problem_queues(
         refreshed_open_rows,
         failure_archive_threshold=failure_threshold,
     )
     refreshed_archived_rows = merge_archived_problem_rows(refreshed_archived_rows, newly_archived_rows)
-    promoted_expand_rows, remaining_expand_rows = promote_expand_candidates(
-        open_rows=refreshed_open_rows,
-        expand_rows=refreshed_expand_rows,
-    )
     refreshed_open_rows = sort_open_problem_queue(
         dedupe_problem_rows_by_stmt(refreshed_open_rows),
         failure_archive_threshold=failure_threshold,
@@ -2859,7 +2954,6 @@ def force_refresh_open_problem_priorities(
     important_verified_counterexamples = collect_important_verified_counterexamples(data_dir)
     write_jsonl_atomic(open_path, refreshed_open_rows)
     write_jsonl_atomic(archived_path, refreshed_archived_rows)
-    write_jsonl_atomic(expand_path, dedupe_problem_rows_by_stmt(remaining_expand_rows))
     theory_state = write_theory_state(
         data_dir,
         run_id=run_id,
@@ -2882,8 +2976,8 @@ def force_refresh_open_problem_priorities(
         )
     return True, "", {
         **dict(worker_meta),
-        "promoted_expand_rows": promoted_expand_rows,
-        "remaining_expand_rows": remaining_expand_rows,
+        "promoted_expand_rows": [],
+        "remaining_expand_rows": [],
     }
 
 
@@ -2909,7 +3003,7 @@ def run_batch_generator_subprocess(
         str(seed_count),
         "--seed-src",
         "batch_generator",
-        "--initialize-runtime-state=false",
+        "--no-initialize-runtime-state",
         "--repo-root",
         str(repo_root),
     ]
@@ -2934,25 +3028,37 @@ def maybe_backfill_open_problems_from_batch_generator(
     derived_file: Path,
     open_problem_target_min: int,
     seed_count: int,
+    reserved_problem_ids: set[str] | None = None,
+    phase_logger: Callable[..., None] | None = None,
 ) -> tuple[list[dict[str, Any]], str]:
     open_path = data_dir / "open_problems.jsonl"
-    if len([normalize_open_problem_row(row) for row in read_jsonl(open_path)]) >= open_problem_target_min:
+    open_rows = [normalize_open_problem_row(row) for row in read_jsonl(open_path)]
+    reserved_ids = set(reserved_problem_ids or set())
+    _ = open_problem_target_min
+    if has_available_solver_eligible_problem(open_rows, reserved_problem_ids=reserved_ids):
         return [], ""
 
     archived_rows = read_archived_problem_rows(data_dir)
     solved_rows = read_jsonl(data_dir / "solved_problems.jsonl")
     counter_rows = read_jsonl(data_dir / "counterexamples.jsonl")
-    open_rows = [normalize_open_problem_row(row) for row in read_jsonl(open_path)]
-    expand_rows = read_expand_candidate_rows(data_dir)
     seen_norms = {
         normalize_stmt_text(str(row.get("stmt", "")))
-        for row in (open_rows + archived_rows + solved_rows + counter_rows + expand_rows)
+        for row in (open_rows + archived_rows + solved_rows + counter_rows)
         if str(row.get("stmt", "")).strip()
     }
-    all_ids = [str(row.get("id", "")) for row in open_rows + archived_rows + solved_rows + counter_rows + expand_rows]
-    requested_count = max(seed_count, open_problem_target_min - len(open_rows))
+    all_ids = [str(row.get("id", "")) for row in open_rows + archived_rows + solved_rows + counter_rows]
+    requested_count = seed_count
     if requested_count <= 0:
         return [], ""
+
+    if phase_logger is not None:
+        phase_logger(
+            phase="batch_seed_generation",
+            status="begin",
+            requested_seed_count=requested_count,
+            active_open_problem_count=len(open_rows),
+            reserved_problem_count=len(reserved_ids),
+        )
 
     with tempfile.NamedTemporaryFile(
         mode="w",
@@ -2973,6 +3079,13 @@ def maybe_backfill_open_problems_from_batch_generator(
             seed_count=requested_count,
         )
         if error:
+            if phase_logger is not None:
+                phase_logger(
+                    phase="batch_seed_generation",
+                    status="error",
+                    requested_seed_count=requested_count,
+                    error=error,
+                )
             return [], error
 
         added_rows: list[dict[str, Any]] = []
@@ -3001,6 +3114,14 @@ def maybe_backfill_open_problems_from_batch_generator(
 
         if added_rows:
             write_jsonl_atomic(open_path, dedupe_problem_rows_by_stmt(open_rows))
+        if phase_logger is not None:
+            phase_logger(
+                phase="batch_seed_generation",
+                status="result",
+                requested_seed_count=requested_count,
+                generated_count=len(generated_rows),
+                added_count=len(added_rows),
+            )
         return added_rows, ""
     finally:
         output_file.unlink(missing_ok=True)
@@ -3014,6 +3135,8 @@ def backfill_open_problems_if_needed(
     repo_root: Path,
     batch_generator_seed_count: int,
     batch_generator_open_target_min: int,
+    reserved_problem_ids: set[str] | None = None,
+    phase_logger: Callable[..., None] | None = None,
 ) -> tuple[bool, str, dict[str, Any]]:
     added_rows, batch_error = maybe_backfill_open_problems_from_batch_generator(
         data_dir=data_dir,
@@ -3022,6 +3145,8 @@ def backfill_open_problems_if_needed(
         derived_file=derived_file,
         open_problem_target_min=batch_generator_open_target_min,
         seed_count=batch_generator_seed_count,
+        reserved_problem_ids=reserved_problem_ids,
+        phase_logger=phase_logger,
     )
     return bool(added_rows), batch_error, {
         "batch_generator_added_problem_rows": added_rows,
@@ -3285,11 +3410,11 @@ def attempt_formalization_until_timeout(
             )
 
         if verify_success:
-            if forbid_sorry and file_contains_sorry(scratch_file):
+            if file_contains_sorry(scratch_file):
                 verify_success = False
                 verify_error_excerpt = "Lean verification succeeded but proof still contains sorry"
                 verify_error_analysis = {
-                    "fingerprint": "main_theorem_contains_sorry",
+                    "fingerprint": "verified_theorem_contains_sorry",
                     "categories": ["contains_sorry"],
                     "top_lines": [verify_error_excerpt],
                 }
@@ -3551,10 +3676,10 @@ def initialize_runtime_state(
     write_jsonl_atomic(archived_problems_file, [])
     write_jsonl_atomic(data_dir / "solved_problems.jsonl", [])
     write_jsonl_atomic(data_dir / "counterexamples.jsonl", [])
-    write_jsonl_atomic(expand_candidates_path(data_dir), [])
     (data_dir / "theorem_reuse_memory.json").write_text('{"entries": []}\n', encoding="utf-8")
     (data_dir / LEGACY_DEFERRED_PROBLEMS_FILENAME).unlink(missing_ok=True)
     (data_dir / LEGACY_PRUNED_OPEN_PROBLEMS_FILENAME).unlink(missing_ok=True)
+    (data_dir / "expand_candidates.jsonl").unlink(missing_ok=True)
     theory_state_path(data_dir).unlink(missing_ok=True)
     cleanup_parallel_scratch_files(scratch_file)
 
@@ -3946,7 +4071,7 @@ def process_manual_main_theorem(
         error_excerpt=verify_error_excerpt,
     )
 
-    if not verify_success or result != "proof":
+    if not verify_success or result not in {"proof", "counterexample"}:
         return {
             "processed": True,
             "candidate_id": candidate_id,
@@ -4102,6 +4227,7 @@ def process_manual_main_theorem(
             repo_root=repo_root,
             batch_generator_seed_count=batch_generator_seed_count,
             batch_generator_open_target_min=batch_generator_open_target_min,
+            allow_backfill=False,
         )
         stored_expand_rows = list(refresh_outcome.get("stored_expand_rows", []))
         priority_refresh_ran = bool(refresh_outcome.get("priority_refresh_ran", False))
@@ -4338,7 +4464,11 @@ def run_problem_session(
         theorem_code = extract_theorem_code_from_scratch(scratch_file)
         if theorem_code:
             append_derived_entry_cache(theorem_context_entries, theorem_code)
-            theory_context = build_problem_theory_context(base_theory_context, theorem_context_entries, target_stmt)
+            theory_context = build_problem_theory_context(
+                base_theory_context,
+                theorem_context_entries,
+                target_stmt,
+            )
 
     expander_candidates: list[dict[str, str]] = []
     same_problem_history_tail = load_formalization_memory(memory_path, problem_id)[-8:]
@@ -4418,7 +4548,7 @@ def run_problem_session(
             )
 
     with state_lock:
-        if verify_success and result == "proof":
+        if verify_success and result in {"proof", "counterexample"}:
             theorem_code = commit_verified_theorem_and_generation(
                 scratch_path=scratch_file,
                 derived_file=derived_path,
@@ -4469,8 +4599,10 @@ def run_problem_session(
             theory_file=Path(THEORY_FILE_PATH),
             derived_file=derived_path,
             repo_root=Path(__file__).resolve().parent.parent,
-            batch_generator_seed_count=BATCH_GENERATOR_SEED_COUNT,
+            batch_generator_seed_count=args.seed_count,
             batch_generator_open_target_min=BATCH_GENERATOR_OPEN_TARGET_MIN,
+            allow_backfill=False,
+            phase_logger=(lambda **fields: emit_phase_log(args.phase_logs, iteration=current_iteration, **fields)),
         )
         stored_expand_rows = list(refresh_outcome.get("stored_expand_rows", []))
         priority_refresh_ran = bool(refresh_outcome.get("priority_refresh_ran", False))
@@ -4478,7 +4610,11 @@ def run_problem_session(
         priority_refresh_report = dict(refresh_outcome.get("priority_refresh_report", {}))
         final_open_rows = [normalize_open_problem_row(row) for row in read_jsonl(data_dir / "open_problems.jsonl")]
         final_archived_rows = read_archived_problem_rows(data_dir)
-        final_expand_rows = read_expand_candidate_rows(data_dir)
+        final_expand_rows = [
+            row
+            for row in final_open_rows
+            if str(row.get("source_kind", "")).strip() == "expand_candidate"
+        ]
 
     emit_phase_log(args.phase_logs, "state_update", iteration=current_iteration, problem_id=problem_id)
     debug_log(f"=== Iteration {current_iteration} END ({result}, verify={verify_success}) ===\n")
@@ -4555,7 +4691,6 @@ def run_parallel_loop(
     main_theorem_future: concurrent.futures.Future | None = None
     launched_iterations = 0
     completed_problem_sessions = 0
-    last_priority_refresh_theorem_count = 0
     pending_priority_refresh_ran_for_report = False
     pending_priority_refresh_error_for_report = ""
     next_main_theorem_check_count = next_main_theorem_trigger_count(
@@ -4577,37 +4712,31 @@ def run_parallel_loop(
         )
         with state_lock:
             try:
-                priority_refresh_ran, priority_refresh_error, priority_refresh_worker_meta = force_refresh_open_problem_priorities(
+                refresh_result = refresh_open_problem_state(
                     data_dir=data_dir,
-                    worker_settings=prioritize_open_problems_worker_settings,
+                    prioritize_worker_settings=prioritize_open_problems_worker_settings,
                     prioritizer_prompt_file=PRIORITIZE_OPEN_PROBLEMS_PROMPT_FILE,
                     derived_entries=derived_entries,
                     current_iteration=1,
                     failure_threshold=args.open_problem_failure_threshold,
                     run_id=run_id,
                     theory_state_history_path=artifact_paths["theory_state_history"],
-                )
-                backfill_ran, backfill_error, backfill_report = backfill_open_problems_if_needed(
-                    data_dir=data_dir,
                     theory_file=Path(THEORY_FILE_PATH),
                     derived_file=derived_path,
                     repo_root=repo_root,
-                    batch_generator_seed_count=BATCH_GENERATOR_SEED_COUNT,
+                    batch_generator_seed_count=args.seed_count,
                     batch_generator_open_target_min=BATCH_GENERATOR_OPEN_TARGET_MIN,
+                    reserved_problem_ids=reserved_problem_ids,
+                    phase_logger=(lambda **fields: emit_phase_log(args.phase_logs, iteration=1, **fields)),
                 )
-                priority_refresh_report = {
-                    "worker_meta": priority_refresh_worker_meta,
-                    "batch_generator_added_problem_rows": list(backfill_report.get("batch_generator_added_problem_rows", [])),
-                    "batch_generator_error": str(backfill_report.get("batch_generator_error", "")),
-                }
-                priority_refresh_ran = bool(priority_refresh_ran or backfill_ran)
-                priority_refresh_error = str(priority_refresh_error or backfill_error or "")
+                priority_refresh_ran = bool(refresh_result.get("priority_refresh_ran", False))
+                priority_refresh_error = str(refresh_result.get("priority_refresh_error", ""))
+                priority_refresh_report = dict(refresh_result.get("priority_refresh_report", {}))
             except Exception as exc:
                 priority_refresh_ran = False
                 priority_refresh_error = str(exc)
                 priority_refresh_report = {}
         if priority_refresh_ran:
-            last_priority_refresh_theorem_count = len(derived_entries)
             record_problem_rows(
                 list(priority_refresh_report.get("batch_generator_added_problem_rows", [])),
                 iteration=1,
@@ -4625,9 +4754,6 @@ def run_parallel_loop(
                 reason="bootstrap",
             )
             pending_priority_refresh_error_for_report = priority_refresh_error
-    else:
-        last_priority_refresh_theorem_count = len(derived_entries)
-
     max_workers = max(1, int(args.parallel_sessions)) + (1 if args.main_theorem_interval > 0 else 0)
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
         while True:
@@ -4672,7 +4798,6 @@ def run_parallel_loop(
                     session_type="loop",
                 )
                 if bool(report.get("priority_refresh_ran", False)):
-                    last_priority_refresh_theorem_count = len(derived_entries)
                     record_problem_rows(
                         list(report.get("batch_generator_added_problem_rows", [])),
                         iteration=current_iteration,
@@ -4742,8 +4867,6 @@ def run_parallel_loop(
                     iteration=current_iteration,
                     session_type="batch_generator",
                 )
-                if bool(auto_main_theorem_report.get("priority_refresh_ran", False)):
-                    last_priority_refresh_theorem_count = len(derived_entries)
                 emit_phase_log(
                     args.phase_logs,
                     "main_theorem_interval_result",
@@ -4779,11 +4902,13 @@ def run_parallel_loop(
                 not stop_requested
                 and main_theorem_future is None
                 and (
-                    (tracked_rows and should_refresh_open_problem_priorities(
-                        derived_theorem_count=len(derived_entries_snapshot),
-                        last_refresh_theorem_count=last_priority_refresh_theorem_count,
-                        refresh_interval=args.priority_refresh_theorem_interval,
-                    ))
+                    (
+                        len(problem_futures) < int(args.parallel_sessions)
+                        and not has_available_solver_eligible_problem(
+                            open_rows,
+                            reserved_problem_ids=reserved_problem_ids,
+                        )
+                    )
                     or (not tracked_rows and not problem_futures)
                 )
             ):
@@ -4796,37 +4921,31 @@ def run_parallel_loop(
                 )
                 with state_lock:
                     try:
-                        priority_refresh_ran, priority_refresh_error, priority_refresh_worker_meta = force_refresh_open_problem_priorities(
+                        refresh_result = refresh_open_problem_state(
                             data_dir=data_dir,
-                            worker_settings=prioritize_open_problems_worker_settings,
+                            prioritize_worker_settings=prioritize_open_problems_worker_settings,
                             prioritizer_prompt_file=PRIORITIZE_OPEN_PROBLEMS_PROMPT_FILE,
                             derived_entries=derived_entries,
                             current_iteration=launched_iterations + 1,
                             failure_threshold=args.open_problem_failure_threshold,
                             run_id=run_id,
                             theory_state_history_path=artifact_paths["theory_state_history"],
-                        )
-                        backfill_ran, backfill_error, backfill_report = backfill_open_problems_if_needed(
-                            data_dir=data_dir,
                             theory_file=Path(THEORY_FILE_PATH),
                             derived_file=derived_path,
                             repo_root=repo_root,
-                            batch_generator_seed_count=BATCH_GENERATOR_SEED_COUNT,
+                            batch_generator_seed_count=args.seed_count,
                             batch_generator_open_target_min=BATCH_GENERATOR_OPEN_TARGET_MIN,
+                            reserved_problem_ids=reserved_problem_ids,
+                            phase_logger=(lambda **fields: emit_phase_log(args.phase_logs, iteration=launched_iterations + 1, **fields)),
                         )
-                        priority_refresh_report = {
-                            "worker_meta": priority_refresh_worker_meta,
-                            "batch_generator_added_problem_rows": list(backfill_report.get("batch_generator_added_problem_rows", [])),
-                            "batch_generator_error": str(backfill_report.get("batch_generator_error", "")),
-                        }
-                        priority_refresh_ran = bool(priority_refresh_ran or backfill_ran)
-                        priority_refresh_error = str(priority_refresh_error or backfill_error or "")
+                        priority_refresh_ran = bool(refresh_result.get("priority_refresh_ran", False))
+                        priority_refresh_error = str(refresh_result.get("priority_refresh_error", ""))
+                        priority_refresh_report = dict(refresh_result.get("priority_refresh_report", {}))
                     except Exception as exc:
                         priority_refresh_ran = False
                         priority_refresh_error = str(exc)
                         priority_refresh_report = {}
                 if priority_refresh_ran:
-                    last_priority_refresh_theorem_count = len(derived_entries)
                     record_problem_rows(
                         list(priority_refresh_report.get("batch_generator_added_problem_rows", [])),
                         iteration=launched_iterations + 1,
@@ -4903,74 +5022,6 @@ def run_parallel_loop(
                 and next_main_theorem_check_count is not None
                 and len(derived_entries) >= next_main_theorem_check_count
             ):
-                if should_force_refresh_before_main_theorem(
-                    tracked_rows=tracked_rows,
-                    derived_theorem_count=len(derived_entries),
-                    last_refresh_theorem_count=last_priority_refresh_theorem_count,
-                ):
-                    emit_phase_log(
-                        args.phase_logs,
-                        "open_problem_priority_refresh",
-                        iteration=max(launched_iterations, 1),
-                        tracked_problem_count=len(tracked_rows),
-                        derived_theorem_count=len(derived_entries),
-                        reason="pre_main_theorem",
-                    )
-                    with state_lock:
-                        try:
-                            priority_refresh_ran, priority_refresh_error, priority_refresh_worker_meta = force_refresh_open_problem_priorities(
-                                data_dir=data_dir,
-                                worker_settings=prioritize_open_problems_worker_settings,
-                                prioritizer_prompt_file=PRIORITIZE_OPEN_PROBLEMS_PROMPT_FILE,
-                                derived_entries=derived_entries,
-                                current_iteration=max(launched_iterations, 1),
-                                failure_threshold=args.open_problem_failure_threshold,
-                                run_id=run_id,
-                                theory_state_history_path=artifact_paths["theory_state_history"],
-                            )
-                            backfill_ran, backfill_error, backfill_report = backfill_open_problems_if_needed(
-                                data_dir=data_dir,
-                                theory_file=Path(THEORY_FILE_PATH),
-                                derived_file=derived_path,
-                                repo_root=repo_root,
-                                batch_generator_seed_count=BATCH_GENERATOR_SEED_COUNT,
-                                batch_generator_open_target_min=BATCH_GENERATOR_OPEN_TARGET_MIN,
-                            )
-                            priority_refresh_report = {
-                                "worker_meta": priority_refresh_worker_meta,
-                                "batch_generator_added_problem_rows": list(backfill_report.get("batch_generator_added_problem_rows", [])),
-                                "batch_generator_error": str(backfill_report.get("batch_generator_error", "")),
-                            }
-                            priority_refresh_ran = bool(priority_refresh_ran or backfill_ran)
-                            priority_refresh_error = str(priority_refresh_error or backfill_error or "")
-                        except Exception as exc:
-                            priority_refresh_ran = False
-                            priority_refresh_error = str(exc)
-                            priority_refresh_report = {}
-                    if priority_refresh_ran:
-                        last_priority_refresh_theorem_count = len(derived_entries)
-                        record_problem_rows(
-                            list(priority_refresh_report.get("batch_generator_added_problem_rows", [])),
-                            iteration=max(launched_iterations, 1),
-                            session_type="batch_generator",
-                        )
-                        pending_priority_refresh_ran_for_report = True
-                        pending_priority_refresh_error_for_report = priority_refresh_error
-                    elif priority_refresh_error:
-                        debug_log(f"Pre-main-theorem priority refresh failed: {priority_refresh_error}")
-                        emit_phase_log(
-                            args.phase_logs,
-                            "open_problem_priority_refresh_error",
-                            iteration=max(launched_iterations, 1),
-                            error=priority_refresh_error,
-                            reason="pre_main_theorem",
-                        )
-                        pending_priority_refresh_error_for_report = priority_refresh_error
-                    with state_lock:
-                        open_rows = [normalize_open_problem_row(row) for row in read_jsonl(open_path)]
-                        archived_rows = read_archived_problem_rows(data_dir)
-                        tracked_rows = open_rows + archived_rows
-                        derived_entries_snapshot = [dict(entry) for entry in derived_entries]
                 emit_phase_log(
                     args.phase_logs,
                     "main_theorem_interval_reached",
@@ -4998,7 +5049,7 @@ def run_parallel_loop(
                     prioritize_open_problems_prompt_file=PRIORITIZE_OPEN_PROBLEMS_PROMPT_FILE,
                     theory_file=Path(THEORY_FILE_PATH),
                     repo_root=Path(__file__).resolve().parent.parent,
-                    batch_generator_seed_count=BATCH_GENERATOR_SEED_COUNT,
+            batch_generator_seed_count=args.seed_count,
                     batch_generator_open_target_min=BATCH_GENERATOR_OPEN_TARGET_MIN,
                     current_iteration=max(launched_iterations, 1),
                     skip_verify=args.skip_verify,
@@ -5169,6 +5220,7 @@ def main() -> None:
     parser.add_argument("--worker-timeout", type=int, help=worker_timeout_help)
     parser.add_argument("--skip-verify", action="store_true")
     parser.add_argument("--parallel-sessions", type=int, default=1)
+    parser.add_argument("--seed-count", type=int, default=BATCH_GENERATOR_SEED_COUNT)
     parser.add_argument("--open-problem-failure-threshold", type=int, default=2)
     parser.add_argument("--main-theorem-interval", type=int, default=0)
     parser.add_argument("--main-theorem-formalize-worker-timeout", type=int, help=worker_timeout_help)
@@ -5188,7 +5240,6 @@ def main() -> None:
         default=3600,
         help=retry_budget_help,
     )
-    parser.add_argument("--priority-refresh-theorem-interval", type=int, default=5)
     args = parser.parse_args()
     if args.max_iterations is not None and args.max_iterations < 0:
         raise ValueError("--max-iterations must be >= 0")
@@ -5196,6 +5247,8 @@ def main() -> None:
         raise ValueError("--open-problem-failure-threshold must be >= 0")
     if args.parallel_sessions < 1:
         raise ValueError("--parallel-sessions must be >= 1")
+    if args.seed_count < 1:
+        raise ValueError("--seed-count must be >= 1")
     if args.main_theorem_interval < 0:
         raise ValueError("--main-theorem-interval must be >= 0")
     if args.main_theorem_formalize_worker_timeout is not None and args.main_theorem_formalize_worker_timeout < 0:
@@ -5212,8 +5265,6 @@ def main() -> None:
         raise ValueError("--max-same-error-streak must be >= 1")
     if args.main_theorem_formalization_retry_budget_sec < 0:
         raise ValueError("--main-theorem-formalization-retry-budget-sec must be >= 0")
-    if args.priority_refresh_theorem_interval < 0:
-        raise ValueError("--priority-refresh-theorem-interval must be >= 0")
     data_dir = Path(DATA_DIR_PATH)
     scratch_file = Path(SCRATCH_FILE_PATH)
     memory_path = Path(FORMALIZATION_MEMORY_FILE_PATH)

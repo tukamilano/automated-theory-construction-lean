@@ -102,7 +102,6 @@ def _add_loop_tuning_flags(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--prover-retry-budget-sec", type=int, help="Whole retry-loop budget in seconds.")
     parser.add_argument("--formalization-retry-budget-sec", type=int, help="Whole retry-loop budget in seconds.")
     parser.add_argument("--max-same-error-streak", type=int)
-    parser.add_argument("--priority-refresh-theorem-interval", type=int)
     parser.add_argument("--main-theorem-interval", type=int)
     parser.add_argument("--main-theorem-formalize-worker-timeout", type=int, help="Per worker subprocess timeout in seconds.")
     parser.add_argument("--main-theorem-repair-worker-timeout", type=int, help="Per worker subprocess timeout in seconds.")
@@ -208,11 +207,11 @@ def _loop_command(args: argparse.Namespace, config: AppConfig) -> tuple[list[str
         cmd.append("--skip-verify")
     _append_flag(cmd, "--max-iterations", config.runtime.max_iterations)
     _append_flag(cmd, "--parallel-sessions", config.runtime.parallel_sessions)
+    _append_flag(cmd, "--seed-count", config.runtime.seed_count)
     _append_flag(cmd, "--open-problem-failure-threshold", config.runtime.open_problem_failure_threshold)
     _append_flag(cmd, "--prover-retry-budget-sec", config.runtime.prover_retry_budget_sec)
     _append_flag(cmd, "--formalization-retry-budget-sec", config.runtime.formalization_retry_budget_sec)
     _append_flag(cmd, "--max-same-error-streak", config.runtime.max_same_error_streak)
-    _append_flag(cmd, "--priority-refresh-theorem-interval", config.runtime.priority_refresh_theorem_interval)
     if config.runtime.run_main_theorem_session:
         _append_flag(cmd, "--main-theorem-interval", config.runtime.main_theorem_interval)
     else:
@@ -259,7 +258,6 @@ def _pipeline_command(args: argparse.Namespace, config: AppConfig) -> tuple[list
     _append_flag(cmd, "--prover-retry-budget-sec", config.runtime.prover_retry_budget_sec)
     _append_flag(cmd, "--formalization-retry-budget-sec", config.runtime.formalization_retry_budget_sec)
     _append_flag(cmd, "--max-same-error-streak", config.runtime.max_same_error_streak)
-    _append_flag(cmd, "--priority-refresh-theorem-interval", config.runtime.priority_refresh_theorem_interval)
     _append_flag(cmd, "--main-theorem-interval", config.runtime.main_theorem_interval)
     _append_flag(
         cmd,

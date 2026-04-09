@@ -44,7 +44,6 @@
     "open_problem_failure_threshold": 2,
     "refactor_pass_1_max_wall_clock_sec": 900,
     "refactor_pass_1_2_max_wall_clock_sec": 900,
-    "priority_refresh_theorem_interval": 3,
     "main_theorem_interval": 10,
     "main_theorem_formalize_worker_timeout": 900,
     "main_theorem_repair_worker_timeout": 600,

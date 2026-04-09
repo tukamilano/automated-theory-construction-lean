@@ -105,10 +105,11 @@ def normalize_open_problem_row(row: dict[str, Any]) -> dict[str, Any]:
     normalized["src"] = src
     normalized["mode"] = str(normalized.get("mode", "local_support") or "local_support").strip() or "local_support"
     normalized["summary_delta"] = str(normalized.get("summary_delta", "") or "").strip()
-    normalized["bottleneck_hit"] = str(normalized.get("bottleneck_hit", "") or "").strip()
-    normalized["agenda_alignment"] = str(normalized.get("agenda_alignment", "") or "").strip()
-    normalized["why_not_peripheral"] = str(normalized.get("why_not_peripheral", "") or "").strip()
-    normalized["unlocks"] = str(normalized.get("unlocks", "") or "").strip()
+    # Legacy metadata fields are intentionally dropped from the normalized row.
+    normalized.pop("bottleneck_hit", None)
+    normalized.pop("agenda_alignment", None)
+    normalized.pop("why_not_peripheral", None)
+    normalized.pop("unlocks", None)
     parent_problem_ids = normalized.get("parent_problem_ids", [])
     if isinstance(parent_problem_ids, list):
         normalized["parent_problem_ids"] = [str(item).strip() for item in parent_problem_ids if str(item).strip()]

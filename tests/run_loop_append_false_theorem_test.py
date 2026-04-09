@@ -27,6 +27,19 @@ theorem thm_example_is_false : ¬(False) := by
 
 end AutomatedTheoryConstruction
 """
+    scratch_with_sorry = """import Mathlib
+import AutomatedTheoryConstruction.Theory
+import AutomatedTheoryConstruction.Derived
+
+set_option autoImplicit false
+
+namespace AutomatedTheoryConstruction
+
+theorem thm_example_bad_is_false : ¬(False) := by
+  sorry
+
+end AutomatedTheoryConstruction
+"""
 
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp = Path(tmpdir)
@@ -67,6 +80,21 @@ end AutomatedTheoryConstruction
         derived_text = derived_path.read_text(encoding="utf-8")
         if "theorem thm_example_is_false" not in derived_text:
             raise RuntimeError("false theorem was not appended to Derived.lean")
+
+        bad_scratch_path = tmp / "ScratchBad.lean"
+        bad_scratch_path.write_text(scratch_with_sorry, encoding="utf-8")
+        rejected = run_loop.append_verified_theorem_from_scratch(
+            scratch_path=bad_scratch_path,
+            derived_file=derived_path,
+            derived_entries=[],
+            docstring="sorry-backed theorem should be rejected",
+        )
+        if rejected:
+            raise RuntimeError("sorry-backed theorem should not be returned from append_verified_theorem_from_scratch")
+
+        derived_text = derived_path.read_text(encoding="utf-8")
+        if "theorem thm_example_bad_is_false" in derived_text:
+            raise RuntimeError("sorry-backed false theorem should not be appended to Derived.lean")
 
     print("run loop append false theorem test passed")
     return 0

@@ -59,7 +59,8 @@ Verification path:
 - Prefer `simp only [...]` over broad `simp [*]` in fragile goals.
 - Keep imports minimal; `import Mathlib` is allowed when needed.
 - Use explicit `*` and `^` notation.
-- Prefer notation-first style for seeds, expansions, and claims when using abbreviations.
+- [Required] Use notation-first style for seeds, expansions, and claims whenever abbreviations are possible.
+  - In planning and implementation, write using the project notation first, and only switch to fully qualified names when notation is missing or ambiguous.
 
 ## Mathlib usage
 

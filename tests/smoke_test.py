@@ -212,7 +212,6 @@ def run_smoke_loop(
     *,
     max_iterations: int = 2,
     parallel_sessions: int = 2,
-    priority_refresh_theorem_interval: int = 0,
     timeout_sec: int = 420,
 ) -> subprocess.CompletedProcess[str]:
     cmd = [
@@ -228,8 +227,6 @@ def run_smoke_loop(
         "--skip-verify",
         "--main-theorem-interval",
         "0",
-        "--priority-refresh-theorem-interval",
-        str(priority_refresh_theorem_interval),
     ]
     try:
         completed = subprocess.run(
@@ -363,7 +360,6 @@ def main() -> int:
         completed = run_smoke_loop(
             dst_root,
             parallel_sessions=1,
-            priority_refresh_theorem_interval=1,
         )
         print("[priority-refresh] checking reports", file=sys.stderr)
         assert_priority_refresh_report(completed)
@@ -379,7 +375,6 @@ def main() -> int:
         completed = run_smoke_loop(
             dst_root,
             parallel_sessions=2,
-            priority_refresh_theorem_interval=1,
         )
         print("[priority-refresh-parallel] checking reports", file=sys.stderr)
         assert_priority_refresh_report(completed)

@@ -151,7 +151,6 @@ def build_loop_command(args: argparse.Namespace) -> list[str]:
     append_optional_flag(cmd, "--repair-worker-timeout", args.repair_worker_timeout)
     append_optional_flag(cmd, "--prioritize-open-problems-worker-command", args.prioritize_open_problems_worker_command)
     append_optional_flag(cmd, "--prioritize-open-problems-worker-timeout", args.prioritize_open_problems_worker_timeout)
-    append_optional_flag(cmd, "--priority-refresh-theorem-interval", args.priority_refresh_theorem_interval)
     append_optional_flag(cmd, "--open-problem-failure-threshold", args.open_problem_failure_threshold)
     append_optional_flag(cmd, "--prover-retry-budget-sec", args.prover_retry_budget_sec)
     append_optional_flag(cmd, "--formalization-retry-budget-sec", args.formalization_retry_budget_sec)
@@ -373,7 +372,6 @@ def _add_budget_flags(parser: argparse.ArgumentParser) -> None:
 
 
 def _add_loop_tuning_flags(parser: argparse.ArgumentParser, *, worker_timeout_help: str, verify_timeout_help: str) -> None:
-    parser.add_argument("--priority-refresh-theorem-interval", type=int)
     parser.add_argument("--open-problem-failure-threshold", type=int)
     parser.add_argument("--main-theorem-interval", type=int)
     parser.add_argument("--main-theorem-formalize-worker-timeout", type=int, help=worker_timeout_help)

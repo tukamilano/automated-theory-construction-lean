@@ -61,7 +61,7 @@
 - Treat `expand_candidate` items as promotion candidates, not as already-admitted queue items.
 - Promote an `expand_candidate` to practical queue relevance only when it clearly outperforms ordinary queue items on summary-level effect.
 - An `expand_candidate` should usually be `low` if it is merely a local support lemma, even when its generator rationale sounds plausible.
-- Use the candidate's `why_not_peripheral`, `theory_state_links`, and `agenda_links` only as evidence to evaluate, not as reasons to skip independent judgment.
+ - Use `theory_state_links` and `agenda_links` only as evidence to evaluate, not as reasons to skip independent judgment.
 
 ## stricter_high_policy
 - `high` should be rare.

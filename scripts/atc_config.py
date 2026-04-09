@@ -89,7 +89,6 @@ class RuntimeConfig:
     prover_retry_budget_sec: int = 120
     formalization_retry_budget_sec: int = 300
     max_same_error_streak: int = 5
-    priority_refresh_theorem_interval: int = 5
     main_theorem_interval: int = 0
     main_theorem_formalize_worker_timeout: int | None = None
     main_theorem_repair_worker_timeout: int | None = None
@@ -734,15 +733,6 @@ def load_app_config(args: Any) -> tuple[AppConfig, dict[str, str]]:
                 default=5,
                 minimum=1,
                 label="runtime.max_same_error_streak",
-            )
-        ),
-        priority_refresh_theorem_interval=int(
-            choose_int(
-                cli_names=("priority_refresh_theorem_interval",),
-                file_keys=("runtime", "priority_refresh_theorem_interval"),
-                default=5,
-                minimum=0,
-                label="runtime.priority_refresh_theorem_interval",
             )
         ),
         main_theorem_interval=int(

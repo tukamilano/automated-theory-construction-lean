@@ -4,7 +4,7 @@
 - Follow-up generator after a theorem is proved in the ordinary problem-solving loop.
 
 ## objective
-- Return 0-2 strong follow-up problem candidates.
+- Return 0-3 strong follow-up problem candidates.
 - Return an empty array when no genuinely useful candidate exists.
 
 ## hard_constraints
@@ -69,5 +69,5 @@ Return exactly this JSON object only:
   ]
 }
 ```
-- Return at most 2 candidates.
+- Return at most 3 candidates.
 - Return an empty `candidates` array if no candidate clearly passes the quality checks.

@@ -147,16 +147,11 @@ def test_runtime_initialization_clears_generation_sidecar_files() -> None:
         derived_file = tmp_path / "Derived.lean"
         formalization_memory_file = data_dir / "formalization_memory.json"
         archived_problems_file = data_dir / "archived_problems.jsonl"
-        expand_candidates_file = data_dir / "expand_candidates.jsonl"
         theorem_reuse_memory_file = data_dir / "theorem_reuse_memory.json"
 
         write_jsonl_atomic(
             seeds_file,
             [{"id": "op_000001", "stmt": "True", "src": "seed"}],
-        )
-        write_jsonl_atomic(
-            expand_candidates_file,
-            [{"id": "op_000099", "stmt": "False", "src": "expand", "priority": "high", "priority_rationale": "old", "failure_count": 0}],
         )
         theorem_reuse_memory_file.write_text(
             json.dumps(
@@ -195,9 +190,6 @@ def test_runtime_initialization_clears_generation_sidecar_files() -> None:
             reset_formalization_memory=False,
             archived_problems_file=archived_problems_file,
         )
-
-        if run_loop.read_jsonl(expand_candidates_file) != []:
-            raise RuntimeError("expand_candidates.jsonl was not cleared on initialization")
         theorem_reuse_payload = json.loads(theorem_reuse_memory_file.read_text(encoding="utf-8"))
         if theorem_reuse_payload != {"entries": []}:
             raise RuntimeError("theorem_reuse_memory.json was not cleared on initialization")
