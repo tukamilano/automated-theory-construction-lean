@@ -18,6 +18,58 @@ def main() -> int:
         tmp = Path(tmpdir)
         data_dir = tmp / "data"
         data_dir.mkdir(parents=True, exist_ok=True)
+        write_jsonl_atomic(
+            data_dir / "open_problems.jsonl",
+            [
+                {
+                    "id": "op_000001",
+                    "stmt": "True",
+                    "src": "seed",
+                    "priority": "unknown",
+                    "priority_rationale": "",
+                    "failure_count": 0,
+                },
+                {
+                    "id": "op_000002",
+                    "stmt": "False -> False",
+                    "src": "seed",
+                    "priority": "unknown",
+                    "priority_rationale": "",
+                    "failure_count": 0,
+                },
+            ],
+        )
+        write_jsonl_atomic(data_dir / "archived_problems.jsonl", [])
+        write_jsonl_atomic(data_dir / "solved_problems.jsonl", [])
+        write_jsonl_atomic(data_dir / "counterexamples.jsonl", [])
+
+        original_batch_generator = run_loop.run_batch_generator_subprocess
+        try:
+            def fail_batch_generator(**_kwargs):
+                raise RuntimeError("batch generator should not run while bootstrap priorities are still unknown")
+
+            run_loop.run_batch_generator_subprocess = fail_batch_generator
+            added_rows, error = run_loop.maybe_backfill_open_problems_from_batch_generator(
+                data_dir=data_dir,
+                repo_root=REPO_ROOT,
+                theory_file=REPO_ROOT / "AutomatedTheoryConstruction" / "Theory.lean",
+                derived_file=REPO_ROOT / "AutomatedTheoryConstruction" / "Derived.lean",
+                open_problem_target_min=2,
+                seed_count=3,
+                reserved_problem_ids=set(),
+            )
+        finally:
+            run_loop.run_batch_generator_subprocess = original_batch_generator
+
+        if error:
+            raise RuntimeError(f"unexpected backfill error during bootstrap deferral: {error}")
+        if added_rows:
+            raise RuntimeError(f"bootstrap deferral should not add rows: {added_rows}")
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmp = Path(tmpdir)
+        data_dir = tmp / "data"
+        data_dir.mkdir(parents=True, exist_ok=True)
         write_jsonl_atomic(data_dir / "open_problems.jsonl", [])
         write_jsonl_atomic(data_dir / "archived_problems.jsonl", [])
         write_jsonl_atomic(data_dir / "solved_problems.jsonl", [])

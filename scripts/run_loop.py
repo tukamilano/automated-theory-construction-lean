@@ -67,7 +67,7 @@ def debug_log(msg: str) -> None:
 
 SCRATCH_TEMPLATE = (
     "import Mathlib\n"
-    "import AutomatedTheoryConstruction.Theory\n"
+    "import AutomatedTheoryConstruction.Lambek\n"
     "import AutomatedTheoryConstruction.Derived\n\n"
     "set_option autoImplicit false\n\n"
     "namespace AutomatedTheoryConstruction\n\n"
@@ -507,7 +507,7 @@ def normalize_stmt_text(stmt: str) -> str:
     return " ".join(stmt.split())
 
 
-MAX_EXPAND_CANDIDATES_PER_SOLVED_PROOF = 2
+MAX_EXPAND_CANDIDATES_PER_SOLVED_PROOF = 3
 MAX_EXPAND_CANDIDATES_PER_MAIN_THEOREM = 5
 
 
@@ -675,6 +675,14 @@ def needs_bootstrap_priority_refresh(open_rows: list[dict[str, Any]]) -> bool:
     return any(open_problem_priority_label(row) == "unknown" for row in open_rows)
 
 
+def is_verified_resolution(*, verify_success: bool, result: str) -> bool:
+    return bool(verify_success and result in {"proof", "counterexample"})
+
+
+def should_generate_expand_candidates(*, verify_success: bool, result: str) -> bool:
+    return is_verified_resolution(verify_success=verify_success, result=result)
+
+
 def normalize_docstring_summary(text: str, max_chars: int = 240) -> str:
     cleaned = " ".join(str(text).replace("```", " ").split())
     if not cleaned:
@@ -726,8 +734,10 @@ def validate_prover_output(
     payload: dict[str, Any],
     expected_problem_id: str,
 ) -> ProverResponsePacket:
-    required_keys = {"problem_id", "result", "proof_sketch", "counterexample_text"}
-    if set(payload.keys()) != required_keys:
+    legacy_keys = {"problem_id", "result", "proof_sketch", "counterexample_text"}
+    current_keys = legacy_keys | {"new_problems"}
+    payload_keys = set(payload.keys())
+    if payload_keys != legacy_keys and payload_keys != current_keys:
         raise ValueError("prover output keys mismatch required contract")
 
     problem_id = payload.get("problem_id")
@@ -742,12 +752,16 @@ def validate_prover_output(
     counterexample_text = payload.get("counterexample_text")
     if not isinstance(proof_sketch, str) or not isinstance(counterexample_text, str):
         raise ValueError("proof_sketch and counterexample_text must be strings")
+    new_problems = payload.get("new_problems", [])
+    if not isinstance(new_problems, list) or any(not isinstance(item, str) for item in new_problems):
+        raise ValueError("new_problems must be a list of strings")
 
     return ProverResponsePacket(
         problem_id=problem_id,
         result=result,
         proof_sketch=proof_sketch,
         counterexample_text=counterexample_text,
+        new_problems=[item.strip() for item in new_problems if item.strip()],
         raw_payload=dict(payload),
     )
 
@@ -1212,7 +1226,7 @@ def formalize_to_scratch(
     scratch = (
         render_import_block(extra_imports)
         + 
-        "import AutomatedTheoryConstruction.Theory\n"
+        "import AutomatedTheoryConstruction.Lambek\n"
         "import AutomatedTheoryConstruction.Derived\n\n"
         "set_option autoImplicit false\n\n"
         "namespace AutomatedTheoryConstruction\n\n"
@@ -2713,7 +2727,7 @@ def request_expand_candidates(
     current_iteration_full_logs: list[dict[str, Any]],
     same_problem_history_tail: list[dict[str, Any]],
     theory_state: dict[str, Any] | None = None,
-    max_candidates: int = 2,
+    max_candidates: int = 3,
 ) -> tuple[list[dict[str, str]], dict[str, Any]]:
     expand_payload: dict[str, Any] = {
         "problem_id": problem_id,
@@ -3034,7 +3048,20 @@ def maybe_backfill_open_problems_from_batch_generator(
     open_path = data_dir / "open_problems.jsonl"
     open_rows = [normalize_open_problem_row(row) for row in read_jsonl(open_path)]
     reserved_ids = set(reserved_problem_ids or set())
-    _ = open_problem_target_min
+    available_open_rows = [
+        row
+        for row in open_rows
+        if str(row.get("id", "")).strip() and str(row.get("id", "")).strip() not in reserved_ids
+    ]
+    if (
+        open_problem_target_min > 0
+        and len(available_open_rows) >= open_problem_target_min
+        and any(open_problem_priority_label(row) == "unknown" for row in available_open_rows)
+    ):
+        # During bootstrap, seeded problems often start as `unknown` until the
+        # prioritizer runs. Treat those as pending work rather than a signal to
+        # synthesize more problems immediately.
+        return [], ""
     if has_available_solver_eligible_problem(open_rows, reserved_problem_ids=reserved_ids):
         return [], ""
 
@@ -4071,7 +4098,7 @@ def process_manual_main_theorem(
         error_excerpt=verify_error_excerpt,
     )
 
-    if not verify_success or result not in {"proof", "counterexample"}:
+    if not is_verified_resolution(verify_success=verify_success, result=result):
         return {
             "processed": True,
             "candidate_id": candidate_id,
@@ -4120,8 +4147,8 @@ def process_manual_main_theorem(
                 problem_id=candidate_id,
                 stmt=final_stmt,
                 original_stmt=statement,
-                result="proof",
-                verify_success=True,
+                result=result,
+                verify_success=verify_success,
                 theory_context=theorem_context,
                 open_rows=[normalize_open_problem_row(row) for row in read_jsonl(data_dir / "open_problems.jsonl")],
                 existing_new_problems=[],
@@ -4460,7 +4487,7 @@ def run_problem_session(
     )
 
     theorem_context_entries = [dict(entry) for entry in derived_entries_snapshot]
-    if verify_success and result == "proof":
+    if should_generate_expand_candidates(verify_success=verify_success, result=result):
         theorem_code = extract_theorem_code_from_scratch(scratch_file)
         if theorem_code:
             append_derived_entry_cache(theorem_context_entries, theorem_code)
@@ -4472,7 +4499,7 @@ def run_problem_session(
 
     expander_candidates: list[dict[str, str]] = []
     same_problem_history_tail = load_formalization_memory(memory_path, problem_id)[-8:]
-    if verify_success and result == "proof":
+    if should_generate_expand_candidates(verify_success=verify_success, result=result):
         expand_started_monotonic = time.monotonic()
         expand_started_at = iso_timestamp_now()
         emit_phase_log(
@@ -4548,7 +4575,7 @@ def run_problem_session(
             )
 
     with state_lock:
-        if verify_success and result in {"proof", "counterexample"}:
+        if is_verified_resolution(verify_success=verify_success, result=result):
             theorem_code = commit_verified_theorem_and_generation(
                 scratch_path=scratch_file,
                 derived_file=derived_path,
@@ -4897,9 +4924,13 @@ def run_parallel_loop(
                         write_jsonl_atomic(open_path, open_rows)
                         write_jsonl_atomic(archived_path, archived_rows)
                 derived_entries_snapshot = [dict(entry) for entry in derived_entries]
+            can_launch_more_iterations = (
+                args.max_iterations is None or launched_iterations < args.max_iterations
+            )
 
             if (
                 not stop_requested
+                and can_launch_more_iterations
                 and main_theorem_future is None
                 and (
                     (
@@ -4970,7 +5001,7 @@ def run_parallel_loop(
             while (
                 not stop_requested
                 and len(problem_futures) < int(args.parallel_sessions)
-                and (args.max_iterations is None or launched_iterations < args.max_iterations)
+                and can_launch_more_iterations
             ):
                 picked = pick_next_available_problem(
                     open_rows,

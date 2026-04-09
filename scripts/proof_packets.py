@@ -69,6 +69,7 @@ class ProverResponsePacket:
     result: str
     proof_sketch: str
     counterexample_text: str
+    new_problems: list[str] = field(default_factory=list)
     attempt: int = 0
     worker_meta: dict[str, Any] = field(default_factory=dict)
     raw_payload: dict[str, Any] = field(default_factory=dict)
@@ -250,11 +251,13 @@ def normalize_prover_payload(payload: dict[str, Any], expected_problem_id: str) 
     result = str(payload.get("result", "")).strip()
     proof_sketch = _coerce_text(payload.get("proof_sketch"))
     counterexample_text = _coerce_text(payload.get("counterexample_text"))
+    new_problems = _as_str_list(payload.get("new_problems"))
     return ProverResponsePacket(
         problem_id=expected_problem_id,
         result=result,
         proof_sketch=proof_sketch,
         counterexample_text=counterexample_text,
+        new_problems=new_problems,
         raw_payload=dict(payload),
     )
 

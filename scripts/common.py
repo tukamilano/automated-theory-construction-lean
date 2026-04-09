@@ -270,6 +270,27 @@ def collect_repo_local_lean_context_files(
         visited.add(resolved)
 
     visit(resolved_entry)
+
+    # `Theory.lean` is the Lean import boundary used by Derived/Scratch, but for
+    # prompt-facing context we also want nearby Lambek developments that are not
+    # imported directly because some aggregate imports currently trigger notation
+    # ambiguities or heavy rebuild failures in Lean.
+    theory_path = (resolved_repo_root / "AutomatedTheoryConstruction" / "Theory.lean").resolve()
+    if resolved_entry == theory_path:
+        lambek_files = sorted(
+            {
+                path.resolve()
+                for path in (resolved_repo_root / "AutomatedTheoryConstruction").glob("Lambek*.lean")
+            }
+            | {
+                path.resolve()
+                for path in (resolved_repo_root / "AutomatedTheoryConstruction" / "Lambek").rglob("*.lean")
+            }
+        )
+        for path in lambek_files:
+            if path not in visited and path not in visiting:
+                ordered_files.append(path)
+                visited.add(path)
     return ordered_files
 
 

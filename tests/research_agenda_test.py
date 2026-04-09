@@ -142,6 +142,7 @@ def test_runtime_initialization_clears_generation_sidecar_files() -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp_path = Path(tmpdir)
         data_dir = tmp_path / "data"
+        data_dir.mkdir(parents=True, exist_ok=True)
         seeds_file = tmp_path / "seeds.jsonl"
         scratch_file = tmp_path / "Scratch.lean"
         derived_file = tmp_path / "Derived.lean"

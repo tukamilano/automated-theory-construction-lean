@@ -1,0 +1,81 @@
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(REPO_ROOT / "scripts"))
+
+
+import run_loop
+
+
+def main() -> int:
+    if not run_loop.is_verified_resolution(verify_success=True, result="proof"):
+        raise RuntimeError("verified proof should count as a resolved outcome")
+
+    if not run_loop.is_verified_resolution(verify_success=True, result="counterexample"):
+        raise RuntimeError("verified counterexample should count as a resolved outcome")
+
+    if run_loop.is_verified_resolution(verify_success=False, result="proof"):
+        raise RuntimeError("unverified proof must not count as a resolved outcome")
+
+    if run_loop.is_verified_resolution(verify_success=True, result="stuck"):
+        raise RuntimeError("stuck results must not count as a resolved outcome")
+
+    if not run_loop.should_generate_expand_candidates(verify_success=True, result="proof"):
+        raise RuntimeError("verified proof should trigger expand generation")
+
+    if not run_loop.should_generate_expand_candidates(verify_success=True, result="counterexample"):
+        raise RuntimeError("verified counterexample should trigger expand generation")
+
+    if run_loop.should_generate_expand_candidates(verify_success=True, result="stuck"):
+        raise RuntimeError("stuck results must not trigger expand generation")
+
+    if run_loop.should_generate_expand_candidates(verify_success=False, result="proof"):
+        raise RuntimeError("unverified proof must not trigger expand generation")
+
+    if run_loop.should_generate_expand_candidates(verify_success=False, result="counterexample"):
+        raise RuntimeError("unverified counterexample must not trigger expand generation")
+
+    accepted = run_loop.validate_problem_candidates_output(
+        {
+            "problem_id": "op_000001",
+            "candidates": [
+                {"statement": "A", "rationale": "r1"},
+                {"statement": "B", "rationale": "r2"},
+                {"statement": "C", "rationale": "r3"},
+            ],
+        },
+        expected_problem_id="op_000001",
+        max_candidates=run_loop.MAX_EXPAND_CANDIDATES_PER_SOLVED_PROOF,
+    )
+    if len(accepted) != 3:
+        raise RuntimeError(f"solved-proof expand should accept 3 candidates, got {accepted}")
+
+    try:
+        run_loop.validate_problem_candidates_output(
+            {
+                "problem_id": "op_000001",
+                "candidates": [
+                    {"statement": "A", "rationale": "r1"},
+                    {"statement": "B", "rationale": "r2"},
+                    {"statement": "C", "rationale": "r3"},
+                    {"statement": "D", "rationale": "r4"},
+                ],
+            },
+            expected_problem_id="op_000001",
+            max_candidates=run_loop.MAX_EXPAND_CANDIDATES_PER_SOLVED_PROOF,
+        )
+    except ValueError:
+        pass
+    else:
+        raise RuntimeError("solved-proof expand should reject more than 3 candidates")
+
+    print("run loop expand policy test passed")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

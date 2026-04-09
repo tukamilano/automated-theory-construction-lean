@@ -19,6 +19,7 @@ def _prover_result(payload: dict[str, Any]) -> dict[str, Any]:
         "result": "stuck",
         "proof_sketch": "mock_worker: no proof attempt",
         "counterexample_text": "mock_worker: no proof generated",
+        "new_problems": [],
     }
 
 

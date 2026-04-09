@@ -113,6 +113,7 @@ def main() -> None:
             "result": "proof",
             "proof_sketch": "Smoke proof.",
             "counterexample_text": "",
+            "new_problems": [],
         }
     elif task_type in {"formalize", "repair"}:
         result_payload = {

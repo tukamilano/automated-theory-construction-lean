@@ -1,0 +1,79 @@
+{
+  "agenda_pressure": [
+    "Prefer metatheorems and separability results over repackaging known local classifications.",
+    "Exploit recursive exact interfaces rather than reviving false global size bounds.",
+    "Use counterexamples to motivate tightened one-sided or mixed-handed hypotheses.",
+    "Favor results with durable completeness, decidability, or fragment-interface consequences."
+  ],
+  "current_bottlenecks": [
+    "The converse `SupportClosure Γ A → (Γ ⇒ A)` is still missing.",
+    "Fragment results remain atomic or restricted-context; there is no full one-sided conservativity theorem yet.",
+    "The positive explanation of the naive-support counterexample is incomplete: mixed-handedness is suggested but not yet sharply characterized.",
+    "Exact proof objects have not yet been turned into bounded search space or decidability machinery."
+  ],
+  "derived_generation": 16,
+  "desired_summary_changes": [
+    "Identify `SupportClosure` itself with derivability, not just with `support_ok`.",
+    "Prove arbitrary-succedent one-sided conservativity for the left-only and right-only fragments.",
+    "State an exact mixed-handed boundary criterion for when recursive support reduces to flat antecedent support.",
+    "Convert exact candidate trees into subformula-bounded finite search or decidability structure."
+  ],
+  "important_verified_counterexamples": [
+    "Verified counterexample to: ∀ {Γ : List Tp} {A : Tp} {t : String}, (Γ ⇒ A) → occurs_atom t A → ∃ B ∈ Γ, occurs_atom t B",
+    "Verified counterexample to: ∀ {Γ : List Tp} {A : Tp}, (Γ ⇒ A) → atom_count A ≤ atom_count_list Γ",
+    "Verified counterexample to: ∀ {s : String} {A : Tp}, ([# s] ⇒ A) → ∃ Δ : List Tp, Δ ⇒ # s ∧ A = (# s ⧸ foldl Tp.ldiv (# s) Δ) ∨ A = (foldr Tp.rdiv (# s) Δ)"
+  ],
+  "missing_bridges": [
+    "From `SupportClosure ↔ support_ok` and `CandidateTree ↔ derivability` to `SupportClosure ↔ derivability`.",
+    "From one-sided atomic or candidate-step collapse to arbitrary-succedent conservativity.",
+    "From mixed-handed counterexamples to an exact recovery criterion for flat support.",
+    "From exact candidate trees to a subformula-bounded finite recognition procedure."
+  ],
+  "next_direction": {
+    "guidance": "Prioritize exact converses that identify recursive closure with derivability and then lift that control to full left-only and right-only conservativity theorems.",
+    "label": "complete_closure_then_fragment_conservativity",
+    "rationale": "CandidateTree already captures derivability globally, while verified failures of degree bounds, atom-count bounds, naive support containment, and simple singleton normal forms show that blunt global bounds will not move the frontier; progress has to come from exact recursive and fragment-sensitive metatheorems."
+  },
+  "overexplored_patterns": [
+    "Singleton-only normalization or witness packages.",
+    "Decision procedures for already-classified local fragments.",
+    "Blunt size or support bounds and nearby weakenings already blocked by counterexamples.",
+    "Fragment lemmas that stop at atomic goals or support transfer instead of exact conservativity."
+  ],
+  "research_agenda": {
+    "anti_goals": [
+      "Cosmetic rewrites",
+      "Unprincipled proliferation of structural rules",
+      "One-off examples",
+      "Unproductive negative statements"
+    ],
+    "canonical_targets": [
+      "A deeper understanding of completeness for $L$",
+      "The boundary between cut elimination and decidability in extensions",
+      "The interface with categorial grammar"
+    ],
+    "soft_constraints": [
+      "Closeness to established notation and theory",
+      "Temporal durability"
+    ],
+    "themes": [
+      "Structural correspondences between language hierarchies and logical systems",
+      "Extraction of logical rules and complexity"
+    ],
+    "valued_problem_types": [
+      "Provability relations among structural rules (reducibility)",
+      "Discovery of invertibility",
+      "Separability",
+      "Proofs of metatheorems"
+    ]
+  },
+  "summary_basis": {
+    "archived_problem_count": 22,
+    "derived_theorem_count": 15,
+    "open_problem_count": 11
+  },
+  "theory_snapshot": "The theory now has exact recursive interfaces at three levels: singleton sequents, atom-only contexts, and arbitrary succedents via `CandidateTree Γ A ↔ (Γ ⇒ A)`, while `SupportClosure` has been reduced exactly to `support_ok`. The main structural gap is no longer the existence of proof objects but the missing converse from closure or support to derivability, together with full left-only or right-only conservativity beyond atomic or special-context cases. Verified counterexamples to degree bounds, atom-count bounds, naive flat support containment, and simple singleton normal forms show that further progress must be recursive, fragment-sensitive, and explicit about mixed-handed obstruction.",
+  "updated_at_iteration": 22,
+  "updated_at_run_id": "20260409-174042-loop",
+  "version": 1
+}

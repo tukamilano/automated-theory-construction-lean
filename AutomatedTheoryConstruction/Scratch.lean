@@ -1,5 +1,5 @@
 import Mathlib
-import AutomatedTheoryConstruction.Theory
+import AutomatedTheoryConstruction.Lambek
 import AutomatedTheoryConstruction.Derived
 
 set_option autoImplicit false

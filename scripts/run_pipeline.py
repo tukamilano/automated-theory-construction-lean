@@ -137,6 +137,7 @@ def build_loop_command(args: argparse.Namespace) -> list[str]:
     if args.skip_loop_verify:
         cmd.append("--skip-verify")
 
+    append_optional_flag(cmd, "--seed-count", args.seed_count)
     append_optional_flag(cmd, "--max-iterations", args.max_iterations)
     append_optional_flag(cmd, "--parallel-sessions", args.parallel_sessions)
     append_optional_flag(cmd, "--worker-command", args.worker_command)
