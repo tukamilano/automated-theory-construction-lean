@@ -48,6 +48,9 @@ from common import (
     write_jsonl_atomic,
 )
 from guidance import build_guidance_context, unpack_guidance_context
+from generated_library import build_library_entries
+from generated_library import ensure_generated_scaffold
+from generated_library import render_scratch_template
 from import_inference import infer_minimal_imports, render_import_block
 from lean_verify import verify_scratch
 from research_agenda import DEFAULT_RESEARCH_AGENDA_PATH
@@ -65,17 +68,7 @@ def debug_log(msg: str) -> None:
 
 
 
-SCRATCH_TEMPLATE = (
-    "import Mathlib\n"
-    "import AutomatedTheoryConstruction.Lambek\n"
-    "import AutomatedTheoryConstruction.Derived\n\n"
-    "set_option autoImplicit false\n\n"
-    "namespace AutomatedTheoryConstruction\n\n"
-    "open Mathling.Lambek.ProductFree\n"
-    "open scoped Mathling.Lambek.ProductFree\n\n"
-    "-- Temporary Lean code generated for verification is written here.\n\n"
-    "end AutomatedTheoryConstruction\n"
-)
+SCRATCH_TEMPLATE = render_scratch_template()
 
 SCRATCH_OPEN_DECLS = (
     "open Mathling.Lambek.ProductFree\n"
@@ -1225,8 +1218,9 @@ def formalize_to_scratch(
 
     scratch = (
         render_import_block(extra_imports)
-        + 
+        +
         "import AutomatedTheoryConstruction.Lambek\n"
+        "import AutomatedTheoryConstruction.Generated.Manifest\n"
         "import AutomatedTheoryConstruction.Derived\n\n"
         "set_option autoImplicit false\n\n"
         "namespace AutomatedTheoryConstruction\n\n"
@@ -1367,8 +1361,9 @@ def extract_derived_theorem_entries(
     derived_path: Path,
     max_theorems: int | None = None,
 ) -> list[dict[str, str]]:
-    """Extract theorem entries directly from Derived.lean."""
-    fallback_entries = build_derived_entries_from_file(derived_path, max_theorems=max_theorems)
+    """Extract theorem entries from Generated plus the active Derived frontier."""
+    generated_root = derived_path.parent / "Generated"
+    fallback_entries = build_library_entries(generated_root=generated_root, derived_file=derived_path)
     return [
         {
             "name": str(entry.get("theorem_name", "")).strip(),
@@ -1475,6 +1470,7 @@ def append_verified_theorem_from_scratch(
     derived_file: Path,
     derived_entries: list[dict[str, str]],
     docstring: str,
+    rebuild_derived: bool = True,
 ) -> str:
     theorem_code = extract_theorem_code_from_scratch(scratch_path)
     if not theorem_code:
@@ -1505,20 +1501,21 @@ def append_verified_theorem_from_scratch(
                 docstring,
             )
             if appended:
-                # Keep Derived's compiled artifacts in sync so downstream scratch checks
-                # can resolve newly appended theorem names reliably.
-                build_proc = subprocess.run(
-                    ["lake", "build", "AutomatedTheoryConstruction.Derived"],
-                    capture_output=True,
-                    text=True,
-                    check=False,
-                )
-                if build_proc.returncode != 0:
-                    derived_file.write_text(original_content, encoding="utf-8")
-                    stderr = (build_proc.stderr or "").strip()
-                    stdout = (build_proc.stdout or "").strip()
-                    excerpt = stderr or stdout or "lake build AutomatedTheoryConstruction.Derived failed without output"
-                    raise RuntimeError(f"Failed to rebuild Derived after appending theorem: {excerpt}")
+                if rebuild_derived:
+                    # Keep Derived's compiled artifacts in sync so downstream scratch checks
+                    # can resolve newly appended theorem names reliably.
+                    build_proc = subprocess.run(
+                        ["lake", "build", "AutomatedTheoryConstruction.Derived"],
+                        capture_output=True,
+                        text=True,
+                        check=False,
+                    )
+                    if build_proc.returncode != 0:
+                        derived_file.write_text(original_content, encoding="utf-8")
+                        stderr = (build_proc.stderr or "").strip()
+                        stdout = (build_proc.stdout or "").strip()
+                        excerpt = stderr or stdout or "lake build AutomatedTheoryConstruction.Derived failed without output"
+                        raise RuntimeError(f"Failed to rebuild Derived after appending theorem: {excerpt}")
                 append_derived_entry_cache(derived_entries, theorem_code)
                 return theorem_code
             derived_content = derived_file.read_text(encoding="utf-8") if derived_file.exists() else ""
@@ -1543,12 +1540,14 @@ def commit_verified_theorem_and_generation(
     derived_runtime_state: dict[str, Any],
     run_id: str,
     current_iteration: int,
+    rebuild_derived: bool = True,
 ) -> str:
     committed_theorem_code = append_verified_theorem_from_scratch(
         scratch_path=scratch_path,
         derived_file=derived_file,
         derived_entries=derived_entries,
         docstring=docstring,
+        rebuild_derived=rebuild_derived,
     )
     if committed_theorem_code:
         next_generation = int(derived_runtime_state.get("generation", 0) or 0) + 1
@@ -1782,7 +1781,7 @@ def render_relevant_derived_context(entries: list[dict[str, Any]], max_chars: in
 
     lines = [
         "",
-        "-- Relevant verified theorems from Derived.lean:",
+        "-- Relevant verified theorems from Generated/Derived:",
         "-- Check these theorem names before re-deriving from axioms.",
     ]
     for entry in entries:
@@ -2342,6 +2341,12 @@ def request_initial_formalization(
     theory_context: str,
     current_iteration_full_logs: list[dict[str, Any]],
     same_problem_history_tail: list[dict[str, Any]],
+    retry_round: int = 0,
+    retry_instruction: str = "",
+    previous_result: str = "",
+    previous_prelude_code: str = "",
+    previous_proof_text: str = "",
+    previous_counterexample_text: str = "",
 ) -> tuple[str, str, str, str, str]:
     formalizer_request = FormalizerRequestPacket(
         problem_id=problem_id,
@@ -2352,6 +2357,12 @@ def request_initial_formalization(
         theory_context=theory_context,
         open_rows=open_rows,
         same_problem_history_tail=same_problem_history_tail,
+        retry_round=retry_round,
+        retry_instruction=retry_instruction,
+        previous_result=previous_result,
+        previous_prelude_code=previous_prelude_code,
+        previous_proof_text=previous_proof_text,
+        previous_counterexample_text=previous_counterexample_text,
         mathlib_allowed=True,
     )
     formalized, formalize_worker_meta = invoke_worker_json(
@@ -2364,7 +2375,7 @@ def request_initial_formalization(
     append_current_iteration_log(
         current_iteration_full_logs,
         stage="formalize",
-        index=1,
+        index=retry_round + 1,
         worker_meta=formalize_worker_meta,
     )
     formalizer_response = validate_formalizer_output(formalized, problem_id)
@@ -2451,6 +2462,7 @@ def resolve_solver_statement(
     prover_statement_worker_settings: Any,
     prover_statement_prompt_file: str,
     statement_verify_timeout_sec: int = 180,
+    skip_verify: bool = False,
     statement_retry_budget_sec: int | None = None,
     max_same_error_streak: int | None = None,
     phase_logs: bool,
@@ -2589,29 +2601,46 @@ def resolve_solver_statement(
         theorem_name = build_theorem_name(problem_id, theorem_name_stem)
         verify_started_monotonic = time.monotonic()
         verify_started_at = iso_timestamp_now()
-        verify_result = validate_solver_statement_with_lean(
-            problem_id=problem_id,
-            theorem_name=theorem_name,
-            stmt=formalized_stmt,
-            statement_prelude_code=statement_prelude_code,
-            timeout_sec=statement_verify_timeout_sec,
-        )
-        update_compile_metrics(compile_metrics, verify_result)
-        verify_success = bool(verify_result.get("success", False))
-        append_phase_attempt_record(
-            phase_attempts_path,
-            run_id=run_id,
-            session_type="loop",
-            iteration=iteration,
-            entity_id=problem_id,
-            phase="verify",
-            worker_task="stmt_check",
-            started_at=verify_started_at,
-            finished_at=iso_timestamp_now(),
-            duration_ms=int(verify_result.get("duration_ms", monotonic_duration_ms(verify_started_monotonic)) or 0),
-            success=verify_success,
-            result="verified" if verify_success else "failed",
-        )
+        if skip_verify:
+            verify_success = True
+            append_phase_attempt_record(
+                phase_attempts_path,
+                run_id=run_id,
+                session_type="loop",
+                iteration=iteration,
+                entity_id=problem_id,
+                phase="verify",
+                worker_task="stmt_check",
+                started_at=verify_started_at,
+                finished_at=iso_timestamp_now(),
+                duration_ms=monotonic_duration_ms(verify_started_monotonic),
+                success=True,
+                result="skipped",
+            )
+        else:
+            verify_result = validate_solver_statement_with_lean(
+                problem_id=problem_id,
+                theorem_name=theorem_name,
+                stmt=formalized_stmt,
+                statement_prelude_code=statement_prelude_code,
+                timeout_sec=statement_verify_timeout_sec,
+            )
+            update_compile_metrics(compile_metrics, verify_result)
+            verify_success = bool(verify_result.get("success", False))
+            append_phase_attempt_record(
+                phase_attempts_path,
+                run_id=run_id,
+                session_type="loop",
+                iteration=iteration,
+                entity_id=problem_id,
+                phase="verify",
+                worker_task="stmt_check",
+                started_at=verify_started_at,
+                finished_at=iso_timestamp_now(),
+                duration_ms=int(verify_result.get("duration_ms", monotonic_duration_ms(verify_started_monotonic)) or 0),
+                success=verify_success,
+                result="verified" if verify_success else "failed",
+            )
         if verify_success:
             break
 
@@ -3206,6 +3235,7 @@ def attempt_formalization_until_timeout(
     phase_logger: Callable[..., None] | None = None,
     forbid_sorry: bool = False,
     max_same_error_streak: int | None = None,
+    retry_initial_formalization_until_budget: bool = False,
     run_id: str,
     session_type: str,
     iteration: int,
@@ -3220,6 +3250,7 @@ def attempt_formalization_until_timeout(
     proof_text = initial_proof_text
     attempted_strengthened_statements = {normalize_stmt_text(current_stmt)}
     best_verified_candidate: dict[str, Any] | None = None
+    deadline = build_retry_deadline(formalization_retry_budget_sec)
 
     if result not in {"proof", "counterexample"}:
         # Preserve stuck exploration history so future timeout handling
@@ -3240,25 +3271,116 @@ def attempt_formalization_until_timeout(
         save_formalization_memory(memory_path, problem_id, persisted_history)
         return verify_success, current_theorem_name, result, prelude_code, proof_text, counterexample_text, verify_error_excerpt, current_stmt
 
+    initial_formalize_round = 0
+    initial_retry_instruction = ""
+    previous_initial_result = ""
+    previous_initial_prelude_code = ""
+    previous_initial_proof_text = ""
+    previous_initial_counterexample_text = ""
     if not prelude_code.strip() and not proof_text.strip():
-        try:
-            same_problem_history_tail = load_formalization_memory(memory_path, problem_id)[-8:]
-            proof_lean_started_monotonic = time.monotonic()
-            proof_lean_started_at = iso_timestamp_now()
-            result, proof_sketch, prelude_code, proof_text, counterexample_text = request_initial_formalization(
-                formalize_worker_settings=formalize_worker_settings,
-                formalizer_prompt=select_formalizer_prompt(formalizer_prompts, result=result),
-                problem_id=problem_id,
-                stmt=current_stmt,
-                result=result,
-                proof_sketch=proof_sketch,
-                counterexample_text=counterexample_text,
-                open_rows=open_rows,
-                theory_context=theory_context,
-                current_iteration_full_logs=current_iteration_full_logs,
-                same_problem_history_tail=same_problem_history_tail,
-            )
-        except RuntimeError as exc:
+        while True:
+            if (
+                retry_initial_formalization_until_budget
+                and deadline is not None
+                and initial_formalize_round > 0
+                and time.monotonic() >= deadline
+            ):
+                if not verify_error_excerpt:
+                    verify_error_excerpt = (
+                        "formalization retry budget exhausted before initial formalization produced Lean code"
+                    )
+                return (
+                    verify_success,
+                    current_theorem_name,
+                    "stuck",
+                    prelude_code,
+                    proof_text,
+                    counterexample_text,
+                    verify_error_excerpt,
+                    current_stmt,
+                )
+            try:
+                same_problem_history_tail = load_formalization_memory(memory_path, problem_id)[-8:]
+                proof_lean_started_monotonic = time.monotonic()
+                proof_lean_started_at = iso_timestamp_now()
+                result, proof_sketch, prelude_code, proof_text, counterexample_text = request_initial_formalization(
+                    formalize_worker_settings=formalize_worker_settings,
+                    formalizer_prompt=select_formalizer_prompt(formalizer_prompts, result=result),
+                    problem_id=problem_id,
+                    stmt=current_stmt,
+                    result=result,
+                    proof_sketch=proof_sketch,
+                    counterexample_text=counterexample_text,
+                    open_rows=open_rows,
+                    theory_context=theory_context,
+                    current_iteration_full_logs=current_iteration_full_logs,
+                    same_problem_history_tail=same_problem_history_tail,
+                    retry_round=initial_formalize_round,
+                    retry_instruction=initial_retry_instruction,
+                    previous_result=previous_initial_result,
+                    previous_prelude_code=previous_initial_prelude_code,
+                    previous_proof_text=previous_initial_proof_text,
+                    previous_counterexample_text=previous_initial_counterexample_text,
+                )
+            except RuntimeError as exc:
+                append_phase_attempt_record(
+                    phase_attempts_path,
+                    run_id=run_id,
+                    session_type=session_type,
+                    iteration=iteration,
+                    entity_id=problem_id,
+                    phase="proof_lean",
+                    worker_task="formalize",
+                    started_at=proof_lean_started_at,
+                    finished_at=iso_timestamp_now(),
+                    duration_ms=monotonic_duration_ms(proof_lean_started_monotonic),
+                    success=False,
+                    result="timeout" if is_worker_timeout_error(exc) else "error",
+                    timeout=is_worker_timeout_error(exc),
+                    error=str(exc),
+                )
+                if is_worker_timeout_error(exc):
+                    persisted_history = load_formalization_memory(memory_path, problem_id)
+                    verify_error_excerpt = f"formalize worker timeout: {exc}"
+                    persisted_history.append(
+                        {
+                            "result": "stuck",
+                            "verify_success": verify_success,
+                            "proof_sketch": proof_sketch,
+                            "prelude_code": prelude_code,
+                            "proof_text": proof_text,
+                            "counterexample_text": counterexample_text,
+                            "lean_error_excerpt": verify_error_excerpt,
+                            "lean_error_fingerprint": "formalizer_timeout",
+                        }
+                    )
+                    save_formalization_memory(memory_path, problem_id, persisted_history)
+                    if not retry_initial_formalization_until_budget:
+                        return (
+                            verify_success,
+                            current_theorem_name,
+                            "stuck",
+                            prelude_code,
+                            proof_text,
+                            counterexample_text,
+                            verify_error_excerpt,
+                            current_stmt,
+                        )
+                    previous_initial_result = "stuck"
+                    previous_initial_prelude_code = prelude_code
+                    previous_initial_proof_text = proof_text
+                    previous_initial_counterexample_text = counterexample_text
+                    initial_retry_instruction = (
+                        "Previous formalize attempt timed out before producing Lean code. "
+                        "Try a materially different proof route or a smaller reusable decomposition. "
+                        "Only return `stuck` if no defensible Lean path remains."
+                    )
+                    initial_formalize_round += 1
+                    prelude_code = ""
+                    proof_text = ""
+                    counterexample_text = ""
+                    continue
+                raise
             append_phase_attempt_record(
                 phase_attempts_path,
                 run_id=run_id,
@@ -3270,44 +3392,12 @@ def attempt_formalization_until_timeout(
                 started_at=proof_lean_started_at,
                 finished_at=iso_timestamp_now(),
                 duration_ms=monotonic_duration_ms(proof_lean_started_monotonic),
-                success=False,
-                result="timeout" if is_worker_timeout_error(exc) else "error",
-                timeout=is_worker_timeout_error(exc),
-                error=str(exc),
+                success=result in {"proof", "counterexample"},
+                result=result,
             )
-            if is_worker_timeout_error(exc):
-                persisted_history = load_formalization_memory(memory_path, problem_id)
-                verify_error_excerpt = f"formalize worker timeout: {exc}"
-                persisted_history.append(
-                    {
-                        "result": "stuck",
-                        "verify_success": verify_success,
-                        "proof_sketch": proof_sketch,
-                        "prelude_code": prelude_code,
-                        "proof_text": proof_text,
-                        "counterexample_text": counterexample_text,
-                        "lean_error_excerpt": verify_error_excerpt,
-                        "lean_error_fingerprint": "formalizer_timeout",
-                    }
-                )
-                save_formalization_memory(memory_path, problem_id, persisted_history)
-                return verify_success, current_theorem_name, "stuck", prelude_code, proof_text, counterexample_text, verify_error_excerpt, current_stmt
-            raise
-        append_phase_attempt_record(
-            phase_attempts_path,
-            run_id=run_id,
-            session_type=session_type,
-            iteration=iteration,
-            entity_id=problem_id,
-            phase="proof_lean",
-            worker_task="formalize",
-            started_at=proof_lean_started_at,
-            finished_at=iso_timestamp_now(),
-            duration_ms=monotonic_duration_ms(proof_lean_started_monotonic),
-            success=result in {"proof", "counterexample"},
-            result=result,
-        )
-        if result not in {"proof", "counterexample"}:
+            if result in {"proof", "counterexample"}:
+                break
+
             persisted_history = load_formalization_memory(memory_path, problem_id)
             persisted_history.append(
                 {
@@ -3322,9 +3412,34 @@ def attempt_formalization_until_timeout(
                 }
             )
             save_formalization_memory(memory_path, problem_id, persisted_history)
-            return verify_success, current_theorem_name, result, prelude_code, proof_text, counterexample_text, verify_error_excerpt, current_stmt
+            if not retry_initial_formalization_until_budget:
+                return (
+                    verify_success,
+                    current_theorem_name,
+                    result,
+                    prelude_code,
+                    proof_text,
+                    counterexample_text,
+                    verify_error_excerpt,
+                    current_stmt,
+                )
+            verify_error_excerpt = (
+                "formalizer returned stuck before Lean verification"
+            )
+            previous_initial_result = result
+            previous_initial_prelude_code = prelude_code
+            previous_initial_proof_text = proof_text
+            previous_initial_counterexample_text = counterexample_text
+            initial_retry_instruction = (
+                "Previous formalize attempt returned `stuck` before Lean verification. "
+                "Try a different proof route, intermediate lemma cut, or counterexample direction if the proof direction is unsound. "
+                "Only return `stuck` if no defensible Lean path remains."
+            )
+            initial_formalize_round += 1
+            prelude_code = ""
+            proof_text = ""
+            counterexample_text = ""
 
-    deadline = build_retry_deadline(formalization_retry_budget_sec)
     persisted_history = load_formalization_memory(memory_path, problem_id)
     repair_round = 0
     repair_history: list[dict[str, Any]] = list(persisted_history)
@@ -3699,6 +3814,12 @@ def initialize_runtime_state(
         raise ValueError(f"Seeds file is empty: {seeds_file}")
 
     data_dir.mkdir(parents=True, exist_ok=True)
+    generated_root = derived_file.parent / "Generated"
+    ensure_generated_scaffold(
+        generated_root=generated_root,
+        manifest_file=generated_root / "Manifest.lean",
+        catalog_file=generated_root / "catalog.json",
+    )
     write_jsonl_atomic(data_dir / "open_problems.jsonl", seed_rows)
     write_jsonl_atomic(archived_problems_file, [])
     write_jsonl_atomic(data_dir / "solved_problems.jsonl", [])
@@ -4081,6 +4202,7 @@ def process_manual_main_theorem(
         phase_logger=(lambda **fields: emit_phase_log(phase_logs, iteration=current_iteration, **fields)),
         forbid_sorry=True,
         max_same_error_streak=max_same_error_streak,
+        retry_initial_formalization_until_budget=True,
         run_id=run_id,
         session_type="main_theorem_session",
         iteration=current_iteration,
@@ -4230,6 +4352,7 @@ def process_manual_main_theorem(
             derived_runtime_state=derived_runtime_state,
             run_id=run_id,
             current_iteration=current_iteration,
+            rebuild_derived=not skip_verify,
         )
         theorem_reuse_payload["appended_to_derived"] = bool(committed_theorem_code)
         append_theorem_reuse_memory_entry(
@@ -4344,6 +4467,7 @@ def run_problem_session(
     ) = resolve_solver_statement(
         prover_statement_worker_settings=prover_statement_worker_settings,
         prover_statement_prompt_file=PROVER_STATEMENT_PROMPT_FILE,
+        skip_verify=args.skip_verify,
         statement_retry_budget_sec=args.formalization_retry_budget_sec,
         max_same_error_streak=args.max_same_error_streak,
         phase_logs=args.phase_logs,
@@ -4590,6 +4714,7 @@ def run_problem_session(
                 derived_runtime_state=derived_runtime_state,
                 run_id=run_id,
                 current_iteration=current_iteration,
+                rebuild_derived=not args.skip_verify,
             )
             theorem_appended = bool(theorem_code)
         else:
@@ -5359,24 +5484,27 @@ def main() -> None:
             reset_formalization_memory=RESET_FORMALIZATION_MEMORY_ON_START,
             archived_problems_file=archived_problems_path,
         )
-        debug_log("Running lake build during initialization")
-        for build_result in prebuild_lean_project():
-            update_compile_metrics(compile_metrics, build_result)
-            append_phase_attempt_record(
-                artifact_paths["phase_attempts"],
-                run_id=run_id,
-                session_type="loop",
-                iteration=0,
-                entity_id=str(build_result.get("target", "")),
-                phase="verify",
-                worker_task="initial_lake_build",
-                started_at=run_started_at,
-                finished_at=iso_timestamp_now(),
-                duration_ms=int(build_result.get("duration_ms", 0) or 0),
-                success=bool(build_result.get("success", False)),
-                result="verified" if bool(build_result.get("success", False)) else "failed",
-            )
-        debug_log("Initialization build completed")
+        if args.skip_verify:
+            debug_log("Skipping initialization lake build because --skip-verify is enabled")
+        else:
+            debug_log("Running lake build during initialization")
+            for build_result in prebuild_lean_project():
+                update_compile_metrics(compile_metrics, build_result)
+                append_phase_attempt_record(
+                    artifact_paths["phase_attempts"],
+                    run_id=run_id,
+                    session_type="loop",
+                    iteration=0,
+                    entity_id=str(build_result.get("target", "")),
+                    phase="verify",
+                    worker_task="initial_lake_build",
+                    started_at=run_started_at,
+                    finished_at=iso_timestamp_now(),
+                    duration_ms=int(build_result.get("duration_ms", 0) or 0),
+                    success=bool(build_result.get("success", False)),
+                    result="verified" if bool(build_result.get("success", False)) else "failed",
+                )
+            debug_log("Initialization build completed")
     _, base_theory_context = load_theory_context(Path(THEORY_FILE_PATH))
     derived_path = Path(DERIVED_FILE_PATH)
     derived_entries = extract_derived_theorem_entries(derived_path)

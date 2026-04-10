@@ -100,10 +100,16 @@ class FormalizerRequestPacket:
     theory_context: str
     open_rows: list[dict[str, Any]]
     same_problem_history_tail: list[dict[str, Any]]
+    retry_round: int = 0
+    retry_instruction: str = ""
+    previous_result: str = ""
+    previous_prelude_code: str = ""
+    previous_proof_text: str = ""
+    previous_counterexample_text: str = ""
     mathlib_allowed: bool = True
 
     def to_payload(self) -> dict[str, Any]:
-        return {
+        payload: dict[str, Any] = {
             "problem_id": self.problem_id,
             "stmt": self.stmt,
             "result": self.result,
@@ -112,8 +118,20 @@ class FormalizerRequestPacket:
             "theory_context": self.theory_context,
             "open_problems": self.open_rows,
             "same_problem_history_tail": self.same_problem_history_tail,
+            "retry_round": self.retry_round,
             "mathlib_allowed": self.mathlib_allowed,
         }
+        if self.retry_instruction:
+            payload["retry_instruction"] = self.retry_instruction
+        if self.previous_result:
+            payload["previous_result"] = self.previous_result
+        if self.previous_prelude_code:
+            payload["previous_prelude_code"] = self.previous_prelude_code
+        if self.previous_proof_text:
+            payload["previous_proof_text"] = self.previous_proof_text
+        if self.previous_counterexample_text:
+            payload["previous_counterexample_text"] = self.previous_counterexample_text
+        return payload
 
 
 @dataclass(frozen=True)

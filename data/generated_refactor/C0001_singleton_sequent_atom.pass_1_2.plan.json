@@ -1,0 +1,25 @@
+{
+  "items": [
+    {
+      "anchor_theorems": [
+        "thm_singleton_atomic_sequent_iff_000011"
+      ],
+      "expected_benefit": "Collapse the exact duplicate `ldiv` and `rdiv` contradiction branches by proving `¬ prove1 [] A` once and reusing it in both cases.",
+      "id": "item_001",
+      "insert_before": "",
+      "kind": "exact_duplicate_collapse",
+      "local_reorder_region": [],
+      "new_theorems": [
+        "prove1_nil_false"
+      ],
+      "rewrite_targets": [
+        "thm_singleton_atomic_sequent_iff_000011"
+      ],
+      "section_members": [],
+      "section_title": ""
+    }
+  ],
+  "plan_version": 1,
+  "source_file": "/Users/milano/ATC_private/AutomatedTheoryConstruction/Generated/C0001_singleton_sequent_atom.lean",
+  "summary": "No exact duplicate theorem statements were provided, but three safe local exact-duplicate collapses exist in the singleton-classification cluster."
+}

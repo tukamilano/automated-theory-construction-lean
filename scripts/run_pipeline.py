@@ -273,13 +273,11 @@ def build_rewrite_command(args: argparse.Namespace, *, input_file: str, output_f
         input_file,
         "--output-file",
         output_file,
-        "--raw-output-file",
-        args.try_at_each_step_raw_output_file,
-        "--apply-report-file",
-        args.try_at_each_step_apply_report_file,
         "--tactic",
         args.try_at_each_step_tactic,
     ]
+    append_optional_flag(cmd, "--raw-output-file", args.try_at_each_step_raw_output_file)
+    append_optional_flag(cmd, "--apply-report-file", args.try_at_each_step_apply_report_file)
     append_optional_flag(cmd, "--verify-timeout", args.try_at_each_step_verify_timeout)
     return cmd
 
@@ -404,17 +402,21 @@ def main() -> int:
     if args.initialize_on_start and not args.dry_run:
         cleanup_pipeline_artifacts(
             [
-                args.preview_file,
-                args.compression_plan_file,
-                args.compression_report_file,
-                args.proof_retarget_plan_file,
-                args.proof_retarget_report_file,
-                args.compression_progress_log_file,
-                args.proof_retarget_progress_log_file,
-                args.review_output_file,
-                args.review_report_file,
-                args.try_at_each_step_raw_output_file,
-                args.try_at_each_step_apply_report_file,
+                path
+                for path in [
+                    args.preview_file,
+                    args.compression_plan_file,
+                    args.compression_report_file,
+                    args.proof_retarget_plan_file,
+                    args.proof_retarget_report_file,
+                    args.compression_progress_log_file,
+                    args.proof_retarget_progress_log_file,
+                    args.review_output_file,
+                    args.review_report_file,
+                    args.try_at_each_step_raw_output_file,
+                    args.try_at_each_step_apply_report_file,
+                ]
+                if path
             ]
         )
 
@@ -498,7 +500,7 @@ def main() -> int:
         print("[pipeline] dry-run only; no stage was executed.", file=sys.stderr, flush=True)
         return 0
 
-    print(
+    summary = (
         "Pipeline completed.\n"
         f"- theory: {DEFAULT_THEORY}\n"
         f"- seeds: {DEFAULT_SEEDS}\n"
@@ -510,13 +512,20 @@ def main() -> int:
         f"- pass 1.3 report: {args.proof_retarget_report_file}\n"
         f"- pass 1.2 log: {args.compression_progress_log_file}\n"
         f"- pass 1.3 log: {args.proof_retarget_progress_log_file}\n"
-        f"- tryAtEachStep raw: {args.try_at_each_step_raw_output_file}\n"
-        f"- tryAtEachStep report: {args.try_at_each_step_apply_report_file}\n"
-        f"- reviewed output: {args.review_output_file}\n"
-        f"- review report: {args.review_report_file}",
-        file=sys.stderr,
-        flush=True,
+        + (
+            f"- tryAtEachStep raw: {args.try_at_each_step_raw_output_file}\n"
+            if args.try_at_each_step_raw_output_file
+            else ""
+        )
+        + (
+            f"- tryAtEachStep report: {args.try_at_each_step_apply_report_file}\n"
+            if args.try_at_each_step_apply_report_file
+            else ""
+        )
+        + f"- reviewed output: {args.review_output_file}\n"
+        + f"- review report: {args.review_report_file}"
     )
+    print(summary, file=sys.stderr, flush=True)
     return 0
 
 

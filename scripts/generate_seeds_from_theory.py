@@ -18,6 +18,10 @@ from common import (
     write_jsonl_atomic,
 )
 from guidance import build_guidance_context, unpack_guidance_context
+from generated_library import DEFAULT_GENERATED_CATALOG
+from generated_library import DEFAULT_GENERATED_MANIFEST
+from generated_library import DEFAULT_GENERATED_ROOT
+from generated_library import ensure_generated_scaffold
 from llm_exec import build_exec_command
 from llm_exec import resolve_provider
 from llm_exec import run_llm_exec
@@ -121,6 +125,12 @@ def reset_runtime_before_seed_generation(
     archived_problems_file: Path,
 ) -> None:
     data_dir.mkdir(parents=True, exist_ok=True)
+    generated_root = derived_file.parent / DEFAULT_GENERATED_ROOT.name
+    ensure_generated_scaffold(
+        generated_root=generated_root,
+        manifest_file=generated_root / DEFAULT_GENERATED_MANIFEST.name,
+        catalog_file=generated_root / DEFAULT_GENERATED_CATALOG.name,
+    )
     seeds_file.unlink(missing_ok=True)
     write_jsonl_atomic(data_dir / "open_problems.jsonl", [])
     write_jsonl_atomic(archived_problems_file, [])
@@ -364,13 +374,7 @@ Quality filter:
 - Avoid seeds that differ only by notation changes, variable renaming, or tiny local rewrites.
 - A local lemma is acceptable when it has sharp content and clear reuse or bottleneck-relief value; do not reject it merely because it is not theory-global.
 - Strongly avoid safe peripheral extensions that fit known overexplored patterns unless they are the clearest route to a broader organizing result.
-- Treat diversity as a tie-breaker among multiple strong candidates, not as a goal that overrides quality, novelty, or agenda fit.
-- When multiple strong seeds are available, prefer a diverse spread across theorem role, statement shape, and proof value.
-- Use these fixed role buckets when reasoning about spread: `generalization`, `converse`, `boundary`, `separation`, `criterion`, `reusable_lemma`.
-- Treat each candidate by its dominant role only.
-- Do not count shallow variants from the same family as distinct candidates for diversity purposes.
-- Avoid returning several seeds that share the same dominant role, the same obstruction, the same repair idea, or the same near-neighbor statement unless those are clearly the strongest options.
-- Do not sacrifice the strongest candidate merely to increase role spread.
+- Keep the seeds mathematically diverse when possible.
 - Make each proposition read like something that could be pasted directly into a theorem statement in Lean.
 {extra_block}
 Output contract:

@@ -89,6 +89,34 @@ For complete schema and replacement steps, follow [`PROOF_EXECUTOR.md`](PROOF_EX
 [Derived.refactored.reviewed.lean]
 ```
 
+## Refactor Design
+
+The recommended refactor design is:
+
+```text
+pass 1.5
+  whole-file rewrite cleanup
+        ↓
+pass 2.0
+  whole-file review-focused cleanup
+        ↓
+split into Generated/C000x_*.lean
+        ↓
+for each generated file, in order:
+  pass 1.2
+    exact-duplicate collapse
+  pass 1.3
+    proof retargeting
+        ↓
+after each local edit:
+  lake build AutomatedTheoryConstruction.Generated.Manifest
+  and repair at the whole-Generated level if needed
+```
+
+The key idea is that pass 1.5 and pass 2.0 are global stabilization passes, while pass 1.2 and pass 1.3 are local reuse/compression passes. In practice, exact-duplicate collapse and proof retargeting are easier to control after splitting the theory into smaller generated files.
+
+`scripts/atc_cli.py materialize-generated` is the entrypoint for the split-based stage. It materializes `Generated/C000x_*.lean`, rebuilds `Manifest.lean` / `catalog.json`, and then runs pass 1.2 and pass 1.3 sequentially inside each generated file. The command also rechecks the whole `AutomatedTheoryConstruction.Generated.Manifest` target after local changes and can trigger whole-Generated repair when integration breaks.
+
 ## Common Commands
 
 The unified operational entrypoint is:
@@ -152,6 +180,14 @@ uv run python scripts/atc_cli.py retarget
 uv run python scripts/atc_cli.py rewrite
 uv run python scripts/atc_cli.py review
 ```
+
+Run the split-based Generated materialization stage:
+
+```bash
+uv run python scripts/atc_cli.py materialize-generated
+```
+
+This stage prints progress directly to stderr and, when enabled, runs pass 1.2 / pass 1.3 inside each generated file in order.
 
 Equivalent `Makefile` shortcuts remain available:
 

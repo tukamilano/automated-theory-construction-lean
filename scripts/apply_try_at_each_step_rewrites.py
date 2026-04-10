@@ -5,6 +5,7 @@ import json
 import shutil
 import subprocess
 import sys
+import tempfile
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -48,6 +49,12 @@ def load_json(path: Path) -> Any:
 def dump_json(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def maybe_dump_json(path: Path | None, payload: dict[str, Any]) -> None:
+    if path is None:
+        return
+    dump_json(path, payload)
 
 
 def verify_lean_file(file_path: Path, timeout_sec: int | None) -> tuple[bool, str]:
@@ -274,11 +281,8 @@ def parse_args() -> argparse.Namespace:
     verify_timeout_help = "Per Lean verification timeout in seconds."
     parser.add_argument("--input-file", default="AutomatedTheoryConstruction/Derived.refactored.preview.lean")
     parser.add_argument("--output-file")
-    parser.add_argument("--raw-output-file", default="AutomatedTheoryConstruction/Derived.tryAtEachStep.json")
-    parser.add_argument(
-        "--apply-report-file",
-        default="AutomatedTheoryConstruction/Derived.tryAtEachStep.apply_report.json",
-    )
+    parser.add_argument("--raw-output-file")
+    parser.add_argument("--apply-report-file")
     parser.add_argument("--tactic", default="with_reducible exact?")
     parser.add_argument("--backup-file")
     parser.add_argument("--verify-timeout", type=int, help=verify_timeout_help)
@@ -290,8 +294,8 @@ def main() -> int:
     args = parse_args()
     input_file = Path(args.input_file)
     output_file = Path(args.output_file) if args.output_file else input_file
-    raw_output_file = Path(args.raw_output_file)
-    apply_report_file = Path(args.apply_report_file)
+    raw_output_file = Path(args.raw_output_file) if args.raw_output_file else None
+    apply_report_file = Path(args.apply_report_file) if args.apply_report_file else None
     backup_file = Path(args.backup_file) if args.backup_file else None
 
     if not input_file.exists():
@@ -304,108 +308,139 @@ def main() -> int:
             "stop_detail": "dry-run requested",
             "input_file": str(input_file),
             "output_file": str(output_file),
-            "raw_output_file": str(raw_output_file),
-            "apply_report_file": str(apply_report_file),
             "tactic": args.tactic,
         }
+        if raw_output_file is not None:
+            report["raw_output_file"] = str(raw_output_file)
+        if apply_report_file is not None:
+            report["apply_report_file"] = str(apply_report_file)
         print(json.dumps(report, ensure_ascii=False))
         return 0
 
-    copy_input_if_needed(input_file, output_file)
-    write_backup_if_needed(output_file, backup_file)
+    with tempfile.TemporaryDirectory(prefix="try-at-each-step.") as temp_dir:
+        temp_root = Path(temp_dir)
+        effective_raw_output_file = raw_output_file or (temp_root / "raw.json")
+        copy_input_if_needed(input_file, output_file)
+        write_backup_if_needed(output_file, backup_file)
 
-    debug_log(
-        "Running tryAtEachStep: "
-        f"input={output_file} tactic={args.tactic} raw_output={raw_output_file}"
-    )
-    try_ok, try_log = run_try_at_each_step(
-        input_file=output_file,
-        tactic=args.tactic,
-        raw_output_file=raw_output_file,
-    )
-    if not try_ok:
-        report = {
-            "status": "error",
-            "stop_reason": "try_at_each_step_failed",
-            "stop_detail": "tryAtEachStep command failed",
-            "input_file": str(input_file),
-            "output_file": str(output_file),
-            "raw_output_file": str(raw_output_file),
-            "apply_report_file": str(apply_report_file),
-            "tactic": args.tactic,
-            "error": try_log,
-        }
-        dump_json(apply_report_file, report)
-        print(json.dumps(report, ensure_ascii=False))
-        return 1
-
-    source_text = output_file.read_text(encoding="utf-8")
-    raw_results = load_json(raw_output_file)
-    if not isinstance(raw_results, list):
-        report = {
-            "status": "error",
-            "stop_reason": "invalid_try_at_each_step_output",
-            "stop_detail": "raw output was not a JSON list",
-            "raw_output_file": str(raw_output_file),
-        }
-        dump_json(apply_report_file, report)
-        print(json.dumps(report, ensure_ascii=False))
-        return 1
-
-    candidates = build_candidates(raw_results, source_text)
-    selected = select_non_overlapping(candidates)
-    debug_log(
-        f"Loaded tryAtEachStep results: raw={len(raw_results)} parseable={len(candidates)} selected={len(selected)}"
-    )
-
-    applied: list[dict[str, Any]] = []
-    skipped: list[dict[str, Any]] = []
-    failed: list[dict[str, Any]] = []
-    current_text = source_text
-
-    for candidate in selected:
-        located = locate_span(
-            current_text,
-            start_line=candidate.start_line,
-            start_col=candidate.start_col,
-            span_text=candidate.span_text,
-        )
-        if located is None:
-            skipped.append(
-                {
-                    "parent_name": candidate.parent_name,
-                    "start_line": candidate.start_line,
-                    "start_col": candidate.start_col,
-                    "reason": "span_not_found_after_prior_rewrites",
-                }
-            )
-            continue
-
-        start_idx, end_idx = located
-        prefix = indentation_prefix(current_text, start_idx)
-        replacement = format_replacement(candidate.suggestion, prefix)
         debug_log(
-            "Trying rewrite: "
-            f"{candidate.parent_name}:{candidate.start_line}:{candidate.start_col} "
-            f"old=`{compact_snippet(candidate.span_text)}` "
-            f"raw=`{compact_snippet(candidate.raw_suggestion)}` "
-            f"replacement=`{compact_snippet(replacement)}`"
-            + (
-                f" stripped_annotation={candidate.stripped_annotation}"
-                if candidate.stripped_annotation is not None
-                else ""
-            )
+            "Running tryAtEachStep: "
+            f"input={output_file} tactic={args.tactic}"
+            + (f" raw_output={effective_raw_output_file}" if raw_output_file is not None else "")
         )
-        trial_text = current_text[:start_idx] + replacement + current_text[end_idx:]
-        output_file.write_text(trial_text, encoding="utf-8")
-        ok, verify_log = verify_lean_file(output_file, timeout_sec=args.verify_timeout)
-        if ok:
+        try_ok, try_log = run_try_at_each_step(
+            input_file=output_file,
+            tactic=args.tactic,
+            raw_output_file=effective_raw_output_file,
+        )
+        if not try_ok:
+            report = {
+                "status": "error",
+                "stop_reason": "try_at_each_step_failed",
+                "stop_detail": "tryAtEachStep command failed",
+                "input_file": str(input_file),
+                "output_file": str(output_file),
+                "tactic": args.tactic,
+                "error": try_log,
+            }
+            if raw_output_file is not None:
+                report["raw_output_file"] = str(raw_output_file)
+            if apply_report_file is not None:
+                report["apply_report_file"] = str(apply_report_file)
+            maybe_dump_json(apply_report_file, report)
+            print(json.dumps(report, ensure_ascii=False))
+            return 1
+
+        source_text = output_file.read_text(encoding="utf-8")
+        raw_results = load_json(effective_raw_output_file)
+        if not isinstance(raw_results, list):
+            report = {
+                "status": "error",
+                "stop_reason": "invalid_try_at_each_step_output",
+                "stop_detail": "raw output was not a JSON list",
+            }
+            if raw_output_file is not None:
+                report["raw_output_file"] = str(raw_output_file)
+            if apply_report_file is not None:
+                report["apply_report_file"] = str(apply_report_file)
+            maybe_dump_json(apply_report_file, report)
+            print(json.dumps(report, ensure_ascii=False))
+            return 1
+
+        candidates = build_candidates(raw_results, source_text)
+        selected = select_non_overlapping(candidates)
+        debug_log(
+            f"Loaded tryAtEachStep results: raw={len(raw_results)} parseable={len(candidates)} selected={len(selected)}"
+        )
+
+        applied: list[dict[str, Any]] = []
+        skipped: list[dict[str, Any]] = []
+        failed: list[dict[str, Any]] = []
+        current_text = source_text
+
+        for candidate in selected:
+            located = locate_span(
+                current_text,
+                start_line=candidate.start_line,
+                start_col=candidate.start_col,
+                span_text=candidate.span_text,
+            )
+            if located is None:
+                skipped.append(
+                    {
+                        "parent_name": candidate.parent_name,
+                        "start_line": candidate.start_line,
+                        "start_col": candidate.start_col,
+                        "reason": "span_not_found_after_prior_rewrites",
+                    }
+                )
+                continue
+
+            start_idx, end_idx = located
+            prefix = indentation_prefix(current_text, start_idx)
+            replacement = format_replacement(candidate.suggestion, prefix)
             debug_log(
-                "Accepted rewrite: "
+                "Trying rewrite: "
+                f"{candidate.parent_name}:{candidate.start_line}:{candidate.start_col} "
+                f"old=`{compact_snippet(candidate.span_text)}` "
+                f"raw=`{compact_snippet(candidate.raw_suggestion)}` "
+                f"replacement=`{compact_snippet(replacement)}`"
+                + (
+                    f" stripped_annotation={candidate.stripped_annotation}"
+                    if candidate.stripped_annotation is not None
+                    else ""
+                )
+            )
+            trial_text = current_text[:start_idx] + replacement + current_text[end_idx:]
+            output_file.write_text(trial_text, encoding="utf-8")
+            ok, verify_log = verify_lean_file(output_file, timeout_sec=args.verify_timeout)
+            if ok:
+                debug_log(
+                    "Accepted rewrite: "
+                    f"{candidate.parent_name}:{candidate.start_line}:{candidate.start_col}"
+                )
+                current_text = trial_text
+                applied.append(
+                    {
+                        "parent_name": candidate.parent_name,
+                        "start_line": candidate.start_line,
+                        "start_col": candidate.start_col,
+                        "old_text": candidate.old_text,
+                        "old_to_end_of_branch": candidate.old_to_end_of_branch,
+                        "raw_suggestion": candidate.raw_suggestion,
+                        "stripped_annotation": candidate.stripped_annotation,
+                        "replacement": replacement,
+                        "shortened_steps_count": candidate.shortened_steps_count,
+                    }
+                )
+                continue
+
+            output_file.write_text(current_text, encoding="utf-8")
+            debug_log(
+                "Rejected rewrite after verification failure: "
                 f"{candidate.parent_name}:{candidate.start_line}:{candidate.start_col}"
             )
-            current_text = trial_text
-            applied.append(
+            failed.append(
                 {
                     "parent_name": candidate.parent_name,
                     "start_line": candidate.start_line,
@@ -416,58 +451,40 @@ def main() -> int:
                     "stripped_annotation": candidate.stripped_annotation,
                     "replacement": replacement,
                     "shortened_steps_count": candidate.shortened_steps_count,
+                    "verify_log_excerpt": verify_log.splitlines()[:20],
                 }
             )
-            continue
 
         output_file.write_text(current_text, encoding="utf-8")
-        debug_log(
-            "Rejected rewrite after verification failure: "
-            f"{candidate.parent_name}:{candidate.start_line}:{candidate.start_col}"
-        )
-        failed.append(
-            {
-                "parent_name": candidate.parent_name,
-                "start_line": candidate.start_line,
-                "start_col": candidate.start_col,
-                "old_text": candidate.old_text,
-                "old_to_end_of_branch": candidate.old_to_end_of_branch,
-                "raw_suggestion": candidate.raw_suggestion,
-                "stripped_annotation": candidate.stripped_annotation,
-                "replacement": replacement,
-                "shortened_steps_count": candidate.shortened_steps_count,
-                "verify_log_excerpt": verify_log.splitlines()[:20],
-            }
-        )
-
-    output_file.write_text(current_text, encoding="utf-8")
-    final_ok, final_verify_log = verify_lean_file(output_file, timeout_sec=args.verify_timeout)
-    status = "ok" if final_ok else "error"
-    report = {
-        "status": status,
-        "stop_reason": "completed" if final_ok else "verify_failed",
-        "stop_detail": "" if final_ok else "final rewritten file failed verification",
-        "input_file": str(input_file),
-        "output_file": str(output_file),
-        "raw_output_file": str(raw_output_file),
-        "apply_report_file": str(apply_report_file),
-        "backup_file": str(backup_file) if backup_file is not None else None,
-        "tactic": args.tactic,
-        "raw_result_count": len(raw_results),
-        "parseable_candidate_count": len(candidates),
-        "selected_candidate_count": len(selected),
-        "applied_count": len(applied),
-        "skipped_count": len(skipped),
-        "failed_count": len(failed),
-        "applied": applied,
-        "skipped": skipped,
-        "failed": failed,
-        "final_verify_success": final_ok,
-        "final_verify_log_excerpt": final_verify_log.splitlines()[:20],
-    }
-    dump_json(apply_report_file, report)
-    print(json.dumps(report, ensure_ascii=False))
-    return 0 if final_ok else 1
+        final_ok, final_verify_log = verify_lean_file(output_file, timeout_sec=args.verify_timeout)
+        status = "ok" if final_ok else "error"
+        report = {
+            "status": status,
+            "stop_reason": "completed" if final_ok else "verify_failed",
+            "stop_detail": "" if final_ok else "final rewritten file failed verification",
+            "input_file": str(input_file),
+            "output_file": str(output_file),
+            "backup_file": str(backup_file) if backup_file is not None else None,
+            "tactic": args.tactic,
+            "raw_result_count": len(raw_results),
+            "parseable_candidate_count": len(candidates),
+            "selected_candidate_count": len(selected),
+            "applied_count": len(applied),
+            "skipped_count": len(skipped),
+            "failed_count": len(failed),
+            "applied": applied,
+            "skipped": skipped,
+            "failed": failed,
+            "final_verify_success": final_ok,
+            "final_verify_log_excerpt": final_verify_log.splitlines()[:20],
+        }
+        if raw_output_file is not None:
+            report["raw_output_file"] = str(raw_output_file)
+        if apply_report_file is not None:
+            report["apply_report_file"] = str(apply_report_file)
+        maybe_dump_json(apply_report_file, report)
+        print(json.dumps(report, ensure_ascii=False))
+        return 0 if final_ok else 1
 
 
 if __name__ == "__main__":

@@ -71,6 +71,8 @@ class RuntimeConfig:
     run_seed: bool = True
     run_refactor_pass_1_2: bool = True
     run_refactor_pass_1_3: bool = True
+    run_generated_pass_1_2: bool = True
+    run_generated_pass_1_3: bool = True
     run_refactor_pass_1_5: bool = True
     run_refactor_pass_2: bool = True
     run_main_theorem_session: bool = True
@@ -78,6 +80,8 @@ class RuntimeConfig:
     open_problem_failure_threshold: int = 2
     refactor_pass_1_2_max_wall_clock_sec: int | None = None
     refactor_pass_1_3_max_wall_clock_sec: int | None = None
+    generated_repair_max_rounds: int = 2
+    generated_repair_verify_timeout: int = 300
     prover_retry_budget_sec: int = 120
     formalization_retry_budget_sec: int = 300
     max_same_error_streak: int = 5
@@ -590,6 +594,22 @@ def load_app_config(args: Any) -> tuple[AppConfig, dict[str, str]]:
                 label="runtime.run_refactor_pass_1_3",
             )
         ),
+        run_generated_pass_1_2=bool(
+            choose_bool(
+                cli_names=("run_generated_pass_1_2",),
+                file_keys=("runtime", "run_generated_pass_1_2"),
+                default=True,
+                label="runtime.run_generated_pass_1_2",
+            )
+        ),
+        run_generated_pass_1_3=bool(
+            choose_bool(
+                cli_names=("run_generated_pass_1_3",),
+                file_keys=("runtime", "run_generated_pass_1_3"),
+                default=True,
+                label="runtime.run_generated_pass_1_3",
+            )
+        ),
         run_refactor_pass_1_5=bool(
             choose_bool(
                 cli_names=("run_refactor_pass_1_5",),
@@ -645,6 +665,24 @@ def load_app_config(args: Any) -> tuple[AppConfig, dict[str, str]]:
             default=None,
             minimum=0,
             label="runtime.refactor_pass_1_3_max_wall_clock_sec",
+        ),
+        generated_repair_max_rounds=int(
+            choose_int(
+                cli_names=("generated_repair_max_rounds",),
+                file_keys=("runtime", "generated_repair_max_rounds"),
+                default=2,
+                minimum=0,
+                label="runtime.generated_repair_max_rounds",
+            )
+        ),
+        generated_repair_verify_timeout=int(
+            choose_int(
+                cli_names=("generated_repair_verify_timeout",),
+                file_keys=("runtime", "generated_repair_verify_timeout"),
+                default=300,
+                minimum=0,
+                label="runtime.generated_repair_verify_timeout",
+            )
         ),
         prover_retry_budget_sec=int(
             choose_int(

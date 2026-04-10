@@ -21,32 +21,42 @@ DEFAULT_LEAN_RULE = Path(".codex/skills/lean-rule/SKILL.md")
 DEFAULT_MATHLIB_USAGE = Path(".codex/skills/mathlib-usage/SKILL.md")
 
 
+def _tail_excerpt(text: str, *, max_lines: int = 8, max_chars: int = 800) -> list[str]:
+    lines = [line.rstrip() for line in text.splitlines() if line.strip()]
+    if not lines:
+        return []
+    excerpt = lines[-max_lines:]
+    joined = "\n".join(excerpt)
+    if len(joined) <= max_chars:
+        return excerpt
+    trimmed = joined[-max_chars:]
+    trimmed_lines = [line for line in trimmed.splitlines() if line.strip()]
+    return trimmed_lines or excerpt[-1:]
+
+
 def build_prompt(
     *,
     input_file: Path,
     output_file: Path,
     verify: bool,
+    verify_command: str | None,
+    task_label: str,
+    extra_instruction: str,
     policy_file: Path,
     lean_rule_file: Path,
     mathlib_usage_file: Path,
 ) -> str:
-    verify_step = (
-        f"- Run `lake env lean {output_file}` after each meaningful edit and fix any resulting errors.\n"
-        if verify
-        else ""
-    )
-    final_step = (
-        f"- Before finishing, run `lake env lean {output_file}` and ensure it succeeds.\n"
-        if verify
-        else ""
-    )
+    verify_target = verify_command.strip() if verify_command else f"lake env lean {output_file}"
+    verify_step = f"- Run `{verify_target}` after each meaningful edit and fix any resulting errors.\n" if verify else ""
+    final_step = f"- Before finishing, run `{verify_target}` and ensure it succeeds.\n" if verify else ""
+    extra_step = (extra_instruction.strip() + "\n") if extra_instruction.strip() else ""
     return f"""Use these repository-local guidance files while you work:
 - {policy_file}
 - {lean_rule_file}
 - {mathlib_usage_file}
 
 Task:
-- Review-polish `{output_file}` as a non-semantic refactor.
+- {task_label} `{output_file}` as a non-semantic refactor.
 - `{output_file}` was copied from `{input_file}` and should be edited in place.
 - Preserve all public theorem names, theorem statements, namespace structure, and intended API.
 - Do not redesign the theorem inventory.
@@ -55,7 +65,7 @@ Task:
 - If two theorems have the same statement, prefer reducing the duplication by rewriting the later proof into an explicit alias/delegation to the earlier theorem rather than keeping two independent proofs.
 - Do not introduce `sorry`.
 - Do not add or remove global instances, `[simp]` attributes, notation, coercions, or transparency changes.
-{verify_step}{final_step}
+{extra_step}{verify_step}{final_step}
 When finished, give a short summary of the non-semantic cleanup you made and whether the final Lean check passed.
 """
 def main() -> int:
@@ -71,6 +81,10 @@ def main() -> int:
     parser.add_argument("--skip-copy", action="store_true")
     parser.add_argument("--no-verify", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--print-worker-output", action="store_true")
+    parser.add_argument("--verify-command")
+    parser.add_argument("--task-label", default="Review-polish")
+    parser.add_argument("--extra-instruction", default="")
     parser.add_argument("--policy-file", default=str(DEFAULT_POLICY))
     parser.add_argument("--lean-rule-file", default=str(DEFAULT_LEAN_RULE))
     parser.add_argument("--mathlib-usage-file", default=str(DEFAULT_MATHLIB_USAGE))
@@ -118,6 +132,9 @@ def main() -> int:
         input_file=input_file,
         output_file=output_file,
         verify=not args.no_verify,
+        verify_command=args.verify_command,
+        task_label=args.task_label,
+        extra_instruction=args.extra_instruction,
         policy_file=policy_file,
         lean_rule_file=lean_rule_file,
         mathlib_usage_file=mathlib_usage_file,
@@ -178,14 +195,34 @@ def main() -> int:
         print_report(report)
         return 1
 
-    if completed.stdout:
-        sys.stdout.write(completed.stdout)
-        sys.stdout.flush()
-    if completed.stderr:
-        sys.stderr.write(completed.stderr)
-        sys.stderr.flush()
+    if args.print_worker_output:
+        if completed.stdout:
+            sys.stdout.write(completed.stdout)
+            sys.stdout.flush()
+        if completed.stderr:
+            sys.stderr.write(completed.stderr)
+            sys.stderr.flush()
 
     status = "ok" if completed.returncode == 0 else "error"
+    stdout_excerpt = _tail_excerpt(completed.stdout or "")
+    stderr_excerpt = _tail_excerpt(completed.stderr or "")
+    if completed.returncode != 0:
+        excerpt_lines = stderr_excerpt or stdout_excerpt
+        if excerpt_lines:
+            sys.stderr.write("[review] worker excerpt:\n")
+            sys.stderr.write("\n".join(excerpt_lines) + "\n")
+            sys.stderr.flush()
+    extra = {
+        "provider": provider,
+        "model": args.model or "",
+        "sandbox": args.sandbox,
+        "verify_requested": not args.no_verify,
+        "skip_copy": bool(args.skip_copy),
+        "returncode": completed.returncode,
+    }
+    if completed.returncode != 0:
+        extra["stdout_excerpt"] = stdout_excerpt
+        extra["stderr_excerpt"] = stderr_excerpt
     report = build_report(
         status,
         "completed" if completed.returncode == 0 else "worker_error",
@@ -193,16 +230,7 @@ def main() -> int:
         input_file=input_file,
         output_file=output_file,
         report_file=report_file,
-        extra={
-            "provider": provider,
-            "model": args.model or "",
-            "sandbox": args.sandbox,
-            "verify_requested": not args.no_verify,
-            "skip_copy": bool(args.skip_copy),
-            "returncode": completed.returncode,
-            "stdout_excerpt": (completed.stdout or "").splitlines()[-20:],
-            "stderr_excerpt": (completed.stderr or "").splitlines()[-20:],
-        },
+        extra=extra,
     )
     write_report(report_file, report)
     print_report(report)

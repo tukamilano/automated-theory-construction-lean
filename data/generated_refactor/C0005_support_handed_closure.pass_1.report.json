@@ -1,0 +1,9 @@
+{
+  "input_file": "/Users/milano/ATC_private/AutomatedTheoryConstruction/Generated/C0005_support_handed_closure.lean",
+  "output_file": "/Users/milano/ATC_private/AutomatedTheoryConstruction/Generated/C0005_support_handed_closure.lean",
+  "plan_file": "data/generated_refactor/C0005_support_handed_closure.pass_1.plan.json",
+  "report_file": "data/generated_refactor/C0005_support_handed_closure.pass_1.report.json",
+  "status": "error",
+  "stop_detail": "name 'args' is not defined",
+  "stop_reason": "worker_error"
+}

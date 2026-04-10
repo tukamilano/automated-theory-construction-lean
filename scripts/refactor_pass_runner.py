@@ -20,34 +20,25 @@ def _remaining_wall_clock_sec(deadline: float | None) -> int | None:
     return max(0, remaining)
 
 
-def run_refactor_pass_cli(spec: RefactorPassSpec) -> None:
-    parser = argparse.ArgumentParser(description=spec.cli_description)
-    parser.add_argument("--input-file", default=str(spec.default_input))
-    parser.add_argument("--output-file", default=str(spec.default_input))
-    parser.add_argument("--theory-file", default=str(spec.default_theory))
-    parser.add_argument("--plan-file", default=str(spec.default_plan))
-    parser.add_argument("--report-file", default=str(spec.default_report))
-    parser.add_argument("--progress-log-file", default=str(spec.default_progress_log))
-    parser.add_argument("--planner-prompt-file", default=str(spec.default_planner_prompt))
-    parser.add_argument("--executor-prompt-file", default=str(spec.default_executor_prompt))
-    parser.add_argument("--theorem-reuse-memory-file", default=str(spec.default_theorem_reuse_memory))
-    parser.add_argument("--worker-command")
-    parser.add_argument("--worker-timeout", type=int, help="Per worker subprocess timeout in seconds.")
-    parser.add_argument("--verify-timeout", type=int, help="Per Lean verification timeout in seconds.")
-    parser.add_argument("--max-wall-clock-sec", type=int, help=f"Total retry budget for {spec.pass_name} in seconds.")
-    args = parser.parse_args()
-
-    input_file = Path(args.input_file)
-    output_file = Path(args.output_file)
-    theory_file = Path(args.theory_file)
-    plan_file = Path(args.plan_file)
-    report_file = Path(args.report_file)
-    progress_log_file = Path(args.progress_log_file) if args.progress_log_file else None
-    planner_prompt_file = Path(args.planner_prompt_file)
-    executor_prompt_file = Path(args.executor_prompt_file)
-    theorem_reuse_memory_file = Path(args.theorem_reuse_memory_file)
-    deadline = None if args.max_wall_clock_sec in (None, 0) else time.monotonic() + args.max_wall_clock_sec
-
+def run_refactor_pass(
+    spec: RefactorPassSpec,
+    *,
+    input_file: Path,
+    output_file: Path,
+    theory_file: Path,
+    plan_file: Path,
+    report_file: Path | None,
+    progress_log_file: Path | None,
+    planner_prompt_file: Path,
+    executor_prompt_file: Path,
+    theorem_reuse_memory_file: Path,
+    worker_command: str | None = None,
+    worker_timeout: int | None = None,
+    verify_timeout: int | None = None,
+    max_wall_clock_sec: int | None = None,
+    print_final_report: bool = False,
+) -> dict[str, object]:
+    deadline = None if max_wall_clock_sec in (None, 0) else time.monotonic() + max_wall_clock_sec
     try:
         planner_reports: list[dict[str, object]] = []
         executor_reports: list[dict[str, object]] = []
@@ -73,8 +64,8 @@ def run_refactor_pass_cli(spec: RefactorPassSpec) -> None:
                 prompt_file=planner_prompt_file,
                 theorem_reuse_memory_file=theorem_reuse_memory_file,
                 output_file=plan_file,
-                worker_command=args.worker_command,
-                worker_timeout=args.worker_timeout,
+                worker_command=worker_command,
+                worker_timeout=worker_timeout,
                 allowed_kinds=set(spec.allowed_kinds),
             )
             planner_reports.append(plan_report)
@@ -99,8 +90,9 @@ def run_refactor_pass_cli(spec: RefactorPassSpec) -> None:
                     },
                 )
                 write_report(report_file, final_report)
-                print_report(final_report)
-                raise SystemExit(1)
+                if print_final_report:
+                    print_report(final_report)
+                return final_report
 
             if int(plan_report.get("item_count", 0) or 0) == 0:
                 final_status = "ok" if accepted_cycles > 0 else "noop"
@@ -153,12 +145,12 @@ def run_refactor_pass_cli(spec: RefactorPassSpec) -> None:
                 prompt_file=executor_prompt_file,
                 theorem_reuse_memory_file=theorem_reuse_memory_file,
                 progress_log_file=progress_log_file,
-                verify_timeout_sec=args.verify_timeout,
+                verify_timeout_sec=verify_timeout,
                 max_wall_clock_sec=remaining_sec,
                 pass_name=spec.pass_name,
                 allow_repair=spec.allow_repair,
-                worker_command=args.worker_command,
-                worker_timeout=args.worker_timeout,
+                worker_command=worker_command,
+                worker_timeout=worker_timeout,
             )
             executor_reports.append(executor_report)
             last_executor_report = executor_report
@@ -199,7 +191,9 @@ def run_refactor_pass_cli(spec: RefactorPassSpec) -> None:
             },
         )
         write_report(report_file, final_report)
-        print_report(final_report)
+        if print_final_report:
+            print_report(final_report)
+        return final_report
     except Exception as exc:
         final_report = build_report(
             "error",
@@ -216,5 +210,44 @@ def run_refactor_pass_cli(spec: RefactorPassSpec) -> None:
             },
         )
         write_report(report_file, final_report)
-        print_report(final_report)
+        if print_final_report:
+            print_report(final_report)
+        return final_report
+
+
+def run_refactor_pass_cli(spec: RefactorPassSpec) -> None:
+    parser = argparse.ArgumentParser(description=spec.cli_description)
+    parser.add_argument("--input-file", default=str(spec.default_input))
+    parser.add_argument("--output-file", default=str(spec.default_input))
+    parser.add_argument("--theory-file", default=str(spec.default_theory))
+    parser.add_argument("--plan-file", default=str(spec.default_plan))
+    parser.add_argument("--report-file", default=str(spec.default_report))
+    parser.add_argument("--progress-log-file", default=str(spec.default_progress_log))
+    parser.add_argument("--planner-prompt-file", default=str(spec.default_planner_prompt))
+    parser.add_argument("--executor-prompt-file", default=str(spec.default_executor_prompt))
+    parser.add_argument("--theorem-reuse-memory-file", default=str(spec.default_theorem_reuse_memory))
+    parser.add_argument("--worker-command")
+    parser.add_argument("--worker-timeout", type=int, help="Per worker subprocess timeout in seconds.")
+    parser.add_argument("--verify-timeout", type=int, help="Per Lean verification timeout in seconds.")
+    parser.add_argument("--max-wall-clock-sec", type=int, help=f"Total retry budget for {spec.pass_name} in seconds.")
+    args = parser.parse_args()
+
+    report = run_refactor_pass(
+        spec,
+        input_file=Path(args.input_file),
+        output_file=Path(args.output_file),
+        theory_file=Path(args.theory_file),
+        plan_file=Path(args.plan_file),
+        report_file=Path(args.report_file),
+        progress_log_file=Path(args.progress_log_file) if args.progress_log_file else None,
+        planner_prompt_file=Path(args.planner_prompt_file),
+        executor_prompt_file=Path(args.executor_prompt_file),
+        theorem_reuse_memory_file=Path(args.theorem_reuse_memory_file),
+        worker_command=args.worker_command,
+        worker_timeout=args.worker_timeout,
+        verify_timeout=args.verify_timeout,
+        max_wall_clock_sec=args.max_wall_clock_sec,
+        print_final_report=True,
+    )
+    if str(report.get("status", "")) == "error":
         raise SystemExit(1)

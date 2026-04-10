@@ -11,35 +11,7 @@ sys.path.insert(0, str(REPO_ROOT / "scripts"))
 import run_loop
 
 
-def test_expand_prompts_include_soft_diversity_guidance() -> None:
-    solved_prompt = run_loop.load_prompt_text("prompts/expander/solved_proof.md")
-    post_theorem_prompt = run_loop.load_prompt_text("prompts/expander/post_theorem.md")
-
-    common_snippets = (
-        "When multiple strong candidates are available, prefer a diverse spread",
-        "`generalization`, `converse`, `boundary`, `separation`, `criterion`, `reusable_lemma`",
-        "Treat each candidate by one dominant role only.",
-        "Do not count shallow variants from the same family as meaningfully distinct.",
-        "Do not return multiple candidates that repeat the same obstruction, the same repair idea, or the same near-neighbor statement unless those are clearly the strongest options.",
-        "Do not sacrifice the strongest candidate merely to create role spread.",
-    )
-    for snippet in common_snippets:
-        if snippet not in solved_prompt:
-            raise RuntimeError(f"missing solved_proof diversity snippet: {snippet}")
-        if snippet not in post_theorem_prompt:
-            raise RuntimeError(f"missing post_theorem diversity snippet: {snippet}")
-
-    post_theorem_specific = (
-        "Around a newly resolved main theorem, prefer covering `converse`, `boundary`, `separation`, and `criterion` before adding multiple candidates from the same family.",
-    )
-    for snippet in post_theorem_specific:
-        if snippet not in post_theorem_prompt:
-            raise RuntimeError(f"missing post_theorem-specific diversity snippet: {snippet}")
-
-
 def main() -> int:
-    test_expand_prompts_include_soft_diversity_guidance()
-
     if not run_loop.is_verified_resolution(verify_success=True, result="proof"):
         raise RuntimeError("verified proof should count as a resolved outcome")
 

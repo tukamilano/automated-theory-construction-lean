@@ -1,0 +1,9 @@
+{
+  "input_file": "/Users/milano/ATC_private/AutomatedTheoryConstruction/Generated/C0004_left_right_only.lean",
+  "output_file": "/Users/milano/ATC_private/AutomatedTheoryConstruction/Generated/C0004_left_right_only.lean",
+  "plan_file": "data/generated_refactor/C0004_left_right_only.pass_1.plan.json",
+  "report_file": "data/generated_refactor/C0004_left_right_only.pass_1.report.json",
+  "status": "error",
+  "stop_detail": "name 'args' is not defined",
+  "stop_reason": "worker_error"
+}

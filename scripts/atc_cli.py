@@ -299,12 +299,12 @@ def _pipeline_command(args: argparse.Namespace, config: AppConfig) -> tuple[list
     _append_flag(
         cmd,
         "--try-at-each-step-raw-output-file",
-        args.try_at_each_step_raw_output_file or config.paths.try_at_each_step_raw_output_file,
+        args.try_at_each_step_raw_output_file,
     )
     _append_flag(
         cmd,
         "--try-at-each-step-apply-report-file",
-        args.try_at_each_step_apply_report_file or config.paths.try_at_each_step_apply_report_file,
+        args.try_at_each_step_apply_report_file,
     )
     _append_flag(
         cmd,
@@ -435,18 +435,89 @@ def _rewrite_command(args: argparse.Namespace, config: AppConfig) -> tuple[list[
             str(input_file),
             "--output-file",
             str(output_file),
-            "--raw-output-file",
-            str(args.raw_output_file or config.paths.try_at_each_step_raw_output_file),
-            "--apply-report-file",
-            str(args.apply_report_file or config.paths.try_at_each_step_apply_report_file),
             "--tactic",
             str(args.tactic or config.runtime.try_at_each_step_tactic),
         ]
     )
+    _append_flag(cmd, "--raw-output-file", args.raw_output_file)
+    _append_flag(cmd, "--apply-report-file", args.apply_report_file)
     _append_flag(cmd, "--backup-file", args.backup_file)
     _append_flag(cmd, "--verify-timeout", args.verify_timeout)
     if args.dry_run:
         cmd.append("--dry-run")
+    return cmd, {}
+
+
+def _materialize_generated_command(args: argparse.Namespace, config: AppConfig) -> tuple[list[str], dict[str, str]]:
+    cmd = _python_command("refactor_derived_to_generated.py")
+    _append_flag(cmd, "--derived-file", getattr(args, "derived_file", None) or config.paths.derived_file)
+    _append_flag(cmd, "--deps-file", args.deps_file)
+    _append_flag(cmd, "--theory-file", getattr(args, "theory_file", None) or config.paths.theory_file)
+    _append_flag(
+        cmd,
+        "--theorem-reuse-memory-file",
+        getattr(args, "theorem_reuse_memory_file", None) or config.paths.theorem_reuse_memory_file,
+    )
+    _append_flag(cmd, "--generated-root", args.generated_root)
+    _append_flag(cmd, "--manifest-file", args.manifest_file)
+    _append_flag(cmd, "--catalog-file", args.catalog_file)
+    _append_flag(cmd, "--plan-file", args.plan_file)
+    _append_flag(cmd, "--min-nodes", args.min_nodes)
+    _append_flag(cmd, "--max-nodes", args.max_nodes)
+    _append_flag(cmd, "--target-nodes", args.target_nodes)
+    _append_flag(cmd, "--cut-penalty", args.cut_penalty)
+    _append_bool_flag(cmd, "--reset-derived", args.reset_derived)
+    _append_bool_flag(cmd, "--refresh-dependencies", args.refresh_dependencies)
+    _append_flag(cmd, "--deps-depth", args.deps_depth)
+    _append_bool_flag(cmd, "--verify-manifest", args.verify_manifest)
+    _append_bool_flag(
+        cmd,
+        "--run-pass-1_2-per-file",
+        bool(
+            getattr(args, "run_generated_pass_1_2", None)
+            if getattr(args, "run_generated_pass_1_2", None) is not None
+            else config.runtime.run_generated_pass_1_2
+        ),
+    )
+    _append_bool_flag(
+        cmd,
+        "--run-pass-1_3-per-file",
+        bool(
+            getattr(args, "run_generated_pass_1_3", None)
+            if getattr(args, "run_generated_pass_1_3", None) is not None
+            else config.runtime.run_generated_pass_1_3
+        ),
+    )
+    _append_flag(
+        cmd,
+        "--pass-1_2-max-wall-clock-sec-per-file",
+        getattr(args, "compression_max_wall_clock_sec", None),
+    )
+    _append_flag(
+        cmd,
+        "--pass-1_3-max-wall-clock-sec-per-file",
+        getattr(args, "proof_retarget_max_wall_clock_sec", None),
+    )
+    _append_flag(
+        cmd,
+        "--generated-repair-max-rounds",
+        getattr(args, "generated_repair_max_rounds", None) or config.runtime.generated_repair_max_rounds,
+    )
+    _append_flag(
+        cmd,
+        "--generated-repair-verify-timeout",
+        getattr(args, "generated_repair_verify_timeout", None) or config.runtime.generated_repair_verify_timeout,
+    )
+    return cmd, build_worker_env(config, task_names=("refactor_derived",))
+
+
+def _extract_derived_deps_command(args: argparse.Namespace, config: AppConfig) -> tuple[list[str], dict[str, str]]:
+    cmd = _python_command("extract_derived_dependencies.py")
+    _append_flag(cmd, "--derived-file", getattr(args, "derived_file", None) or config.paths.derived_file)
+    _append_flag(cmd, "--output-file", args.output_file)
+    _append_flag(cmd, "--extractor-file", args.extractor_file)
+    _append_flag(cmd, "--build-target", args.build_target)
+    _append_flag(cmd, "--depth", args.depth)
     return cmd, {}
 
 
@@ -553,6 +624,49 @@ def _build_parser() -> argparse.ArgumentParser:
     rewrite.add_argument("--backup-file")
     rewrite.add_argument("--verify-timeout", type=int, help=verify_timeout_help)
 
+    materialize_generated = subparsers.add_parser(
+        "materialize-generated",
+        help="Split Derived.lean into contiguous Generated chunk files and rebuild Manifest/catalog.",
+    )
+    _add_common_flags(materialize_generated)
+    _add_worker_flags(materialize_generated, include_refactor_task=True)
+    materialize_generated.add_argument("--derived-file")
+    materialize_generated.add_argument("--theory-file")
+    materialize_generated.add_argument("--theorem-reuse-memory-file")
+    materialize_generated.add_argument("--deps-file")
+    materialize_generated.add_argument("--generated-root")
+    materialize_generated.add_argument("--manifest-file")
+    materialize_generated.add_argument("--catalog-file")
+    materialize_generated.add_argument("--plan-file")
+    materialize_generated.add_argument("--min-nodes", type=int, default=6)
+    materialize_generated.add_argument("--max-nodes", type=int, default=14)
+    materialize_generated.add_argument("--target-nodes", type=int)
+    materialize_generated.add_argument("--cut-penalty", type=float, default=0.25)
+    materialize_generated.add_argument("--reset-derived", action=argparse.BooleanOptionalAction, default=True)
+    materialize_generated.add_argument("--refresh-dependencies", action=argparse.BooleanOptionalAction, default=True)
+    materialize_generated.add_argument("--deps-depth", type=int, default=1)
+    materialize_generated.add_argument("--verify-manifest", action=argparse.BooleanOptionalAction, default=True)
+    materialize_generated.add_argument("--run-pass-1_2-per-file", dest="run_generated_pass_1_2", action=argparse.BooleanOptionalAction, default=None)
+    materialize_generated.add_argument("--run-pass-1_3-per-file", dest="run_generated_pass_1_3", action=argparse.BooleanOptionalAction, default=None)
+    _add_budget_flags(
+        materialize_generated,
+        compression_help="Per-file pass 1.2 wall-clock budget in seconds.",
+        proof_retarget_help="Per-file pass 1.3 wall-clock budget in seconds.",
+    )
+    materialize_generated.add_argument("--generated-repair-max-rounds", type=int)
+    materialize_generated.add_argument("--generated-repair-verify-timeout", type=int)
+
+    extract_deps = subparsers.add_parser(
+        "extract-derived-deps",
+        help="Refresh data/derived-deps.json from DependencyExtractor.lean and Derived.lean.",
+    )
+    _add_common_flags(extract_deps)
+    extract_deps.add_argument("--derived-file")
+    extract_deps.add_argument("--output-file")
+    extract_deps.add_argument("--extractor-file")
+    extract_deps.add_argument("--build-target", default="AutomatedTheoryConstruction.Derived")
+    extract_deps.add_argument("--depth", type=int, default=1)
+
     config_cmd = subparsers.add_parser("config", help="Inspect resolved configuration.")
     config_subparsers = config_cmd.add_subparsers(dest="config_command", required=True)
     config_show = config_subparsers.add_parser("show", help="Print resolved config as JSON.")
@@ -598,6 +712,8 @@ def main() -> int:
         "retarget": _retarget_command,
         "rewrite": _rewrite_command,
         "review": _review_command,
+        "materialize-generated": _materialize_generated_command,
+        "extract-derived-deps": _extract_derived_deps_command,
     }
     builder = builders[args.command]
 

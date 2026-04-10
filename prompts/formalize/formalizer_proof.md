@@ -25,11 +25,13 @@
 
 ## formalization_policy
 - Use `stmt`, `result`, `proof_sketch`, and `counterexample_text` as primary inputs.
+- When present, use `retry_round`, `retry_instruction`, prior attempt fields, and `same_problem_history_tail` to avoid repeating a failed route.
 - Assume `Mathlib` is available.
 - Prefer standard Mathlib lemmas/tactics (`simpa`, `rw`, `constructor`, `aesop`, `grind`, `omega`, `linarith`, `nlinarith`, `ring_nf`, `positivity`) over ad hoc expansions.
 - Avoid invented Mathlib names; use only confident facts.
 - If target matches an existing Mathlib concept, align with it directly.
 - Reuse `Derived.lean` results first; avoid re-deriving from axioms unless no relevant theorem applies.
+- If a previous formalization attempt returned `stuck`, try a materially different angle before returning `stuck` again.
 
 ## prelude_rules
 - `prelude_code` is optional and only for genuinely helpful declarations (no `import`, `namespace`, `section`, `axiom`, `theorem`).

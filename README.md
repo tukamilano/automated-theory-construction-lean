@@ -73,6 +73,22 @@ The CCR example demonstrates that nontrivial mathematical structure can emerge p
 
 This loop runs continuously, producing a growing body of verified results.
 
+## Refactor Design
+
+The refactor pipeline is intentionally split into two phases.
+
+First, use whole-file cleanup passes on the accumulated theory:
+
+- pass 1.5: lightweight rewrite cleanup
+- pass 2.0: review-focused non-semantic cleanup
+
+Then split the accumulated theory into multiple `Generated/C000x_*.lean` files and run local structure-improving passes inside each generated file:
+
+- pass 1.2: exact-duplicate collapse
+- pass 1.3: proof retargeting
+
+This ordering is deliberate. Passes 1.2 and 1.3 are local reuse/compression passes, so they are more effective and easier to repair after the theory has been partitioned into smaller files. After each local refactor, the system rechecks the full `AutomatedTheoryConstruction.Generated.Manifest` target so that integration errors are repaired at the whole-Generated level rather than only inside one file.
+
 ## Design Principle
 
 > Do not aim directly at the final theorem.  
