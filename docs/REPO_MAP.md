@@ -33,6 +33,7 @@ This file explains which parts of the repository users are expected to edit and 
 | --- | --- | --- | --- |
 | `scripts/` | Shared | Advanced only | Orchestration, worker wrappers, verification, and state updates |
 | `scripts/lean_verify.py` | Advanced | Usually do not edit directly | Verification execution entrypoint; set `ATC_PROOF_EXECUTOR` instead of editing code for custom checkers |
+| `LeanTools/` | Shared | Advanced only | Standalone Lean helper tools used by dependency extraction and pass 1.5 rewrites |
 | `Makefile` | Shared | Allowed | Thin wrapper around the CLI |
 | `tests/` | Shared | Allowed | Smoke tests and repo-level checks |
 | `README.md` | Shared | Allowed | User-facing entry point |
@@ -46,7 +47,6 @@ This file explains which parts of the repository users are expected to edit and 
 | `build/` | Generated build output |
 | `.venv/` | Local Python environment |
 | `lake-manifest.json` | Dependency lockfile; change only when intentionally updating dependencies |
-| `myblog/` | Blog/site content, not part of the runtime path |
 | `example/` | Reference examples, not the active runtime theory |
 
 ## Short Version

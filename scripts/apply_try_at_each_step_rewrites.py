@@ -83,7 +83,7 @@ def run_try_at_each_step(
         "env",
         "lean",
         "--run",
-        "tryAtEachStep/tryAtEachStep.lean",
+        "LeanTools/tryAtEachStep.lean",
         tactic,
         str(input_file),
         "--outfile",

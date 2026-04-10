@@ -13,7 +13,7 @@ from plan_derived_chunks import parse_declaration_order
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-DEFAULT_EXTRACTOR_FILE = REPO_ROOT / "Dependency_extractor/DependencyExtractor.lean"
+DEFAULT_EXTRACTOR_FILE = REPO_ROOT / "LeanTools/DependencyExtractor.lean"
 DEFAULT_BUILD_TARGET = "AutomatedTheoryConstruction.Derived"
 
 
