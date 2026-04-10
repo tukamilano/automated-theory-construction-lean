@@ -45,9 +45,9 @@
     "refactor_pass_1_max_wall_clock_sec": 900,
     "refactor_pass_1_2_max_wall_clock_sec": 900,
     "main_theorem_interval": 10,
-    "main_theorem_formalize_worker_timeout": 900,
-    "main_theorem_repair_worker_timeout": 600,
-    "main_theorem_verify_timeout": 600,
+    "main_theorem_formalize_worker_timeout": 1200,
+    "main_theorem_repair_worker_timeout": 1200,
+    "main_theorem_verify_timeout": 1200,
     "main_theorem_formalization_retry_budget_sec": 3600
   },
   "logging": {

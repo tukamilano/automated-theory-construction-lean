@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import os
 import sys
 import tempfile
 import json
+import subprocess
 from pathlib import Path
 
 
@@ -403,6 +405,113 @@ def test_force_refresh_writes_research_agenda_to_theory_state() -> None:
             raise RuntimeError(f"unexpected research_agenda in theory_state: {theory_state}")
 
 
+def test_run_llm_uses_env_model_and_retries_without_model_on_capacity() -> None:
+    original_run_llm_exec = generate_seeds_from_theory.run_llm_exec
+    original_model = os.environ.get("ATC_CODEX_MODEL")
+    calls: list[str | None] = []
+
+    try:
+        os.environ["ATC_CODEX_MODEL"] = "gpt-5.4"
+
+        def fake_run_llm_exec(
+            *,
+            provider,
+            prompt,
+            sandbox,
+            model=None,
+            cwd=None,
+            output_schema_path=None,
+            output_last_message_path=None,
+            timeout_sec=None,
+            capture_output=True,
+        ):
+            calls.append(model)
+            if len(calls) == 1:
+                return subprocess.CompletedProcess(
+                    args=["codex"],
+                    returncode=1,
+                    stdout="",
+                    stderr="Selected model is at capacity",
+                )
+            if output_last_message_path is not None:
+                Path(output_last_message_path).write_text('{"seeds":["seed A"]}', encoding="utf-8")
+            return subprocess.CompletedProcess(
+                args=["codex"],
+                returncode=0,
+                stdout="",
+                stderr="",
+            )
+
+        generate_seeds_from_theory.run_llm_exec = fake_run_llm_exec
+        output = generate_seeds_from_theory.run_llm(
+            prompt="prompt",
+            schema={"type": "object"},
+            repo_root=REPO_ROOT,
+            sandbox="read-only",
+            provider="codex",
+            model=None,
+        )
+    finally:
+        generate_seeds_from_theory.run_llm_exec = original_run_llm_exec
+        if original_model is None:
+            os.environ.pop("ATC_CODEX_MODEL", None)
+        else:
+            os.environ["ATC_CODEX_MODEL"] = original_model
+
+    if output != '{"seeds":["seed A"]}':
+        raise RuntimeError(f"unexpected output: {output}")
+    if calls != ["gpt-5.4", None]:
+        raise RuntimeError(f"expected capacity fallback to clear model, got calls={calls}")
+
+
+def test_run_llm_includes_stderr_when_final_message_missing() -> None:
+    original_run_llm_exec = generate_seeds_from_theory.run_llm_exec
+
+    try:
+        def fake_run_llm_exec(
+            *,
+            provider,
+            prompt,
+            sandbox,
+            model=None,
+            cwd=None,
+            output_schema_path=None,
+            output_last_message_path=None,
+            timeout_sec=None,
+            capture_output=True,
+        ):
+            return subprocess.CompletedProcess(
+                args=["codex"],
+                returncode=0,
+                stdout="",
+                stderr="transport closed before final response",
+            )
+
+        generate_seeds_from_theory.run_llm_exec = fake_run_llm_exec
+        try:
+            generate_seeds_from_theory.run_llm(
+                prompt="prompt",
+                schema={"type": "object"},
+                repo_root=REPO_ROOT,
+                sandbox="read-only",
+                provider="codex",
+                model="gpt-5.4",
+            )
+        except RuntimeError as exc:
+            message = str(exc)
+        else:
+            raise RuntimeError("expected run_llm to fail on missing final message")
+    finally:
+        generate_seeds_from_theory.run_llm_exec = original_run_llm_exec
+
+    if "returned no final message" not in message:
+        raise RuntimeError(f"missing base diagnostic: {message}")
+    if "stderr=transport closed before final response" not in message:
+        raise RuntimeError(f"missing stderr diagnostic: {message}")
+    if "model=gpt-5.4" not in message:
+        raise RuntimeError(f"missing model diagnostic: {message}")
+
+
 def main() -> int:
     test_parse_research_agenda_markdown_extracts_sections()
     test_parse_research_agenda_markdown_handles_numbered_headings_and_ignores_paragraphs()
@@ -412,6 +521,8 @@ def main() -> int:
     test_runtime_initialization_clears_generation_sidecar_files()
     test_worker_payloads_include_research_agenda()
     test_force_refresh_writes_research_agenda_to_theory_state()
+    test_run_llm_uses_env_model_and_retries_without_model_on_capacity()
+    test_run_llm_includes_stderr_when_final_message_missing()
     print("research agenda test passed")
     return 0
 

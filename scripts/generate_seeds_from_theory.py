@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 import tempfile
 from pathlib import Path
@@ -42,6 +43,31 @@ DEFAULT_SCRATCH = Path("AutomatedTheoryConstruction/Scratch.lean")
 DEFAULT_FORMALIZATION_MEMORY = Path("data/formalization_memory.json")
 DEFAULT_ARCHIVED = Path("data/archived_problems.jsonl")
 DEFAULT_RESEARCH_AGENDA = DEFAULT_REPO_ROOT / DEFAULT_RESEARCH_AGENDA_PATH
+
+
+def _resolve_model(explicit: str | None) -> str | None:
+    model = (explicit or os.getenv("ATC_CODEX_MODEL") or "").strip()
+    return model or None
+
+
+def _is_unsupported_model_error(provider: str, model: str | None, stderr: str) -> bool:
+    return bool(
+        model
+        and provider == "codex"
+        and "not supported" in stderr.lower()
+        and "model" in stderr.lower()
+    )
+
+
+def _is_capacity_error(provider: str, stderr: str) -> bool:
+    lowered = stderr.lower()
+    return bool(
+        provider == "codex"
+        and (
+            "at capacity" in lowered
+            or "selected model is at capacity" in lowered
+        )
+    )
 
 
 def _preview_file_for(derived_file: Path) -> Path:
@@ -437,6 +463,7 @@ def run_llm(
     provider: str,
     model: str | None,
 ) -> str:
+    resolved_model = _resolve_model(model)
     with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", delete=False, suffix=".json") as schema_handle:
         json.dump(schema, schema_handle, ensure_ascii=False, indent=2)
         schema_path = Path(schema_handle.name)
@@ -445,24 +472,43 @@ def run_llm(
         output_path = Path(output_handle.name)
 
     try:
-        completed = run_llm_exec(
-            provider=provider,
-            prompt=prompt,
-            sandbox=sandbox,
-            model=model,
-            cwd=repo_root,
-            output_schema_path=schema_path,
-            output_last_message_path=output_path,
-        )
+        def run_once(use_model: bool):
+            return run_llm_exec(
+                provider=provider,
+                prompt=prompt,
+                sandbox=sandbox,
+                model=resolved_model if use_model else None,
+                cwd=repo_root,
+                output_schema_path=schema_path,
+                output_last_message_path=output_path,
+            )
+
+        completed = run_once(use_model=True)
         if completed.returncode != 0:
             stderr = (completed.stderr or "").strip()
-            raise RuntimeError(f"{provider} exec failed ({completed.returncode}): {stderr}")
+            if _is_unsupported_model_error(provider, resolved_model, stderr):
+                completed = run_once(use_model=False)
+            elif _is_capacity_error(provider, stderr) and resolved_model:
+                completed = run_once(use_model=False)
+
+            if completed.returncode != 0:
+                retry_stderr = (completed.stderr or "").strip()
+                raise RuntimeError(f"{provider} exec failed ({completed.returncode}): {retry_stderr}")
 
         text = output_path.read_text(encoding="utf-8") if output_path.exists() else ""
         if not text.strip():
             text = (completed.stdout or "").strip()
         if not text.strip():
-            raise RuntimeError(f"{provider} exec returned no final message")
+            stderr = (completed.stderr or "").strip()
+            details: list[str] = []
+            if resolved_model:
+                details.append(f"model={resolved_model}")
+            if stderr:
+                details.append(f"stderr={stderr}")
+            if completed.stdout:
+                details.append(f"stdout={completed.stdout.strip()}")
+            suffix = f" ({'; '.join(details)})" if details else ""
+            raise RuntimeError(f"{provider} exec returned no final message{suffix}")
         return text
     finally:
         schema_path.unlink(missing_ok=True)
