@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import contextlib
-import io
 import json
 import subprocess
 import sys
@@ -291,95 +289,28 @@ end AutomatedTheoryConstruction
             encoding="utf-8",
         )
 
-        import refactor_derived_to_generated as module
-
-        original_run_chunk_pass = module._run_chunk_pass
-        original_run_manifest_build = module._run_manifest_build
-        original_repair_generated_after_failure = module._repair_generated_after_failure
-        try:
-            def fake_run_chunk_pass(**kwargs):
-                spec = kwargs["spec"]
-                if spec.pass_name == "pass_1.2":
-                    return {
-                        "status": "ok",
-                        "stop_reason": "completed",
-                        "accepted_cycles": 1,
-                        "planner_reports": [{"summary": "collapse duplicate singleton statements", "item_count": 1}],
-                        "executor_reports": [
-                            {
-                                "items": [
-                                    {
-                                        "kind": "exact_duplicate_collapse",
-                                        "result": "accepted",
-                                        "summary": "reuse alpha in beta",
-                                        "change_notes": ["rewrote beta as an explicit reuse of alpha"],
-                                        "touched_theorems": ["beta"],
-                                    }
-                                ]
-                            }
-                        ],
-                    }
-                return {
-                    "status": "noop",
-                    "stop_reason": "no_candidates",
-                    "accepted_cycles": 0,
-                    "planner_reports": [{"summary": "no retarget candidates", "item_count": 0}],
-                    "executor_reports": [],
-                }
-
-            build_calls: list[tuple[bool, str]] = []
-
-            def fake_run_manifest_build(timeout_sec):
-                build_calls.append((True, str(timeout_sec)))
-                return {"success": True, "detail": "", "returncode": 0}
-
-            def fake_repair_generated_after_failure(**kwargs):
-                raise RuntimeError("repair should not be called in happy-path test")
-
-            module._run_chunk_pass = fake_run_chunk_pass
-            module._run_manifest_build = fake_run_manifest_build
-            module._repair_generated_after_failure = fake_repair_generated_after_failure
-
-            stderr_buffer = io.StringIO()
-            with contextlib.redirect_stderr(stderr_buffer):
-                report = materialize_derived_to_generated(
-                    derived_file=derived_file,
-                    deps_file=deps_file,
-                    theory_file=theory_file,
-                    theorem_reuse_memory_file=theorem_reuse_memory_file,
-                    generated_root=None,
-                    manifest_file=None,
-                    catalog_file=None,
-                    plan_file=plan_file,
-                    min_nodes=2,
-                    max_nodes=4,
-                    target_nodes=3,
-                    cut_penalty=0.2,
-                    reset_derived=False,
-                    refresh_dependencies=False,
-                    verify_manifest=False,
-                    run_pass_1_2_per_file=True,
-                    run_pass_1_3_per_file=True,
-                    pass_1_2_max_wall_clock_sec_per_file=30,
-                    pass_1_3_max_wall_clock_sec_per_file=30,
-                    generated_repair_max_rounds=1,
-                    generated_repair_verify_timeout=30,
-                )
-        finally:
-            module._run_chunk_pass = original_run_chunk_pass
-            module._run_manifest_build = original_run_manifest_build
-            module._repair_generated_after_failure = original_repair_generated_after_failure
-
-        statuses = [(item["pass"], item["status"]) for item in report["chunk_passes"]]
-        if ("1.2", "ok") not in statuses:
-            raise RuntimeError(f"expected pass 1.2 execution in report: {report['chunk_passes']}")
-        if ("1.3", "skipped_no_candidates") not in statuses:
-            raise RuntimeError(f"expected pass 1.3 skip in report: {report['chunk_passes']}")
+        report = materialize_derived_to_generated(
+            derived_file=derived_file,
+            deps_file=deps_file,
+            theory_file=theory_file,
+            theorem_reuse_memory_file=theorem_reuse_memory_file,
+            generated_root=None,
+            manifest_file=None,
+            catalog_file=None,
+            plan_file=plan_file,
+            min_nodes=2,
+            max_nodes=4,
+            target_nodes=3,
+            cut_penalty=0.2,
+            reset_derived=False,
+            refresh_dependencies=False,
+            verify_manifest=False,
+            generated_repair_verify_timeout=30,
+        )
         if not report["final_manifest_build_success"]:
             raise RuntimeError(f"expected final manifest build success: {report}")
-        stderr_output = stderr_buffer.getvalue()
-        if "event=chunk_pass_action" not in stderr_output:
-            raise RuntimeError(f"expected chunk_pass_action in stderr output: {stderr_output!r}")
+        if report["chunk_count"] != 1:
+            raise RuntimeError(f"unexpected report after no-pass run: {report}")
 
     print("refactor derived to generated test passed")
     return 0

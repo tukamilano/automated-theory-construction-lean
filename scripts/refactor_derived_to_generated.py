@@ -2,12 +2,9 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import re
-import shutil
 import subprocess
 import sys
-import tempfile
 import time
 from pathlib import Path
 from typing import Any
@@ -22,9 +19,6 @@ from generated_library import write_generated_catalog
 from generated_library import write_generated_manifest
 from plan_derived_chunks import DEFAULT_DEPS_FILE
 from plan_derived_chunks import build_chunk_plan
-from refactor_pass_runner import run_refactor_pass
-from refactor_pass_specs import EXACT_DUPLICATE_PASS_SPEC
-from refactor_pass_specs import PROOF_RETARGET_PASS_SPEC
 
 
 DERIVED_TEMPLATE = (
@@ -82,55 +76,6 @@ def _print_progress(event: str, **fields: Any) -> None:
             continue
         parts.append(f"{key}={value}")
     print(" ".join(parts), file=sys.stderr, flush=True)
-
-
-def _short_text(value: Any, limit: int = 160) -> str:
-    text = " ".join(str(value).split())
-    return text if len(text) <= limit else text[: limit - 3] + "..."
-
-
-def _emit_pass_action_logs(*, chunk_file: Path, pass_name: str, report: dict[str, Any]) -> None:
-    planner_reports = report.get("planner_reports", [])
-    if isinstance(planner_reports, list):
-        for index, planner_report in enumerate(planner_reports, start=1):
-            if not isinstance(planner_report, dict):
-                continue
-            summary = _short_text(planner_report.get("summary", ""))
-            item_count = int(planner_report.get("item_count", 0) or 0)
-            if summary or item_count:
-                _print_progress(
-                    "chunk_pass_plan",
-                    chunk=chunk_file.name,
-                    pass_name=pass_name,
-                    cycle=index,
-                    item_count=item_count,
-                    summary=summary,
-                )
-
-    executor_reports = report.get("executor_reports", [])
-    if isinstance(executor_reports, list):
-        for cycle_index, executor_report in enumerate(executor_reports, start=1):
-            if not isinstance(executor_report, dict):
-                continue
-            items = executor_report.get("items", [])
-            if not isinstance(items, list):
-                continue
-            for item in items:
-                if not isinstance(item, dict):
-                    continue
-                touched = item.get("touched_theorems", [])
-                touched_label = ",".join(str(name) for name in touched[:3]) if isinstance(touched, list) else ""
-                _print_progress(
-                    "chunk_pass_action",
-                    chunk=chunk_file.name,
-                    pass_name=pass_name,
-                    cycle=cycle_index,
-                    kind=item.get("kind", ""),
-                    result=item.get("result", ""),
-                    touched=touched_label,
-                    summary=_short_text(item.get("summary", "")),
-                    notes=_short_text("; ".join(item.get("change_notes", [])) if isinstance(item.get("change_notes"), list) else ""),
-                )
 
 
 def _resolve_generated_paths(
@@ -278,349 +223,6 @@ def _verify_manifest(timeout_sec: int | None) -> None:
         raise RuntimeError(f"manifest verification failed: {result.get('detail', '')}".strip())
 
 
-def _artifact_dir_for(deps_file: Path) -> Path:
-    return deps_file.parent / "generated_refactor"
-
-
-def _resolve_generated_pass_budget(explicit_budget: int | None) -> int | None:
-    if explicit_budget not in (None, 0):
-        return explicit_budget
-    for env_name in (
-        "ATC_REFACTOR_DERIVED_CODEX_TIMEOUT",
-        "ATC_CODEX_TIMEOUT",
-        "ATC_REFACTOR_DERIVED_WORKER_TIMEOUT",
-        "ATC_WORKER_TIMEOUT",
-    ):
-        raw = os.environ.get(env_name)
-        if raw is None or raw.strip() == "":
-            continue
-        try:
-            value = int(raw)
-        except ValueError:
-            continue
-        if value > 0:
-            return value
-    return None
-
-
-def _snapshot_generated_root(generated_root: Path) -> Path:
-    snapshot_dir = Path(tempfile.mkdtemp(prefix="generated.snapshot."))
-    if generated_root.exists():
-        shutil.copytree(generated_root, snapshot_dir / "Generated", dirs_exist_ok=True)
-    return snapshot_dir
-
-
-def _restore_generated_root(snapshot_dir: Path, generated_root: Path) -> None:
-    source = snapshot_dir / "Generated"
-    if generated_root.exists():
-        shutil.rmtree(generated_root)
-    shutil.copytree(source, generated_root)
-
-
-def _cleanup_snapshot(snapshot_dir: Path | None) -> None:
-    if snapshot_dir is None:
-        return
-    shutil.rmtree(snapshot_dir, ignore_errors=True)
-
-
-def _pass_artifact_paths(artifact_dir: Path, chunk_file: Path, pass_name: str) -> tuple[Path, Path]:
-    artifact_dir.mkdir(parents=True, exist_ok=True)
-    safe_pass_name = pass_name.replace(".", "_")
-    prefix = artifact_dir / f"{chunk_file.stem}.{safe_pass_name}"
-    return Path(f"{prefix}.plan.json"), Path(f"{prefix}.report.json")
-
-
-def _run_chunk_pass(
-    *,
-    spec: Any,
-    chunk_file: Path,
-    theory_file: Path,
-    theorem_reuse_memory_file: Path,
-    artifact_dir: Path,
-    verify_timeout_sec: int | None,
-    max_wall_clock_sec: int | None,
-) -> dict[str, Any]:
-    plan_file, report_file = _pass_artifact_paths(artifact_dir, chunk_file, spec.pass_name)
-    return run_refactor_pass(
-        spec,
-        input_file=chunk_file,
-        output_file=chunk_file,
-        theory_file=theory_file,
-        plan_file=plan_file,
-        report_file=report_file,
-        progress_log_file=None,
-        planner_prompt_file=spec.default_planner_prompt,
-        executor_prompt_file=spec.default_executor_prompt,
-        theorem_reuse_memory_file=theorem_reuse_memory_file,
-        verify_timeout=verify_timeout_sec,
-        max_wall_clock_sec=max_wall_clock_sec,
-        print_final_report=False,
-    )
-
-
-def _repair_generated_after_failure(
-    *,
-    generated_root: Path,
-    manifest_file: Path,
-    focus_file: Path,
-    artifact_dir: Path,
-    diagnostics: str,
-    max_rounds: int,
-    verify_timeout_sec: int | None,
-) -> dict[str, Any]:
-    report_file = artifact_dir / f"{focus_file.stem}.generated_repair.report.json"
-    verify_command = "lake build AutomatedTheoryConstruction.Generated.Manifest"
-    last_detail = diagnostics.strip()
-    for round_index in range(1, max_rounds + 1):
-        _print_progress(
-            "generated_repair_round_start",
-            round=round_index,
-            focus_file=focus_file.name,
-        )
-        extra_instruction = (
-            "This file belongs to the Generated chunk library.\n"
-            "Fix only what is necessary so the full Generated manifest builds again.\n"
-            "Preserve theorem names, theorem statements, imports, and namespace structure unless the build error "
-            "forces a minimal change.\n"
-            f"Current build diagnostics:\n{last_detail[:4000]}"
-        )
-        cmd = [
-            sys.executable,
-            str((REPO_ROOT / "scripts" / "direct_refactor_derived.py").resolve()),
-            "--input-file",
-            str(focus_file),
-            "--output-file",
-            str(focus_file),
-            "--report-file",
-            str(report_file),
-            "--skip-copy",
-            "--verify-command",
-            verify_command,
-            "--task-label",
-            "Repair Generated chunk integration for",
-            "--extra-instruction",
-            extra_instruction,
-        ]
-        completed = subprocess.run(cmd, cwd=str(REPO_ROOT), check=False)
-        build_result = _run_manifest_build(verify_timeout_sec)
-        _print_progress(
-            "generated_repair_round_result",
-            round=round_index,
-            focus_file=focus_file.name,
-            worker_status="ok" if completed.returncode == 0 else "error",
-            manifest_success=build_result["success"],
-        )
-        if bool(build_result.get("success", False)):
-            return {
-                "status": "ok",
-                "repair_rounds": round_index,
-                "detail": str(build_result.get("detail", "")),
-            }
-        last_detail = str(build_result.get("detail", "")).strip() or last_detail
-    return {
-        "status": "error",
-        "repair_rounds": max_rounds,
-        "detail": last_detail,
-    }
-
-
-def _run_generated_local_refactors(
-    *,
-    generated_root: Path,
-    manifest_file: Path,
-    theory_file: Path,
-    theorem_reuse_memory_file: Path,
-    artifact_dir: Path,
-    run_pass_1_2_per_file: bool,
-    run_pass_1_3_per_file: bool,
-    pass_1_2_max_wall_clock_sec_per_file: int | None,
-    pass_1_3_max_wall_clock_sec_per_file: int | None,
-    generated_repair_max_rounds: int,
-    generated_repair_verify_timeout: int | None,
-) -> list[dict[str, Any]]:
-    catalog_file = generated_root / "catalog.json"
-    payload = json.loads(catalog_file.read_text(encoding="utf-8"))
-    chunk_files = [Path(chunk["file"]) for chunk in payload.get("chunks", []) if isinstance(chunk, dict)]
-    results: list[dict[str, Any]] = []
-    last_changed_chunk: Path | None = None
-    pass_1_2_budget = _resolve_generated_pass_budget(pass_1_2_max_wall_clock_sec_per_file)
-    pass_1_3_budget = _resolve_generated_pass_budget(pass_1_3_max_wall_clock_sec_per_file)
-
-    for chunk_file in chunk_files:
-        _print_progress("chunk_start", chunk=chunk_file.name)
-
-        if run_pass_1_2_per_file:
-            snapshot_dir = _snapshot_generated_root(generated_root)
-            _print_progress("chunk_pass_start", chunk=chunk_file.name, pass_name="1.2", budget_sec=pass_1_2_budget)
-            report = _run_chunk_pass(
-                spec=EXACT_DUPLICATE_PASS_SPEC,
-                chunk_file=chunk_file,
-                theory_file=theory_file,
-                theorem_reuse_memory_file=theorem_reuse_memory_file,
-                artifact_dir=artifact_dir,
-                verify_timeout_sec=generated_repair_verify_timeout,
-                max_wall_clock_sec=pass_1_2_budget,
-            )
-            accepted_cycles = int(report.get("accepted_cycles", 0) or 0)
-            status = str(report.get("status", "ok"))
-            stop_reason = str(report.get("stop_reason", "completed"))
-            _emit_pass_action_logs(chunk_file=chunk_file, pass_name="1.2", report=report)
-            if accepted_cycles > 0:
-                build_result = _run_manifest_build(generated_repair_verify_timeout)
-                if not bool(build_result.get("success", False)):
-                    _print_progress("manifest_verify_result", chunk=chunk_file.name, pass_name="1.2", success=False)
-                    repair_result = _repair_generated_after_failure(
-                        generated_root=generated_root,
-                        manifest_file=manifest_file,
-                        focus_file=chunk_file,
-                        artifact_dir=artifact_dir,
-                        diagnostics=str(build_result.get("detail", "")),
-                        max_rounds=generated_repair_max_rounds,
-                        verify_timeout_sec=generated_repair_verify_timeout,
-                    )
-                    if repair_result["status"] != "ok":
-                        _restore_generated_root(snapshot_dir, generated_root)
-                        results.append(
-                            {
-                                "chunk": chunk_file.name,
-                                "pass": "1.2",
-                                "status": "rolled_back_after_failed_repair",
-                                "detail": str(repair_result.get("detail", "")),
-                            }
-                        )
-                        _print_progress("rollback_applied", chunk=chunk_file.name, pass_name="1.2")
-                    else:
-                        last_changed_chunk = chunk_file
-                        results.append(
-                            {
-                                "chunk": chunk_file.name,
-                                "pass": "1.2",
-                                "status": "repaired_after_failure",
-                                "accepted_cycles": accepted_cycles,
-                            }
-                        )
-                else:
-                    last_changed_chunk = chunk_file
-                    results.append(
-                        {
-                            "chunk": chunk_file.name,
-                            "pass": "1.2",
-                            "status": status,
-                            "accepted_cycles": accepted_cycles,
-                            "stop_reason": stop_reason,
-                        }
-                    )
-                    _print_progress(
-                        "chunk_pass_result",
-                        chunk=chunk_file.name,
-                        pass_name="1.2",
-                        status=status,
-                        accepted_cycles=accepted_cycles,
-                    )
-            else:
-                skip_status = "skipped_no_candidates" if stop_reason == "no_candidates" else status
-                results.append({"chunk": chunk_file.name, "pass": "1.2", "status": skip_status, "stop_reason": stop_reason})
-                _print_progress("chunk_pass_result", chunk=chunk_file.name, pass_name="1.2", status=skip_status)
-            _cleanup_snapshot(snapshot_dir)
-
-        if run_pass_1_3_per_file:
-            snapshot_dir = _snapshot_generated_root(generated_root)
-            _print_progress("chunk_pass_start", chunk=chunk_file.name, pass_name="1.3", budget_sec=pass_1_3_budget)
-            report = _run_chunk_pass(
-                spec=PROOF_RETARGET_PASS_SPEC,
-                chunk_file=chunk_file,
-                theory_file=theory_file,
-                theorem_reuse_memory_file=theorem_reuse_memory_file,
-                artifact_dir=artifact_dir,
-                verify_timeout_sec=generated_repair_verify_timeout,
-                max_wall_clock_sec=pass_1_3_budget,
-            )
-            accepted_cycles = int(report.get("accepted_cycles", 0) or 0)
-            status = str(report.get("status", "ok"))
-            stop_reason = str(report.get("stop_reason", "completed"))
-            _emit_pass_action_logs(chunk_file=chunk_file, pass_name="1.3", report=report)
-            if accepted_cycles > 0:
-                build_result = _run_manifest_build(generated_repair_verify_timeout)
-                if not bool(build_result.get("success", False)):
-                    _print_progress("manifest_verify_result", chunk=chunk_file.name, pass_name="1.3", success=False)
-                    repair_result = _repair_generated_after_failure(
-                        generated_root=generated_root,
-                        manifest_file=manifest_file,
-                        focus_file=chunk_file,
-                        artifact_dir=artifact_dir,
-                        diagnostics=str(build_result.get("detail", "")),
-                        max_rounds=generated_repair_max_rounds,
-                        verify_timeout_sec=generated_repair_verify_timeout,
-                    )
-                    if repair_result["status"] != "ok":
-                        _restore_generated_root(snapshot_dir, generated_root)
-                        results.append(
-                            {
-                                "chunk": chunk_file.name,
-                                "pass": "1.3",
-                                "status": "rolled_back_after_failed_repair",
-                                "detail": str(repair_result.get("detail", "")),
-                            }
-                        )
-                        _print_progress("rollback_applied", chunk=chunk_file.name, pass_name="1.3")
-                    else:
-                        last_changed_chunk = chunk_file
-                        results.append(
-                            {
-                                "chunk": chunk_file.name,
-                                "pass": "1.3",
-                                "status": "repaired_after_failure",
-                                "accepted_cycles": accepted_cycles,
-                            }
-                        )
-                else:
-                    last_changed_chunk = chunk_file
-                    results.append(
-                        {
-                            "chunk": chunk_file.name,
-                            "pass": "1.3",
-                            "status": status,
-                            "accepted_cycles": accepted_cycles,
-                            "stop_reason": stop_reason,
-                        }
-                    )
-                    _print_progress(
-                        "chunk_pass_result",
-                        chunk=chunk_file.name,
-                        pass_name="1.3",
-                        status=status,
-                        accepted_cycles=accepted_cycles,
-                    )
-            else:
-                skip_status = "skipped_no_candidates" if stop_reason == "no_candidates" else status
-                results.append({"chunk": chunk_file.name, "pass": "1.3", "status": skip_status, "stop_reason": stop_reason})
-                _print_progress("chunk_pass_result", chunk=chunk_file.name, pass_name="1.3", status=skip_status)
-            _cleanup_snapshot(snapshot_dir)
-
-    final_build = _run_manifest_build(generated_repair_verify_timeout)
-    if not bool(final_build.get("success", False)) and chunk_files:
-        focus_file = last_changed_chunk or chunk_files[-1]
-        _print_progress("manifest_verify_result", chunk=focus_file.name, pass_name="final", success=False)
-        repair_result = _repair_generated_after_failure(
-            generated_root=generated_root,
-            manifest_file=manifest_file,
-            focus_file=focus_file,
-            artifact_dir=artifact_dir,
-            diagnostics=str(final_build.get("detail", "")),
-            max_rounds=generated_repair_max_rounds,
-            verify_timeout_sec=generated_repair_verify_timeout,
-        )
-        results.append(
-            {
-                "chunk": focus_file.name,
-                "pass": "final",
-                "status": "repaired_after_failure" if repair_result["status"] == "ok" else "error",
-                "detail": str(repair_result.get("detail", "")),
-            }
-        )
-    return results
-
-
 def materialize_derived_to_generated(
     *,
     derived_file: Path,
@@ -639,11 +241,6 @@ def materialize_derived_to_generated(
     refresh_dependencies: bool = True,
     deps_depth: int = 1,
     verify_manifest: bool = True,
-    run_pass_1_2_per_file: bool = False,
-    run_pass_1_3_per_file: bool = False,
-    pass_1_2_max_wall_clock_sec_per_file: int | None = None,
-    pass_1_3_max_wall_clock_sec_per_file: int | None = None,
-    generated_repair_max_rounds: int = 2,
     generated_repair_verify_timeout: int | None = 300,
 ) -> dict[str, Any]:
     generated_root, manifest_file, catalog_file = _resolve_generated_paths(
@@ -652,13 +249,10 @@ def materialize_derived_to_generated(
         manifest_file=manifest_file,
         catalog_file=catalog_file,
     )
-    artifact_dir = _artifact_dir_for(deps_file)
     _print_progress(
         "start",
         derived_file=derived_file,
         generated_root=generated_root,
-        run_pass_1_2_per_file=run_pass_1_2_per_file,
-        run_pass_1_3_per_file=run_pass_1_3_per_file,
     )
     dependency_report: dict[str, Any] | None = None
     if refresh_dependencies:
@@ -733,26 +327,10 @@ def materialize_derived_to_generated(
     if verify_manifest:
         _verify_manifest(generated_repair_verify_timeout)
 
-    chunk_passes: list[dict[str, Any]] = []
-    if run_pass_1_2_per_file or run_pass_1_3_per_file:
-        chunk_passes = _run_generated_local_refactors(
-            generated_root=generated_root,
-            manifest_file=manifest_file,
-            theory_file=theory_file,
-            theorem_reuse_memory_file=theorem_reuse_memory_file,
-            artifact_dir=artifact_dir,
-            run_pass_1_2_per_file=run_pass_1_2_per_file,
-            run_pass_1_3_per_file=run_pass_1_3_per_file,
-            pass_1_2_max_wall_clock_sec_per_file=pass_1_2_max_wall_clock_sec_per_file,
-            pass_1_3_max_wall_clock_sec_per_file=pass_1_3_max_wall_clock_sec_per_file,
-            generated_repair_max_rounds=generated_repair_max_rounds,
-            generated_repair_verify_timeout=generated_repair_verify_timeout,
-        )
-
     if reset_derived:
         derived_file.write_text(DERIVED_TEMPLATE, encoding="utf-8")
 
-    should_run_final_manifest_build = bool(verify_manifest or run_pass_1_2_per_file or run_pass_1_3_per_file)
+    should_run_final_manifest_build = bool(verify_manifest)
     final_manifest_build = (
         _run_manifest_build(generated_repair_verify_timeout)
         if should_run_final_manifest_build
@@ -765,9 +343,7 @@ def materialize_derived_to_generated(
         "manifest_file": str(manifest_file),
         "catalog_file": str(catalog_file),
         "plan_file": str(plan_file),
-        "artifact_dir": str(artifact_dir),
         "chunk_count": len(catalog_chunks),
-        "chunk_passes": chunk_passes,
         "reset_derived": reset_derived,
         "refresh_dependencies": refresh_dependencies,
         "deps_depth": deps_depth,
@@ -799,11 +375,6 @@ def main() -> None:
     parser.add_argument("--refresh-dependencies", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--deps-depth", type=int, default=1)
     parser.add_argument("--verify-manifest", action=argparse.BooleanOptionalAction, default=True)
-    parser.add_argument("--run-pass-1_2-per-file", action=argparse.BooleanOptionalAction, default=False)
-    parser.add_argument("--run-pass-1_3-per-file", action=argparse.BooleanOptionalAction, default=False)
-    parser.add_argument("--pass-1_2-max-wall-clock-sec-per-file", type=int)
-    parser.add_argument("--pass-1_3-max-wall-clock-sec-per-file", type=int)
-    parser.add_argument("--generated-repair-max-rounds", type=int, default=2)
     parser.add_argument("--generated-repair-verify-timeout", type=int, default=300)
     args = parser.parse_args()
 
@@ -824,11 +395,6 @@ def main() -> None:
         refresh_dependencies=bool(args.refresh_dependencies),
         deps_depth=args.deps_depth,
         verify_manifest=bool(args.verify_manifest),
-        run_pass_1_2_per_file=bool(args.run_pass_1_2_per_file),
-        run_pass_1_3_per_file=bool(args.run_pass_1_3_per_file),
-        pass_1_2_max_wall_clock_sec_per_file=args.pass_1_2_max_wall_clock_sec_per_file,
-        pass_1_3_max_wall_clock_sec_per_file=args.pass_1_3_max_wall_clock_sec_per_file,
-        generated_repair_max_rounds=args.generated_repair_max_rounds,
         generated_repair_verify_timeout=args.generated_repair_verify_timeout,
     )
     print(json.dumps(report, ensure_ascii=False))

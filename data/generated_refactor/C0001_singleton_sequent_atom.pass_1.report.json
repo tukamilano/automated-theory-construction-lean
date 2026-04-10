@@ -1,9 +1,0 @@
-{
-  "input_file": "/Users/milano/ATC_private/AutomatedTheoryConstruction/Generated/C0001_singleton_sequent_atom.lean",
-  "output_file": "/Users/milano/ATC_private/AutomatedTheoryConstruction/Generated/C0001_singleton_sequent_atom.lean",
-  "plan_file": "data/generated_refactor/C0001_singleton_sequent_atom.pass_1.plan.json",
-  "report_file": "data/generated_refactor/C0001_singleton_sequent_atom.pass_1.report.json",
-  "status": "error",
-  "stop_detail": "name 'args' is not defined",
-  "stop_reason": "worker_error"
-}

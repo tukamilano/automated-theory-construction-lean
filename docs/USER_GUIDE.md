@@ -66,15 +66,7 @@ For complete schema and replacement steps, follow [`PROOF_EXECUTOR.md`](PROOF_EX
 +-------------------------------------------+
         ↓
 [Derived.refactored.preview.lean]
-  copy of Derived.lean used for refactor passes
-        ↓
-[scripts/run_compression_pass.py]
-  pass 1.2 exact-duplicate collapse with incremental repair
-        ↓
-[Derived.refactored.preview.lean]
-        ↓
-[scripts/run_proof_retarget_pass.py]
-  pass 1.3 proof-retarget compression with incremental repair
+  copy of Derived.lean used for review-time refactors
         ↓
 [Derived.refactored.preview.lean]
         ↓
@@ -102,20 +94,15 @@ pass 2.0
         ↓
 split into Generated/C000x_*.lean
         ↓
-for each generated file, in order:
-  pass 1.2
-    exact-duplicate collapse
-  pass 1.3
-    proof retargeting
+per-file validation after split
         ↓
-after each local edit:
-  lake build AutomatedTheoryConstruction.Generated.Manifest
-  and repair at the whole-Generated level if needed
+lake build AutomatedTheoryConstruction.Generated.Manifest
+and repair at the whole-Generated level if needed
 ```
 
-The key idea is that pass 1.5 and pass 2.0 are global stabilization passes, while pass 1.2 and pass 1.3 are local reuse/compression passes. In practice, exact-duplicate collapse and proof retargeting are easier to control after splitting the theory into smaller generated files.
+The key idea is that pass 1.5 and pass 2.0 are global stabilization passes, while generated-file splitting is used to make local validation and edits tractable.
 
-`scripts/atc_cli.py materialize-generated` is the entrypoint for the split-based stage. It materializes `Generated/C000x_*.lean`, rebuilds `Manifest.lean` / `catalog.json`, and then runs pass 1.2 and pass 1.3 sequentially inside each generated file. The command also rechecks the whole `AutomatedTheoryConstruction.Generated.Manifest` target after local changes and can trigger whole-Generated repair when integration breaks.
+`scripts/atc_cli.py materialize-generated` is the entrypoint for the split-based stage. It materializes `Generated/C000x_*.lean`, rebuilds `Manifest.lean` / `catalog.json`, and then performs generated-file verification and optional generated-level repair.
 
 ## Common Commands
 
@@ -175,8 +162,6 @@ Run the final refactor stages of `Derived.lean`:
 
 ```bash
 cp AutomatedTheoryConstruction/Derived.lean AutomatedTheoryConstruction/Derived.refactored.preview.lean
-uv run python scripts/atc_cli.py compress
-uv run python scripts/atc_cli.py retarget
 uv run python scripts/atc_cli.py rewrite
 uv run python scripts/atc_cli.py review
 ```
@@ -187,7 +172,7 @@ Run the split-based Generated materialization stage:
 uv run python scripts/atc_cli.py materialize-generated
 ```
 
-This stage prints progress directly to stderr and, when enabled, runs pass 1.2 / pass 1.3 inside each generated file in order.
+This stage prints progress directly to stderr while materializing generated chunks and rebuilding the manifest.
 
 Equivalent `Makefile` shortcuts remain available:
 
@@ -195,8 +180,6 @@ Equivalent `Makefile` shortcuts remain available:
 make seed SEED_ARGS="--seed-count 4"
 make loop LOOP_ARGS="--max-iterations 40"
 make pipeline PIPELINE_ARGS="--max-iterations 40"
-make compress
-make retarget
 make rewrite
 make review
 ```

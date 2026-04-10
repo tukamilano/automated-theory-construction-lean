@@ -134,26 +134,6 @@ cp AutomatedTheoryConstruction/Derived.lean \
   AutomatedTheoryConstruction/Derived.refactored.preview.lean
 ```
 
-Pass 1.2 keeps the same preview file but applies exact-duplicate collapse in place:
-
-```bash
-uv run python scripts/run_compression_pass.py \
-  --input-file AutomatedTheoryConstruction/Derived.refactored.preview.lean \
-  --output-file AutomatedTheoryConstruction/Derived.refactored.preview.lean \
-  --plan-file AutomatedTheoryConstruction/Derived.compression.plan.json \
-  --report-file AutomatedTheoryConstruction/Derived.compression.report.json
-```
-
-Pass 1.3 then keeps the same preview file but applies proof-retarget rewrites in place:
-
-```bash
-uv run python scripts/run_proof_retarget_pass.py \
-  --input-file AutomatedTheoryConstruction/Derived.refactored.preview.lean \
-  --output-file AutomatedTheoryConstruction/Derived.refactored.preview.lean \
-  --plan-file AutomatedTheoryConstruction/Derived.proof_retarget.plan.json \
-  --report-file AutomatedTheoryConstruction/Derived.proof_retarget.report.json
-```
-
 Pass 1.5 rewrites the preview in place using parseable `tryAtEachStep` suggestions:
 
 ```bash
@@ -180,8 +160,6 @@ uv run python scripts/direct_refactor_derived.py --skip-copy
 
 If you use `scripts/atc_cli.py` or `atc.json`, the stage toggles are:
 
-- `runtime.run_refactor_pass_1_2`
-- `runtime.run_refactor_pass_1_3`
 - `runtime.run_refactor_pass_1_5`
 - `runtime.run_refactor_pass_2`
 

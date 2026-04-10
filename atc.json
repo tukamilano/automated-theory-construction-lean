@@ -36,8 +36,6 @@
     "max_iterations": 50,
     "parallel_sessions": 2,
     "run_seed": true,
-    "run_refactor_pass_1_2": false,
-    "run_refactor_pass_1_3": false,
     "run_refactor_pass_1_5": true,
     "run_refactor_pass_2": true,
     "run_main_theorem_session": true,

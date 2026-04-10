@@ -551,6 +551,6 @@
     "target_nodes": 10
   },
   "plan_version": 1,
-  "source_file": "/Users/milano/ATC_private/AutomatedTheoryConstruction/Derived.lean",
+  "source_file": "/home/kei.tsukamoto/ATC_private/AutomatedTheoryConstruction/Derived.lean",
   "summary": "6 chunks over 67 declarations using 136 internal dependencies"
 }
