@@ -12,6 +12,12 @@ PREVIEW_FILE ?= AutomatedTheoryConstruction/Derived.refactored.preview.lean
 REVIEWED_FILE ?= AutomatedTheoryConstruction/Derived.refactored.reviewed.lean
 TRY_AT_EACH_STEP_RAW_OUTPUT_FILE ?= AutomatedTheoryConstruction/Derived.tryAtEachStep.json
 TRY_AT_EACH_STEP_APPLY_REPORT_FILE ?= AutomatedTheoryConstruction/Derived.tryAtEachStep.apply_report.json
+DEPS_FILE ?= data/derived-deps.json
+DERIVED_CHUNK_PLAN_FILE ?= data/derived-chunk-plan.json
+GENERATED_ROOT ?= AutomatedTheoryConstruction/Generated
+GENERATED_MANIFEST_FILE ?= $(GENERATED_ROOT)/Manifest.lean
+GENERATED_CATALOG_FILE ?= $(GENERATED_ROOT)/catalog.json
+GENERATED_LOCAL_MANIFEST_VERIFY_TIMEOUT ?= 300
 
 WORKER_COMMAND ?= uv run scripts/codex_worker.py
 WORKER_TIMEOUT ?= 420
@@ -25,8 +31,10 @@ LOOP_ARGS ?=
 PIPELINE_ARGS ?=
 REWRITE_ARGS ?=
 REVIEW_ARGS ?=
+MATERIALIZE_ARGS ?=
+GENERATED_LOCAL_ARGS ?=
 
-.PHONY: help build check check-theory check-derived check-scratch smoke seed loop loop-continue pipeline rewrite review
+.PHONY: help build check check-theory check-derived check-scratch smoke seed loop loop-continue pipeline rewrite review refactor-to-generated-materialized
 
 help:
 	@printf '%s\n' \
@@ -43,6 +51,7 @@ help:
 		'  make pipeline      - run seed -> loop -> rewrite -> review via scripts/atc_cli.py pipeline' \
 		'  make rewrite       - run scripts/atc_cli.py rewrite' \
 		'  make review        - run scripts/atc_cli.py review' \
+		'  make refactor-to-generated-materialized - run pass1.5 -> pass2 -> split -> local pass1.2 -> local pass1.3' \
 		'' \
 		'Common overrides:' \
 		'  WORKER_COMMAND="uv run scripts/mock_worker.py"' \
@@ -125,3 +134,31 @@ review:
 		--input-file $(PREVIEW_FILE) \
 		--output-file $(REVIEWED_FILE) \
 		$(REVIEW_ARGS)
+
+refactor-to-generated-materialized:
+	cp $(DERIVED_FILE) $(PREVIEW_FILE)
+	$(ATC) rewrite \
+		--input-file $(PREVIEW_FILE) \
+		--output-file $(PREVIEW_FILE) \
+		--raw-output-file $(TRY_AT_EACH_STEP_RAW_OUTPUT_FILE) \
+		--apply-report-file $(TRY_AT_EACH_STEP_APPLY_REPORT_FILE) \
+		$(REWRITE_ARGS)
+	$(ATC) review \
+		--input-file $(PREVIEW_FILE) \
+		--output-file $(REVIEWED_FILE) \
+		$(REVIEW_ARGS)
+	$(ATC) materialize-generated \
+		--derived-file $(REVIEWED_FILE) \
+		--deps-file $(DEPS_FILE) \
+		--generated-root $(GENERATED_ROOT) \
+		--manifest-file $(GENERATED_MANIFEST_FILE) \
+		--catalog-file $(GENERATED_CATALOG_FILE) \
+		--plan-file $(DERIVED_CHUNK_PLAN_FILE) \
+		$(MATERIALIZE_ARGS)
+	$(PYTHON) scripts/run_generated_local_passes.py \
+		--generated-root $(GENERATED_ROOT) \
+		--theory-file $(THEORY_FILE) \
+		--worker-command "$(WORKER_COMMAND)" \
+		--worker-timeout $(WORKER_TIMEOUT) \
+		--manifest-verify-timeout $(GENERATED_LOCAL_MANIFEST_VERIFY_TIMEOUT) \
+		$(GENERATED_LOCAL_ARGS)

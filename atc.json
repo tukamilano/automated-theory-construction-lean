@@ -22,10 +22,6 @@
       },
       "repair": {
         "timeout": 600
-      },
-      "refactor_derived": {
-        "timeout": 960,
-        "codex_timeout": 390
       }
     }
   },
