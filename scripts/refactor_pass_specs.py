@@ -50,19 +50,3 @@ PROOF_RETARGET_PASS_SPEC = RefactorPassSpec(
     default_executor_prompt=Path("prompts/derived/compression_executor.md"),
     default_theorem_reuse_memory=Path("data/theorem_reuse_memory.json"),
 )
-
-
-PRESENTATION_PASS_SPEC = RefactorPassSpec(
-    pass_name="pass_1.4",
-    cli_description="Run pass 1.4 presentation shaping for Derived preview files.",
-    allowed_kinds=("cluster_sectionize", "cluster_reorder"),
-    allow_repair=False,
-    default_input=Path("AutomatedTheoryConstruction/Derived.refactored.preview.lean"),
-    default_theory=Path("AutomatedTheoryConstruction/Theory.lean"),
-    default_plan=Path("AutomatedTheoryConstruction/Derived.presentation.plan.json"),
-    default_report=Path("AutomatedTheoryConstruction/Derived.presentation.report.json"),
-    default_progress_log=Path("AutomatedTheoryConstruction/Derived.presentation.executor.log.jsonl"),
-    default_planner_prompt=Path("prompts/derived/presentation_planner.md"),
-    default_executor_prompt=Path("prompts/derived/presentation_executor.md"),
-    default_theorem_reuse_memory=Path("data/theorem_reuse_memory.json"),
-)

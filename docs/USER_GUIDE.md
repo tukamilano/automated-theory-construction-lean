@@ -65,10 +65,8 @@ For complete schema and replacement steps, follow [`PROOF_EXECUTOR.md`](PROOF_EX
 |   accumulated verified theorems           |
 +-------------------------------------------+
         ↓
-[scripts/refactor_derived.py]
-  final local refactor sweep
-        ↓
 [Derived.refactored.preview.lean]
+  copy of Derived.lean used for refactor passes
         ↓
 [scripts/run_compression_pass.py]
   pass 1.2 exact-duplicate collapse with incremental repair
@@ -77,11 +75,6 @@ For complete schema and replacement steps, follow [`PROOF_EXECUTOR.md`](PROOF_EX
         ↓
 [scripts/run_proof_retarget_pass.py]
   pass 1.3 proof-retarget compression with incremental repair
-        ↓
-[Derived.refactored.preview.lean]
-        ↓
-[scripts/run_presentation_pass.py]
-  optional pass 1.4 presentation shaping
         ↓
 [Derived.refactored.preview.lean]
         ↓
@@ -153,10 +146,9 @@ uv run python scripts/atc_cli.py pipeline \
 Run the final refactor stages of `Derived.lean`:
 
 ```bash
-uv run python scripts/atc_cli.py refactor
+cp AutomatedTheoryConstruction/Derived.lean AutomatedTheoryConstruction/Derived.refactored.preview.lean
 uv run python scripts/atc_cli.py compress
 uv run python scripts/atc_cli.py retarget
-uv run python scripts/atc_cli.py present
 uv run python scripts/atc_cli.py rewrite
 uv run python scripts/atc_cli.py review
 ```
@@ -167,7 +159,8 @@ Equivalent `Makefile` shortcuts remain available:
 make seed SEED_ARGS="--seed-count 4"
 make loop LOOP_ARGS="--max-iterations 40"
 make pipeline PIPELINE_ARGS="--max-iterations 40"
-make refactor
+make compress
+make retarget
 make rewrite
 make review
 ```

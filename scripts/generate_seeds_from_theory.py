@@ -94,28 +94,12 @@ def _proof_retarget_report_file_for(derived_file: Path) -> Path:
     return derived_file.with_name(f"{derived_file.stem}.proof_retarget.report.json")
 
 
-def _presentation_plan_file_for(derived_file: Path) -> Path:
-    return derived_file.with_name(f"{derived_file.stem}.presentation.plan.json")
-
-
-def _presentation_report_file_for(derived_file: Path) -> Path:
-    return derived_file.with_name(f"{derived_file.stem}.presentation.report.json")
-
-
-def _refactor_pass_1_log_file_for(derived_file: Path) -> Path:
-    return derived_file.with_name(f"{derived_file.stem}.refactor.pass1.log.jsonl")
-
-
 def _compression_executor_log_file_for(derived_file: Path) -> Path:
     return derived_file.with_name(f"{derived_file.stem}.compression.executor.log.jsonl")
 
 
 def _proof_retarget_executor_log_file_for(derived_file: Path) -> Path:
     return derived_file.with_name(f"{derived_file.stem}.proof_retarget.executor.log.jsonl")
-
-
-def _presentation_executor_log_file_for(derived_file: Path) -> Path:
-    return derived_file.with_name(f"{derived_file.stem}.presentation.executor.log.jsonl")
 
 
 def _try_at_each_step_raw_output_file_for(derived_file: Path) -> Path:
@@ -570,12 +554,8 @@ def main() -> int:
                 _compression_report_file_for(derived_file),
                 _proof_retarget_plan_file_for(derived_file),
                 _proof_retarget_report_file_for(derived_file),
-                _presentation_plan_file_for(derived_file),
-                _presentation_report_file_for(derived_file),
-                _refactor_pass_1_log_file_for(derived_file),
                 _compression_executor_log_file_for(derived_file),
                 _proof_retarget_executor_log_file_for(derived_file),
-                _presentation_executor_log_file_for(derived_file),
                 _reviewed_file_for(derived_file),
                 _try_at_each_step_raw_output_file_for(derived_file),
                 _try_at_each_step_apply_report_file_for(derived_file),

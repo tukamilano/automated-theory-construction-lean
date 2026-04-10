@@ -30,7 +30,6 @@ scripts:
 - `scripts/run_loop.py`
 - `scripts/run_pipeline.py`
 - `scripts/generate_seeds_from_theory.py`
-- `scripts/refactor_derived.py`
 - `scripts/direct_refactor_derived.py`
 
 This proposal does not try to solve generic multi-theory orchestration yet.

@@ -12,7 +12,8 @@ import run_pipeline
 
 
 DISABLE_REFACTOR_FLAGS = [
-    "--no-run-refactor-pass-1",
+    "--no-run-refactor-pass-1_2",
+    "--no-run-refactor-pass-1_3",
     "--no-run-refactor-pass-1_5",
     "--no-run-refactor-pass-2",
 ]
