@@ -29,20 +29,15 @@ theorem singleton_bad_sequent_counterexample : ([#"p"] ⇒ (#"p" ⧸ (#"p" ⧹ #
 /-- A derivable conclusion has degree bounded by its context degree. -/
 theorem thm_sequent_degree_bound_000005_is_false : ¬(∀ {Γ : List Tp} {A : Tp}, (Γ ⇒ A) → tp_degree A ≤ list_degree Γ) := by
   intro h
-  let p : Tp := Tp.atom "p"
-  let bad : Tp := Tp.rdiv p (Tp.ldiv p p)
-  have hseq : [p] ⇒ bad := by
-    simpa [bad, p] using singleton_bad_sequent_counterexample
-  have hle : tp_degree bad ≤ list_degree [p] := h hseq
-  norm_num [bad, p, tp_degree, list_degree] at hle
-
+  have hle : tp_degree (#"p" ⧸ (#"p" ⧹ #"p")) ≤ list_degree [#"p"] :=
+    h singleton_bad_sequent_counterexample
+  norm_num [tp_degree, list_degree] at hle
 
 /-- A singleton sequent holds exactly when the conclusion equals its premise. -/
 theorem thm_singleton_sequent_eq_000002_is_false : ¬(∀ {A B : Tp}, ([A] ⇒ B) ↔ A = B) := by
   intro h
-  have hseq : ([#"p"] ⇒ (#"p" ⧸ (#"p" ⧹ #"p"))) := singleton_bad_sequent_counterexample
   have heq : (#"p" : Tp) = (#"p" ⧸ (#"p" ⧹ #"p")) :=
-    (h (A := #"p") (B := (#"p" ⧸ (#"p" ⧹ #"p")))).mp hseq
+    (h (A := #"p") (B := (#"p" ⧸ (#"p" ⧹ #"p")))).mp singleton_bad_sequent_counterexample
   cases heq
 
 /-- The fold-branch alternatives for a singleton atom conclusion are impossible. -/
@@ -78,13 +73,9 @@ def atom_count_list : List Tp → Nat
 /-- A derivable conclusion has atom count at most that of its context. -/
 theorem thm_atom_count_bounded_by_context_000010_is_false : ¬(∀ {Γ : List Tp} {A : Tp}, (Γ ⇒ A) → atom_count A ≤ atom_count_list Γ) := by
   intro h
-  let p : Tp := #"p"
-  let bad : Tp := p ⧸ (p ⧹ p)
-  have hseq : [p] ⇒ bad := by
-    simpa [bad, p] using singleton_bad_sequent_counterexample
-  have hle : atom_count bad ≤ atom_count_list [p] := h hseq
-  norm_num [bad, p, atom_count, atom_count_list] at hle
-
+  have hle : atom_count (#"p" ⧸ (#"p" ⧹ #"p")) ≤ atom_count_list [#"p"] :=
+    h singleton_bad_sequent_counterexample
+  norm_num [atom_count, atom_count_list] at hle
 
 /-- A non-atomic singleton conclusion has an outer division decomposition. -/
 theorem thm_singleton_nonatom_derivation_shape_000013 : ∀ {s : String} {A : Tp}, ([# s] ⇒ A) ∧ ¬ is_atom A → (∃ B C : Tp, A = (B ⧹ C) ∧ ([B, # s] ⇒ C)) ∨ (∃ B C : Tp, A = (C ⧸ B) ∧ ([# s, B] ⇒ C)) := by
@@ -102,7 +93,6 @@ theorem thm_singleton_nonatom_derivation_shape_000013 : ∀ {s : String} {A : Tp
       right
       refine ⟨B, C, rfl, ?_⟩
       simpa using rdiv_invertible hA
-
 
 /-- A singleton context derives an atom iff it is that atom. -/
 theorem thm_singleton_atomic_sequent_iff_000011 : ∀ {A : Tp} {s : String}, ([A] ⇒ # s) ↔ A = # s := by
@@ -138,45 +128,7 @@ theorem thm_singleton_atomic_sequent_iff_000011 : ∀ {A : Tp} {s : String}, ([A
   · rintro rfl
     exact Sequent.ax
 
-
-/-- Characterize sequents from a singleton atomic context. -/
-theorem thm_singleton_atom_sequent_iff_000018 : ∀ {s : String} {A : Tp}, ([# s] ⇒ A) ↔ A = # s ∨ (∃ B C : Tp, A = (B ⧹ C) ∧ ([B, # s] ⇒ C)) ∨ (∃ B C : Tp, A = (C ⧸ B) ∧ ([# s, B] ⇒ C)) := by
-  intro s A
-  constructor
-  · intro h
-    cases A with
-    | atom name =>
-        left
-        have hctx : ∀ x ∈ [Tp.atom s], is_atom x := by
-          intro x hx
-          simp at hx
-          rcases hx with rfl
-          simp [is_atom]
-        have hsingle : [Tp.atom s] = [Tp.atom name] := atom_generation hctx h
-        simpa using (List.singleton_inj.mp hsingle).symm
-    | ldiv B C =>
-        right
-        left
-        refine ⟨B, C, rfl, ?_⟩
-        simpa using ldiv_invertible h
-    | rdiv C B =>
-        right
-        right
-        refine ⟨B, C, rfl, ?_⟩
-        simpa using rdiv_invertible h
-  · intro h
-    rcases h with rfl | h | h
-    · exact thm_singleton_atomic_sequent_iff_000011.mpr rfl
-    · rcases h with ⟨B, C, rfl, hBC⟩
-      have hne : ([# s] : List Tp) ≠ [] := List.cons_ne_nil (#s) []
-      simpa using Sequent.ldiv_r hne hBC
-    · rcases h with ⟨B, C, rfl, hCB⟩
-      have hne : ([# s] : List Tp) ≠ [] := List.cons_ne_nil (#s) []
-      simpa using Sequent.rdiv_r hne hCB
-
-
-/-- Characterize derivations from a singleton context. -/
-theorem thm_singleton_sequent_iff_cases_000022 : ∀ {A C : Tp}, ([A] ⇒ C) ↔ A = C ∨ (∃ B D : Tp, C = (B ⧹ D) ∧ ([B, A] ⇒ D)) ∨ (∃ B D : Tp, C = (D ⧸ B) ∧ ([A, B] ⇒ D)) := by
+theorem singleton_sequent_iff_cases_core : ∀ {A C : Tp}, ([A] ⇒ C) ↔ A = C ∨ (∃ B D : Tp, C = (B ⧹ D) ∧ ([B, A] ⇒ D)) ∨ (∃ B D : Tp, C = (D ⧸ B) ∧ ([A, B] ⇒ D)) := by
   intro A C
   constructor
   · intro h
@@ -203,5 +155,16 @@ theorem thm_singleton_sequent_iff_cases_000022 : ∀ {A C : Tp}, ([A] ⇒ C) ↔
     · rcases h with ⟨B, D, rfl, hDB⟩
       have hne : ([A] : List Tp) ≠ [] := List.cons_ne_nil A []
       simpa using Sequent.rdiv_r hne hDB
+
+/-- Characterize sequents from a singleton atomic context. -/
+theorem thm_singleton_atom_sequent_iff_000018 : ∀ {s : String} {A : Tp}, ([# s] ⇒ A) ↔ A = # s ∨ (∃ B C : Tp, A = (B ⧹ C) ∧ ([B, # s] ⇒ C)) ∨ (∃ B C : Tp, A = (C ⧸ B) ∧ ([# s, B] ⇒ C)) := by
+  intro s A
+  simpa [eq_comm] using
+    (singleton_sequent_iff_cases_core (A := # s) (C := A))
+
+/-- Characterize derivations from a singleton context. -/
+theorem thm_singleton_sequent_iff_cases_000022 : ∀ {A C : Tp}, ([A] ⇒ C) ↔ A = C ∨ (∃ B D : Tp, C = (B ⧹ D) ∧ ([B, A] ⇒ D)) ∨ (∃ B D : Tp, C = (D ⧸ B) ∧ ([A, B] ⇒ D)) := by
+  intro A C
+  simpa using (singleton_sequent_iff_cases_core (A := A) (C := C))
 
 end AutomatedTheoryConstruction

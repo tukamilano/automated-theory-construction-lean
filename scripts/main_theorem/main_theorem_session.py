@@ -50,6 +50,109 @@ def load_prompt_text(prompt_file: str) -> str:
     return load_prompt_file(Path(prompt_file))
 
 
+def _build_main_theorem_followup_candidates(
+    *,
+    theorem_name: str,
+    statement: str,
+    rationale: str,
+    verify_error_excerpt: str,
+    missing_lemmas: list[str],
+    intermediate_lemmas: list[str],
+) -> list[dict[str, str]]:
+    candidates: list[dict[str, str]] = []
+    seen_stmt_norms: set[str] = set()
+
+    def add_candidate(raw_statement: str, raw_rationale: str) -> None:
+        stmt = str(raw_statement).strip()
+        if not stmt:
+            return
+        norm = " ".join(stmt.split()).lower()
+        if not norm or norm in seen_stmt_norms:
+            return
+        seen_stmt_norms.add(norm)
+        candidates.append(
+            {
+                "statement": stmt,
+                "rationale": str(raw_rationale).strip(),
+            }
+        )
+
+    if statement.strip():
+        add_candidate(
+            statement,
+            verify_error_excerpt.strip()
+            or rationale.strip()
+            or f"Main theorem candidate `{theorem_name}` remained unresolved.",
+        )
+    for item in missing_lemmas:
+        add_candidate(item, f"Missing lemma needed for `{theorem_name}`.")
+    for item in intermediate_lemmas:
+        add_candidate(item, f"Intermediate lemma suggested while proving `{theorem_name}`.")
+    return candidates
+
+
+def _store_main_theorem_followups(
+    *,
+    data_dir: Path,
+    theorem_name: str,
+    statement: str,
+    rationale: str,
+    verify_error_excerpt: str,
+    missing_lemmas: list[str],
+    intermediate_lemmas: list[str],
+    prioritize_open_problems_worker_settings: Any,
+    prioritize_open_problems_prompt_file: str,
+    derived_entries: list[dict[str, str]],
+    current_iteration: int,
+    failure_threshold: int,
+    run_id: str,
+    theory_state_history_path: Path,
+    theory_file: Path,
+    derived_file: Path,
+    repo_root: Path,
+    batch_generator_seed_count: int,
+    batch_generator_open_target_min: int,
+) -> dict[str, Any]:
+    followup_candidates = _build_main_theorem_followup_candidates(
+        theorem_name=theorem_name,
+        statement=statement,
+        rationale=rationale,
+        verify_error_excerpt=verify_error_excerpt,
+        missing_lemmas=missing_lemmas,
+        intermediate_lemmas=intermediate_lemmas,
+    )
+    if not followup_candidates:
+        return {
+            "followup_candidates": [],
+            "stored_expand_rows": [],
+            "priority_refresh_ran": False,
+            "priority_refresh_error": "",
+            "priority_refresh_report": {},
+        }
+    refresh_outcome = store_expand_candidates_and_refresh(
+        data_dir=data_dir,
+        statements_with_rationale=followup_candidates,
+        source="main_theorem_followup",
+        source_problem_id=theorem_name,
+        source_kind="main_theorem",
+        prioritize_worker_settings=prioritize_open_problems_worker_settings,
+        prioritizer_prompt_file=prioritize_open_problems_prompt_file,
+        derived_entries=derived_entries,
+        current_iteration=current_iteration,
+        failure_threshold=failure_threshold,
+        run_id=run_id,
+        theory_state_history_path=theory_state_history_path,
+        theory_file=theory_file,
+        derived_file=derived_file,
+        repo_root=repo_root,
+        batch_generator_seed_count=batch_generator_seed_count,
+        batch_generator_open_target_min=batch_generator_open_target_min,
+        allow_backfill=False,
+    )
+    refresh_outcome["followup_candidates"] = followup_candidates
+    return refresh_outcome
+
+
 def validate_main_theorem_suggestion_output(
     payload: dict[str, Any],
     expected_candidate_id: str,
@@ -358,10 +461,35 @@ def run_manual_main_theorem_check(
         status=result,
     )
     if result != "ok":
+        followup_refresh = _store_main_theorem_followups(
+            data_dir=data_dir,
+            theorem_name=candidate_id,
+            statement="",
+            rationale=rationale,
+            verify_error_excerpt="",
+            missing_lemmas=missing_lemmas,
+            intermediate_lemmas=[],
+            prioritize_open_problems_worker_settings=prioritize_open_problems_worker_settings,
+            prioritize_open_problems_prompt_file=prioritize_open_problems_prompt_file,
+            derived_entries=derived_entries,
+            current_iteration=current_iteration,
+            failure_threshold=failure_threshold,
+            run_id=run_id,
+            theory_state_history_path=Path(phase_attempts_path).parent / "theory_state_history.jsonl",
+            theory_file=theory_file,
+            derived_file=derived_file,
+            repo_root=repo_root,
+            batch_generator_seed_count=batch_generator_seed_count,
+            batch_generator_open_target_min=batch_generator_open_target_min,
+        )
         return {
             "status": "main_theorem_suggest_stuck",
             "processed": False,
             "verify_success": False,
+            "followup_candidates": list(followup_refresh.get("followup_candidates", [])),
+            "stored_expand_rows": list(followup_refresh.get("stored_expand_rows", [])),
+            "priority_refresh_ran": bool(followup_refresh.get("priority_refresh_ran", False)),
+            "priority_refresh_error": str(followup_refresh.get("priority_refresh_error", "")),
         }
 
     report = process_manual_main_theorem(
@@ -609,6 +737,27 @@ def process_manual_main_theorem(
     )
 
     if not is_verified_resolution(verify_success=verify_success, result=result):
+        followup_refresh = _store_main_theorem_followups(
+            data_dir=data_dir,
+            theorem_name=theorem_name,
+            statement=final_stmt.strip() or statement,
+            rationale=plan_summary or rationale,
+            verify_error_excerpt=verify_error_excerpt,
+            missing_lemmas=missing_lemmas,
+            intermediate_lemmas=intermediate_lemmas,
+            prioritize_open_problems_worker_settings=prioritize_open_problems_worker_settings,
+            prioritize_open_problems_prompt_file=prioritize_open_problems_prompt_file,
+            derived_entries=derived_entries,
+            current_iteration=current_iteration,
+            failure_threshold=failure_threshold,
+            run_id=run_id,
+            theory_state_history_path=theory_state_history_path,
+            theory_file=theory_file,
+            derived_file=derived_file,
+            repo_root=repo_root,
+            batch_generator_seed_count=batch_generator_seed_count,
+            batch_generator_open_target_min=batch_generator_open_target_min,
+        )
         return {
             "processed": True,
             "candidate_id": candidate_id,
@@ -616,6 +765,10 @@ def process_manual_main_theorem(
             "verify_success": False,
             "verify_error_excerpt": verify_error_excerpt,
             "plan_summary": plan_summary,
+            "followup_candidates": list(followup_refresh.get("followup_candidates", [])),
+            "stored_expand_rows": list(followup_refresh.get("stored_expand_rows", [])),
+            "priority_refresh_ran": bool(followup_refresh.get("priority_refresh_ran", False)),
+            "priority_refresh_error": str(followup_refresh.get("priority_refresh_error", "")),
         }
 
     theorem_code = extract_theorem_code_from_scratch(scratch_file)

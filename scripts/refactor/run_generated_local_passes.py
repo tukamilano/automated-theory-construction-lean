@@ -2,8 +2,11 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import subprocess
 import sys
+import threading
+import time
 from pathlib import Path
 from typing import Any
 
@@ -51,6 +54,90 @@ PASS_SPECS = (
         "allowed_kinds": {"proof_retarget"},
     },
 )
+
+HEARTBEAT_INTERVAL_SEC = 30.0
+
+
+def _timeout_label(timeout_sec: int | None) -> str:
+    if timeout_sec in (None, 0):
+        return "none"
+    return f"{timeout_sec}s"
+
+
+def _run_with_heartbeat(
+    *,
+    label: str,
+    timeout_sec: int | None,
+    fn: Any,
+) -> Any:
+    done = threading.Event()
+    state: dict[str, Any] = {}
+    started = time.monotonic()
+
+    def _target() -> None:
+        try:
+            state["result"] = fn()
+        except Exception as exc:  # pragma: no cover - passthrough wrapper
+            state["exception"] = exc
+        finally:
+            done.set()
+
+    debug_log(
+        f"[generated-local] {label} start timeout={_timeout_label(timeout_sec)}"
+    )
+    worker = threading.Thread(target=_target, name="generated-local-heartbeat", daemon=True)
+    worker.start()
+    while not done.wait(HEARTBEAT_INTERVAL_SEC):
+        elapsed = time.monotonic() - started
+        debug_log(
+            f"[generated-local] {label} heartbeat elapsed={elapsed:.1f}s timeout={_timeout_label(timeout_sec)}"
+        )
+    worker.join(timeout=1.0)
+    elapsed = time.monotonic() - started
+    if "exception" in state:
+        debug_log(f"[generated-local] {label} error elapsed={elapsed:.1f}s")
+        raise state["exception"]
+    debug_log(f"[generated-local] {label} done elapsed={elapsed:.1f}s")
+    return state.get("result")
+
+
+def _single_line_excerpt(text: str, limit: int = 240) -> str:
+    normalized = " ".join(text.strip().split())
+    if not normalized:
+        return ""
+    if len(normalized) <= limit:
+        return normalized
+    return normalized[: limit - 3] + "..."
+
+
+def _is_worker_timeout_error(exc: Exception) -> bool:
+    message = str(exc).lower()
+    if "keyboardinterrupt" in message or "exited with code 130" in message or "interrupt_requested" in message:
+        return False
+    return "timed out" in message or "timeout" in message
+
+
+def _worker_failure_summary(*, phase: str, exc: Exception) -> str:
+    return f"{phase} timeout" if _is_worker_timeout_error(exc) else f"{phase} worker error"
+
+
+def _remaining_timeout_sec(deadline_monotonic: float | None) -> int | None:
+    if deadline_monotonic is None:
+        return None
+    remaining = deadline_monotonic - time.monotonic()
+    if remaining <= 0:
+        return 0
+    return max(1, math.ceil(remaining))
+
+
+def _scoped_worker_settings(settings: WorkerSettings, timeout_sec: int | None) -> WorkerSettings:
+    return WorkerSettings(
+        command=settings.command,
+        timeout_sec=timeout_sec,
+        propagate_timeout=settings.propagate_timeout,
+        codex_timeout_sec=settings.codex_timeout_sec,
+        propagate_codex_timeout=settings.propagate_codex_timeout,
+    )
 
 
 def _run_manifest_build(timeout_sec: int | None) -> dict[str, Any]:
@@ -109,6 +196,7 @@ def _plan_items(
     prompt_file: Path,
     allowed_kinds: set[str],
     pass_name: str,
+    pass_deadline_monotonic: float | None,
 ) -> tuple[str, str, list[dict[str, Any]]]:
     prompt_text = load_prompt_text(prompt_file)
     payload = _build_planner_payload(
@@ -116,13 +204,31 @@ def _plan_items(
         theory_file=theory_file,
         theorem_reuse_memory_file=theorem_reuse_memory_file,
     )
-    raw_result, _worker_meta = invoke_worker_json(
-        settings=worker_settings,
-        task_type="plan_derived_compression",
-        system_prompt=prompt_text,
-        payload=payload,
-        metadata={"input_file": str(chunk_file), "pass_name": pass_name},
-    )
+    remaining_timeout_sec = _remaining_timeout_sec(pass_deadline_monotonic)
+    if remaining_timeout_sec == 0:
+        detail = f"pass budget exhausted before planning started for {chunk_file.name} {pass_name}"
+        debug_log(f"[generated-local] {detail}")
+        return "stuck", "planner budget exhausted", []
+    try:
+        raw_result, _worker_meta = _run_with_heartbeat(
+            label=(
+                f"plan chunk={chunk_file.name} pass={pass_name}"
+            ),
+            timeout_sec=remaining_timeout_sec,
+            fn=lambda: invoke_worker_json(
+                settings=_scoped_worker_settings(worker_settings, remaining_timeout_sec),
+                task_type="plan_derived_compression",
+                system_prompt=prompt_text,
+                payload=payload,
+                metadata={"input_file": str(chunk_file), "pass_name": pass_name},
+            ),
+        )
+    except Exception as exc:
+        detail = _single_line_excerpt(str(exc))
+        debug_log(
+            f"[generated-local] plan chunk={chunk_file.name} pass={pass_name} failed detail={detail}"
+        )
+        return "stuck", _worker_failure_summary(phase="planner", exc=exc), []
     return validate_plan_output(raw_result, allowed_kinds=allowed_kinds)
 
 
@@ -136,6 +242,7 @@ def _apply_item(
     plan_item: dict[str, Any],
     pass_name: str,
     manifest_verify_timeout: int | None,
+    pass_deadline_monotonic: float | None,
 ) -> dict[str, Any]:
     before_code = load_text(chunk_file)
     before_entries = build_derived_entries_from_file(chunk_file)
@@ -147,17 +254,52 @@ def _apply_item(
     )
     payload["plan_item"] = plan_item
     payload["repair_round"] = 0
-    raw_result, _worker_meta = invoke_worker_json(
-        settings=worker_settings,
-        task_type="apply_derived_compression_item",
-        system_prompt=prompt_text,
-        payload=payload,
-        metadata={
-            "input_file": str(chunk_file),
-            "pass_name": pass_name,
+    item_id = str(plan_item.get("id", "")).strip() or "<no-id>"
+    remaining_timeout_sec = _remaining_timeout_sec(pass_deadline_monotonic)
+    if remaining_timeout_sec == 0:
+        detail = (
+            f"pass budget exhausted before apply started for {chunk_file.name} {pass_name} item={item_id}"
+        )
+        debug_log(f"[generated-local] {detail}")
+        return {
+            "applied": False,
+            "result": "stuck",
+            "summary": "apply budget exhausted",
+            "change_notes": [detail],
+            "touched_theorems": [],
             "item_id": str(plan_item.get("id", "")).strip(),
-        },
-    )
+        }
+    try:
+        raw_result, _worker_meta = _run_with_heartbeat(
+            label=(
+                f"apply chunk={chunk_file.name} pass={pass_name} item={item_id}"
+            ),
+            timeout_sec=remaining_timeout_sec,
+            fn=lambda: invoke_worker_json(
+                settings=_scoped_worker_settings(worker_settings, remaining_timeout_sec),
+                task_type="apply_derived_compression_item",
+                system_prompt=prompt_text,
+                payload=payload,
+                metadata={
+                    "input_file": str(chunk_file),
+                    "pass_name": pass_name,
+                    "item_id": str(plan_item.get("id", "")).strip(),
+                },
+            ),
+        )
+    except Exception as exc:
+        detail = _single_line_excerpt(str(exc))
+        debug_log(
+            f"[generated-local] apply chunk={chunk_file.name} pass={pass_name} item={item_id} failed detail={detail}"
+        )
+        return {
+            "applied": False,
+            "result": "stuck",
+            "summary": _worker_failure_summary(phase="apply", exc=exc),
+            "change_notes": [detail] if detail else [],
+            "touched_theorems": [],
+            "item_id": str(plan_item.get("id", "")).strip(),
+        }
     result, refactored_code, summary, change_notes, touched_theorems = validate_full_file_refactor_output(
         raw_result,
         label="generated local refactor output",
@@ -186,7 +328,27 @@ def _apply_item(
         }
 
     chunk_file.write_text(refactored_code.rstrip() + "\n", encoding="utf-8")
-    manifest_result = _run_manifest_build(manifest_verify_timeout)
+    manifest_timeout_sec = manifest_verify_timeout
+    remaining_timeout_sec = _remaining_timeout_sec(pass_deadline_monotonic)
+    if remaining_timeout_sec == 0:
+        chunk_file.write_text(before_code.rstrip() + "\n", encoding="utf-8")
+        return {
+            "applied": False,
+            "result": "stuck",
+            "summary": "pass budget exhausted before manifest verification",
+            "change_notes": change_notes,
+            "touched_theorems": touched_theorems,
+            "item_id": str(plan_item.get("id", "")).strip(),
+        }
+    if manifest_timeout_sec is None:
+        manifest_timeout_sec = remaining_timeout_sec
+    elif remaining_timeout_sec is not None:
+        manifest_timeout_sec = min(manifest_timeout_sec, remaining_timeout_sec)
+    manifest_result = _run_with_heartbeat(
+        label=f"manifest-build chunk={chunk_file.name} pass={pass_name} item={item_id}",
+        timeout_sec=manifest_timeout_sec,
+        fn=lambda: _run_manifest_build(manifest_timeout_sec),
+    )
     if not bool(manifest_result.get("success", False)):
         chunk_file.write_text(before_code.rstrip() + "\n", encoding="utf-8")
         return {
@@ -233,8 +395,33 @@ def run_generated_local_passes(
         per_chunk_reports: list[dict[str, Any]] = []
         for spec in PASS_SPECS:
             pass_name = str(spec["pass_name"])
+            pass_timeout_sec = worker_settings.timeout_sec
+            pass_deadline_monotonic = (
+                None if pass_timeout_sec is None else time.monotonic() + pass_timeout_sec
+            )
+            debug_log(
+                f"[generated-local] chunk={chunk_file.name} pass={pass_name} start "
+                f"max_rounds={max_rounds_per_pass} timeout_budget={_timeout_label(pass_timeout_sec)}"
+            )
             pass_report: dict[str, Any] = {"pass_name": pass_name, "rounds": []}
             for round_index in range(1, max_rounds_per_pass + 1):
+                remaining_timeout_sec = _remaining_timeout_sec(pass_deadline_monotonic)
+                if remaining_timeout_sec == 0:
+                    detail = f"pass budget exhausted before round {round_index} for {chunk_file.name} {pass_name}"
+                    debug_log(f"[generated-local] {detail}")
+                    pass_report["rounds"].append(
+                        {
+                            "round": round_index,
+                            "plan_result": "stuck",
+                            "plan_summary": "pass budget exhausted",
+                            "item_count": 0,
+                        }
+                    )
+                    break
+                debug_log(
+                    f"[generated-local] chunk={chunk_file.name} pass={pass_name} round={round_index} "
+                    f"planning remaining_timeout={_timeout_label(remaining_timeout_sec)}"
+                )
                 plan_result, plan_summary, plan_items = _plan_items(
                     chunk_file=chunk_file,
                     theory_file=theory_file,
@@ -243,6 +430,7 @@ def run_generated_local_passes(
                     prompt_file=Path(spec["prompt_file"]),
                     allowed_kinds=set(spec["allowed_kinds"]),
                     pass_name=pass_name,
+                    pass_deadline_monotonic=pass_deadline_monotonic,
                 )
                 round_report: dict[str, Any] = {
                     "round": round_index,
@@ -250,6 +438,10 @@ def run_generated_local_passes(
                     "plan_summary": plan_summary,
                     "item_count": len(plan_items),
                 }
+                debug_log(
+                    f"[generated-local] chunk={chunk_file.name} pass={pass_name} round={round_index} "
+                    f"plan_result={plan_result} item_count={len(plan_items)}"
+                )
                 if plan_result != "ok" or not plan_items:
                     pass_report["rounds"].append(round_report)
                     break
@@ -257,6 +449,11 @@ def run_generated_local_passes(
                 applied = False
                 item_reports: list[dict[str, Any]] = []
                 for item in plan_items:
+                    item_id = str(item.get("id", "")).strip() or "<no-id>"
+                    debug_log(
+                        f"[generated-local] chunk={chunk_file.name} pass={pass_name} "
+                        f"round={round_index} applying item={item_id}"
+                    )
                     item_report = _apply_item(
                         chunk_file=chunk_file,
                         theory_file=theory_file,
@@ -266,8 +463,14 @@ def run_generated_local_passes(
                         plan_item=item,
                         pass_name=pass_name,
                         manifest_verify_timeout=manifest_verify_timeout,
+                        pass_deadline_monotonic=pass_deadline_monotonic,
                     )
                     item_reports.append(item_report)
+                    debug_log(
+                        f"[generated-local] chunk={chunk_file.name} pass={pass_name} "
+                        f"round={round_index} item={item_id} applied={bool(item_report.get('applied', False))} "
+                        f"result={item_report.get('result', '')}"
+                    )
                     if bool(item_report.get("applied", False)):
                         applied = True
                         applied_item_count += 1
@@ -277,7 +480,9 @@ def run_generated_local_passes(
                 if not applied:
                     break
             per_chunk_reports.append(pass_report)
+            debug_log(f"[generated-local] chunk={chunk_file.name} pass={pass_name} done")
         chunk_reports.append({"chunk_file": str(chunk_file), "passes": per_chunk_reports})
+        debug_log(f"[generated-local] chunk={chunk_file.name} done")
 
     return build_report(
         "ok",

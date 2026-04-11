@@ -1,0 +1,95 @@
+{
+  "agenda_pressure": [
+    "Favor residual-search metatheorems that move toward finite recognition, decidability, or complexity.",
+    "Prefer canonical automata and exact witness interfaces over local booleans or cosmetic proof objects.",
+    "Use fragment work mainly when it yields intrinsic residual or candidate-tree witnesses with later automata value.",
+    "Treat verified support and counting counterexamples as pressure toward handed or residual criteria rather than ordinary support claims.",
+    "Keep separability results only when they are sharp and reusable, not just local negative sharpening."
+  ],
+  "current_bottlenecks": [
+    "No unconditional subformula theorem for outputs of residualAtomicState.",
+    "No graph-level control of every state visited on accepting residual runs.",
+    "Residual graph recognition still depends on external graph machinery rather than a closed automaton witness.",
+    "Fragment calculi still lack intrinsic residual states, graphs, and candidate-tree interfaces.",
+    "The exact same-handed threshold where residual occurrence implies acceptance is unresolved."
+  ],
+  "derived_generation": 24,
+  "desired_summary_changes": [
+    "Residual root states are uniformly subformula-bounded by the original sequent.",
+    "Accepting residual runs stay inside a finite subformula-bounded reachable region.",
+    "Residual recognition is reformulated as a closed internal branching automaton.",
+    "One-sided conservativity gains intrinsic residual-graph or candidate-tree witnesses.",
+    "Same-handed occurrence-versus-acceptance gaps are replaced by sharp residual thresholds."
+  ],
+  "important_verified_counterexamples": [
+    "Verified counterexample to: Prove a one-sided exactness theorem for ordinary support closure: if every formula in `Γ` and `A` is left-only, then `SupportClosure Γ A ↔ HandedSupportClosure Γ A`; dually, if every formula in `Γ` and `A` is ...",
+    "Verified counterexample to: Prove exact completeness of the support closure by showing `∀ (Γ : List Tp) (A : Tp), SupportClosure Γ A ↔ (Γ ⇒ A)`.",
+    "Verified counterexample to: ∀ {Γ : List Tp} {A : Tp} {t : String}, (Γ ⇒ A) → occurs_atom t A → ∃ B ∈ Γ, occurs_atom t B"
+  ],
+  "missing_bridges": [
+    "From residualAtomicState exactness to subformula control of the residual root.",
+    "From residual graph acceptance to a finite subformula-bounded reachable region.",
+    "From residual graph recognition to a self-contained branching automaton.",
+    "From translation-level one-sided conservativity to intrinsic fragment residual graphs and candidate trees.",
+    "From same-handed support counterexamples to exact residual-state acceptance criteria."
+  ],
+  "next_direction": {
+    "guidance": "Prioritize residual subformula bounds for root and run states, then internalize residual recognition as a closed branching automaton, taking fragment work mainly when it yields intrinsic residual witnesses.",
+    "label": "finite_residual_automata",
+    "rationale": "Residual exactness and graph recognition are already proved, while verified failures of ordinary support exactness and counting-style invariants show that summary-level progress now comes from finite residual control and exact same-handed residual boundaries."
+  },
+  "overexplored_patterns": [
+    "Singleton or atom-only corollaries already dominated by arbitrary-context exact theorems.",
+    "Booleans or normal forms that only package a solved iff characterization.",
+    "Fragment corollaries weaker than solved sequent-level conservativity or handed-closure transfer.",
+    "Orientation-blind support or counting claims outside exact residual or handed interfaces.",
+    "Witness refactorings that do not add finite-search control or intrinsic fragment automata."
+  ],
+  "research_agenda": {
+    "anti_goals": [
+      "Cosmetic rewrites",
+      "Unprincipled proliferation of structural rules",
+      "One-off examples",
+      "Unproductive negative statements"
+    ],
+    "canonical_targets": [
+      "A deeper understanding of completeness for $L$",
+      "The boundary between cut elimination and decidability in extensions",
+      "The interface with categorial grammar"
+    ],
+    "current_deemphasis": [
+      "already-dominated singleton, atom-only, or fragment corollaries",
+      "packaging results that only restate solved characterizations",
+      "orientation-blind support or counting claims"
+    ],
+    "current_emphasis": [
+      "finite residual control",
+      "internal recognition interfaces",
+      "intrinsic fragment witnesses"
+    ],
+    "soft_constraints": [
+      "Closeness to established notation and theory",
+      "Temporal durability"
+    ],
+    "themes": [
+      "Structural correspondences between language hierarchies and logical systems",
+      "Extraction of logical rules and complexity"
+    ],
+    "theory_reading": "The theory now has exact arbitrary-context derivability through aligned CandidateTree, HandedSupportClosure, residualAtomicState, and residual-graph interfaces, together with full one-sided conservativity at the sequent level. The frontier has shifted from extensional completeness to finite residual control: there is still no unconditional subformula bound for residual root states or for all states along accepting runs, and residual recognition is not yet internalized as a self-contained branching automaton.",
+    "valued_problem_types": [
+      "Provability relations among structural rules (reducibility)",
+      "Discovery of invertibility",
+      "Separability",
+      "Proofs of metatheorems"
+    ]
+  },
+  "summary_basis": {
+    "archived_problem_count": 43,
+    "derived_theorem_count": 24,
+    "open_problem_count": 3
+  },
+  "theory_snapshot": "The theory now has exact arbitrary-context derivability through aligned CandidateTree, HandedSupportClosure, residualAtomicState, and residual-graph interfaces, together with full one-sided conservativity at the sequent level. The frontier has shifted from extensional completeness to finite residual control: there is still no unconditional subformula bound for residual root states or for all states along accepting runs, and residual recognition is not yet internalized as a self-contained branching automaton. Verified failures of plain SupportClosure exactness, flat atom-occurrence containment, counting bounds, and same-handed ordinary-support exactness force future progress toward handed or residual boundary criteria and intrinsic fragment witnesses rather than orientation-blind support claims.",
+  "updated_at_iteration": 50,
+  "updated_at_run_id": "20260409-174042-loop",
+  "version": 1
+}

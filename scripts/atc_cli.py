@@ -226,6 +226,96 @@ def _pipeline_command(args: argparse.Namespace, config: AppConfig) -> tuple[list
     return cmd, build_worker_env(config)
 
 
+def _cycle_command(args: argparse.Namespace, config: AppConfig) -> tuple[list[str], dict[str, str]]:
+    cmd = _python_command("loop/run_cycle.py")
+    _append_flag(cmd, "--worker-command", args.worker_command)
+    _append_flag(cmd, "--worker-timeout", args.worker_timeout)
+    _append_flag(cmd, "--theory-file", args.theory_file or config.paths.theory_file)
+    _append_flag(cmd, "--derived-file", args.derived_file or config.paths.derived_file)
+    _append_flag(cmd, "--scratch-file", args.scratch_file or config.paths.scratch_file)
+    _append_flag(cmd, "--data-dir", args.data_dir or config.paths.data_dir)
+    _append_flag(
+        cmd,
+        "--formalization-memory-file",
+        args.formalization_memory_file or (config.paths.data_dir / "formalization_memory.json"),
+    )
+    _append_flag(
+        cmd,
+        "--phase-attempts-file",
+        args.phase_attempts_file or (config.paths.data_dir / "manual_main_theorem_phase_attempts.jsonl"),
+    )
+    _append_flag(cmd, "--preview-file", args.preview_file or config.paths.preview_file)
+    _append_flag(cmd, "--review-output-file", args.review_output_file or config.paths.reviewed_file)
+    _append_flag(cmd, "--review-report-file", args.review_report_file or config.paths.review_report_file)
+    _append_flag(
+        cmd,
+        "--try-at-each-step-raw-output-file",
+        args.try_at_each_step_raw_output_file or config.paths.try_at_each_step_raw_output_file,
+    )
+    _append_flag(
+        cmd,
+        "--try-at-each-step-apply-report-file",
+        args.try_at_each_step_apply_report_file or config.paths.try_at_each_step_apply_report_file,
+    )
+    _append_flag(
+        cmd,
+        "--try-at-each-step-tactic",
+        args.try_at_each_step_tactic or config.runtime.try_at_each_step_tactic,
+    )
+    _append_flag(
+        cmd,
+        "--theorem-reuse-memory-file",
+        args.theorem_reuse_memory_file or config.paths.theorem_reuse_memory_file,
+    )
+    _append_flag(cmd, "--deps-file", args.deps_file)
+    _append_flag(cmd, "--generated-root", args.generated_root)
+    _append_flag(cmd, "--manifest-file", args.manifest_file)
+    _append_flag(cmd, "--catalog-file", args.catalog_file)
+    _append_flag(cmd, "--plan-file", args.plan_file)
+    _append_flag(
+        cmd,
+        "--snapshot-root",
+        args.snapshot_root or config.paths.snapshot_root,
+    )
+    _append_flag(
+        cmd,
+        "--cycle-iterations",
+        args.cycle_iterations if args.cycle_iterations is not None else config.runtime.cycle_iterations,
+    )
+    _append_bool_flag(
+        cmd,
+        "--phase-logs",
+        config.runtime.phase_logs if args.phase_logs is None else args.phase_logs,
+    )
+    _append_bool_flag(
+        cmd,
+        "--initialize-on-start",
+        bool(args.initialize_on_start),
+    )
+    if args.skip_verify:
+        cmd.append("--skip-verify")
+    if args.skip_main_theorem:
+        cmd.append("--skip-main-theorem")
+    if args.skip_refactor:
+        cmd.append("--skip-refactor")
+    _append_flag(cmd, "--parallel-sessions", config.runtime.parallel_sessions)
+    _append_flag(cmd, "--seed-count", config.runtime.seed_count)
+    _append_flag(cmd, "--open-problem-failure-threshold", config.runtime.open_problem_failure_threshold)
+    _append_flag(cmd, "--prover-retry-budget-sec", config.runtime.prover_retry_budget_sec)
+    _append_flag(cmd, "--formalization-retry-budget-sec", config.runtime.formalization_retry_budget_sec)
+    _append_flag(cmd, "--max-same-error-streak", config.runtime.max_same_error_streak)
+    _append_flag(
+        cmd,
+        "--generated-repair-verify-timeout",
+        args.generated_repair_verify_timeout or config.runtime.generated_repair_verify_timeout,
+    )
+    _append_flag(cmd, "--batch-generator-open-target-min", args.batch_generator_open_target_min)
+    _append_flag(cmd, "--generated-local-worker-timeout", args.generated_local_worker_timeout)
+    _append_flag(cmd, "--generated-local-manifest-verify-timeout", args.generated_local_manifest_verify_timeout)
+    _append_flag(cmd, "--generated-local-max-rounds-per-pass", args.generated_local_max_rounds_per_pass)
+    return cmd, build_worker_env(config)
+
+
 def _main_theorem_command(args: argparse.Namespace, config: AppConfig) -> tuple[list[str], dict[str, str]]:
     cmd = _python_command("main_theorem/run_main_theorem_session.py")
     cmd.append("--enable-worker")
@@ -391,6 +481,43 @@ def _build_parser() -> argparse.ArgumentParser:
     _add_initialize_phase_flags(loop, default=None)
     _add_loop_tuning_flags(loop)
 
+    cycle = subparsers.add_parser("cycle", help="Run one cycle: loop -> main theorem -> refactor -> snapshot.")
+    _add_common_flags(cycle)
+    _add_worker_flags(cycle, include_refactor_task=True)
+    _add_loop_task_worker_flags(cycle)
+    cycle.add_argument("--theory-file")
+    cycle.add_argument("--derived-file")
+    cycle.add_argument("--scratch-file")
+    cycle.add_argument("--worker-command")
+    cycle.add_argument("--worker-timeout", type=int)
+    cycle.add_argument("--data-dir")
+    cycle.add_argument("--formalization-memory-file")
+    cycle.add_argument("--phase-attempts-file")
+    cycle.add_argument("--preview-file")
+    cycle.add_argument("--review-output-file")
+    cycle.add_argument("--review-report-file")
+    cycle.add_argument("--try-at-each-step-raw-output-file")
+    cycle.add_argument("--try-at-each-step-apply-report-file")
+    cycle.add_argument("--try-at-each-step-tactic")
+    cycle.add_argument("--theorem-reuse-memory-file")
+    cycle.add_argument("--deps-file")
+    cycle.add_argument("--generated-root")
+    cycle.add_argument("--manifest-file")
+    cycle.add_argument("--catalog-file")
+    cycle.add_argument("--plan-file")
+    cycle.add_argument("--snapshot-root")
+    cycle.add_argument("--cycle-iterations", type=int)
+    cycle.add_argument("--skip-verify", action="store_true")
+    cycle.add_argument("--skip-main-theorem", action="store_true")
+    cycle.add_argument("--skip-refactor", action="store_true")
+    cycle.add_argument("--initialize-on-start", action=argparse.BooleanOptionalAction, default=None)
+    cycle.add_argument("--phase-logs", action=argparse.BooleanOptionalAction, default=None)
+    cycle.add_argument("--generated-repair-verify-timeout", type=int)
+    cycle.add_argument("--batch-generator-open-target-min", type=int, default=2)
+    cycle.add_argument("--generated-local-worker-timeout", type=int)
+    cycle.add_argument("--generated-local-manifest-verify-timeout", type=int)
+    cycle.add_argument("--generated-local-max-rounds-per-pass", type=int)
+
     pipeline = subparsers.add_parser("pipeline", help="Run seed -> loop -> preview copy -> rewrite -> review.")
     _add_common_flags(pipeline)
     _add_worker_flags(pipeline, include_refactor_task=True)
@@ -523,6 +650,7 @@ def main() -> int:
     builders = {
         "seed": _seed_command,
         "loop": _loop_command,
+        "cycle": _cycle_command,
         "pipeline": _pipeline_command,
         "main-theorem": _main_theorem_command,
         "rewrite": _rewrite_command,

@@ -18,6 +18,9 @@
 
 ## planning_policy
 - Prioritize exact duplicate groups before other edits.
+- Decide quickly whether a concrete, low-risk item exists.
+- If no executor-ready item is apparent after a short scan of the cluster, return `noop` instead of continuing to search.
+- Return `stuck` only when the input is inconsistent, ambiguous, or cannot support a reliable local plan.
 
 ## output_schema
 ```json

@@ -2842,13 +2842,15 @@ def run_parallel_loop(
     pending_priority_refresh_error_for_report = ""
     stop_requested = False
     interrupt_notice_emitted = False
+    iteration_offset = int(getattr(args, "iteration_offset", 0) or 0)
 
     initial_open_rows = [normalize_open_problem_row(row) for row in read_jsonl(open_path)]
     if needs_bootstrap_priority_refresh(initial_open_rows) or not initial_open_rows:
+        bootstrap_iteration = iteration_offset + 1
         emit_phase_log(
             args.phase_logs,
             "open_problem_priority_refresh",
-            iteration=1,
+            iteration=bootstrap_iteration,
             tracked_problem_count=len(initial_open_rows) + len(read_archived_problem_rows(data_dir)),
             derived_theorem_count=len(derived_entries),
             reason="bootstrap",
@@ -2860,7 +2862,7 @@ def run_parallel_loop(
                     prioritize_worker_settings=prioritize_open_problems_worker_settings,
                     prioritizer_prompt_file=PRIORITIZE_OPEN_PROBLEMS_PROMPT_FILE,
                     derived_entries=derived_entries,
-                    current_iteration=1,
+                    current_iteration=bootstrap_iteration,
                     failure_threshold=args.open_problem_failure_threshold,
                     run_id=run_id,
                     theory_state_history_path=artifact_paths["theory_state_history"],
@@ -2870,7 +2872,7 @@ def run_parallel_loop(
                     batch_generator_seed_count=args.seed_count,
                     batch_generator_open_target_min=BATCH_GENERATOR_OPEN_TARGET_MIN,
                     reserved_problem_ids=reserved_problem_ids,
-                    phase_logger=(lambda **fields: emit_phase_log(args.phase_logs, iteration=1, **fields)),
+                    phase_logger=(lambda **fields: emit_phase_log(args.phase_logs, iteration=bootstrap_iteration, **fields)),
                 )
                 priority_refresh_ran = bool(refresh_result.get("priority_refresh_ran", False))
                 priority_refresh_error = str(refresh_result.get("priority_refresh_error", ""))
@@ -3006,7 +3008,7 @@ def run_parallel_loop(
                 emit_phase_log(
                     args.phase_logs,
                     "open_problem_priority_refresh",
-                    iteration=launched_iterations + 1,
+                    iteration=iteration_offset + launched_iterations + 1,
                     tracked_problem_count=len(tracked_rows),
                     derived_theorem_count=len(derived_entries_snapshot),
                 )
@@ -3017,7 +3019,7 @@ def run_parallel_loop(
                             prioritize_worker_settings=prioritize_open_problems_worker_settings,
                             prioritizer_prompt_file=PRIORITIZE_OPEN_PROBLEMS_PROMPT_FILE,
                             derived_entries=derived_entries,
-                            current_iteration=launched_iterations + 1,
+                            current_iteration=iteration_offset + launched_iterations + 1,
                             failure_threshold=args.open_problem_failure_threshold,
                             run_id=run_id,
                             theory_state_history_path=artifact_paths["theory_state_history"],
@@ -3027,7 +3029,7 @@ def run_parallel_loop(
                             batch_generator_seed_count=args.seed_count,
                             batch_generator_open_target_min=BATCH_GENERATOR_OPEN_TARGET_MIN,
                             reserved_problem_ids=reserved_problem_ids,
-                            phase_logger=(lambda **fields: emit_phase_log(args.phase_logs, iteration=launched_iterations + 1, **fields)),
+                            phase_logger=(lambda **fields: emit_phase_log(args.phase_logs, iteration=iteration_offset + launched_iterations + 1, **fields)),
                         )
                         priority_refresh_ran = bool(refresh_result.get("priority_refresh_ran", False))
                         priority_refresh_error = str(refresh_result.get("priority_refresh_error", ""))
@@ -3049,7 +3051,7 @@ def run_parallel_loop(
                     emit_phase_log(
                         args.phase_logs,
                         "open_problem_priority_refresh_error",
-                        iteration=launched_iterations + 1,
+                        iteration=iteration_offset + launched_iterations + 1,
                         error=priority_refresh_error,
                     )
                     pending_priority_refresh_error_for_report = priority_refresh_error
@@ -3070,7 +3072,7 @@ def run_parallel_loop(
                 if picked is None:
                     break
                 launched_iterations += 1
-                current_iteration = launched_iterations
+                current_iteration = iteration_offset + launched_iterations
                 problem_id = str(picked.get("id", "")).strip()
                 reserved_problem_ids.add(problem_id)
                 used_slots = {int(meta.get("slot_index", 0) or 0) for meta in problem_futures.values()}
@@ -3256,6 +3258,7 @@ def main() -> None:
         help=retry_budget_help,
     )
     parser.add_argument("--max-same-error-streak", type=int, default=DEFAULT_MAX_SAME_ERROR_STREAK)
+    parser.add_argument("--iteration-offset", type=int, default=0)
     args = parser.parse_args()
     if args.max_iterations is not None and args.max_iterations < 0:
         raise ValueError("--max-iterations must be >= 0")
@@ -3271,6 +3274,8 @@ def main() -> None:
         raise ValueError("--formalization-retry-budget-sec must be >= 0")
     if args.max_same_error_streak < 1:
         raise ValueError("--max-same-error-streak must be >= 1")
+    if args.iteration_offset < 0:
+        raise ValueError("--iteration-offset must be >= 0")
     data_dir = Path(DATA_DIR_PATH)
     scratch_file = Path(SCRATCH_FILE_PATH)
     memory_path = Path(FORMALIZATION_MEMORY_FILE_PATH)

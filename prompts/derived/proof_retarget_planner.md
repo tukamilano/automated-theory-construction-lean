@@ -19,6 +19,9 @@
 ## planning_policy
 - Prefer items with low risk and clear dominance/subsumption structure.
 - Prefer explicit reuse path over speculative proof reshaping.
+- Decide quickly whether a concrete, local retarget is available.
+- If no safe theorem-to-theorem reuse path is apparent after a short scan, return `noop` instead of continuing to search.
+- Return `stuck` only when the input is inconsistent, ambiguous, or cannot support a reliable local plan.
 
 ## output_schema
 ```json

@@ -18,6 +18,7 @@ GENERATED_ROOT ?= AutomatedTheoryConstruction/Generated
 GENERATED_MANIFEST_FILE ?= $(GENERATED_ROOT)/Manifest.lean
 GENERATED_CATALOG_FILE ?= $(GENERATED_ROOT)/catalog.json
 GENERATED_LOCAL_MANIFEST_VERIFY_TIMEOUT ?= 300
+SNAPSHOT_ROOT ?= snapshots
 
 WORKER_COMMAND ?= uv run scripts/codex_worker.py
 WORKER_TIMEOUT ?= 420
@@ -25,6 +26,7 @@ CODEX_TIMEOUT ?= 390
 
 SEED_ARGS ?=
 LOOP_ARGS ?=
+CYCLE_ARGS ?=
 PIPELINE_ARGS ?=
 MAIN_THEOREM_ARGS ?=
 REWRITE_ARGS ?=
@@ -32,7 +34,7 @@ REVIEW_ARGS ?=
 MATERIALIZE_ARGS ?=
 GENERATED_LOCAL_ARGS ?=
 
-.PHONY: help build check check-theory check-derived check-scratch smoke seed loop loop-continue pipeline main-theorem rewrite review refactor-to-generated
+.PHONY: help build check check-theory check-derived check-scratch smoke seed loop loop-continue cycle pipeline main-theorem rewrite review refactor-to-generated
 
 help:
 	@printf '%s\n' \
@@ -46,6 +48,7 @@ help:
 		'  make seed          - generate seeds.jsonl via scripts/atc_cli.py seed' \
 		'  make loop          - run the default worker loop via scripts/atc_cli.py loop' \
 		'  make loop-continue - same as loop, but keep current runtime state' \
+		'  make cycle         - run one cycle: loop -> main theorem -> refactor -> snapshot' \
 		'  make pipeline      - run seed -> loop -> rewrite -> review via scripts/atc_cli.py pipeline' \
 		'  make main-theorem  - run a one-shot main theorem session via scripts/atc_cli.py main-theorem' \
 		'  make rewrite       - run scripts/atc_cli.py rewrite' \
@@ -59,6 +62,7 @@ help:
 		'  THEORY_FILE should point to the Theory.lean entry module' \
 		'  SEED_ARGS="--context-file path/to/context.tex --seed-count 4"' \
 		'  LOOP_ARGS="--max-iterations 40"' \
+		'  CYCLE_ARGS="--cycle-iterations 20 --snapshot-root snapshots"' \
 		'  MAIN_THEOREM_ARGS="--skip-verify --current-iteration 0"' \
 		'  PIPELINE_ARGS="--context-file path/to/context.tex --max-iterations 40"'
 
@@ -100,6 +104,14 @@ loop-continue:
 		--codex-timeout "$(CODEX_TIMEOUT)" \
 		--no-initialize-on-start \
 		$(LOOP_ARGS)
+
+cycle:
+	$(ATC) cycle \
+		--worker-command "$(WORKER_COMMAND)" \
+		--worker-timeout "$(WORKER_TIMEOUT)" \
+		--codex-timeout "$(CODEX_TIMEOUT)" \
+		--snapshot-root $(SNAPSHOT_ROOT) \
+		$(CYCLE_ARGS)
 
 pipeline:
 	$(ATC) pipeline \
@@ -143,8 +155,9 @@ refactor-to-generated:
 		--input-file $(PREVIEW_FILE) \
 		--output-file $(REVIEWED_FILE) \
 		$(REVIEW_ARGS)
+	cp $(REVIEWED_FILE) $(DERIVED_FILE)
 	$(ATC) materialize-generated \
-		--derived-file $(REVIEWED_FILE) \
+		--derived-file $(DERIVED_FILE) \
 		--deps-file $(DEPS_FILE) \
 		--generated-root $(GENERATED_ROOT) \
 		--manifest-file $(GENERATED_MANIFEST_FILE) \

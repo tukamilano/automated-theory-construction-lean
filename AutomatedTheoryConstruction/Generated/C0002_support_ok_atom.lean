@@ -176,6 +176,20 @@ inductive AtomicCandidateTree : List Tp → String → Prop where
       (hrec : AtomicCandidateTree (Γ₁ ++ [B] ++ R) s) :
       AtomicCandidateTree Γ s
 
+lemma candidate_rdiv_context_eq
+    {Γ L Δ Λ : List Tp} {A B : Tp}
+    (hc : Cand.rdiv L B A Δ Λ ∈ candidates Γ) :
+    Γ = L ++ [B ⧸ A] ++ Δ ++ Λ := by
+  symm
+  simpa using (candidates_list_degree (Γ := Γ) (c := Cand.rdiv L B A Δ Λ) hc)
+
+lemma candidate_ldiv_context_eq
+    {Γ Γ₁ Δ R : List Tp} {A B : Tp}
+    (hc : Cand.ldiv Γ₁ Δ A B R ∈ candidates Γ) :
+    Γ = Γ₁ ++ Δ ++ [A ⧹ B] ++ R := by
+  symm
+  simpa using (candidates_list_degree (Γ := Γ) (c := Cand.ldiv Γ₁ Δ A B R) hc)
+
 /-- Atomic candidate trees characterize atomic sequents. -/
 theorem thm_atomic_candidate_tree_iff_sequent_000030 : ∀ (Γ : List Tp) (s : String), AtomicCandidateTree Γ s ↔ (Γ ⇒ # s) := by
   intro Γ s
@@ -185,16 +199,10 @@ theorem thm_atomic_candidate_tree_iff_sequent_000030 : ∀ (Γ : List Tp) (s : S
     | base s =>
         exact thm_singleton_atomic_sequent_iff_000011.mpr rfl
     | step_rdiv Γ L Δ Λ A B s hc harg hrec ih =>
-        have hΓ : Γ = L ++ [B ⧸ A] ++ Δ ++ Λ := by
-          symm
-          simpa using (candidates_list_degree (Γ := Γ) (c := Cand.rdiv L B A Δ Λ) hc)
-        subst Γ
+        rw [candidate_rdiv_context_eq hc]
         exact Sequent.rdiv_l harg ih
     | step_ldiv Γ Γ₁ Δ R A B s hc harg hrec ih =>
-        have hΓ : Γ = Γ₁ ++ Δ ++ [A ⧹ B] ++ R := by
-          symm
-          simpa using (candidates_list_degree (Γ := Γ) (c := Cand.ldiv Γ₁ Δ A B R) hc)
-        subst Γ
+        rw [candidate_ldiv_context_eq hc]
         exact Sequent.ldiv_l harg ih
   · have hcomplete : ∀ (Γ : List Tp) (s : String), (Γ ⇒ # s) → AtomicCandidateTree Γ s := by
       intro Γ s
@@ -329,16 +337,10 @@ theorem thm_candidate_tree_iff_sequent_000038 : ∀ (Γ : List Tp) (A : Tp), Can
     | base s =>
         exact thm_singleton_atomic_sequent_iff_000011.mpr rfl
     | step_rdiv Γ L Δ Λ A B s hc harg hrec ih =>
-        have hΓ : Γ = L ++ [B ⧸ A] ++ Δ ++ Λ := by
-          symm
-          simpa using (candidates_list_degree (Γ := Γ) (c := Cand.rdiv L B A Δ Λ) hc)
-        subst Γ
+        rw [candidate_rdiv_context_eq hc]
         exact Sequent.rdiv_l harg ih
     | step_ldiv Γ Γ₁ Δ R A B s hc harg hrec ih =>
-        have hΓ : Γ = Γ₁ ++ Δ ++ [A ⧹ B] ++ R := by
-          symm
-          simpa using (candidates_list_degree (Γ := Γ) (c := Cand.ldiv Γ₁ Δ A B R) hc)
-        subst Γ
+        rw [candidate_ldiv_context_eq hc]
         exact Sequent.ldiv_l harg ih
     | ldiv_r Γ A B hne hrec ih =>
         exact Sequent.ldiv_r hne ih

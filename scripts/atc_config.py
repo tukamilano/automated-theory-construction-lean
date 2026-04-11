@@ -36,6 +36,7 @@ class PathsConfig:
     prompt_dir: Path
     log_dir: Path
     theorem_reuse_memory_file: Path
+    snapshot_root: Path
 
 
 @dataclass
@@ -60,6 +61,7 @@ class RuntimeConfig:
     initialize_on_start: bool = True
     phase_logs: bool = True
     seed_count: int = 4
+    cycle_iterations: int = 20
     max_iterations: int | None = None
     parallel_sessions: int = 1
     run_seed: bool = True
@@ -390,6 +392,12 @@ def load_app_config(args: Any) -> tuple[AppConfig, dict[str, str]]:
             default="data/theorem_reuse_memory.json",
             label="paths.theorem_reuse_memory_file",
         ),
+        snapshot_root=choose_path(
+            cli_names=("snapshot_root",),
+            file_keys=("paths", "snapshot_root"),
+            default="snapshots",
+            label="paths.snapshot_root",
+        ),
     )
 
     task_configs: dict[str, WorkerTaskConfig] = {}
@@ -497,6 +505,15 @@ def load_app_config(args: Any) -> tuple[AppConfig, dict[str, str]]:
                 default=4,
                 minimum=1,
                 label="runtime.seed_count",
+            )
+        ),
+        cycle_iterations=int(
+            choose_int(
+                cli_names=("cycle_iterations",),
+                file_keys=("runtime", "cycle_iterations"),
+                default=20,
+                minimum=1,
+                label="runtime.cycle_iterations",
             )
         ),
         max_iterations=choose_int(

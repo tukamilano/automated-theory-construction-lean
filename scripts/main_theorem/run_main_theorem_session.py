@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import sys
 import threading
@@ -33,6 +34,7 @@ def main() -> None:
     parser.add_argument("--data-dir", default="data")
     parser.add_argument("--formalization-memory-file", default="data/formalization_memory.json")
     parser.add_argument("--phase-attempts-file", default="data/manual_main_theorem_phase_attempts.jsonl")
+    parser.add_argument("--report-file")
     parser.add_argument("--run-id", default="manual-main-theorem-check")
     parser.add_argument("--current-iteration", type=int, default=0)
     parser.add_argument("--phase-logs", action=argparse.BooleanOptionalAction, default=True)
@@ -154,7 +156,10 @@ def main() -> None:
         state_lock=threading.Lock(),
         derived_runtime_state={"generation": 0},
     )
-    print(report)
+    report_json = json.dumps(report, ensure_ascii=False)
+    if args.report_file:
+        Path(args.report_file).write_text(report_json + "\n", encoding="utf-8")
+    print(report_json)
 
 
 if __name__ == "__main__":

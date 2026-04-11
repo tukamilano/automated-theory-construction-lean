@@ -20,6 +20,7 @@ from generated_library import DEFAULT_GENERATED_CATALOG
 from generated_library import DEFAULT_GENERATED_MANIFEST
 from generated_library import DEFAULT_GENERATED_ROOT
 from generated_library import ensure_generated_scaffold
+from generated_library import iter_generated_chunk_files
 from generated_library import render_generated_chunk
 from generated_library import write_generated_catalog
 from generated_library import write_generated_manifest
@@ -30,6 +31,7 @@ from plan_derived_chunks import build_chunk_plan
 DERIVED_TEMPLATE = (
     "import Mathlib\n"
     "import AutomatedTheoryConstruction.Theory\n\n"
+    "import AutomatedTheoryConstruction.Generated.Manifest\n\n"
     "set_option autoImplicit false\n\n"
     "namespace AutomatedTheoryConstruction\n\n"
     "open Mathling.Lambek.ProductFree\n"
@@ -196,6 +198,52 @@ def _slice_chunk_body(derived_text: str, declarations: list[dict[str, Any]], sta
     return derived_text[start_decl["start_offset"] : end_decl["end_offset"]].strip() + "\n"
 
 
+def _extract_declaration_blocks(source_text: str) -> list[str]:
+    try:
+        declarations = _collect_declaration_spans(source_text)
+    except ValueError as exc:
+        if "supported declarations" in str(exc):
+            return []
+        raise
+    blocks: list[str] = []
+    for decl in declarations:
+        block = source_text[int(decl["start_offset"]) : int(decl["end_offset"])].strip()
+        if block:
+            blocks.append(block)
+    return blocks
+
+
+def _render_materialized_derived(blocks: list[str]) -> str:
+    body = "\n\n".join(blocks).strip()
+    parts = [
+        "import Mathlib",
+        "import AutomatedTheoryConstruction.Theory",
+        "",
+        "set_option autoImplicit false",
+        "",
+        "namespace AutomatedTheoryConstruction",
+        "",
+        "open Mathling.Lambek.ProductFree",
+        "open scoped Mathling.Lambek.ProductFree",
+        "",
+    ]
+    if body:
+        parts.append(body)
+        parts.append("")
+    parts.append("end AutomatedTheoryConstruction")
+    parts.append("")
+    return "\n".join(parts)
+
+
+def _materialize_library_source(*, generated_root: Path, derived_file: Path) -> str:
+    blocks: list[str] = []
+    for chunk_file in iter_generated_chunk_files(generated_root):
+        blocks.extend(_extract_declaration_blocks(chunk_file.read_text(encoding="utf-8")))
+    if derived_file.exists():
+        blocks.extend(_extract_declaration_blocks(derived_file.read_text(encoding="utf-8")))
+    return _render_materialized_derived(blocks)
+
+
 def _run_manifest_build(timeout_sec: int | None) -> dict[str, Any]:
     try:
         completed = subprocess.run(
@@ -262,12 +310,23 @@ def materialize_derived_to_generated(
     )
     dependency_report: dict[str, Any] | None = None
     if refresh_dependencies:
+        materialized_source = _materialize_library_source(
+            generated_root=generated_root,
+            derived_file=derived_file,
+        )
+        derived_file.write_text(materialized_source, encoding="utf-8")
         dependency_report = extract_derived_dependencies(
             derived_file=derived_file,
             output_file=deps_file,
             depth=deps_depth,
         )
-    derived_text = derived_file.read_text(encoding="utf-8")
+        derived_text = materialized_source
+    else:
+        derived_text = _materialize_library_source(
+            generated_root=generated_root,
+            derived_file=derived_file,
+        )
+        derived_file.write_text(derived_text, encoding="utf-8")
     declarations = _collect_declaration_spans(derived_text)
     plan = build_chunk_plan(
         derived_file=derived_file,

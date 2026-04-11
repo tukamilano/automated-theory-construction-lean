@@ -1,0 +1,78 @@
+{
+  "theory_reading": "The current theory is no longer mainly about extensional completeness through ordinary support-style interfaces. It is becoming a structural theory of residual witnesses, exact recognition interfaces, and one-sided conservativity, with the frontier now centered on finite residual control and internal recognition machinery rather than orientation-blind support claims. The main question is how to turn already exact residual interfaces into durable structural criteria that look like metatheorem-shaping boundaries rather than a pile of local equivalences.",
+  "keep": [
+    "Structural correspondences between language hierarchies and logical systems",
+    "Extraction of logical rules and complexity",
+    "Temporal durability",
+    "Closeness to established notation and theory"
+  ],
+  "focus_now": [
+    {
+      "label": "finite_residual_control",
+      "thesis": "Treat finite residual control as the main structural invariant that could reorganize the current theory.",
+      "why_now": "The theory snapshot says exact residual and graph interfaces already exist, while desired summary changes emphasize subformula-bounded root and run control and a finite reachable region.",
+      "valued_problem_types": [
+        "Proofs of metatheorems",
+        "Extraction of logical rules and complexity"
+      ],
+      "target_result_shapes": [
+        "subformula bounds for residual root states",
+        "finite reachable-region theorems for accepting residual runs",
+        "criteria turning residual exactness into finite-search control"
+      ]
+    },
+    {
+      "label": "internal_recognition_interfaces",
+      "thesis": "Refine the agenda toward self-contained internal recognition or witness frameworks rather than external graph packaging.",
+      "why_now": "Both the theory snapshot and the missing-bridges list point to reformulating residual recognition as a closed internal branching automaton and to replacing external graph dependence with intrinsic witnesses.",
+      "valued_problem_types": [
+        "Exact correspondences with language classes",
+        "Proofs of metatheorems"
+      ],
+      "target_result_shapes": [
+        "branching automaton style internal recognition theorems",
+        "intrinsic residual witness interfaces",
+        "closed recognition formalisms replacing external graph machinery"
+      ]
+    },
+    {
+      "label": "sharp_handed_boundaries",
+      "thesis": "Use handed and residual criteria to formulate exact boundaries that replace broad support-style statements.",
+      "why_now": "Verified counterexamples rule out ordinary SupportClosure exactness, flat atom-occurrence containment, counting bounds, and same-handed ordinary-support exactness, so the productive direction is now sharp boundary criteria rather than generic support claims.",
+      "valued_problem_types": [
+        "Separability",
+        "Discovery of invertibility"
+      ],
+      "target_result_shapes": [
+        "exact same-handed occurrence-versus-acceptance thresholds",
+        "criteria distinguishing residual acceptance from weaker support notions",
+        "boundary theorems explaining why orientation-blind support fails"
+      ]
+    }
+  ],
+  "deemphasize_now": [
+    {
+      "pattern": "orientation-blind support or counting claims stated without exact residual or handed interfaces",
+      "reason": "The theory state already records verified failures and overexploration in this direction, so such claims are unlikely to rewrite the top-level summary."
+    },
+    {
+      "pattern": "local witness refactorings that do not add finite-search control or internal automata structure",
+      "reason": "These may clean up existing exactness statements but do not advance the theory toward durable structural criteria."
+    },
+    {
+      "pattern": "singleton, atom-only, or fragment corollaries already dominated by arbitrary-context or sequent-level exactness",
+      "reason": "The overexplored-pattern list indicates that these are already structurally subsumed and no longer agenda-defining."
+    }
+  ],
+  "boundary_evidence": [
+    "Ordinary SupportClosure exactness is not the right global frame; future agenda should be phrased through residual or handed criteria instead.",
+    "Flat atom-occurrence and counting-style bounds are not reliable structural summaries of derivability in the current setting.",
+    "Same-handed support phenomena need exact thresholds or converse failures, not broader support reformulations."
+  ],
+  "agenda_guardrails": [
+    "Keep the working agenda at the level of theorem families and structural interfaces, not concrete next lemmas.",
+    "Prefer themes that would still matter if several nearby proof attempts fail.",
+    "Use counterexamples to sharpen the framing of the theory, not to accumulate isolated negative statements.",
+    "Do not let tactical next-step guidance replace the higher-level reading of what theory is being built."
+  ]
+}

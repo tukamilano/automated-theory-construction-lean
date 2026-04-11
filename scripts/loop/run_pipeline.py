@@ -18,6 +18,7 @@ DEFAULT_REVIEWED = Path("AutomatedTheoryConstruction/Derived.refactored.reviewed
 DEFAULT_REVIEW_REPORT = Path("AutomatedTheoryConstruction/Derived.refactored.reviewed.report.json")
 DEFAULT_TRY_AT_EACH_STEP_RAW = Path("AutomatedTheoryConstruction/Derived.tryAtEachStep.json")
 DEFAULT_TRY_AT_EACH_STEP_REPORT = Path("AutomatedTheoryConstruction/Derived.tryAtEachStep.apply_report.json")
+DEFAULT_REFACTOR_ARTIFACT_DIR = Path("data/pipeline_artifacts")
 LEAN_BUILD_TARGETS = (
     "AutomatedTheoryConstruction.Theory",
     "AutomatedTheoryConstruction.Derived",
@@ -41,6 +42,12 @@ def cleanup_pipeline_artifacts(paths: list[str]) -> None:
             continue
         seen.add(path)
         path.unlink(missing_ok=True)
+
+
+def _resolve_refactor_artifact_path(*, raw_path: str, default_path: Path, artifact_dir: Path) -> Path:
+    if raw_path == str(default_path):
+        return artifact_dir / default_path.name
+    return Path(raw_path)
 
 
 def run_stage(
@@ -257,6 +264,7 @@ def _add_path_flags(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--review-report-file", default=str(DEFAULT_REVIEW_REPORT))
     parser.add_argument("--try-at-each-step-raw-output-file", default=str(DEFAULT_TRY_AT_EACH_STEP_RAW))
     parser.add_argument("--try-at-each-step-apply-report-file", default=str(DEFAULT_TRY_AT_EACH_STEP_REPORT))
+    parser.add_argument("--refactor-artifact-dir")
 
 
 def _add_rewrite_and_review_flags(parser: argparse.ArgumentParser) -> None:
@@ -301,6 +309,41 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
+    refactor_artifact_dir = (
+        Path(args.refactor_artifact_dir)
+        if args.refactor_artifact_dir
+        else DEFAULT_REFACTOR_ARTIFACT_DIR
+    )
+    preview_file = _resolve_refactor_artifact_path(
+        raw_path=args.preview_file,
+        default_path=DEFAULT_PREVIEW,
+        artifact_dir=refactor_artifact_dir,
+    )
+    review_output_file = _resolve_refactor_artifact_path(
+        raw_path=args.review_output_file,
+        default_path=DEFAULT_REVIEWED,
+        artifact_dir=refactor_artifact_dir,
+    )
+    review_report_file = _resolve_refactor_artifact_path(
+        raw_path=args.review_report_file,
+        default_path=DEFAULT_REVIEW_REPORT,
+        artifact_dir=refactor_artifact_dir,
+    )
+    raw_output_file = _resolve_refactor_artifact_path(
+        raw_path=args.try_at_each_step_raw_output_file,
+        default_path=DEFAULT_TRY_AT_EACH_STEP_RAW,
+        artifact_dir=refactor_artifact_dir,
+    )
+    apply_report_file = _resolve_refactor_artifact_path(
+        raw_path=args.try_at_each_step_apply_report_file,
+        default_path=DEFAULT_TRY_AT_EACH_STEP_REPORT,
+        artifact_dir=refactor_artifact_dir,
+    )
+    args.preview_file = str(preview_file)
+    args.review_output_file = str(review_output_file)
+    args.review_report_file = str(review_report_file)
+    args.try_at_each_step_raw_output_file = str(raw_output_file)
+    args.try_at_each_step_apply_report_file = str(apply_report_file)
 
     if args.initialize_on_start and not args.dry_run:
         cleanup_pipeline_artifacts(
@@ -338,6 +381,7 @@ def main() -> int:
             )
 
     require_success("main-loop", run_stage("main-loop", loop_cmd, dry_run=args.dry_run))
+    refactor_artifact_dir.mkdir(parents=True, exist_ok=True)
     prepare_preview_file(DEFAULT_DERIVED, Path(args.preview_file), dry_run=args.dry_run)
 
     if args.run_refactor_pass_1_5:
@@ -381,7 +425,8 @@ def main() -> int:
             else ""
         )
         + f"- reviewed output: {args.review_output_file}\n"
-        + f"- review report: {args.review_report_file}"
+        + f"- review report: {args.review_report_file}\n"
+        + f"- refactor artifact dir: {refactor_artifact_dir}"
     )
     print(summary, file=sys.stderr, flush=True)
     return 0

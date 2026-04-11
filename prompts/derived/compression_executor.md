@@ -20,6 +20,9 @@
 - Follow `plan_item.kind`.
 - If `repair_round > 0`, use `lean_diagnostics` for minimal incremental repair.
 - `change_notes` should describe only concrete local edits.
+- Decide quickly whether the requested local edit is actually safe and mechanical.
+- If no safe local edit is clear, return `noop` promptly with the input module unchanged.
+- If the request cannot be executed reliably because the plan item is inconsistent or underspecified, return `stuck` promptly instead of exploring speculative rewrites.
 
 ## output_schema
 ```json
