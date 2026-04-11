@@ -33,8 +33,8 @@ theorem thm_residual_state_subformula_occurs_000061 : ∀ {Γ Δ : List Tp} {A :
       rcases hres with ⟨rfl, rfl⟩
       constructor
       · intro B hB
-        exact ⟨B, by simp [hB], Subformula.refl B⟩
-      · exact ⟨# t, by simp, by simp [occurs_atom]⟩
+        exact ⟨B, by exact List.mem_append_left [#t] hB, Subformula.refl B⟩
+      · exact ⟨# t, by exact List.mem_concat_self, by simp [occurs_atom]⟩
   | ldiv B C ihB ihC =>
       cases Γ with
       | nil =>
@@ -48,22 +48,22 @@ theorem thm_residual_state_subformula_occurs_000061 : ∀ {Γ Δ : List Tp} {A :
             simp [List.mem_append] at hYmem
             rcases hYmem with hYeq | hYeq | hYmem | hYeq
             · subst Y
-              exact ⟨B ⧹ C, by simp, Subformula.ldiv_left hXY⟩
+              exact ⟨B ⧹ C, by exact List.mem_concat_self, Subformula.ldiv_left hXY⟩
             · subst Y
               exact ⟨A, by simp, hXY⟩
             · exact ⟨Y, by simp [List.mem_append, hYmem], hXY⟩
             · subst Y
-              exact ⟨B ⧹ C, by simp, Subformula.ldiv_right hXY⟩
+              exact ⟨B ⧹ C, by exact List.mem_concat_self, Subformula.ldiv_right hXY⟩
           · rcases hocc with ⟨Y, hYmem, hYs⟩
             simp [List.mem_append] at hYmem
             rcases hYmem with hYeq | hYeq | hYmem | hYeq
             · subst Y
-              exact ⟨B ⧹ C, by simp, by simp [occurs_atom, hYs]⟩
+              exact ⟨B ⧹ C, by exact List.mem_concat_self, by simp [occurs_atom, hYs]⟩
             · subst Y
               exact ⟨A, by simp, hYs⟩
             · exact ⟨Y, by simp [List.mem_append, hYmem], hYs⟩
             · subst Y
-              exact ⟨B ⧹ C, by simp, by simp [occurs_atom, hYs]⟩
+              exact ⟨B ⧹ C, by exact List.mem_concat_self, by simp [occurs_atom, hYs]⟩
   | rdiv C B ihC ihB =>
       cases Γ with
       | nil =>
@@ -80,9 +80,9 @@ theorem thm_residual_state_subformula_occurs_000061 : ∀ {Γ Δ : List Tp} {A :
               exact ⟨A, by simp, hXY⟩
             · exact ⟨Y, by simp [List.mem_append, hYmem], hXY⟩
             · subst Y
-              exact ⟨C ⧸ B, by simp, Subformula.rdiv_right hXY⟩
+              exact ⟨C ⧸ B, by exact List.mem_concat_self, Subformula.rdiv_right hXY⟩
             · subst Y
-              exact ⟨C ⧸ B, by simp, Subformula.rdiv_left hXY⟩
+              exact ⟨C ⧸ B, by exact List.mem_concat_self, Subformula.rdiv_left hXY⟩
           · rcases hocc with ⟨Y, hYmem, hYs⟩
             simp [List.mem_append] at hYmem
             rcases hYmem with hYeq | hYmem | hYeq | hYeq
@@ -90,15 +90,15 @@ theorem thm_residual_state_subformula_occurs_000061 : ∀ {Γ Δ : List Tp} {A :
               exact ⟨A, by simp, hYs⟩
             · exact ⟨Y, by simp [List.mem_append, hYmem], hYs⟩
             · subst Y
-              exact ⟨C ⧸ B, by simp, by simp [occurs_atom, hYs]⟩
+              exact ⟨C ⧸ B, by exact List.mem_concat_self, by simp [occurs_atom, hYs]⟩
             · subst Y
-              exact ⟨C ⧸ B, by simp, by simp [occurs_atom, hYs]⟩
+              exact ⟨C ⧸ B, by exact List.mem_concat_self, by simp [occurs_atom, hYs]⟩
 
 
 lemma subformula_trans {A B C : Tp} : Subformula A B → Subformula B C → Subformula A C := by
   intro hAB hBC
   induction hBC with
-  | refl => exact hAB
+  | refl => exact ((fun a => hAB) ∘ fun a => A) A
   | ldiv_left h ih => exact Subformula.ldiv_left ih
   | ldiv_right h ih => exact Subformula.ldiv_right ih
   | rdiv_left h ih => exact Subformula.rdiv_left ih
@@ -114,15 +114,13 @@ theorem thm_residual_reachable_subformula_invariant_000065 : ∀ (Γ Δ : List T
     (thm_residual_state_subformula_occurs_000061 (Γ := Γ) (Δ := Δ) (A := A) (s := s) hres).1
   induction hreach with
   | refl =>
-      constructor
-      · rfl
-      · simpa using hstart
+      exact And.symm ⟨hstart, rfl⟩
   | tail hreach hstep ih =>
       rcases ih with ⟨hs, hsub⟩
       cases hstep with
       | rdiv Γ0 L Δ0 Λ A0 B0 s0 hc harg =>
           constructor
-          · exact hs
+          · exact (String.append_left_inj s).mp (congrFun (congrArg HAppend.hAppend hs) s)
           · intro X hX
             have hctx : Γ0 = L ++ [B0 ⧸ A0] ++ Δ0 ++ Λ :=
               cand_rdiv_context_eq (Γ := Γ0) (L := L) (Δ := Δ0) (Λ := Λ) (A := A0) (B := B0) hc
@@ -132,7 +130,7 @@ theorem thm_residual_reachable_subformula_invariant_000065 : ∀ (Γ Δ : List T
             · have hmem : X ∈ Γ0 := by
                 rw [hctx]
                 simp [List.mem_append, hX]
-              exact hsub X hmem
+              exact Exists.imp (fun a a_1 => a_1) (hsub X hmem)
             · have hmem : Tp.rdiv X A0 ∈ Γ0 := by
                 rw [hctx]
                 simp [List.mem_append]
@@ -140,11 +138,11 @@ theorem thm_residual_reachable_subformula_invariant_000065 : ∀ (Γ Δ : List T
               exact ⟨C, hC, subformula_trans (Subformula.rdiv_left (Subformula.refl X)) hSC⟩
             · have hmem : X ∈ Γ0 := by
                 rw [hctx]
-                simp [List.mem_append, hX]
-              exact hsub X hmem
+                exact List.mem_append_right (L ++ [B0 / A0] ++ Δ0) hX
+              exact Exists.imp (fun a a_1 => a_1) (hsub X hmem)
       | ldiv Γ0 Γ1 Δ0 R A0 B0 s0 hc harg =>
           constructor
-          · exact hs
+          · exact (String.append_left_inj s).mp (congrFun (congrArg HAppend.hAppend hs) s)
           · intro X hX
             have hctx : Γ0 = Γ1 ++ Δ0 ++ [A0 ⧹ B0] ++ R := by
               symm
@@ -155,7 +153,7 @@ theorem thm_residual_reachable_subformula_invariant_000065 : ∀ (Γ Δ : List T
             · have hmem : X ∈ Γ0 := by
                 rw [hctx]
                 simp [List.mem_append, hX]
-              exact hsub X hmem
+              exact Exists.imp (fun a a_1 => a_1) (hsub X hmem)
             · have hmem : Tp.ldiv A0 X ∈ Γ0 := by
                 rw [hctx]
                 simp [List.mem_append]
@@ -163,8 +161,8 @@ theorem thm_residual_reachable_subformula_invariant_000065 : ∀ (Γ Δ : List T
               exact ⟨C, hC, subformula_trans (Subformula.ldiv_right (Subformula.refl X)) hSC⟩
             · have hmem : X ∈ Γ0 := by
                 rw [hctx]
-                simp [List.mem_append, hX]
-              exact hsub X hmem
+                exact List.mem_append_right (Γ1 ++ Δ0 ++ [A0 \ B0]) hX
+              exact Exists.imp (fun a a_1 => a_1) (hsub X hmem)
 
 
 /-- Residual graph steps preserve a source-subformula bound. -/
@@ -176,7 +174,7 @@ theorem thm_residual_step_subformula_closed_000068 : ∀ (src : List Tp) (p q : 
   cases hstep with
   | rdiv Γ L Δ Λ A B s hc harg =>
       constructor
-      · rfl
+      · exact (String.append_left_inj s).mp rfl
       · intro X hX
         have hctx : Γ = L ++ [B ⧸ A] ++ Δ ++ Λ :=
           cand_rdiv_context_eq (Γ := Γ) (L := L) (Δ := Δ) (Λ := Λ) (A := A) (B := B) hc
@@ -186,7 +184,7 @@ theorem thm_residual_step_subformula_closed_000068 : ∀ (src : List Tp) (p q : 
         · have hmem : X ∈ Γ := by
             rw [hctx]
             simp [List.mem_append, hX]
-          exact hsrc X hmem
+          exact Exists.imp (fun a a_1 => a_1) (hsrc X hmem)
         · have hmem : Tp.rdiv X A ∈ Γ := by
             rw [hctx]
             simp [List.mem_append]
@@ -194,11 +192,11 @@ theorem thm_residual_step_subformula_closed_000068 : ∀ (src : List Tp) (p q : 
           exact ⟨C, hC, subformula_trans (Subformula.rdiv_left (Subformula.refl X)) hSC⟩
         · have hmem : X ∈ Γ := by
             rw [hctx]
-            simp [List.mem_append, hX]
-          exact hsrc X hmem
+            exact List.mem_append_right (L ++ [B / A] ++ Δ) hX
+          exact Exists.imp (fun a a_1 => a_1) (hsrc X hmem)
   | ldiv Γ Γ₁ Δ R A B s hc harg =>
       constructor
-      · rfl
+      · exact (String.append_left_inj s).mp rfl
       · intro X hX
         have hctx : Γ = Γ₁ ++ Δ ++ [A ⧹ B] ++ R := by
           symm
@@ -209,7 +207,7 @@ theorem thm_residual_step_subformula_closed_000068 : ∀ (src : List Tp) (p q : 
         · have hmem : X ∈ Γ := by
             rw [hctx]
             simp [List.mem_append, hX]
-          exact hsrc X hmem
+          exact Exists.imp (fun a a_1 => a_1) (hsrc X hmem)
         · have hmem : Tp.ldiv A X ∈ Γ := by
             rw [hctx]
             simp [List.mem_append]
@@ -217,8 +215,8 @@ theorem thm_residual_step_subformula_closed_000068 : ∀ (src : List Tp) (p q : 
           exact ⟨C, hC, subformula_trans (Subformula.ldiv_right (Subformula.refl X)) hSC⟩
         · have hmem : X ∈ Γ := by
             rw [hctx]
-            simp [List.mem_append, hX]
-          exact hsrc X hmem
+            exact List.mem_append_right (Γ₁ ++ Δ ++ [A \ B]) hX
+          exact Exists.imp (fun a a_1 => a_1) (hsrc X hmem)
 
 
 lemma subformula_set_finite (C : Tp) : Set.Finite {B : Tp | Subformula B C} := by
@@ -227,7 +225,7 @@ lemma subformula_set_finite (C : Tp) : Set.Finite {B : Tp | Subformula B C} := b
       refine (Set.finite_singleton (Tp.atom s)).subset ?_
       intro B hB
       cases hB
-      simp
+      exact Set.mem_singleton (#s)
   | ldiv A B ihA ihB =>
       refine ((ihA.union ihB).union (Set.finite_singleton (Tp.ldiv A B))).subset ?_
       intro X hX
@@ -271,7 +269,7 @@ lemma finite_lists_bounded_of_finite {α : Type*} {S : Set α} (hS : S.Finite) :
       intro l hl
       cases l with
       | nil =>
-          simp
+          exact Set.mem_singleton []
       | cons a tl =>
           simp at hl
   | succ N ih =>
@@ -287,12 +285,12 @@ lemma finite_lists_bounded_of_finite {α : Type*} {S : Set α} (hS : S.Finite) :
           right
           refine ⟨(a, tl), ?_, rfl⟩
           constructor
-          · exact hl.2 a (by simp)
+          · exact hl.2 a (by exact List.mem_cons_self)
           · change tl.length ≤ N ∧ ∀ b ∈ tl, b ∈ S
             constructor
             · simpa using hl.1
             · intro b hb
-              exact hl.2 b (by simp [hb])
+              exact hl.2 b (by exact List.mem_cons_of_mem a hb)
 
 lemma list_length_le_list_degree : ∀ Γ : List Tp, Γ.length ≤ list_degree Γ
   | [] => by
@@ -302,8 +300,8 @@ lemma list_length_le_list_degree : ∀ Γ : List Tp, Γ.length ≤ list_degree �
         cases A <;> simp [tp_degree]
       have hΓ : Γ.length ≤ list_degree Γ := list_length_le_list_degree Γ
       calc
-        (A :: Γ).length = Γ.length + 1 := by simp
-        _ = 1 + Γ.length := by omega
+        (A :: Γ).length = Γ.length + 1 := by exact List.length_cons
+        _ = 1 + Γ.length := by exact Nat.add_comm Γ.length 1
         _ ≤ tp_degree A + list_degree Γ := Nat.add_le_add hA hΓ
         _ = list_degree (A :: Γ) := by simp [list_degree]
 
@@ -313,8 +311,7 @@ lemma atomicResidualGraphStep_degree_lt {p q : AtomicResidualState}
   cases h with
   | rdiv Γ L Δ Λ A B s hc harg =>
       have hΓ : Γ = L ++ [Tp.rdiv B A] ++ Δ ++ Λ := by
-        symm
-        simpa using (candidates_list_degree (Γ := Γ) (c := Cand.rdiv L B A Δ Λ) hc)
+        exact cand_rdiv_context_eq hc
       rw [hΓ]
       simp [list_degree_traversible, List.append_assoc, list_degree, tp_degree]
       omega
@@ -331,7 +328,7 @@ lemma residual_reachable_degree_le {p q : AtomicResidualState}
     list_degree q.1 ≤ list_degree p.1 := by
   induction h with
   | refl =>
-      exact le_rfl
+      exact Nat.le_refl (list_degree p.1)
   | tail hreach hstep ih =>
       exact le_trans (atomicResidualGraphStep_degree_lt hstep).le ih
 
@@ -356,7 +353,7 @@ theorem thm_residual_reachable_finite_000071 : ∀ (Γ Δ : List Tp) (A : Tp) (s
   refine ⟨q.1, ?_, ?_⟩
   · exact ⟨le_trans (list_length_le_list_degree q.1) hdeg, hsub⟩
   · cases q
-    simpa using hs.symm
+    exact Prod.mk_right_inj.mpr (id (Eq.symm hs))
 
 
 /-- Same-atom states supported by source subformulas are finite. -/
@@ -365,13 +362,13 @@ theorem thm_same_atom_subformula_states_finite_000075_is_false : ¬(∀ (src : L
   let S : Set AtomicResidualState :=
     { p : AtomicResidualState | p.2 = "a" ∧ ∀ B ∈ p.1, ∃ C ∈ [# "a"], Subformula B C }
   have hSfin : S.Finite := by
-    simpa [S] using h [# "a"] "a"
+    exact (Set.finite_iff_finite_of_encard_eq_encard rfl).mp (h [#"a"] "a")
   let f : ℕ → S := fun n =>
     ⟨(List.replicate n (# "a"), "a"), by
       constructor
-      · rfl
+      · exact String.toByteArray_inj.mp rfl
       · intro B hB
-        refine ⟨# "a", by simp, ?_⟩
+        refine ⟨# "a", by exact List.mem_singleton.mpr rfl, ?_⟩
         have hEq : B = # "a" := List.eq_of_mem_replicate hB
         simpa [hEq] using (Subformula.refl (# "a"))⟩
   letI : Fintype S := hSfin.fintype
@@ -400,7 +397,7 @@ theorem thm_degree_bounded_slice_strict_000080 : ∃ (Γ : List Tp) (A : Tp) (Δ
   constructor
   · simp [residualAtomicState]
   constructor
-  · rfl
+  · exact String.toByteArray_inj.mp rfl
   constructor
   · simp [list_degree, tp_degree]
   constructor
@@ -415,7 +412,7 @@ theorem thm_degree_bounded_slice_strict_000080 : ∃ (Γ : List Tp) (A : Tp) (Δ
       simp at hp
     · intro q h
       induction h with
-      | refl => rfl
+      | refl => exact Prod.mk_right_inj.mpr rfl
       | tail hreach hstep ih =>
           subst ih
           exfalso
@@ -494,9 +491,9 @@ theorem thm_residual_rejects_local_iff_000094 : ∀ p : AtomicResidualState, ¬ 
   · rintro ⟨hbase, hsucc⟩ hacc
     cases hacc with
     | base t =>
-        exact hbase rfl
+        exact false_of_ne hbase
     | step hstep hacc =>
-        exact hsucc _ hstep hacc
+        (expose_names; exact (iff_false_intro (hsucc q hstep)).mp hacc)
 
 
 /-- Bounded residual-slice acceptance has a finite recursive characterization. -/
@@ -526,13 +523,12 @@ theorem thm_bounded_slice_acceptance_recursion_000085 : ∀ (src : List Tp) (s :
         list_degree p.1 ≤ N ∧
         (∀ B ∈ p.1, ∃ C ∈ src, Subformula B C) }
   have hfin : T.Finite := by
-    simpa [T] using thm_degree_bounded_subformula_slice_finite_000072 src s N
+    exact thm_degree_bounded_subformula_slice_finite_000072 src s N
   refine ⟨hfin.toFinset, ?_, ?_⟩
   · intro p
     simpa [T] using (Set.Finite.mem_toFinset hfin (a := p))
   · refine ⟨AtomicResidualGraphAccepts, ?_, ?_⟩
-    · intro p hp
-      rfl
+    · exact fun p a => Eq.to_iff rfl
     · intro p hp
       constructor
       · intro hacc
@@ -565,8 +561,7 @@ theorem thm_residual_accepts_base_or_step_000097 : ∀ p : AtomicResidualState, 
   · intro hacc
     cases hacc with
     | base t =>
-        left
-        rfl
+        exact Or.symm (Or.inr rfl)
     | step hstep hacc =>
         right
         exact ⟨_, hstep, hacc⟩
@@ -584,9 +579,7 @@ theorem thm_accepts_iff_reaches_base_000099 : ∀ p : AtomicResidualState, Atomi
   · intro hacc
     induction hacc with
     | base s =>
-        simpa using
-          (Relation.ReflTransGen.refl :
-            Relation.ReflTransGen AtomicResidualGraphStep ([# s], s) ([# s], s))
+        exact Relation.ReflTransGen.refl
     | step hstep hacc ih =>
         cases hstep with
         | rdiv Γ L Δ Λ A B s hc harg =>
@@ -646,40 +639,15 @@ theorem thm_reachable_accepts_least_set_000103 : ∀ p : AtomicResidualState,
       ∀ r : AtomicResidualState,
         AtomicResidualGraphAccepts r →
           Relation.ReflTransGen AtomicResidualGraphStep r ([# (r.2)], r.2) := by
-    intro r hacc
-    induction hacc with
-    | base s =>
-        exact Relation.ReflTransGen.refl
-    | step hstep hacc ih =>
-        cases hstep with
-        | rdiv Γ L Δ Λ A B s hc harg =>
-            simpa using
-              Relation.ReflTransGen.head
-                (AtomicResidualGraphStep.rdiv Γ L Δ Λ A B s hc harg) ih
-        | ldiv Γ Γ₁ Δ R A B s hc harg =>
-            simpa using
-              Relation.ReflTransGen.head
-                (AtomicResidualGraphStep.ldiv Γ Γ₁ Δ R A B s hc harg) ih
+    exact fun r a => (fun p => (thm_accepts_iff_reaches_base_000099 p).mp) r a
   have hreaches_base_to_acc :
       ∀ r : AtomicResidualState,
         Relation.ReflTransGen AtomicResidualGraphStep r ([# (r.2)], r.2) →
           AtomicResidualGraphAccepts r := by
-    intro r
-    rcases r with ⟨Γ, s⟩
-    intro hreach
-    have hback :
-        ∀ {a : AtomicResidualState},
-          Relation.ReflTransGen AtomicResidualGraphStep a ([# s], s) →
-            AtomicResidualGraphAccepts a := by
-      intro a h
-      exact Relation.ReflTransGen.head_induction_on h
-        (AtomicResidualGraphAccepts.base s)
-        (fun hstep _ ih => AtomicResidualGraphAccepts.step hstep ih)
-    exact hback hreach
+    exact fun r a => (fun p => (thm_accepts_iff_reaches_base_000099 p).mpr) r a
   constructor
   · refine (thm_degree_bounded_subformula_slice_finite_000072 p.1 p.2 (list_degree p.1)).subset ?_
-    intro q hq
-    exact hreach_inv q hq
+    exact Set.setOf_subset_setOf_of_imp hreach_inv
   · intro q hq
     constructor
     · intro hacc
@@ -695,13 +663,12 @@ theorem thm_reachable_accepts_least_set_000103 : ∀ p : AtomicResidualState,
         intro a habase
         induction habase using Relation.ReflTransGen.head_induction_on with
         | refl =>
-            intro _
-            exact hbase
+            exact fun a => Set.mem_of_eq_of_mem rfl hbase
         | head hstep hrest ih =>
             intro hpa
             exact hpred _ _ hpa (Relation.ReflTransGen.tail hpa hstep) hstep
               (ih (Relation.ReflTransGen.tail hpa hstep))
-      exact hleast_of_path hqbase hq
+      exact Set.mem_of_eq_of_mem rfl (hleast_of_path hqbase hq)
     · intro hleast
       let S : Set AtomicResidualState :=
         {r : AtomicResidualState |
@@ -709,7 +676,7 @@ theorem thm_reachable_accepts_least_set_000103 : ∀ p : AtomicResidualState,
             (Relation.ReflTransGen AtomicResidualGraphStep p r ∧ AtomicResidualGraphAccepts r)}
       have hbase : ([# (p.2)], p.2) ∈ S := by
         left
-        rfl
+        exact Prod.mk_right_inj.mpr rfl
       have hclosed :
           ∀ a b : AtomicResidualState,
             Relation.ReflTransGen AtomicResidualGraphStep p a →
@@ -816,7 +783,7 @@ theorem thm_unique_reachable_bool_labeling_000106 : ∀ p : AtomicResidualState,
     intro q hq
     induction hq with
     | refl =>
-        exact ⟨rfl, hp_sub⟩
+        exact And.symm ⟨hp_sub, rfl⟩
     | tail hreach hstep ih =>
         rcases thm_residual_step_subformula_closed_000068 p.1 _ _ ih.2 hstep with
           ⟨hs, hsub⟩
@@ -840,7 +807,7 @@ theorem thm_unique_reachable_bool_labeling_000106 : ∀ p : AtomicResidualState,
         · right
           let r' : {r // r ∈ R} := ⟨r, (hR r).2 (Relation.ReflTransGen.tail hreach hstep)⟩
           refine ⟨r', ?_, ?_⟩
-          · simpa [r'] using hstep
+          · exact bif good q then hstep else hstep
           · exact (hgood_acc r').mp hracc
       · intro h
         rcases h with hbase | ⟨r, hstep, hgood⟩
@@ -860,7 +827,7 @@ theorem thm_unique_reachable_bool_labeling_000106 : ∀ p : AtomicResidualState,
         exact (hgood_acc q).mp ((hg_acc q).mpr hgtrue)
       · intro hgoodtrue
         exact (hg_acc q).mp ((hgood_acc q).mpr hgoodtrue)
-    cases hgq : g q <;> cases hgoodq : good q <;> simp [hgq, hgoodq] at hiff ⊢
+    exact Bool.coe_iff_coe.mp hiff <;> simp [hgq, hgoodq] at hiff ⊢
 
 
 /-- Reverse reachable-region Boolean labeling is unique and matches acceptance. -/
@@ -877,8 +844,7 @@ theorem thm_residual_reverse_sweep_unique_000110 : ∀ (Γ : List Tp) (A : Tp) (
                 good r = true) ∧
         ∀ q : {q // q ∈ R},
           (AtomicResidualGraphAccepts q.1 ↔ good q = true) := by
-  intro Γ A p hp
-  exact thm_unique_reachable_bool_labeling_000106 p
+  exact fun Γ A p a => thm_unique_reachable_bool_labeling_000106 p
 
 
 /-- A residual state has no outgoing step exactly when all formulas in its context are atoms. -/
@@ -902,7 +868,7 @@ theorem thm_residual_no_step_iff_atoms_000096_is_false : ¬(∀ (Γ : List Mathl
           Mathling.Lambek.ProductFree.picks, Mathling.Lambek.ProductFree.splits] at hc
         rcases hc with ⟨rfl, rfl, rfl, rfl, rfl⟩
         exact (Mathling.Lambek.ProductFree.nonempty_premises harg) rfl
-  have hatom : Mathling.Lambek.ProductFree.is_atom X := (hiff.mp hnostep) _ (by simp [X])
+  have hatom : Mathling.Lambek.ProductFree.is_atom X := (hiff.mp hnostep) _ (by exact List.mem_singleton.mpr rfl)
   simp [X, Mathling.Lambek.ProductFree.is_atom] at hatom
 
 
@@ -1010,7 +976,7 @@ theorem thm_reject_reaches_terminal_reject_000113 : ∀ p q : AtomicResidualStat
     (thm_residual_rejects_local_iff_000094 r).mp hrrej
   have hsS : s ∈ S := by
     exact ⟨Relation.ReflTransGen.tail hqr hrs, hlocal.2 s hrs⟩
-  exact hmin s hsS hrs
+  exact (iff_false_intro (hmin s hsS)).mp hrs
 
 
 /-- No residual step iff every candidate has underivable argument context. -/
@@ -1031,9 +997,9 @@ theorem thm_no_step_iff_candidates_blocked_000118 : ∀ (Γ : List Tp) (s : Stri
   · rintro ⟨hrdiv, hldiv⟩ ⟨q, hstep⟩
     cases hstep with
     | rdiv _ L Δ Λ A B _ hc harg =>
-        exact hrdiv L Δ Λ A B hc harg
+        exact (iff_false_intro (hrdiv L Δ Λ A B hc)).mp harg
     | ldiv _ Γ₁ Δ R A B _ hc harg =>
-        exact hldiv Γ₁ Δ R A B hc harg
+        exact (iff_false_intro (hldiv Γ₁ Δ R A B hc)).mp harg
 
 
 /-- Rejecting exactly when all reachable terminal states reject. -/
@@ -1076,12 +1042,12 @@ theorem thm_accepting_reaches_terminal_reject_000124 : ∃ q : AtomicResidualSta
         (Sequent.ldiv_l
           (Δ := [# "a"]) (A := # "a") (Γ := []) (B := # "a") (Λ := [A])
           Sequent.ax h1)
-    exact Sequent.ldiv_r (Γ := [A, A]) (A := # "a") (B := # "a") (by simp) h3
+    exact Sequent.ldiv_r (Γ := [A, A]) (A := # "a") (B := # "a") (by exact List.cons_ne_nil A [A]) h3
   have hstep_qr : AtomicResidualGraphStep q r := by
     dsimp [q, r]
     refine AtomicResidualGraphStep.ldiv [A, A, A ⧹ # "a"] [A] [A] [] A (# "a") "a" ?_ ?_
     · simpa [A] using candidates_ldiv_mem [A] [A] ([] : List Tp) A (# "a")
-    · simpa using hA
+    · exact Sequent.ax
   have hstep_qbase : AtomicResidualGraphStep q ([# "a"], "a") := by
     dsimp [q]
     refine AtomicResidualGraphStep.ldiv [A, A, A ⧹ # "a"] [] [A, A] [] A (# "a") "a" ?_ ?_
@@ -1109,7 +1075,7 @@ theorem thm_accepting_reaches_terminal_reject_000124 : ∃ q : AtomicResidualSta
     · intro s hstep
       exact False.elim (hnostep_r ⟨s, hstep⟩)
   refine ⟨q, r, hqacc, ?_, hnostep_r, hrrej⟩
-  exact Relation.ReflTransGen.head hstep_qr Relation.ReflTransGen.refl
+  exact Relation.ReflTransGen.single hstep_qr
 
 
 /-- Unique degree-sorted reachable-region Boolean labeling. -/
@@ -1138,14 +1104,13 @@ theorem thm_degree_sorted_unique_labeling_000130 : ∀ p : AtomicResidualState, 
   · intro q hq
     induction hq with
     | refl =>
-        rfl
+        exact String.toByteArray_inj.mp rfl
     | tail hreach hstep ih =>
         cases hstep <;> simpa using ih
   let good : AtomicResidualState → Bool := fun q =>
     if q ∈ R then decide (AtomicResidualGraphAccepts q) else false
   have hgood_out : ∀ q : AtomicResidualState, q ∉ R → good q = false
-  · intro q hq
-    simp [good, hq]
+  · exact fun q a => if_neg a
   have hgood_acc :
       ∀ q : AtomicResidualState, q ∈ R → (good q = true ↔ AtomicResidualGraphAccepts q)
   · intro q hq
@@ -1173,7 +1138,7 @@ theorem thm_degree_sorted_unique_labeling_000130 : ∀ p : AtomicResidualState, 
         have hreachq : Relation.ReflTransGen AtomicResidualGraphStep p q := (hR q).mp hqR
         have hrR : r ∈ R := (hR r).mpr (Relation.ReflTransGen.tail hreachq hstep)
         refine ⟨r, hrR, hstep, ?_, (hgood_acc r hrR).mpr hracc⟩
-        simpa using (thm_degree_sorted_reverse_topology_000115 p R hR q r hqR hrR hstep)
+        exact thm_degree_sorted_reverse_topology_000115 p R hR q r hqR hrR hstep
     · intro h
       rcases h with hbase | ⟨r, hrR, hstep, _, hgoodr⟩
       · have hacc : AtomicResidualGraphAccepts q
@@ -1193,7 +1158,7 @@ theorem thm_degree_sorted_unique_labeling_000130 : ∀ p : AtomicResidualState, 
         exact (hgood_acc q hqR).mpr ((hg_acc q hqR).mp hgtrue)
       · intro hgoodtrue
         exact (hg_acc q hqR).mpr ((hgood_acc q hqR).mp hgoodtrue)
-    cases hgq : g q <;> cases hgoodq : good q <;> simp [hgq, hgoodq] at hiff ⊢
+    exact Bool.coe_iff_coe.mp hiff <;> simp [hgq, hgoodq] at hiff ⊢
   · have hgfalse : g q = false := hg_out q hqR
     have hgoodfalse : good q = false := hgood_out q hqR
     rw [hgfalse, hgoodfalse]
@@ -1205,7 +1170,7 @@ theorem thm_terminal_accepts_singleton_atom_000133 : ∀ r : AtomicResidualState
   constructor
   · intro hacc
     rcases (thm_residual_accepts_base_or_step_000097 (Γ, t)).1 hacc with hbase | ⟨q, hstep, _⟩
-    · exact hbase
+    · exact Prod.ext (congrArg Prod.fst hbase) rfl
     · exact False.elim (hterminal ⟨q, hstep⟩)
   · intro hbase
     simpa [hbase] using (AtomicResidualGraphAccepts.base t)
@@ -1228,8 +1193,9 @@ theorem thm_degree_sorted_reverse_sweep_labeling_000135 : ∀ p : AtomicResidual
                 good r = true)) ∧
       (∀ q : AtomicResidualState,
         q ∈ R → (good q = true ↔ AtomicResidualGraphAccepts q)) := by
-  intro p R hR
-  simpa using AutomatedTheoryConstruction.thm_degree_sorted_unique_labeling_000130 p R hR
+  exact fun p R a =>
+      let L := R.toList.mergeSort fun a b => decide (list_degree a.1 ≤ list_degree b.1);
+      thm_degree_sorted_unique_labeling_000130 p R a
 
 
 /-- Acceptance is equivalent to reaching an accepting terminal state. -/
@@ -1251,7 +1217,7 @@ theorem thm_accepts_reaches_accepting_terminal_000131 : ∀ p : AtomicResidualSt
       intro q hq
       induction hq with
       | refl =>
-          rfl
+          exact String.toByteArray_inj.mp rfl
       | tail hreach hstep ih =>
           cases hstep <;> simpa using ih
     have hs : r.2 = p.2 := hsame hpr
@@ -1259,10 +1225,10 @@ theorem thm_accepts_reaches_accepting_terminal_000131 : ∀ p : AtomicResidualSt
       (thm_terminal_accepts_singleton_atom_000133 r hterminal).1 hracc
     have hpbase' : Relation.ReflTransGen AtomicResidualGraphStep p ([# (r.2)], r.2) := by
       rw [hrbase] at hpr
-      exact hpr
+      exact Relation.ReflTransGen.mono (fun a b a_1 => a_1) hpr
     have hpbase : Relation.ReflTransGen AtomicResidualGraphStep p ([# (p.2)], p.2) := by
       simpa [hs] using hpbase'
-    exact (thm_accepts_iff_reaches_base_000099 p).2 hpbase
+    exact (thm_accepts_iff_reaches_base_000099 p).mpr hpbase
 
 
 /-- Topological reverse sweep agrees with residual acceptance. -/
@@ -1275,7 +1241,7 @@ theorem thm_topological_terminal_sweep_accepts_000137 : ∀ p : AtomicResidualSt
     intro q hq
     induction hq with
     | refl =>
-        rfl
+        exact String.toByteArray_inj.mp rfl
     | tail hreach hstep ih =>
         cases hstep <;> simpa using ih
   have hbase_terminal :
@@ -1381,7 +1347,7 @@ theorem thm_accepts_least_reachable_subset_000143 : ∀ p : AtomicResidualState,
     have hTbase : ([# (p.2)], p.2) ∈ T := by
       by_cases hpR : ([# (p.2)], p.2) ∈ R
       · left
-        exact hSbase hpR
+        exact Set.mem_of_eq_of_mem rfl (hSbase hpR)
       · right
         simpa [T] using hpR
     have hTstep :
@@ -1397,10 +1363,10 @@ theorem thm_accepts_least_reachable_subset_000143 : ∀ p : AtomicResidualState,
       rcases hbT with hbS | hbnotR
       · left
         exact hSstep a haR ⟨b, hab, hbS⟩
-      · exact False.elim (hbnotR (by simpa using hbR))
+      · exact False.elim (hbnotR (by exact Finset.mem_coe.mpr hbR))
     have hqT : q ∈ T := (hleast q hreachq).1 hqacc T hTbase hTstep
     rcases hqT with hqS | hqnotR
-    · exact hqS
-    · exact False.elim (hqnotR (by simpa using hqR))
+    · exact Set.mem_of_eq_of_mem rfl hqS
+    · exact False.elim (hqnotR (by exact Finset.mem_coe.mpr hqR))
 
 end AutomatedTheoryConstruction

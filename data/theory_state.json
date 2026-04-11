@@ -1,53 +1,48 @@
 {
   "agenda_pressure": [
-    "Prefer exact internalization over stronger ambient overapproximation results.",
-    "Reward characterization, converse, and impossibility theorems that explain verified counterexamples.",
-    "Use `list_degree` mainly as a recursion and control parameter, not just as another finiteness bound.",
-    "Down-rank local support lemmas unless they directly unlock exact recursion or finite internal recognition."
+    "Prefer exact reachable-region computation over ambient finite-slice packaging.",
+    "Favor reusable order-independent sweep invariants over one-off list encodings.",
+    "Use ambient-slice and mixed-terminal counterexamples to keep boundary-only follow-ups low unless they unlock exact computation."
   ],
   "current_bottlenecks": [
-    "No theorem yet converts well-founded degree descent into an exact recursive acceptance computation.",
-    "There is no canonical exact finite state object extracted from reachable residual states.",
-    "Terminal residual states and nonaccepting dead ends are not yet structurally characterized.",
-    "The gap between true reachability and the bounded ambient slice is evidenced but not explained conceptually."
+    "Canonical labeling is still packaged abstractly rather than as an explicit arbitrary-order fold.",
+    "The theory lacks a stable semantic invariant for intermediate reverse-sweep states.",
+    "Strict degree descent has not yet been converted into exact path-length or saturation-round bounds."
   ],
-  "derived_generation": 11,
+  "derived_generation": 32,
   "desired_summary_changes": [
-    "An exact backward-recursive acceptance theorem replaces external residual-graph acceptance.",
-    "A canonical finite internal automaton or bounded state model captures residual acceptance exactly.",
-    "Terminal and dead-end residual states are characterized sharply enough to drive recursion.",
-    "The failure of ambient bounded slices is explained by a structural criterion, not only isolated witnesses."
+    "A concrete `List.foldr` theorem for any reverse-topological enumeration of the exact reachable finset.",
+    "A reusable suffix or partial-sweep invariant identifying each intermediate fold state with the least predecessor-closed subset of the unprocessed region.",
+    "An exact distance-to-base criterion on reachable states that yields finite saturation-round convergence as a corollary."
   ],
   "important_verified_counterexamples": [
+    "Verified counterexample to: For every Γ : List Tp and s : String, (¬ ∃ q, AtomicResidualGraphStep (Γ, s) q) ↔ ∀ B ∈ Γ, is_atom B.",
     "Verified counterexample to: For every finite list src and atom s, the class of states p such that p.2 = s and every formula B in p.1 is a subformula of some formula C in src is finite.",
-    "Verified counterexample to: Prove a one-sided exactness theorem for ordinary support closure: if every formula in `Γ` and `A` is left-only, then `SupportClosure Γ A ↔ HandedSupportClosure Γ A`; dually, if every formula in `Γ` and `A` is ...",
-    "Verified counterexample to: Prove exact completeness of the support closure by showing `∀ (Γ : List Tp) (A : Tp), SupportClosure Γ A ↔ (Γ ⇒ A)`."
+    "Verified counterexample to: Prove a one-sided exactness theorem for ordinary support closure: if every formula in `Γ` and `A` is left-only, then `SupportClosure Γ A ↔ HandedSupportClosure Γ A`; dually, if every formula in `Γ` and `A` is ..."
   ],
   "missing_bridges": [
-    "From well-founded residual descent to executable backward recursion on acceptance and rejection.",
-    "From exact reachable-set finiteness to a canonical finite internal automaton.",
-    "From terminal-state structure to a sharp local acceptance or rejection criterion.",
-    "From bounded-slice counterexamples to a criterion separating reachable states from merely admissible ambient states."
+    "A bridge from canonical or least-subset descriptions to an explicit `List.foldr` computation on arbitrary reverse-topological lists.",
+    "A bridge from predecessor closure to operator-style least-fixed-point and iterative saturation on the exact reachable region.",
+    "A bridge from degree descent to exact path distance and convergence time."
   ],
   "next_direction": {
-    "guidance": "Prioritize theorems that turn well-founded degree descent and terminal-state structure into an exact bounded recursion or finite internal automaton for residual acceptance.",
-    "label": "exact_finite_internalization",
-    "rationale": "Reachable states are already finite and degree-controlled, while the verified same-atom infinitude and bounded-slice nonexactness results rule out naive ambient-slice exactness."
+    "guidance": "Prioritize problems that make the exact reachable finset computationally explicit, either by proving arbitrary reverse-topological fold correctness with a reusable partial-sweep invariant or by deriving exact distance and saturation-round bounds on that same region.",
+    "label": "explicit_fold_and_distance_control",
+    "rationale": "The semantic characterization of acceptance is already complete on the exact reachable DAG, while counterexamples have shown that ambient slices and universal-terminal viewpoints are not the right abstraction; the remaining summary-changing work is executable fold semantics and quantitative convergence."
   },
   "overexplored_patterns": [
-    "Repackaging already solved reachable-set or bounded-slice finiteness into explicit finite containers.",
-    "Further one-step or multi-step descent restatements without a new recursion or exactness payoff.",
-    "Ambient slice lemmas that ignore the verified same-atom infinitude and bounded-slice nonexactness evidence.",
-    "Additional isolated nonreachability witnesses without a general boundary criterion."
+    "Ambient same-atom or bounded-slice exactness and separation questions outside the exact reachable region.",
+    "Universal-terminal or all-sinks summaries already weakened by mixed-terminal evidence.",
+    "Presentation-specific restatements of labeling or least-subset results that do not yield an explicit algorithm or quantitative bound."
   ],
   "research_agenda": {},
   "summary_basis": {
-    "archived_problem_count": 33,
-    "derived_theorem_count": 35,
-    "open_problem_count": 6
+    "archived_problem_count": 66,
+    "derived_theorem_count": 56,
+    "open_problem_count": 3
   },
-  "theory_snapshot": "Residualization is now the central exact interface: derivability reduces to atomic residual roots, residual-graph acceptance is exact, and every reachable state preserves the target atom while staying inside the source subformula closure. Structural control is also tight: each residual step strictly decreases `list_degree`, the step relation is well founded, reachable sets are finite, and same-atom subformula families are finite exactly when their `list_degree` is uniformly bounded. The main frontier is exact internal computation, because there is still no canonical backward-recursive acceptance theorem or finite internal recognizer extracted from these facts. Verified boundary evidence matters here: the unrestricted same-atom subformula universe can be infinite, and even the natural degree-bounded same-atom slice can strictly overapproximate true reachability.",
-  "updated_at_iteration": 14,
+  "theory_snapshot": "The theory now has a stable exact-reachable-region core: from any residual root, the reachable region is finite, degree-descending, and acceptance is exactly reachability of the distinguished singleton base state. On that exact region, acceptance already has canonical Boolean-label, least predecessor-closed subset, and topological-order characterizations, so the main structural gap is no longer semantic correctness but explicit computation. The remaining frontier is to turn those abstract descriptions into a concrete arbitrary reverse-topological fold and, in parallel, to extract exact saturation-round and path-length control from the same descent structure. Verified failures of ambient same-atom finiteness and verified mixed-terminal behavior continue to rule out ambient overapproximation and universal-sink summaries as high-value directions.",
+  "updated_at_iteration": 50,
   "updated_at_run_id": "20260411-202812-loop",
   "version": 1
 }
