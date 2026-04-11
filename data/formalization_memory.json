@@ -1179,10 +1179,7 @@
     {
       "stage": "statement_formalization",
       "source_statement": "Prove a residual subformula theorem: if `residualAtomicState Γ A = some (Δ, s)`, then every formula in `Δ` is a subformula of some formula in `Γ` or of `A`, and the atom `s` already occurs in `Γ` or `A`.",
-      "statement_prelude_code": "inductive TpSubformula : Tp → Tp → Prop where\n  | refl (A : Tp) : TpSubformula A A\n  | ldiv_left {A B C : Tp} : TpSubformula A B → TpSubformula A (Tp.ldiv B C)\n  | ldiv_right {A B C : Tp} : TpSubformula A C → TpSubformula A (Tp.ldiv B C)\n  | rdiv_left {A B C : Tp} : TpSubformula A B → TpSubformula A (Tp.rdiv B C)\n  | rdiv_right {A B C : Tp} : TpSubformula A C → TpSubformula A (Tp.rdiv B C)",
       "formalized_statement": "∀ (Γ : List Tp) (A : Tp) (Δ : List Tp) (s : String),\n  residualAtomicState Γ A = some (Δ, s) →\n    (∀ B ∈ Δ, ∃ C ∈ [A] ++ Γ, TpSubformula B C) ∧\n    ∃ C ∈ [A] ++ Γ, occurs_atom s C",
-      "theorem_name_stem": "residual_root_subformula",
-      "docstring_summary": "Residual atomic states stay inside the root subformula closure.",
       "statement_formalization_notes": "Introduced a minimal local `TpSubformula` relation because the current context defines `occurs_atom` but no subformula predicate. The phrase “in `Γ` or of `A`” is encoded as membership in `[A] ++ Γ`.",
       "result": "ok",
       "verify_success": true,
@@ -1191,6 +1188,55 @@
       "counterexample_text": "",
       "lean_error_excerpt": "",
       "lean_error_fingerprint": "statement_formalization"
+    },
+    {
+      "stage": "statement_formalization",
+      "source_statement": "Prove a residual subformula theorem: if `residualAtomicState Γ A = some (Δ, s)`, then every formula in `Δ` is a subformula of some formula in `Γ` or of `A`, and the atom `s` already occurs in `Γ` or `A`.",
+      "formalized_statement": "∀ (Γ : List Tp) (A : Tp) (Δ : List Tp) (s : String),\n  residualAtomicState Γ A = some (Δ, s) →\n    (∀ B ∈ Δ, ∃ C ∈ [A] ++ Γ, TpSubformula B C) ∧\n    ∃ C ∈ [A] ++ Γ, occurs_atom s C",
+      "statement_formalization_notes": "Introduced a minimal local subformula relation because the current context has `occurs_atom` but no existing subformula predicate; “in Γ or of A” is encoded as membership in `[A] ++ Γ`.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization"
+    },
+    {
+      "stage": "statement_formalization",
+      "source_statement": "Prove a residual subformula theorem: if `residualAtomicState Γ A = some (Δ, s)`, then every formula in `Δ` is a subformula of some formula in `Γ` or of `A`, and the atom `s` already occurs in `Γ` or `A`.",
+      "formalized_statement": "∀ (Γ Δ : List Tp) (A : Tp) (s : String),\n  residualAtomicState Γ A = some (Δ, s) →\n    (∀ B ∈ Δ, (∃ C ∈ Γ, subformula B C) ∨ subformula B A) ∧\n    ((∃ C ∈ Γ, occurs_atom s C) ∨ occurs_atom s A)",
+      "statement_formalization_notes": "Introduced a local recursive `subformula` predicate because no repository-level subformula relation was present in the available context; reused existing `occurs_atom` for atom occurrence.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization"
+    },
+    {
+      "stage": "statement_formalization",
+      "source_statement": "Prove a residual subformula theorem: if `residualAtomicState Γ A = some (Δ, s)`, then every formula in `Δ` is a subformula of some formula in `Γ` or of `A`, and the atom `s` already occurs in `Γ` or `A`.",
+      "formalized_statement": "∀ {Γ Δ : List Tp} {A : Tp} {s : String},\n  residualAtomicState Γ A = some (Δ, s) →\n    (∀ B ∈ Δ, ∃ C ∈ Γ ++ [A], Subformula B C) ∧\n    (∃ C ∈ Γ ++ [A], occurs_atom s C)",
+      "statement_formalization_notes": "Introduced a minimal local `Subformula` relation because the current theory context provides `occurs_atom` but no existing subformula predicate.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization"
+    },
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "Induct on `A`, unfold `residualAtomicState`, and in the division cases pass the induction-hypothesis witnesses from the residualized context to `Γ ++ [A]` by splitting the membership witness and lifting through the outer `⧹` or `⧸` constructor.",
+      "prelude_code": "inductive Subformula : Tp → Tp → Prop where\n  | refl (A : Tp) : Subformula A A\n  | ldiv_left {A B C : Tp} : Subformula A B → Subformula A (B ⧹ C)\n  | ldiv_right {A B C : Tp} : Subformula A C → Subformula A (B ⧹ C)\n  | rdiv_left {A B C : Tp} : Subformula A B → Subformula A (B ⧸ C)\n  | rdiv_right {A B C : Tp} : Subformula A C → Subformula A (B ⧸ C)",
+      "proof_text": "intro Γ Δ A s hres\ninduction A generalizing Γ Δ s with\n| atom t =>\n    simp [residualAtomicState] at hres\n    rcases hres with ⟨rfl, rfl⟩\n    constructor\n    · intro B hB\n      exact ⟨B, by simp [hB], Subformula.refl B⟩\n    · exact ⟨# t, by simp, by simp [occurs_atom]⟩\n| ldiv B C ihB ihC =>\n    cases Γ with\n    | nil =>\n        simp [residualAtomicState] at hres\n    | cons A Γ =>\n        have hih := ihC (Γ := B :: A :: Γ) (Δ := Δ) (s := s) hres\n        rcases hih with ⟨hsub, hocc⟩\n        constructor\n        · intro X hX\n          rcases hsub X hX with ⟨Y, hYmem, hXY⟩\n          simp [List.mem_append] at hYmem\n          rcases hYmem with hYeq | hYeq | hYmem | hYeq\n          · subst Y\n            exact ⟨B ⧹ C, by simp, Subformula.ldiv_left hXY⟩\n          · subst Y\n            exact ⟨A, by simp, hXY⟩\n          · exact ⟨Y, by simp [List.mem_append, hYmem], hXY⟩\n          · subst Y\n            exact ⟨B ⧹ C, by simp, Subformula.ldiv_right hXY⟩\n        · rcases hocc with ⟨Y, hYmem, hYs⟩\n          simp [List.mem_append] at hYmem\n          rcases hYmem with hYeq | hYeq | hYmem | hYeq\n          · subst Y\n            exact ⟨B ⧹ C, by simp, by simp [occurs_atom, hYs]⟩\n          · subst Y\n            exact ⟨A, by simp, hYs⟩\n          · exact ⟨Y, by simp [List.mem_append, hYmem], hYs⟩\n          · subst Y\n            exact ⟨B ⧹ C, by simp, by simp [occurs_atom, hYs]⟩\n| rdiv C B ihC ihB =>\n    cases Γ with\n    | nil =>\n        simp [residualAtomicState] at hres\n    | cons A Γ =>\n        have hih := ihC (Γ := (A :: Γ) ++ [B]) (Δ := Δ) (s := s) hres\n        rcases hih with ⟨hsub, hocc⟩\n        constructor\n        · intro X hX\n          rcases hsub X hX with ⟨Y, hYmem, hXY⟩\n          simp [List.mem_append] at hYmem\n          rcases hYmem with hYeq | hYmem | hYeq | hYeq\n          · subst Y\n            exact ⟨A, by simp, hXY⟩\n          · exact ⟨Y, by simp [List.mem_append, hYmem], hXY⟩\n          · subst Y\n            exact ⟨C ⧸ B, by simp, Subformula.rdiv_right hXY⟩\n          · subst Y\n            exact ⟨C ⧸ B, by simp, Subformula.rdiv_left hXY⟩\n        · rcases hocc with ⟨Y, hYmem, hYs⟩\n          simp [List.mem_append] at hYmem\n          rcases hYmem with hYeq | hYmem | hYeq | hYeq\n          · subst Y\n            exact ⟨A, by simp, hYs⟩\n          · exact ⟨Y, by simp [List.mem_append, hYmem], hYs⟩\n          · subst Y\n            exact ⟨C ⧸ B, by simp, by simp [occurs_atom, hYs]⟩\n          · subst Y\n            exact ⟨C ⧸ B, by simp, by simp [occurs_atom, hYs]⟩",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "no_diagnostics | toolchain=leanprover/lean4:v4.29.0-rc6"
     }
   ],
   "op_000062": [
@@ -1360,14 +1406,56 @@
       "lean_error_fingerprint": "statement_formalization"
     },
     {
+      "stage": "",
+      "source_statement": "",
+      "formalized_statement": "",
+      "statement_formalization_notes": "",
       "result": "stuck",
       "verify_success": false,
       "proof_sketch": "This should be a proof. The smallest missing bridge is `forall Delta s, AtomicCandidateTree Delta s <-> AtomicResidualBranchingAccepts (Delta, s)`. For `AtomicCandidateTree Delta s -> AtomicResidualBranchingAccepts (Delta, s)`, do strong induction on `list_degree Delta`: in a `step_rdiv` or `step_ldiv`, use `thm_handed_support_closure_iff_sequent_000048` and the first half of `thm_residual_support_normal_form_000050` on the premise sequent `Delta0 => A0` to obtain `residualAtomicState Delta0 A0 = some arg` together with an atomic candidate tree on `arg`, and both recursive states are smaller by the same `candidates_list_degree` degree gap used in `thm_atomic_candidate_tree_iff_sequent_000030` plus the deterministic peeling in `residualAtomicState`. For the reverse implication, induct on `AtomicResidualBranchingAccepts`: the continuation child gives the recursive atomic tree directly, while the argument child and its residual witness are converted back to `Delta0 => A0` using `thm_residual_support_normal_form_000050` and `thm_handed_support_closure_iff_sequent_000048`, so `AtomicCandidateTree.step_rdiv` or `AtomicCandidateTree.step_ldiv` applies. Then rewrite `(Gamma => A)` by `thm_handed_support_closure_iff_sequent_000048` and the first half of `thm_residual_support_normal_form_000050`, and replace `AtomicCandidateTree` with the bridge to get exactly the claimed residual-branching acceptance criterion.",
-      "prelude_code": "",
       "proof_text": "",
       "counterexample_text": "",
       "lean_error_excerpt": "formalize worker timeout: Worker returned error: Command '['codex', 'exec', '-', '--sandbox', 'read-only', '--skip-git-repo-check', '--output-last-message', '/tmp/tmpf17h0x88', '--model', 'gpt-5.4']' timed out after 390 seconds (task_type=formalize)",
       "lean_error_fingerprint": "formalizer_timeout"
+    },
+    {
+      "stage": "statement_formalization",
+      "source_statement": "Define a self-contained branching residual automaton on atomic states: from `(Γ, s)`, each division candidate yields the continuation state together with the residual state obtained by residualizing its argument premise. Prove that `Γ ⇒ A` iff the initial state returned by `residualAtomicState Γ A` is accepted by this internal branching automaton.",
+      "formalized_statement": "∀ (Γ : List Tp) (A : Tp), (Γ ⇒ A) ↔ internalBranchingResidualAccepted Γ A",
+      "statement_formalization_notes": "Introduced a binary branching step on atomic residual states: one branch residualizes the argument premise via `residualAtomicState`, and the other follows the candidate continuation.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization"
+    },
+    {
+      "stage": "statement_formalization",
+      "source_statement": "Define a self-contained branching residual automaton on atomic states: from `(Γ, s)`, each division candidate yields the continuation state together with the residual state obtained by residualizing its argument premise. Prove that `Γ ⇒ A` iff the initial state returned by `residualAtomicState Γ A` is accepted by this internal branching automaton.",
+      "formalized_statement": "∀ (Γ : List Tp) (A : Tp), (Γ ⇒ A) ↔ internalBranchingResidualAccepted Γ A",
+      "statement_formalization_notes": "Formalized the requested internal automaton as a binary branching acceptance relation on `AtomicResidualState`, with one child from residualizing the argument premise and the other from the candidate continuation.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization"
+    },
+    {
+      "stage": "statement_formalization",
+      "source_statement": "Define a self-contained branching residual automaton on atomic states: from `(Γ, s)`, each division candidate yields the continuation state together with the residual state obtained by residualizing its argument premise. Prove that `Γ ⇒ A` iff the initial state returned by `residualAtomicState Γ A` is accepted by this internal branching automaton.",
+      "formalized_statement": "∀ (Γ : List Tp) (A : Tp), (Γ ⇒ A) ↔ InternalAtomicBranchingAccepted (residualAtomicState Γ A)",
+      "statement_formalization_notes": "Introduced a self-contained branching acceptance predicate whose step branches to both the continuation state and the residualized argument state, then stated recognition directly on the option-valued initial residual state.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization"
     }
   ],
   "mt_main_theorem": [
@@ -1390,6 +1478,404 @@
       "proof_sketch": "Use the residual support normal form for `SupportClosure`, then split on whether the unique residual atomic state is graph-accepting. Acceptance gives derivability via residual graph recognition; non-acceptance gives the second disjunct. Conversely, derivability implies support by `thm_derivable_support_ok_000032`, and an explicit residual witness gives `SupportClosure` directly.",
       "prelude_code": "",
       "proof_text": "intro Γ A\nconstructor\n· intro hsup\n  rcases ((thm_residual_support_normal_form_000050 Γ A).2).mp hsup with ⟨Δ, s, hres, hocc⟩\n  by_cases hacc : AtomicResidualGraphAccepts (Δ, s)\n  · left\n    exact (thm_residual_graph_recognizes_sequent_000062 Γ A).2 ⟨Δ, s, hres, hacc⟩\n  · right\n    exact ⟨Δ, s, hres, hocc, hacc⟩\n· intro h\n  rcases h with hseq | ⟨Δ, s, hres, hocc, _hacc⟩\n  · rw [thm_support_closure_matches_support_ok_000036]\n    exact thm_derivable_support_ok_000032 hseq\n  · exact ((thm_residual_support_normal_form_000050 Γ A).2).mpr ⟨Δ, s, hres, hocc⟩",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "no_diagnostics | toolchain=leanprover/lean4:v4.29.0-rc6"
+    }
+  ],
+  "op_000065": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "For any Γ A Δ s, if residualAtomicState Γ A = some (Δ, s), then every state reachable in the residual graph from (Δ, s) has the form (Δ', s) with every formula in Δ' a subformula of some formula in Γ ++ [A].",
+      "formalized_statement": "∀ {Γ Δ : List Tp} {A : Tp} {s : String}, residualAtomicState Γ A = some (Δ, s) → ∀ p : AtomicResidualState, Relation.ReflTransGen AtomicResidualGraphStep (Δ, s) p → ∃ Δ' : List Tp, p = (Δ', s) ∧ ∀ B ∈ Δ', ∃ C ∈ Γ ++ [A], Subformula B C",
+      "statement_formalization_notes": "Formalized reachability as the reflexive-transitive closure `Relation.ReflTransGen AtomicResidualGraphStep`, so the start state is included and every reachable state is required to preserve the same atom label `s`.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization"
+    },
+    {
+      "stage": "",
+      "source_statement": "",
+      "formalized_statement": "",
+      "statement_formalization_notes": "",
+      "result": "stuck",
+      "verify_success": false,
+      "proof_sketch": "Proceed by induction on the reachability proof `Relation.ReflTransGen AtomicResidualGraphStep (Δ, s) p`. In the reflexive base case, apply `thm_residual_state_subformula_occurs_000061` to the hypothesis `residualAtomicState Γ A = some (Δ, s)`; this gives exactly that every `B ∈ Δ` is a subformula of some formula in `Γ ++ [A]`, and the state is `(Δ, s)`. For the step case, first use the induction hypothesis on the predecessor state `(Δ0, s)` to write it as `(Δ0', s)` with the desired support property, then case on the last `AtomicResidualGraphStep`. In either constructor, `candidates_list_degree` shows the predecessor context decomposes as either `L ++ [B ⧸ A] ++ Δ ++ Λ` or `Γ₁ ++ Δ ++ [A ⧹ B] ++ R`, so every formula in the successor context is either unchanged from the predecessor or is the exposed formula `B`. Unchanged formulas keep their original witness, and for the new `B` one uses `Subformula.rdiv_left (Subformula.refl B)` or `Subformula.ldiv_right (Subformula.refl B)` together with a small transitivity lemma for `Subformula` to compose with the predecessor witness, so the label `s` is preserved and the support invariant propagates to every reachable state.",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "formalize worker timeout: Worker returned error: Command '['codex', 'exec', '-', '--sandbox', 'read-only', '--skip-git-repo-check', '--output-last-message', '/tmp/tmpyjhnz023', '--model', 'gpt-5.4']' timed out after 390 seconds (task_type=formalize)",
+      "lean_error_fingerprint": "formalizer_timeout"
+    },
+    {
+      "stage": "statement_formalization",
+      "source_statement": "For any Γ A Δ s, if residualAtomicState Γ A = some (Δ, s), then every state reachable in the residual graph from (Δ, s) has the form (Δ', s) with every formula in Δ' a subformula of some formula in Γ ++ [A].",
+      "formalized_statement": "∀ (Γ Δ : List Tp) (A : Tp) (s : String) (q : AtomicResidualState),\n  residualAtomicState Γ A = some (Δ, s) →\n  Relation.ReflTransGen AtomicResidualGraphStep (Δ, s) q →\n  q.2 = s ∧ ∀ B ∈ q.1, ∃ C ∈ Γ ++ [A], Subformula B C",
+      "statement_formalization_notes": "Formalized “reachable in the residual graph” as `Relation.ReflTransGen AtomicResidualGraphStep`; “has the form `(Δ', s)`” is encoded by `q.2 = s` and the residual context is `q.1`.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization"
+    },
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "Induct on the `Relation.ReflTransGen` reachability derivation. The base case is exactly the initial residual-state subformula theorem. In the step case, case on the final `AtomicResidualGraphStep`; inherited formulas use the induction hypothesis, while the newly exposed formula uses the predecessor witness for the principal division formula together with `subformula_trans` and `Subformula.rdiv_left` or `Subformula.ldiv_right`.",
+      "prelude_code": "lemma subformula_trans {A B C : Tp} : Subformula A B → Subformula B C → Subformula A C := by\n  intro hAB hBC\n  induction hBC with\n  | refl => exact hAB\n  | ldiv_left h ih => exact Subformula.ldiv_left ih\n  | ldiv_right h ih => exact Subformula.ldiv_right ih\n  | rdiv_left h ih => exact Subformula.rdiv_left ih\n  | rdiv_right h ih => exact Subformula.rdiv_right ih",
+      "proof_text": "intro Γ Δ A s q hres hreach\nhave hstart : ∀ B ∈ Δ, ∃ C ∈ Γ ++ [A], Subformula B C :=\n  (thm_residual_state_subformula_occurs_000061 (Γ := Γ) (Δ := Δ) (A := A) (s := s) hres).1\ninduction hreach with\n| refl =>\n    constructor\n    · rfl\n    · simpa using hstart\n| tail hreach hstep ih =>\n    rcases ih with ⟨hs, hsub⟩\n    cases hstep with\n    | rdiv Γ0 L Δ0 Λ A0 B0 s0 hc harg =>\n        constructor\n        · exact hs\n        · intro X hX\n          have hctx : Γ0 = L ++ [B0 ⧸ A0] ++ Δ0 ++ Λ :=\n            cand_rdiv_context_eq (Γ := Γ0) (L := L) (Δ := Δ0) (Λ := Λ) (A := A0) (B := B0) hc\n          have hcases : X ∈ L ∨ X = B0 ∨ X ∈ Λ := by\n            simpa [List.mem_append, List.mem_singleton] using hX\n          rcases hcases with hX | rfl | hX\n          · have hmem : X ∈ Γ0 := by\n              rw [hctx]\n              simp [List.mem_append, hX]\n            exact hsub X hmem\n          · have hmem : Tp.rdiv X A0 ∈ Γ0 := by\n              rw [hctx]\n              simp [List.mem_append]\n            rcases hsub (Tp.rdiv X A0) hmem with ⟨C, hC, hSC⟩\n            exact ⟨C, hC, subformula_trans (Subformula.rdiv_left (Subformula.refl X)) hSC⟩\n          · have hmem : X ∈ Γ0 := by\n              rw [hctx]\n              simp [List.mem_append, hX]\n            exact hsub X hmem\n    | ldiv Γ0 Γ1 Δ0 R A0 B0 s0 hc harg =>\n        constructor\n        · exact hs\n        · intro X hX\n          have hctx : Γ0 = Γ1 ++ Δ0 ++ [A0 ⧹ B0] ++ R := by\n            symm\n            simpa using (candidates_list_degree (Γ := Γ0) (c := Cand.ldiv Γ1 Δ0 A0 B0 R) hc)\n          have hcases : X ∈ Γ1 ∨ X = B0 ∨ X ∈ R := by\n            simpa [List.mem_append, List.mem_singleton] using hX\n          rcases hcases with hX | rfl | hX\n          · have hmem : X ∈ Γ0 := by\n              rw [hctx]\n              simp [List.mem_append, hX]\n            exact hsub X hmem\n          · have hmem : Tp.ldiv A0 X ∈ Γ0 := by\n              rw [hctx]\n              simp [List.mem_append]\n            rcases hsub (Tp.ldiv A0 X) hmem with ⟨C, hC, hSC⟩\n            exact ⟨C, hC, subformula_trans (Subformula.ldiv_right (Subformula.refl X)) hSC⟩\n          · have hmem : X ∈ Γ0 := by\n              rw [hctx]\n              simp [List.mem_append, hX]\n            exact hsub X hmem",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "no_diagnostics | toolchain=leanprover/lean4:v4.29.0-rc6"
+    }
+  ],
+  "op_000067": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "There is a finite branching automaton built only from subformulas of Γ ++ [A] such that, whenever residualAtomicState Γ A = some (Δ, s), acceptance from (Δ, s) in the residual graph is equivalent to acceptance in that finite automaton.",
+      "formalized_statement": "∀ (Γ : List Tp) (A : Tp),\n  ∃ M : FiniteAtomicBranchingAutomaton,\n    (∀ p ∈ M.states, ResidualStateSubformulaBound Γ A p) ∧\n    ∀ (Δ : List Tp) (s : String),\n      residualAtomicState Γ A = some (Δ, s) →\n        (Δ, s) ∈ M.states ∧\n        (AtomicResidualGraphAccepts (Δ, s) ↔ FiniteAtomicBranchingAccepts M (Δ, s))",
+      "statement_formalization_notes": "Introduced a finite binary branching automaton on atomic residual states. “Built only from subformulas of Γ ++ [A]” is encoded by requiring every automaton state to satisfy the existing root-relative `Subformula` and atom-occurrence bound.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization"
+    },
+    {
+      "stage": "statement_formalization",
+      "source_statement": "There is a finite branching automaton built only from subformulas of Γ ++ [A] such that, whenever residualAtomicState Γ A = some (Δ, s), acceptance from (Δ, s) in the residual graph is equivalent to acceptance in that finite automaton.",
+      "formalized_statement": "∀ (Γ : List Tp) (A : Tp),\n  ∃ M : FiniteAtomicBranchingAutomaton,\n    (∀ p ∈ M.states, ResidualStateSubformulaBound Γ A p) ∧\n    ∀ (Δ : List Tp) (s : String),\n      residualAtomicState Γ A = some (Δ, s) →\n        (Δ, s) ∈ M.states ∧\n        (AtomicResidualGraphAccepts (Δ, s) ↔ FiniteAtomicBranchingAccepts M (Δ, s))",
+      "statement_formalization_notes": "Introduced a finite binary branching automaton on atomic residual states; the subformula-built condition is encoded by requiring every automaton state to satisfy the root-relative subformula and atom-occurrence bound.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization"
+    },
+    {
+      "stage": "",
+      "source_statement": "",
+      "formalized_statement": "",
+      "statement_formalization_notes": "",
+      "result": "stuck",
+      "verify_success": false,
+      "proof_sketch": "The proposed route needs two substantial ingredients that are not available in the imported theory. First, one must prove a closure lemma saying every continuation/argument state used by the internal branching presentation still satisfies the root-relative predicate `ResidualStateSubformulaBound Γ A`; this is essentially the missing global reachable-state control behind open problem `op_000065`. Second, one must turn that bound into an actual `Finset` of states for `FiniteAtomicBranchingAutomaton`; no finite-enumeration machinery for bounded residual states is present, and building it from scratch requires a sizeable new development. Although `thm_residual_branching_automaton_correct_000063` exists in `Scratch.loop.lean`, it is not part of the imported context, and even after recreating it locally the finite packaging step remains unproved. So there is not a defensible short Lean formalization of the target from the verified environment provided here.",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "formalizer_returned_stuck"
+    },
+    {
+      "stage": "statement_formalization",
+      "source_statement": "There is a finite branching automaton built only from subformulas of Γ ++ [A] such that, whenever residualAtomicState Γ A = some (Δ, s), acceptance from (Δ, s) in the residual graph is equivalent to acceptance in that finite automaton.",
+      "formalized_statement": "∀ (Γ : List Tp) (A : Tp),\n  ∃ M : FiniteAtomicBranchingAutomaton,\n    (∀ p ∈ M.states, ResidualStateSubformulaBound Γ A p) ∧\n    ∀ (Δ : List Tp) (s : String),\n      residualAtomicState Γ A = some (Δ, s) →\n        (Δ, s) ∈ M.states ∧\n        (AtomicResidualGraphAccepts (Δ, s) ↔ FiniteAtomicBranchingAccepts M (Δ, s))",
+      "statement_formalization_notes": "Encoded a finite branching automaton as a finite state set with finitely many binary branches, and interpreted “built only from subformulas of Γ ++ [A]” via the existing `Subformula` and `occurs_atom` bounds on every automaton state.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization"
+    },
+    {
+      "result": "stuck",
+      "verify_success": false,
+      "proof_sketch": "Tried a materially different route from the previous `stuck`: define a finite automaton whose states are root-subformula-bounded residual states with an additional degree cap `list_degree p.1 + 1 ≤ list_degree Γ + tp_degree A`, and define branches by filtering the finite state-product with the candidate/residual relation. This would use `thm_residual_state_subformula_occurs_000061`, `thm_residual_graph_recognizes_sequent_000062`, and `thm_residual_reachable_subformula_invariant_000065` to prove the two acceptance directions. However, in the imported environment this still requires a substantial new prelude: the automaton/acceptance declarations themselves, an exact residual-degree lemma for `residualAtomicState`, finite-enumeration lemmas for bounded residual states, and closure lemmas showing argument residuals produced from a bounded state remain root-bounded and inside the degree cap. Those ingredients are not already available, and the helper checks show they are nontrivial rather than short wrappers around existing theorems, so I cannot provide a defensible compile-ready Lean proof here.",
+      "prelude_code": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "formalizer_returned_stuck"
+    }
+  ],
+  "op_000066": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "For any Γ A Δ s, if residualAtomicState Γ A = some (Δ, s), then the set of residual-graph states reachable from (Δ, s) is finite.",
+      "formalized_statement": "∀ (Γ Δ : List Tp) (A : Tp) (s : String),\n  residualAtomicState Γ A = some (Δ, s) →\n  Set.Finite { q : AtomicResidualState | Relation.ReflTransGen AtomicResidualGraphStep (Δ, s) q }",
+      "statement_formalization_notes": "Formalized the reachable region as the set of `AtomicResidualState` values reachable from `(Δ, s)` via `Relation.ReflTransGen AtomicResidualGraphStep`, using `Set.Finite` for finiteness.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization"
+    },
+    {
+      "stage": "statement_formalization",
+      "source_statement": "For any Γ A Δ s, if residualAtomicState Γ A = some (Δ, s), then the set of residual-graph states reachable from (Δ, s) is finite.",
+      "formalized_statement": "∀ (Γ Δ : List Tp) (A : Tp) (s : String),\n  residualAtomicState Γ A = some (Δ, s) →\n  Set.Finite { q : AtomicResidualState | Relation.ReflTransGen AtomicResidualGraphStep (Δ, s) q }",
+      "statement_formalization_notes": "Formalized the reachable region as the set of `AtomicResidualState` values reachable from `(Δ, s)` via `Relation.ReflTransGen AtomicResidualGraphStep`, using `Set.Finite` for finiteness.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization"
+    },
+    {
+      "result": "proof",
+      "verify_success": false,
+      "proof_sketch": "Reuse the derived reachable-subformula invariant, then bound reachable contexts by finite subformula support and by the degree-decreasing residual step relation. This is the same argument already verified in `Scratch.loop.lean`, inlined here using helper lemmas because the proof harness imports `Generated.Manifest` and `Derived`, not `Scratch.loop`.",
+      "prelude_code": "lemma subformula_set_finite (C : Tp) : Set.Finite {B : Tp | Subformula B C} := by\n  induction C with\n  | atom s =>\n      refine (Set.finite_singleton (# s)).subset ?_\n      intro B hB\n      cases hB\n      simp\n  | ldiv A B ihA ihB =>\n      refine ((ihA.union ihB).union (Set.finite_singleton (A ⧹ B))).subset ?_\n      intro X hX\n      cases hX with\n      | refl =>\n          simp\n      | ldiv_left h =>\n          simp [h]\n      | ldiv_right h =>\n          simp [h]\n  | rdiv A B ihA ihB =>\n      refine ((ihA.union ihB).union (Set.finite_singleton (A ⧸ B))).subset ?_\n      intro X hX\n      cases hX with\n      | refl =>\n          simp\n      | rdiv_left h =>\n          simp [h]\n      | rdiv_right h =>\n          simp [h]\n\nlemma subformula_support_finite (src : List Tp) :\n    Set.Finite {B : Tp | ∃ C ∈ src, Subformula B C} := by\n  induction src with\n  | nil =>\n      simpa using (Set.finite_empty : Set.Finite (∅ : Set Tp))\n  | cons C src ih =>\n      rw [show ({B : Tp | ∃ D ∈ C :: src, Subformula B D} : Set Tp) =\n          {B : Tp | Subformula B C} ∪ {B : Tp | ∃ D ∈ src, Subformula B D} by\n        ext B\n        simp]\n      exact (subformula_set_finite C).union ih\n\nlemma finite_lists_bounded_of_finite {α : Type*} {S : Set α} (hS : S.Finite) :\n    ∀ N : Nat,\n      Set.Finite {l : List α | l.length ≤ N ∧ ∀ a ∈ l, a ∈ S}\n  | 0 =>\n      refine (Set.finite_singleton ([] : List α)).subset ?_\n      intro l hl\n      have hl0 : l.length = 0 := Nat.eq_zero_of_le_zero hl.1\n      have hnil : l = [] := by\n        rwa [List.length_eq_zero_iff] at hl0\n      simpa [hnil]\n  | N + 1 =>\n      let T : Set (List α) := {l | l.length ≤ N ∧ ∀ a ∈ l, a ∈ S}\n      have hT : T.Finite := finite_lists_bounded_of_finite hS N\n      refine ((Set.finite_singleton ([] : List α)).union\n        (Set.Finite.image (fun p : α × List α => p.1 :: p.2) (hS.prod hT))).subset ?_\n      intro l hl\n      cases l with\n      | nil =>\n          simp\n      | cons a tl =>\n          right\n          refine ⟨(a, tl), ?_, rfl⟩\n          constructor\n          · exact hl.2 a (by simp)\n          · change tl.length ≤ N ∧ ∀ b ∈ tl, b ∈ S\n            constructor\n            · simpa using hl.1\n            · intro b hb\n              exact hl.2 b (by simp [hb])\n\nlemma tp_degree_pos (A : Tp) : 0 < tp_degree A := by\n  cases A <;> simp [tp_degree]\n\nlemma list_length_le_list_degree : ∀ Γ : List Tp, Γ.length ≤ list_degree Γ\n  | [] => by simp [list_degree]\n  | A :: Γ => by\n      have hA : 1 ≤ tp_degree A := Nat.succ_le_of_lt (tp_degree_pos A)\n      simpa [list_degree] using Nat.add_le_add hA (list_length_le_list_degree Γ)\n\nlemma atomicResidualGraphStep_degree_lt {p q : AtomicResidualState}\n    (h : AtomicResidualGraphStep p q) :\n    list_degree q.1 < list_degree p.1 := by\n  cases h with\n  | rdiv Γ L Δ Λ A B s hc harg =>\n      have hΓ : Γ = L ++ [B ⧸ A] ++ Δ ++ Λ :=\n        cand_rdiv_context_eq (Γ := Γ) (L := L) (Δ := Δ) (Λ := Λ) (A := A) (B := B) hc\n      rw [hΓ]\n      simp [list_degree_traversible, List.append_assoc, list_degree, tp_degree]\n      omega\n  | ldiv Γ Γ₁ Δ R A B s hc harg =>\n      have hΓ : Γ = Γ₁ ++ Δ ++ [A ⧹ B] ++ R := by\n        symm\n        simpa using (candidates_list_degree (Γ := Γ) (c := Cand.ldiv Γ₁ Δ A B R) hc)\n      rw [hΓ]\n      simp [list_degree_traversible, List.append_assoc, list_degree, tp_degree]\n      omega\n\nlemma residual_reachable_degree_le {p q : AtomicResidualState}\n    (h : Relation.ReflTransGen AtomicResidualGraphStep p q) :\n    list_degree q.1 ≤ list_degree p.1 := by\n  induction h with\n  | refl =>\n      exact le_rfl\n  | tail hreach hstep ih =>\n      exact le_trans (atomicResidualGraphStep_degree_lt hstep).le ih",
+      "proof_text": "intro Γ Δ A s hres\nhave hsubsrc : Set.Finite {B : Tp | ∃ C ∈ Γ ++ [A], Subformula B C} :=\n  subformula_support_finite (Γ ++ [A])\nhave hctxfin :\n    Set.Finite {ctx : List Tp |\n      ctx.length ≤ list_degree Δ ∧\n      ∀ B ∈ ctx, ∃ C ∈ Γ ++ [A], Subformula B C} :=\n  finite_lists_bounded_of_finite\n    (S := {B : Tp | ∃ C ∈ Γ ++ [A], Subformula B C})\n    hsubsrc (list_degree Δ)\nrefine (Set.Finite.image (fun ctx : List Tp => (ctx, s)) hctxfin).subset ?_\nintro q hq\nrcases thm_residual_reachable_subformula_invariant_000065 Γ Δ A s q hres hq with\n  ⟨hs, hsub⟩\nhave hdeg : list_degree q.1 ≤ list_degree Δ :=\n  residual_reachable_degree_le hq\nrefine ⟨q.1, ?_, ?_⟩\n· exact ⟨le_trans (list_length_le_list_degree q.1) hdeg, hsub⟩\n· cases q\n  simpa [hs]",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.loop.lean:45:6: warning: try 'simp' instead of 'simpa'",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.loop.lean:45:6: warning: try 'simp' instead of 'simpa' | Note: This linter can be disabled with `set_option linter.unnecessarySimpa false` | AutomatedTheoryConstruction/Scratch.loop.lean:57:6: error(lean.unknownIdentifier): Unknown identifier `refine`"
+    }
+  ],
+  "op_000068": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "For any finite source list Σ and states p q, if every formula in p.1 is a subformula of some formula in Σ and AtomicResidualGraphStep p q, then q.2 = p.2 and every formula in q.1 is a subformula of some formula in Σ.",
+      "formalized_statement": "∀ (src : List Tp) (p q : AtomicResidualState),\n  (∀ B ∈ p.1, ∃ C ∈ src, Subformula B C) →\n  AtomicResidualGraphStep p q →\n  q.2 = p.2 ∧ ∀ B ∈ q.1, ∃ C ∈ src, Subformula B C",
+      "statement_formalization_notes": "Minimal repair of the previous formalization: replaced the parser-rejected binder name `Σ` with `src`. Interpreted “finite source list” as `src : List Tp`, since finiteness is built into lists.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization"
+    },
+    {
+      "result": "proof",
+      "verify_success": false,
+      "proof_sketch": "Case split on the residual-graph step. In each constructor the string component is definitionally unchanged. For the context component, use the candidate-context equality to rewrite the source list, split membership in the successor context into left/principal/right cases, and in the principal case compose the predecessor subformula witness with `Subformula.rdiv_left` or `Subformula.ldiv_right` via `subformula_trans`.",
+      "prelude_code": "",
+      "proof_text": "intro src p q hsrc hstep\ncases hstep with\n| rdiv Γ L Δ Λ A B s hc harg =>\n    constructor\n    · rfl\n    · intro X hX\n      have hctx : Γ = L ++ [B ⧸ A] ++ Δ ++ Λ :=\n        cand_rdiv_context_eq (Γ := Γ) (L := L) (Δ := Δ) (Λ := Λ) (A := A) (B := B) hc\n      have hcases : X ∈ L ∨ X = B ∨ X ∈ Λ := by\n        simpa [List.mem_append, List.mem_singleton] using hX\n      rcases hcases with hX | rfl | hX\n      · have hmem : X ∈ Γ := by\n          rw [hctx]\n          simp [List.mem_append, hX]\n        exact hsrc X hmem\n      · have hmem : X ⧸ A ∈ Γ := by\n          rw [hctx]\n          simp [List.mem_append]\n        rcases hsrc (X ⧸ A) hmem with ⟨C, hC, hSC⟩\n        exact ⟨C, hC, subformula_trans (Subformula.rdiv_left (Subformula.refl X)) hSC⟩\n      · have hmem : X ∈ Γ := by\n          rw [hctx]\n          simp [List.mem_append, hX]\n        exact hsrc X hmem\n| ldiv Γ Γ₁ Δ R A B s hc harg =>\n    constructor\n    · rfl\n    · intro X hX\n      have hctx : Γ = Γ₁ ++ Δ ++ [A ⧹ B] ++ R := by\n        symm\n        simpa using (candidates_list_degree (Γ := Γ) (c := Cand.ldiv Γ₁ Δ A B R) hc)\n      have hcases : X ∈ Γ₁ ∨ X = B ∨ X ∈ R := by\n        simpa [List.mem_append, List.mem_singleton] using hX\n      rcases hcases with hX | rfl | hX\n      · have hmem : X ∈ Γ := by\n          rw [hctx]\n          simp [List.mem_append, hX]\n        exact hsrc X hmem\n      · have hmem : A ⧹ X ∈ Γ := by\n          rw [hctx]\n          simp [List.mem_append]\n        rcases hsrc (A ⧹ X) hmem with ⟨C, hC, hSC⟩\n        exact ⟨C, hC, subformula_trans (Subformula.ldiv_right (Subformula.refl X)) hSC⟩\n      · have hmem : X ∈ Γ := by\n          rw [hctx]\n          simp [List.mem_append, hX]\n        exact hsrc X hmem",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.loop.002.lean:32:22: error: Application type mismatch: The argument",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.loop.002.lean:32:22: error: Application type mismatch: The argument | X | has type"
+    },
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "Split on `AtomicResidualGraphStep`. In each constructor, the string component is definitionally unchanged. For the list component, rewrite the predecessor context using the candidate-context equality, split membership in the successor list into left/principal/right cases, and in the principal case pull the predecessor witness through `Subformula.rdiv_left` or `Subformula.ldiv_right`. The repair is to use the explicit constructors `Tp.rdiv X A` and `Tp.ldiv A X` in term position, matching the already verified pattern in `Derived.lean`.",
+      "prelude_code": "",
+      "proof_text": "intro src p q hsrc hstep\ncases hstep with\n| rdiv Γ L Δ Λ A B s hc harg =>\n    constructor\n    · rfl\n    · intro X hX\n      have hctx : Γ = L ++ [B ⧸ A] ++ Δ ++ Λ :=\n        cand_rdiv_context_eq (Γ := Γ) (L := L) (Δ := Δ) (Λ := Λ) (A := A) (B := B) hc\n      have hcases : X ∈ L ∨ X = B ∨ X ∈ Λ := by\n        simpa [List.mem_append, List.mem_singleton] using hX\n      rcases hcases with hX | rfl | hX\n      · have hmem : X ∈ Γ := by\n          rw [hctx]\n          simp [List.mem_append, hX]\n        exact hsrc X hmem\n      · have hmem : Tp.rdiv X A ∈ Γ := by\n          rw [hctx]\n          simp [List.mem_append]\n        rcases hsrc (Tp.rdiv X A) hmem with ⟨C, hC, hSC⟩\n        exact ⟨C, hC, subformula_trans (Subformula.rdiv_left (Subformula.refl X)) hSC⟩\n      · have hmem : X ∈ Γ := by\n          rw [hctx]\n          simp [List.mem_append, hX]\n        exact hsrc X hmem\n| ldiv Γ Γ₁ Δ R A B s hc harg =>\n    constructor\n    · rfl\n    · intro X hX\n      have hctx : Γ = Γ₁ ++ Δ ++ [A ⧹ B] ++ R := by\n        symm\n        simpa using (candidates_list_degree (Γ := Γ) (c := Cand.ldiv Γ₁ Δ A B R) hc)\n      have hcases : X ∈ Γ₁ ∨ X = B ∨ X ∈ R := by\n        simpa [List.mem_append, List.mem_singleton] using hX\n      rcases hcases with hX | rfl | hX\n      · have hmem : X ∈ Γ := by\n          rw [hctx]\n          simp [List.mem_append, hX]\n        exact hsrc X hmem\n      · have hmem : Tp.ldiv A X ∈ Γ := by\n          rw [hctx]\n          simp [List.mem_append]\n        rcases hsrc (Tp.ldiv A X) hmem with ⟨C, hC, hSC⟩\n        exact ⟨C, hC, subformula_trans (Subformula.ldiv_right (Subformula.refl X)) hSC⟩\n      · have hmem : X ∈ Γ := by\n          rw [hctx]\n          simp [List.mem_append, hX]\n        exact hsrc X hmem",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "no_diagnostics | toolchain=leanprover/lean4:v4.29.0-rc6"
+    }
+  ],
+  "op_000071": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∀ (Γ Δ : List Tp) (A : Tp) (s : String), residualAtomicState Γ A = some (Δ, s) → Set.Finite { q : AtomicResidualState | Relation.ReflTransGen AtomicResidualGraphStep (Δ, s) q }",
+      "formalized_statement": "∀ (Γ Δ : List Tp) (A : Tp) (s : String), residualAtomicState Γ A = some (Δ, s) → Set.Finite { q : AtomicResidualState | Relation.ReflTransGen AtomicResidualGraphStep (Δ, s) q }",
+      "statement_formalization_notes": "The input statement already matches repository notation and existing residual-graph names, so no prelude code is needed.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization"
+    },
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "Use the reachable-state invariant from `thm_residual_reachable_subformula_invariant_000065`, add a local lemma that each residual step strictly decreases `list_degree`, deduce every reachable context has degree and hence length bounded by `list_degree Δ`, and combine this with finiteness of the source subformula set and finiteness of bounded-length lists over a finite alphabet.",
+      "prelude_code": "lemma subformula_set_finite (C : Tp) : Set.Finite {B : Tp | Subformula B C} := by\n  induction C with\n  | atom s =>\n      refine (Set.finite_singleton (Tp.atom s)).subset ?_\n      intro B hB\n      cases hB\n      simp\n  | ldiv A B ihA ihB =>\n      refine ((ihA.union ihB).union (Set.finite_singleton (Tp.ldiv A B))).subset ?_\n      intro X hX\n      cases hX with\n      | refl =>\n          simp\n      | ldiv_left h =>\n          simp [h]\n      | ldiv_right h =>\n          simp [h]\n  | rdiv A B ihA ihB =>\n      refine ((ihA.union ihB).union (Set.finite_singleton (Tp.rdiv A B))).subset ?_\n      intro X hX\n      cases hX with\n      | refl =>\n          simp\n      | rdiv_left h =>\n          simp [h]\n      | rdiv_right h =>\n          simp [h]\n\nlemma subformula_support_finite (src : List Tp) :\n    Set.Finite {B : Tp | ∃ C ∈ src, Subformula B C} := by\n  induction src with\n  | nil =>\n      simpa using (Set.finite_empty : Set.Finite (∅ : Set Tp))\n  | cons C src ih =>\n      rw [show ({B : Tp | ∃ D ∈ C :: src, Subformula B D} : Set Tp) =\n          {B : Tp | Subformula B C} ∪ {B : Tp | ∃ D ∈ src, Subformula B D} by\n        ext B\n        simp]\n      exact (subformula_set_finite C).union ih\n\nlemma finite_lists_bounded_of_finite {α : Type*} {S : Set α} (hS : S.Finite) :\n    ∀ N : Nat,\n      Set.Finite {l : List α | l.length ≤ N ∧ ∀ a ∈ l, a ∈ S} := by\n  intro N\n  induction N with\n  | zero =>\n      refine (Set.finite_singleton ([] : List α)).subset ?_\n      intro l hl\n      cases l with\n      | nil =>\n          simp\n      | cons a tl =>\n          simp at hl\n  | succ N ih =>\n      let T : Set (List α) := {l | l.length ≤ N ∧ ∀ a ∈ l, a ∈ S}\n      have hT : T.Finite := ih\n      refine ((Set.finite_singleton ([] : List α)).union\n        (Set.Finite.image (fun p : α × List α => p.1 :: p.2) (hS.prod hT))).subset ?_\n      intro l hl\n      cases l with\n      | nil =>\n          simp\n      | cons a tl =>\n          right\n          refine ⟨(a, tl), ?_, rfl⟩\n          constructor\n          · exact hl.2 a (by simp)\n          · change tl.length ≤ N ∧ ∀ b ∈ tl, b ∈ S\n            constructor\n            · simpa using hl.1\n            · intro b hb\n              exact hl.2 b (by simp [hb])\n\nlemma list_length_le_list_degree : ∀ Γ : List Tp, Γ.length ≤ list_degree Γ\n  | [] => by\n      simp [list_degree]\n  | A :: Γ => by\n      have hA : 1 ≤ tp_degree A := by\n        cases A <;> simp [tp_degree]\n      have hΓ : Γ.length ≤ list_degree Γ := list_length_le_list_degree Γ\n      calc\n        (A :: Γ).length = Γ.length + 1 := by simp\n        _ = 1 + Γ.length := by omega\n        _ ≤ tp_degree A + list_degree Γ := Nat.add_le_add hA hΓ\n        _ = list_degree (A :: Γ) := by simp [list_degree]\n\nlemma atomicResidualGraphStep_degree_lt {p q : AtomicResidualState}\n    (h : AtomicResidualGraphStep p q) :\n    list_degree q.1 < list_degree p.1 := by\n  cases h with\n  | rdiv Γ L Δ Λ A B s hc harg =>\n      have hΓ : Γ = L ++ [Tp.rdiv B A] ++ Δ ++ Λ := by\n        symm\n        simpa using (candidates_list_degree (Γ := Γ) (c := Cand.rdiv L B A Δ Λ) hc)\n      rw [hΓ]\n      simp [list_degree_traversible, List.append_assoc, list_degree, tp_degree]\n      omega\n  | ldiv Γ Γ₁ Δ R A B s hc harg =>\n      have hΓ : Γ = Γ₁ ++ Δ ++ [Tp.ldiv A B] ++ R := by\n        symm\n        simpa using (candidates_list_degree (Γ := Γ) (c := Cand.ldiv Γ₁ Δ A B R) hc)\n      rw [hΓ]\n      simp [list_degree_traversible, List.append_assoc, list_degree, tp_degree]\n      omega\n\nlemma residual_reachable_degree_le {p q : AtomicResidualState}\n    (h : Relation.ReflTransGen AtomicResidualGraphStep p q) :\n    list_degree q.1 ≤ list_degree p.1 := by\n  induction h with\n  | refl =>\n      exact le_rfl\n  | tail hreach hstep ih =>\n      exact le_trans (atomicResidualGraphStep_degree_lt hstep).le ih",
+      "proof_text": "intro Γ Δ A s hres\nhave hsubsrc : Set.Finite {B : Tp | ∃ C ∈ Γ ++ [A], Subformula B C} :=\n  subformula_support_finite (Γ ++ [A])\nhave hctxfin :\n    Set.Finite {ctx : List Tp |\n      ctx.length ≤ list_degree Δ ∧\n      ∀ B ∈ ctx, ∃ C ∈ Γ ++ [A], Subformula B C} :=\n  finite_lists_bounded_of_finite\n    (S := {B : Tp | ∃ C ∈ Γ ++ [A], Subformula B C})\n    hsubsrc (list_degree Δ)\nrefine (Set.Finite.image (fun ctx : List Tp => (ctx, s)) hctxfin).subset ?_\nintro q hq\nrcases thm_residual_reachable_subformula_invariant_000065 Γ Δ A s q hres hq with\n  ⟨hs, hsub⟩\nhave hdeg : list_degree q.1 ≤ list_degree Δ :=\n  residual_reachable_degree_le hq\nrefine ⟨q.1, ?_, ?_⟩\n· exact ⟨le_trans (list_length_le_list_degree q.1) hdeg, hsub⟩\n· cases q\n  simpa using hs.symm",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.loop.lean:45:6: warning: try 'simp' instead of 'simpa' | Note: This linter can be disabled with `set_option linter.unnecessarySimpa false` | toolchain=leanprover/lean4:v4.29.0-rc6"
+    }
+  ],
+  "op_000075": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "For every finite list src and atom s, the class of states p such that p.2 = s and every formula B in p.1 is a subformula of some formula C in src is finite.",
+      "formalized_statement": "∀ (src : List Tp) (s : String), Set.Finite { p : AtomicResidualState | p.2 = s ∧ ∀ B ∈ p.1, ∃ C ∈ src, Subformula B C }",
+      "statement_formalization_notes": "Formalized the class as a set of `AtomicResidualState` with fixed second component `s` and with every formula in the first component a subformula of some formula in `src`; the phrase 'finite list' is represented by Lean's `List`.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization"
+    },
+    {
+      "result": "counterexample",
+      "verify_success": false,
+      "proof_sketch": "The statement is false. Specialize the claimed finiteness to `src = [# \"a\"]` and `s = \"a\"`. Because `Subformula` is reflexive, every state `(List.replicate n (# \"a\"), \"a\")` lies in the resulting set: every formula occurring in the first component is exactly `# \"a\"`, hence a subformula of the unique source formula. This yields an injective map `Nat → S`. If `S` were finite, then the subtype `S` would be a finite type, and `Finite.of_injective` would imply that `Nat` is finite, contradiction.",
+      "prelude_code": "",
+      "proof_text": "intro h\nlet S : Set AtomicResidualState :=\n  { p : AtomicResidualState | p.2 = \"a\" ∧ ∀ B ∈ p.1, ∃ C ∈ [# \"a\"], Subformula B C }\nhave hSfin : S.Finite := by\n  simpa [S] using h [# \"a\"] \"a\"\nlet f : ℕ → S := fun n =>\n  ⟨(List.replicate n (# \"a\"), \"a\"), by\n    constructor\n    · rfl\n    · intro B hB\n      refine ⟨# \"a\", by simp, ?_⟩\n      have hEq : B = # \"a\" := eq_of_mem_replicate hB\n      simpa [hEq] using (Subformula.refl (# \"a\"))⟩\nletI : Fintype S := hSfin.fintype\nhave hf : Function.Injective f := by\n  intro m n hmn\n  simpa [f] using congr_arg (fun x : S => x.1.1.length) hmn\nhaveI : Finite ℕ := Finite.of_injective f hf\nexact not_finite ℕ",
+      "counterexample_text": "Take `src = [# \"a\"]` and `s = \"a\"`. For each `n : Nat`, the state `p_n = (List.replicate n (# \"a\"), \"a\")` satisfies the defining property, since every `B ∈ p_n.1` is equal to `# \"a\"`, and `Subformula.refl` gives `Subformula (# \"a\") (# \"a\")`. The states `p_n` are pairwise distinct because their first components have different lengths, so this same-atom subformula-bounded class is infinite.",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.loop.002.lean:25:32: error(lean.unknownIdentifier): Unknown identifier `eq_of_mem_replicate`",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.loop.002.lean:25:32: error(lean.unknownIdentifier): Unknown identifier `eq_of_mem_replicate` | toolchain=leanprover/lean4:v4.29.0-rc6"
+    },
+    {
+      "result": "counterexample",
+      "verify_success": true,
+      "proof_sketch": "The statement is false. Specialize to `src = [# \"a\"]` and `s = \"a\"`. Then every state `(List.replicate n (# \"a\"), \"a\")` belongs to the set, because each formula appearing in the first component is equal to `# \"a\"`, hence is a subformula of the unique source formula by `Subformula.refl`. This gives an injective map `Nat → S`. If `S` were finite, then `S` would be a fintype, so `Finite.of_injective` would make `Nat` finite, contradicting `not_finite ℕ`.",
+      "prelude_code": "",
+      "proof_text": "intro h\nlet S : Set AtomicResidualState :=\n  { p : AtomicResidualState | p.2 = \"a\" ∧ ∀ B ∈ p.1, ∃ C ∈ [# \"a\"], Subformula B C }\nhave hSfin : S.Finite := by\n  simpa [S] using h [# \"a\"] \"a\"\nlet f : ℕ → S := fun n =>\n  ⟨(List.replicate n (# \"a\"), \"a\"), by\n    constructor\n    · rfl\n    · intro B hB\n      refine ⟨# \"a\", by simp, ?_⟩\n      have hEq : B = # \"a\" := List.eq_of_mem_replicate hB\n      simpa [hEq] using (Subformula.refl (# \"a\"))⟩\nletI : Fintype S := hSfin.fintype\nhave hf : Function.Injective f := by\n  intro m n hmn\n  simpa [f] using congr_arg (fun x : S => x.1.1.length) hmn\nhaveI : Finite ℕ := Finite.of_injective f hf\nexact not_finite ℕ",
+      "counterexample_text": "Take `src = [# \"a\"]` and `s = \"a\"`. For each `n : Nat`, define `p_n = (List.replicate n (# \"a\"), \"a\")`. Every `B ∈ p_n.1` is equal to `# \"a\"` by `List.eq_of_mem_replicate`, so `Subformula.refl (# \"a\")` shows that `B` is a subformula of the unique element of `src`. Thus each `p_n` lies in the target set. These states are pairwise distinct because their first components have lengths `n`, so the set is infinite. Therefore the claimed finiteness statement is false.",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "no_diagnostics | toolchain=leanprover/lean4:v4.29.0-rc6"
+    }
+  ],
+  "op_000070": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∀ (src : List Tp) (p q : AtomicResidualState), (∀ B ∈ p.1, ∃ C ∈ src, Subformula B C) → AtomicResidualGraphStep p q → q.2 = p.2 ∧ list_degree q.1 < list_degree p.1 ∧ (∀ B ∈ q.1, ∃ C ∈ src, Subformula B C)",
+      "formalized_statement": "∀ (src : List Tp) (p q : AtomicResidualState), (∀ B ∈ p.1, ∃ C ∈ src, Subformula B C) → AtomicResidualGraphStep p q → q.2 = p.2 ∧ list_degree q.1 < list_degree p.1 ∧ (∀ B ∈ q.1, ∃ C ∈ src, Subformula B C)",
+      "statement_formalization_notes": "This matches the natural-language target directly and aligns with the existing one-step subformula-closure and degree-descent lemmas in Derived.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization"
+    },
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "Combine the existing one-step subformula-closure theorem with the one-step strict degree-drop lemma, then package the conclusions in the required conjunction order.",
+      "prelude_code": "",
+      "proof_text": "intro src p q hsrc hstep\nrcases thm_residual_step_subformula_closed_000068 src p q hsrc hstep with ⟨hs, hsub⟩\nexact ⟨hs, atomicResidualGraphStep_degree_lt hstep, hsub⟩",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "no_diagnostics | toolchain=leanprover/lean4:v4.29.0-rc6"
+    }
+  ],
+  "op_000080": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "There exist Γ, A, Δ, s, and a state p such that residualAtomicState Γ A = some (Δ, s), p.2 = s, list_degree p.1 ≤ list_degree Δ, every formula in p.1 is a subformula of some formula in Γ ++ [A], but p is not reachable from (Δ, s) by residual-graph steps.",
+      "formalized_statement": "∃ (Γ : List Tp) (A : Tp) (Δ : List Tp) (s : String) (p : AtomicResidualState),\n  residualAtomicState Γ A = some (Δ, s) ∧\n  p.2 = s ∧\n  list_degree p.1 ≤ list_degree Δ ∧\n  (∀ B ∈ p.1, ∃ C ∈ Γ ++ [A], Subformula B C) ∧\n  ¬ Relation.ReflTransGen AtomicResidualGraphStep (Δ, s) p",
+      "statement_formalization_notes": "Formalized the witness state as `p : AtomicResidualState` and interpreted “reachable by residual-graph steps” as `Relation.ReflTransGen AtomicResidualGraphStep (Δ, s) p`, matching the repository’s existing reachability statements.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization"
+    },
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "Use witnesses Γ = [# \"a\"], A = (# \"a\" ⧹ # \"a\"), Δ = [# \"a\", # \"a\"], s = \"a\", and p = ([# \"a\"], \"a\"). The residual-state equation is by unfolding `residualAtomicState`; the degree and subformula bounds are immediate. For non-reachability, show that every state reachable from `([# \"a\", # \"a\"], \"a\")` equals the start state, because `candidates [# \"a\", # \"a\"]` is empty, so no residual step can occur from that all-atom context.",
+      "prelude_code": "",
+      "proof_text": "refine ⟨[# \"a\"], # \"a\" ⧹ # \"a\", [# \"a\", # \"a\"], \"a\", ([# \"a\"], \"a\"), ?_⟩\nconstructor\n· simp [residualAtomicState]\nconstructor\n· rfl\nconstructor\n· simp [list_degree, tp_degree]\nconstructor\n· intro B hB\n  simp at hB\n  subst hB\n  refine ⟨# \"a\", ?_, Subformula.refl (# \"a\")⟩\n  simp\n· intro hreach\n  suffices hstay : ∀ q, Relation.ReflTransGen AtomicResidualGraphStep ([# \"a\", # \"a\"], \"a\") q → q = ([# \"a\", # \"a\"], \"a\")\n  · have hp : ([# \"a\"], \"a\") = ([# \"a\", # \"a\"], \"a\") := hstay ([# \"a\"], \"a\") hreach\n    simp at hp\n  · intro q h\n    induction h with\n    | refl => rfl\n    | tail hreach hstep ih =>\n        subst ih\n        exfalso\n        cases hstep with\n        | rdiv Γ L Δ Λ A B s hc harg =>\n            simp [candidates, picks] at hc\n        | ldiv Γ Γ₁ Δ R A B s hc harg =>\n            simp [candidates, picks] at hc",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "no_diagnostics | toolchain=leanprover/lean4:v4.29.0-rc6"
+    }
+  ],
+  "op_000072": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∀ (src : List Tp) (s : String) (N : Nat), Set.Finite { q : AtomicResidualState | q.2 = s ∧ list_degree q.1 ≤ N ∧ (∀ B ∈ q.1, ∃ C ∈ src, Subformula B C) }",
+      "formalized_statement": "∀ (src : List Tp) (s : String) (N : Nat),\n  Set.Finite { q : AtomicResidualState |\n    q.2 = s ∧\n    list_degree q.1 ≤ N ∧\n    (∀ B ∈ q.1, ∃ C ∈ src, Subformula B C) }",
+      "statement_formalization_notes": "Kept the statement in the ambient `AtomicResidualState` set-comprehension form used by nearby residual-state theorems; no extra prelude declarations are needed.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization"
+    },
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "Use `subformula_support_finite src` to get a finite support set of formulas, then `finite_lists_bounded_of_finite` to show there are only finitely many lists of length at most `N` whose entries lie in that support. Every state in the target has second component exactly `s`, so it lies in the image of that finite list set under `ctx ↦ (ctx, s)`. The degree bound implies the needed length bound via `list_length_le_list_degree`.",
+      "prelude_code": "",
+      "proof_text": "intro src s N\nhave hsubsrc : Set.Finite {B : Tp | ∃ C ∈ src, Subformula B C} :=\n  subformula_support_finite src\nhave hctxfin :\n    Set.Finite {ctx : List Tp |\n      ctx.length ≤ N ∧\n      ∀ B ∈ ctx, ∃ C ∈ src, Subformula B C} :=\n  finite_lists_bounded_of_finite\n    (S := {B : Tp | ∃ C ∈ src, Subformula B C})\n    hsubsrc N\nrefine (Set.Finite.image (fun ctx : List Tp => (ctx, s)) hctxfin).subset ?_\nintro q hq\nrefine ⟨q.1, ?_, ?_⟩\n· exact ⟨le_trans (list_length_le_list_degree q.1) hq.2.1, hq.2.2⟩\n· cases q\n  simpa using hq.1.symm",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "no_diagnostics | toolchain=leanprover/lean4:v4.29.0-rc6"
+    }
+  ],
+  "op_000085": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "For every `src`, `s`, and `N`, residual acceptance on the bounded slice `{ p : AtomicResidualState | p.2 = s ∧ list_degree p.1 ≤ N ∧ (∀ B ∈ p.1, ∃ C ∈ src, Subformula B C) }` admits an internal finite characterization by backward induction on `list_degree`.",
+      "formalized_statement": "",
+      "statement_formalization_notes": "The phrase “admits an internal finite characterization by backward induction on list_degree” is not precise enough to formalize reliably from the current context alone. It could mean a finite-set exactness theorem, existence of a recursive boolean recognizer on the bounded slice, or a fixed-point/inductive characterization of `AtomicResidualGraphAccepts`, and the repository does not provide a canonical predicate for that notion.",
+      "result": "stuck",
+      "verify_success": false,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization"
+    },
+    {
+      "result": "stuck",
+      "verify_success": false,
+      "proof_sketch": "The phrase “admits an internal finite characterization by backward induction on list_degree” is not precise enough to formalize reliably from the current context alone. It could mean a finite-set exactness theorem, existence of a recursive boolean recognizer on the bounded slice, or a fixed-point/inductive characterization of `AtomicResidualGraphAccepts`, and the repository does not provide a canonical predicate for that notion.",
+      "prelude_code": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "non_formalized_result"
+    }
+  ],
+  "op_000084": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "For every finite `src` and atom `s`, a subset of `{ p : AtomicResidualState | p.2 = s ∧ (∀ B ∈ p.1, ∃ C ∈ src, Subformula B C) }` is finite if and only if the values `list_degree p.1` are uniformly bounded on that subset.",
+      "formalized_statement": "∀ (src : List Tp) (s : String) (S : Set AtomicResidualState), S ⊆ { p : AtomicResidualState | p.2 = s ∧ (∀ B ∈ p.1, ∃ C ∈ src, Subformula B C) } → (S.Finite ↔ ∃ N : Nat, ∀ p ∈ S, list_degree p.1 ≤ N)",
+      "statement_formalization_notes": "Formalized the unspecified subset as a set `S` contained in the ambient same-atom subformula state set; `src` is taken finite via the repository’s `List Tp` representation.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization"
+    },
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "Forward: the image of a finite set `S` under `p ↦ list_degree p.1` is a finite set of naturals, hence bounded above by `Set.finite_iff_bddAbove`. Reverse: if all `list_degree p.1` are bounded by `N`, then `S` is contained in the finite degree-bounded same-atom subformula slice from `thm_degree_bounded_subformula_slice_finite_000072`.",
+      "prelude_code": "",
+      "proof_text": "intro src s S hSub\nconstructor\n· intro hfin\n  have hfinImg :\n      Set.Finite ((fun p : AtomicResidualState => list_degree p.1) '' S) :=\n    Set.Finite.image (fun p : AtomicResidualState => list_degree p.1) hfin\n  rcases (Set.finite_iff_bddAbove.mp hfinImg) with ⟨N, hN⟩\n  refine ⟨N, ?_⟩\n  intro p hp\n  exact hN ⟨p, hp, rfl⟩\n· rintro ⟨N, hN⟩\n  refine (thm_degree_bounded_subformula_slice_finite_000072 src s N).subset ?_\n  intro p hp\n  have hp' := hSub hp\n  exact ⟨hp'.1, hN p hp, hp'.2⟩",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "no_diagnostics | toolchain=leanprover/lean4:v4.29.0-rc6"
+    }
+  ],
+  "op_000078": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "AtomicResidualGraphStep is well-founded on AtomicResidualState.",
+      "formalized_statement": "WellFounded (fun q p : AtomicResidualState => AtomicResidualGraphStep p q)",
+      "statement_formalization_notes": "Formalized well-foundedness using the converse relation, since `AtomicResidualGraphStep p q` is a forward step from `p` to the smaller state `q`, while `WellFounded` is stated on predecessor relations.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization"
+    },
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "Use `list_degree` on the residual context as a measure. The lemma `atomicResidualGraphStep_degree_lt` shows that any step `AtomicResidualGraphStep p q` gives `list_degree q.1 < list_degree p.1`, so the reversed step relation is a subrelation of `measure (fun p : AtomicResidualState => list_degree p.1)`, hence well-founded.",
+      "prelude_code": "",
+      "proof_text": "refine Subrelation.wf ?_ (measure (fun p : AtomicResidualState => list_degree p.1)).wf\nintro q p hstep\nsimpa using atomicResidualGraphStep_degree_lt hstep",
       "counterexample_text": "",
       "lean_error_excerpt": "",
       "lean_error_fingerprint": "no_diagnostics | toolchain=leanprover/lean4:v4.29.0-rc6"

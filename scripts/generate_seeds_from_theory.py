@@ -8,6 +8,13 @@ from pathlib import Path
 from typing import Any
 import json
 
+SCRIPT_DIR = Path(__file__).resolve().parent
+LOOP_DIR = SCRIPT_DIR / "loop"
+for path in (SCRIPT_DIR, LOOP_DIR):
+    path_str = str(path)
+    if path_str not in sys.path:
+        sys.path.insert(0, path_str)
+
 from common import (
     ARCHIVED_PROBLEMS_FILENAME,
     LEGACY_DEFERRED_PROBLEMS_FILENAME,

@@ -1,6 +1,7 @@
 # Repository Map
 
 This file explains which parts of the repository users are expected to edit and which parts are mainly runtime or AI-managed.
+For setup and operational workflows, use this together with [`GETTING_STARTED.md`](GETTING_STARTED.md) and [`USER_GUIDE.md`](USER_GUIDE.md).
 
 ## Edit Here First
 

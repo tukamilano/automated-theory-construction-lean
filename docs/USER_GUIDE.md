@@ -1,108 +1,42 @@
 # User Guide
 
-This page collects the user-facing operational details that do not need to live in the root README.
+This page is for normal operation after initial setup. For first-time setup, read [`GETTING_STARTED.md`](GETTING_STARTED.md) first.
 
-For the initial setup order, see [`GETTING_STARTED.md`](GETTING_STARTED.md).
+## Operational Mental Model
 
-## Start Here
+```text
+[Theory.lean (+ optional Theory/*.lean)] + [research_agenda.md]
+        ↓
+seed generation
+        ↓
+[seeds.jsonl]
+        ↓
+loop: generate -> formalize -> verify -> repair
+        ↓
+[Scratch.lean] temporary verification target
+        ↓
+[Derived.lean] accumulated verified theorems
+        ↓
+optional cleanup and split-based refactor stages
+```
 
-If you are new to this repository, begin with these paths:
+The important separation is:
+
+- you edit the base theory and agenda
+- the loop edits `Derived.lean`, `Scratch.lean`, and runtime data
+
+If you need ownership boundaries, keep [`REPO_MAP.md`](REPO_MAP.md) open alongside this guide.
+
+## What You Usually Edit
+
+For a custom theory, the normal edit set is:
 
 - `AutomatedTheoryConstruction/Theory.lean`
 - `AutomatedTheoryConstruction/Theory/*.lean`
 - `AutomatedTheoryConstruction/research_agenda.md`
+- `AutomatedTheoryConstruction/seeds.jsonl` when you want to hand-curate initial problems
 
-If you want the ownership map for generated files and advanced paths, see [`REPO_MAP.md`](REPO_MAP.md).
-
-## What To Edit
-
-To switch from the bundled example to your own theory, edit:
-
-- `AutomatedTheoryConstruction/Theory.lean`
-- `AutomatedTheoryConstruction/Theory/*.lean` as needed for local theory submodules
-- `AutomatedTheoryConstruction/research_agenda.md` to define what kinds of problems are worth generating
-- `AutomatedTheoryConstruction/seeds.jsonl` if you want to provide your own initial problems
-
-`Theory.lean` remains the public entry point. If your theory grows beyond one file, keep the imports there and move detailed definitions or helper lemmas under `AutomatedTheoryConstruction/Theory/`.
-If you split your theory across multiple files under `AutomatedTheoryConstruction/Theory/`, add the corresponding `import` lines to `AutomatedTheoryConstruction/Theory.lean`.
-
-`AutomatedTheoryConstruction/research_agenda.md` is the persistent external value function. Seed generation, open-problem prioritization, and problem expansion read it automatically.
-Optional extra reference files can still be passed ad hoc with `--context-file`.
-
-## Swap the Proof Engine (without touching planning logic)
-
-The loop treats planning/reasoning (`prover`, `formalizer`, `repair`) and Lean verification (`Scratch.lean` check) as separate concerns.
-You can replace only the verification engine used for `Scratch.lean` checks.
-
-- Set `ATC_PROOF_EXECUTOR` to a CLI command before running `atc_cli`.
-- Keep prover/formalize/repair worker commands unchanged.
-- Export contract-compatible JSON from the external process.
-
-For complete schema and replacement steps, follow [`PROOF_EXECUTOR.md`](PROOF_EXECUTOR.md).
-
-## Quick Mental Model
-
-```text
-[Theory.lean (+ optional Theory/*.lean)] + [AutomatedTheoryConstruction/research_agenda.md]
-        ↓
-[scripts/generate_seeds_from_theory.py]
-  generate initial open problems
-        ↓
-[seeds.jsonl]
-        ↓
-+-------------------------------------------+
-| [Theory.lean]                             |
-|   entry module for base theory            |
-|   + optional local theory submodules      |
-|         ↓                                 |
-| [scripts/run_loop.py]                     |
-|   generate / formalize / prove / repair   |
-|         ↓                                 |
-| [Scratch.lean]                            |
-|   temporary Lean verification             |
-|         ↓                                 |
-| [Derived.lean]                            |
-|   accumulated verified theorems           |
-+-------------------------------------------+
-        ↓
-[Derived.refactored.preview.lean]
-  copy of Derived.lean used for review-time refactors
-        ↓
-[Derived.refactored.preview.lean]
-        ↓
-[scripts/apply_try_at_each_step_rewrites.py]
-  direct proof-shortening rewrites from `tryAtEachStep`
-        ↓
-[Derived.refactored.preview.lean]
-        ↓
-[scripts/direct_refactor_derived.py]
-  review-focused non-semantic cleanup
-        ↓
-[Derived.refactored.reviewed.lean]
-```
-
-## Refactor Design
-
-The recommended refactor design is:
-
-```text
-pass 1.5
-  whole-file rewrite cleanup
-        ↓
-pass 2.0
-  whole-file review-focused cleanup
-        ↓
-split into Generated/C000x_*.lean
-        ↓
-per-file validation after split
-        ↓
-lake build AutomatedTheoryConstruction.Generated.Manifest
-and repair at the whole-Generated level if needed
-```
-
-The key idea is that pass 1.5 and pass 2.0 are global stabilization passes, while generated-file splitting is used to make local validation and edits tractable.
-
-`scripts/atc_cli.py materialize-generated` is the entrypoint for the split-based stage. It materializes `Generated/C000x_*.lean`, rebuilds `Manifest.lean` / `catalog.json`, and then performs generated-file verification and optional generated-level repair.
+`Theory.lean` stays the public entry point. If the theory grows, keep imports there and move detailed definitions or helper lemmas into `AutomatedTheoryConstruction/Theory/`.
 
 ## Common Commands
 
@@ -112,53 +46,69 @@ The unified operational entrypoint is:
 uv run python scripts/atc_cli.py --help
 ```
 
-Config files are also supported:
+If `atc.json` exists at the repository root, `scripts/atc_cli.py` picks it up automatically.
+You can inspect the resolved config with:
 
 ```bash
 uv run python scripts/atc_cli.py config show
 ```
 
-If `atc.json` exists at the repo root, `scripts/atc_cli.py` picks it up automatically.
-
-Build:
+Core checks:
 
 ```bash
 make build
-```
-
-Check the three main Lean targets:
-
-```bash
 make check
 ```
 
-Regenerate seeds from the current theory:
+## Daily Workflows
+
+### Regenerate seeds
 
 ```bash
 uv run python scripts/atc_cli.py seed \
   --seed-count 4
 ```
 
-Run the worker loop:
+Optional extra reference material can be attached ad hoc:
+
+```bash
+uv run python scripts/atc_cli.py seed \
+  --context-file path/to/context.pdf \
+  --seed-count 4
+```
+
+### Run the main loop
 
 ```bash
 uv run python scripts/atc_cli.py loop
 ```
 
-If you want to keep the current runtime state instead of reinitializing it:
+Equivalent `Makefile` shortcut:
+
+```bash
+make loop
+```
+
+`make loop` resets runtime state on start. If you want to keep the current queue and `Derived.lean`, use:
 
 ```bash
 make loop-continue
 ```
 
-Run the one-shot pipeline from seed generation through refactor:
+### Run a larger one-shot pipeline
 
 ```bash
 uv run python scripts/atc_cli.py pipeline \
   --max-iterations 40
 ```
 
-Run the final refactor stages of `Derived.lean`:
+Equivalent shortcut:
+
+```bash
+make pipeline PIPELINE_ARGS="--max-iterations 40"
+```
+
+### Run the final whole-file refactor passes
 
 ```bash
 cp AutomatedTheoryConstruction/Derived.lean AutomatedTheoryConstruction/Derived.refactored.preview.lean
@@ -166,27 +116,33 @@ uv run python scripts/atc_cli.py rewrite
 uv run python scripts/atc_cli.py review
 ```
 
-Run the split-based Generated materialization stage:
+`rewrite` is the pass 1.5 cleanup stage. `review` is the pass 2.0 review-focused cleanup stage.
+
+### Materialize generated chunk files
 
 ```bash
 uv run python scripts/atc_cli.py materialize-generated
 ```
 
-This stage prints progress directly to stderr while materializing generated chunks and rebuilding the manifest.
+This splits `Derived.lean` into `AutomatedTheoryConstruction/Generated/C000x_*.lean`, rebuilds `Manifest.lean` and `catalog.json`, and performs generated-level verification and repair.
 
-Equivalent `Makefile` shortcuts remain available:
+If you want the bundled end-to-end shortcut for the whole refactor path:
 
 ```bash
-make seed SEED_ARGS="--seed-count 4"
-make loop LOOP_ARGS="--max-iterations 40"
-make pipeline PIPELINE_ARGS="--max-iterations 40"
-make rewrite
-make review
+make refactor-to-generated
 ```
 
-## Codex Worker
+## Worker Modes
 
-If you have Codex CLI available and want the actual worker-backed loop:
+### Mock worker for smoke runs
+
+```bash
+uv run python scripts/atc_cli.py loop \
+  --worker-command "uv run scripts/mock_worker.py" \
+  --max-iterations 1
+```
+
+### Codex-backed worker
 
 ```bash
 uv run python scripts/atc_cli.py loop \
@@ -198,6 +154,14 @@ uv run python scripts/atc_cli.py loop \
   --main-theorem-repair-worker-timeout 600
 ```
 
+## Custom Proof Engine
+
+Planning and Lean verification are deliberately separated.
+If you want to replace only the final verification step used for `Scratch.lean`, set `ATC_PROOF_EXECUTOR` before running the CLI and keep the rest of the worker loop unchanged.
+
+For the full JSON contract and replacement steps, read [`PROOF_EXECUTOR.md`](PROOF_EXECUTOR.md).
+
 ## More Detail
 
-For low-level runtime behavior and implementation-oriented design notes, see [`../design/RUNTIME.md`](../design/RUNTIME.md).
+For implementation-oriented runtime behavior, see [`../design/RUNTIME.md`](../design/RUNTIME.md).
+For the full documentation index, see [`README.md`](README.md).

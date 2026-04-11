@@ -1,5 +1,6 @@
 import Mathlib
 import AutomatedTheoryConstruction.Lambek
+import AutomatedTheoryConstruction.Generated.Manifest
 import AutomatedTheoryConstruction.Derived
 
 set_option autoImplicit false

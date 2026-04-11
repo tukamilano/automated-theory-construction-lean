@@ -21,6 +21,7 @@ DEFAULT_TRY_AT_EACH_STEP_REPORT = Path("AutomatedTheoryConstruction/Derived.tryA
 DEFAULT_REFACTOR_ARTIFACT_DIR = Path("data/pipeline_artifacts")
 LEAN_BUILD_TARGETS = (
     "AutomatedTheoryConstruction.Theory",
+    "AutomatedTheoryConstruction.Generated.Manifest",
     "AutomatedTheoryConstruction.Derived",
 )
 

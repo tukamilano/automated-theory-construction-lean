@@ -43,7 +43,7 @@ from theorem_reuse_memory import append_theorem_reuse_memory_entry
 from worker_client import invoke_worker_json
 
 
-SCRATCH_TEMPLATE = render_scratch_template(include_generated_manifest=False)
+SCRATCH_TEMPLATE = render_scratch_template()
 MAX_EXPAND_CANDIDATES_PER_MAIN_THEOREM = 5
 MAIN_THEOREM_CANDIDATE_COUNT = 3
 MAIN_THEOREM_PATTERNS = {"new_theorem", "structure_discovery", "framework_introduction"}

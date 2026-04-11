@@ -94,7 +94,7 @@ def debug_log(msg: str) -> None:
 
 
 
-SCRATCH_TEMPLATE = render_scratch_template(include_generated_manifest=False)
+SCRATCH_TEMPLATE = render_scratch_template()
 
 SCRATCH_OPEN_DECLS = (
     "open Mathling.Lambek.ProductFree\n"
@@ -599,11 +599,10 @@ def validate_prover_output(
     payload: dict[str, Any],
     expected_problem_id: str,
 ) -> ProverResponsePacket:
-    legacy_keys = {"problem_id", "result", "proof_sketch", "counterexample_text"}
-    current_keys = legacy_keys | {"new_problems"}
-    payload_keys = set(payload.keys())
-    if payload_keys != legacy_keys and payload_keys != current_keys:
-        raise ValueError("prover output keys mismatch required contract")
+    required_keys = {"problem_id", "result", "proof_sketch", "counterexample_text"}
+    missing_keys = sorted(required_keys - set(payload.keys()))
+    if missing_keys:
+        raise ValueError(f"prover output missing required keys: {', '.join(missing_keys)}")
 
     problem_id = payload.get("problem_id")
     if problem_id != expected_problem_id:
@@ -626,7 +625,7 @@ def validate_prover_output(
         result=result,
         proof_sketch=proof_sketch,
         counterexample_text=counterexample_text,
-        new_problems=[item.strip() for item in new_problems if item.strip()],
+        new_problems=[item.strip() for item in new_problems if item.strip()][:2],
         raw_payload=dict(payload),
     )
 
@@ -976,6 +975,7 @@ def formalize_to_scratch(
         render_import_block(extra_imports)
         +
         "import AutomatedTheoryConstruction.Lambek\n"
+        "import AutomatedTheoryConstruction.Generated.Manifest\n"
         "import AutomatedTheoryConstruction.Derived\n\n"
         "set_option autoImplicit false\n\n"
         "namespace AutomatedTheoryConstruction\n\n"
@@ -3284,7 +3284,11 @@ def prebuild_lean_project() -> list[dict[str, Any]]:
     initialization builds so a broken scratch proof does not block the loop.
     """
     results: list[dict[str, Any]] = []
-    for target in ("AutomatedTheoryConstruction.Theory", "AutomatedTheoryConstruction.Derived"):
+    for target in (
+        "AutomatedTheoryConstruction.Theory",
+        "AutomatedTheoryConstruction.Generated.Manifest",
+        "AutomatedTheoryConstruction.Derived",
+    ):
         started = time.monotonic()
         proc = subprocess.run(
             ["lake", "build", target],

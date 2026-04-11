@@ -6,6 +6,7 @@
 ## objective
 - Quickly judge the target as `proof`, `counterexample`, or `stuck`.
 - Return only short, concrete reasoning in `proof_sketch` or concrete refutation intuition.
+- After attempting the target, you may propose up to two follow-up problems in `new_problems`.
 
 ## hard_constraints
 - `proof_sketch` must be 3–8 sentences.
@@ -29,6 +30,12 @@
   "problem_id": "<match input>",
   "result": "proof|counterexample|stuck",
   "proof_sketch": "short reasoning",
-  "counterexample_text": "model intuition"
+  "counterexample_text": "model intuition",
+  "new_problems": []
 }
 ```
+
+## output_rules
+- Return JSON only.
+- `new_problems` must be an array of strings with length 0-2.
+- Do not add extra top-level keys.

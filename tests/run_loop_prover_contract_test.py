@@ -37,6 +37,20 @@ def main() -> int:
     if current_packet.new_problems != ["a = a", "Investigate whether left cancellation follows."]:
         raise RuntimeError(f"unexpected new_problems normalization: {current_packet.new_problems}")
 
+    extra_key_packet = run_loop.validate_prover_output(
+        {
+            "problem_id": "op_000001",
+            "result": "proof",
+            "proof_sketch": "Use the previous theorem.",
+            "counterexample_text": "",
+            "new_problems": ["p", "q", "r"],
+            "notes": "extra output should not crash the loop",
+        },
+        "op_000001",
+    )
+    if extra_key_packet.new_problems != ["p", "q"]:
+        raise RuntimeError(f"unexpected new_problems truncation: {extra_key_packet.new_problems}")
+
     try:
         run_loop.validate_prover_output(
             {
@@ -52,6 +66,20 @@ def main() -> int:
         pass
     else:
         raise RuntimeError("mixed-type new_problems should be rejected")
+
+    try:
+        run_loop.validate_prover_output(
+            {
+                "problem_id": "op_000001",
+                "result": "stuck",
+                "proof_sketch": "",
+            },
+            "op_000001",
+        )
+    except ValueError:
+        pass
+    else:
+        raise RuntimeError("missing required keys should be rejected")
 
     print("run loop prover contract test passed")
     return 0

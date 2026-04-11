@@ -73,8 +73,9 @@ def collect_stage_commands(extra_argv: list[str]) -> dict[str, list[str]]:
 
 def main() -> int:
     continued_names = collect_stage_names(["--no-initialize-on-start", "--no-run-seed"])
-    if continued_names[:3] != [
+    if continued_names[:4] != [
         "lean-prebuild:AutomatedTheoryConstruction.Theory",
+        "lean-prebuild:AutomatedTheoryConstruction.Generated.Manifest",
         "lean-prebuild:AutomatedTheoryConstruction.Derived",
         "main-loop",
     ]:
@@ -87,8 +88,9 @@ def main() -> int:
         raise RuntimeError(f"fresh pipeline should not duplicate lake build, got {fresh_names}")
 
     seedless_names = collect_stage_names(["--no-run-seed"])
-    if seedless_names[:3] != [
+    if seedless_names[:4] != [
         "lean-prebuild:AutomatedTheoryConstruction.Theory",
+        "lean-prebuild:AutomatedTheoryConstruction.Generated.Manifest",
         "lean-prebuild:AutomatedTheoryConstruction.Derived",
         "main-loop",
     ]:
