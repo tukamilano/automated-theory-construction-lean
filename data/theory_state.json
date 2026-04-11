@@ -57,16 +57,6 @@
       "The boundary between cut elimination and decidability in extensions",
       "The interface with categorial grammar"
     ],
-    "current_deemphasis": [
-      "already-dominated singleton, atom-only, or fragment corollaries",
-      "packaging results that only restate solved characterizations",
-      "orientation-blind support or counting claims"
-    ],
-    "current_emphasis": [
-      "finite residual control",
-      "internal recognition interfaces",
-      "intrinsic fragment witnesses"
-    ],
     "soft_constraints": [
       "Closeness to established notation and theory",
       "Temporal durability"
@@ -75,7 +65,6 @@
       "Structural correspondences between language hierarchies and logical systems",
       "Extraction of logical rules and complexity"
     ],
-    "theory_reading": "The theory now has exact arbitrary-context derivability through aligned CandidateTree, HandedSupportClosure, residualAtomicState, and residual-graph interfaces, together with full one-sided conservativity at the sequent level. The frontier has shifted from extensional completeness to finite residual control: there is still no unconditional subformula bound for residual root states or for all states along accepting runs, and residual recognition is not yet internalized as a self-contained branching automaton.",
     "valued_problem_types": [
       "Provability relations among structural rules (reducibility)",
       "Discovery of invertibility",

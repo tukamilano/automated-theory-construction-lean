@@ -129,7 +129,6 @@ def main() -> None:
         formalizer_prompt_file="prompts/formalize/formalizer_proof.md",
         repair_prompt_file="prompts/formalize/repair_proof.md",
         suggest_prompt_file="prompts/main_theorem/suggester.md",
-        plan_prompt_file="prompts/main_theorem/planner.md",
         post_expand_prompt_file="prompts/expander/post_theorem.md",
         prioritize_open_problems_worker_settings=prioritize_open_problems_worker_settings,
         prioritize_open_problems_prompt_file="prompts/prioritizer/open_problem_prioritizer.md",

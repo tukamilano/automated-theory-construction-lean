@@ -156,7 +156,8 @@ def _store_main_theorem_followups(
 def validate_main_theorem_suggestion_output(
     payload: dict[str, Any],
     expected_candidate_id: str,
-) -> tuple[str, str, str, str, str, list[str], list[str]]:
+    known_problem_ids: list[str],
+) -> tuple[str, str, str, str, str, list[str], list[str], list[str]]:
     required_keys = {
         "candidate_id",
         "result",
@@ -166,6 +167,10 @@ def validate_main_theorem_suggestion_output(
         "rationale",
         "supporting_theorems",
         "missing_lemmas",
+        "source_problem_ids",
+        "theorem_pattern",
+        "context_note",
+        "conceptual_depth_note",
     }
     if set(payload.keys()) != required_keys:
         raise ValueError("main_theorem_suggest output keys mismatch required contract")
@@ -175,30 +180,49 @@ def validate_main_theorem_suggestion_output(
         raise ValueError("main_theorem_suggest candidate_id does not match request")
 
     result = str(payload.get("result", "")).strip()
-    if result not in {"ok", "stuck"}:
-        raise ValueError("main_theorem_suggest result must be ok|stuck")
+    if result != "ok":
+        raise ValueError("main_theorem_suggest result must be ok")
 
     statement = str(payload.get("statement", "")).strip()
     theorem_name_stem = str(payload.get("theorem_name_stem", "")).strip()
     docstring_summary = str(payload.get("docstring_summary", "")).strip()
     rationale = str(payload.get("rationale", "")).strip()
+    theorem_pattern = str(payload.get("theorem_pattern", "")).strip()
+    context_note = str(payload.get("context_note", "")).strip()
+    conceptual_depth_note = str(payload.get("conceptual_depth_note", "")).strip()
     supporting = payload.get("supporting_theorems", [])
     missing = payload.get("missing_lemmas", [])
-    if not isinstance(supporting, list) or not isinstance(missing, list):
-        raise ValueError("main_theorem_suggest supporting_theorems and missing_lemmas must be arrays")
+    source_problem_ids_value = payload.get("source_problem_ids", [])
+    if not isinstance(supporting, list) or not isinstance(missing, list) or not isinstance(source_problem_ids_value, list):
+        raise ValueError("main_theorem_suggest supporting_theorems, missing_lemmas, and source_problem_ids must be arrays")
 
     supporting_theorems = [str(item).strip() for item in supporting if str(item).strip()]
     missing_lemmas = [str(item).strip() for item in missing if str(item).strip()]
+    known_problem_id_set = {str(item).strip() for item in known_problem_ids if str(item).strip()}
+    source_problem_ids: list[str] = []
+    seen_source_ids: set[str] = set()
+    for item in source_problem_ids_value:
+        problem_id = str(item).strip()
+        if not problem_id or problem_id in seen_source_ids:
+            continue
+        if known_problem_id_set and problem_id not in known_problem_id_set:
+            raise ValueError(f"main_theorem_suggest source_problem_id is not in tracked_problems: {problem_id}")
+        seen_source_ids.add(problem_id)
+        source_problem_ids.append(problem_id)
 
-    if result == "ok":
-        if not statement:
-            raise ValueError("main_theorem_suggest statement must be non-empty when result=ok")
-        theorem_name_stem = validate_theorem_name_stem(theorem_name_stem)
-        if not docstring_summary:
-            raise ValueError("main_theorem_suggest docstring_summary must be non-empty when result=ok")
-    else:
-        if statement or theorem_name_stem or docstring_summary:
-            raise ValueError("main_theorem_suggest stuck result must not return statement/name/docstring")
+    if not statement:
+        raise ValueError("main_theorem_suggest statement must be non-empty when result=ok")
+    theorem_name_stem = validate_theorem_name_stem(theorem_name_stem)
+    if not docstring_summary:
+        raise ValueError("main_theorem_suggest docstring_summary must be non-empty when result=ok")
+    if known_problem_id_set and not source_problem_ids:
+        raise ValueError("main_theorem_suggest source_problem_ids must be non-empty when tracked_problems are available")
+    if theorem_pattern not in {"new_theorem", "structure_discovery", "framework_introduction"}:
+        raise ValueError("main_theorem_suggest theorem_pattern must be new_theorem|structure_discovery|framework_introduction")
+    if not context_note:
+        raise ValueError("main_theorem_suggest context_note must be non-empty when result=ok")
+    if not conceptual_depth_note:
+        raise ValueError("main_theorem_suggest conceptual_depth_note must be non-empty when result=ok")
 
     return (
         result,
@@ -208,46 +232,8 @@ def validate_main_theorem_suggestion_output(
         rationale,
         supporting_theorems,
         missing_lemmas,
+        source_problem_ids,
     )
-
-
-def validate_main_theorem_plan_output(
-    payload: dict[str, Any],
-    expected_candidate_id: str,
-) -> tuple[str, str, str, list[str], list[str], str]:
-    required_keys = {
-        "candidate_id",
-        "result",
-        "plan_summary",
-        "proof_sketch",
-        "supporting_theorems",
-        "intermediate_lemmas",
-        "notes",
-    }
-    if set(payload.keys()) != required_keys:
-        raise ValueError("main_theorem_plan output keys mismatch required contract")
-
-    candidate_id = str(payload.get("candidate_id", "")).strip()
-    if candidate_id != expected_candidate_id:
-        raise ValueError("main_theorem_plan candidate_id does not match request")
-
-    result = str(payload.get("result", "")).strip()
-    if result not in {"ok", "stuck"}:
-        raise ValueError("main_theorem_plan result must be ok|stuck")
-
-    plan_summary = str(payload.get("plan_summary", "")).strip()
-    proof_sketch = str(payload.get("proof_sketch", "")).strip()
-    notes = str(payload.get("notes", "")).strip()
-    supporting = payload.get("supporting_theorems", [])
-    intermediate = payload.get("intermediate_lemmas", [])
-    if not isinstance(supporting, list) or not isinstance(intermediate, list):
-        raise ValueError("main_theorem_plan supporting_theorems and intermediate_lemmas must be arrays")
-
-    supporting_theorems = [str(item).strip() for item in supporting if str(item).strip()]
-    intermediate_lemmas = [str(item).strip() for item in intermediate if str(item).strip()]
-    if result == "ok" and not proof_sketch:
-        raise ValueError("main_theorem_plan proof_sketch must be non-empty when result=ok")
-    return result, plan_summary, proof_sketch, supporting_theorems, intermediate_lemmas, notes
 
 
 def request_main_theorem_suggestion(
@@ -260,7 +246,9 @@ def request_main_theorem_suggestion(
     tracked_rows: list[dict[str, Any]],
     current_iteration: int,
     guidance: dict[str, Any],
-) -> tuple[tuple[str, str, str, str, str, list[str], list[str]], dict[str, Any]]:
+) -> tuple[tuple[str, str, str, str, str, list[str], list[str], list[str]], dict[str, Any]]:
+    visible_tracked_rows = tracked_rows[:40]
+    known_problem_ids = [str(row.get("id", "")).strip() for row in visible_tracked_rows if str(row.get("id", "")).strip()]
     theory_state, research_agenda = unpack_guidance_context(guidance)
     payload: dict[str, Any] = {
         "candidate_id": candidate_id,
@@ -284,7 +272,7 @@ def request_main_theorem_suggestion(
                 "mode": str(row.get("mode", "")),
                 "summary_delta": str(row.get("summary_delta", "")),
             }
-            for row in tracked_rows[:40]
+            for row in visible_tracked_rows
         ],
         "theory_state": theory_state,
         "research_agenda": research_agenda,
@@ -296,46 +284,7 @@ def request_main_theorem_suggestion(
         payload=payload,
         metadata={"candidate_id": candidate_id, "derived_theorem_count": len(derived_entries)},
     )
-    return validate_main_theorem_suggestion_output(response, candidate_id), worker_meta
-
-
-def request_main_theorem_plan(
-    *,
-    worker_settings: Any,
-    planner_prompt: str,
-    candidate_row: dict[str, Any],
-    derived_entries: list[dict[str, str]],
-    theory_context: str,
-) -> tuple[tuple[str, str, str, list[str], list[str], str], dict[str, Any]]:
-    payload: dict[str, Any] = {
-        "candidate_id": str(candidate_row.get("candidate_id", "")),
-        "statement": str(candidate_row.get("statement", "")),
-        "theorem_name": str(candidate_row.get("theorem_name", "")),
-        "docstring_summary": str(candidate_row.get("docstring_summary", "")),
-        "rationale": str(candidate_row.get("rationale", "")),
-        "supporting_theorems": list(candidate_row.get("supporting_theorems", [])),
-        "missing_lemmas": list(candidate_row.get("missing_lemmas", [])),
-        "derived_theorems": [
-            {
-                "name": str(entry.get("name", "")),
-                "statement": str(entry.get("statement", "")),
-            }
-            for entry in shortlist_relevant_derived_entries(
-                derived_entries,
-                str(candidate_row.get("statement", "")),
-                max_entries=8,
-            )
-        ],
-        "theory_context": theory_context,
-    }
-    response, worker_meta = invoke_worker_json(
-        settings=worker_settings,
-        task_type="main_theorem_plan",
-        system_prompt=planner_prompt,
-        payload=payload,
-        metadata={"candidate_id": str(candidate_row.get("candidate_id", ""))},
-    )
-    return validate_main_theorem_plan_output(response, str(candidate_row.get("candidate_id", ""))), worker_meta
+    return validate_main_theorem_suggestion_output(response, candidate_id, known_problem_ids), worker_meta
 
 
 def run_manual_main_theorem_check(
@@ -352,7 +301,6 @@ def run_manual_main_theorem_check(
     formalizer_prompt_file: str,
     repair_prompt_file: str,
     suggest_prompt_file: str,
-    plan_prompt_file: str,
     post_expand_prompt_file: str,
     prioritize_open_problems_worker_settings: Any,
     prioritize_open_problems_prompt_file: str,
@@ -399,6 +347,7 @@ def run_manual_main_theorem_check(
             rationale,
             supporting_theorems,
             missing_lemmas,
+            source_problem_ids,
         ), _ = request_main_theorem_suggestion(
             worker_settings=worker_settings,
             suggester_prompt=suggest_prompt,
@@ -460,37 +409,6 @@ def run_manual_main_theorem_check(
         candidate_id=candidate_id,
         status=result,
     )
-    if result != "ok":
-        followup_refresh = _store_main_theorem_followups(
-            data_dir=data_dir,
-            theorem_name=candidate_id,
-            statement="",
-            rationale=rationale,
-            verify_error_excerpt="",
-            missing_lemmas=missing_lemmas,
-            intermediate_lemmas=[],
-            prioritize_open_problems_worker_settings=prioritize_open_problems_worker_settings,
-            prioritize_open_problems_prompt_file=prioritize_open_problems_prompt_file,
-            derived_entries=derived_entries,
-            current_iteration=current_iteration,
-            failure_threshold=failure_threshold,
-            run_id=run_id,
-            theory_state_history_path=Path(phase_attempts_path).parent / "theory_state_history.jsonl",
-            theory_file=theory_file,
-            derived_file=derived_file,
-            repo_root=repo_root,
-            batch_generator_seed_count=batch_generator_seed_count,
-            batch_generator_open_target_min=batch_generator_open_target_min,
-        )
-        return {
-            "status": "main_theorem_suggest_stuck",
-            "processed": False,
-            "verify_success": False,
-            "followup_candidates": list(followup_refresh.get("followup_candidates", [])),
-            "stored_expand_rows": list(followup_refresh.get("stored_expand_rows", [])),
-            "priority_refresh_ran": bool(followup_refresh.get("priority_refresh_ran", False)),
-            "priority_refresh_error": str(followup_refresh.get("priority_refresh_error", "")),
-        }
 
     report = process_manual_main_theorem(
         candidate_id=candidate_id,
@@ -511,7 +429,6 @@ def run_manual_main_theorem_check(
         worker_settings=worker_settings,
         formalizer_prompt_file=formalizer_prompt_file,
         repair_prompt_file=repair_prompt_file,
-        plan_prompt_file=plan_prompt_file,
         post_expand_prompt_file=post_expand_prompt_file,
         prioritize_open_problems_worker_settings=prioritize_open_problems_worker_settings,
         prioritize_open_problems_prompt_file=prioritize_open_problems_prompt_file,
@@ -535,6 +452,7 @@ def run_manual_main_theorem_check(
     )
     report["suggested_statement"] = statement
     report["suggested_rationale"] = rationale
+    report["source_problem_ids"] = list(source_problem_ids)
     return report
 
 
@@ -558,7 +476,6 @@ def process_manual_main_theorem(
     worker_settings: Any,
     formalizer_prompt_file: str,
     repair_prompt_file: str,
-    plan_prompt_file: str,
     post_expand_prompt_file: str,
     prioritize_open_problems_worker_settings: Any,
     prioritize_open_problems_prompt_file: str,
@@ -595,103 +512,8 @@ def process_manual_main_theorem(
 
     theorem_context = build_problem_theory_context(base_theory_context, derived_entries, statement)
     current_iteration_full_logs: list[dict[str, Any]] = []
-    plan_summary = ""
-    proof_sketch = ""
-    plan_notes = ""
     intermediate_lemmas: list[str] = []
-    emit_phase_log(
-        phase_logs,
-        "main_theorem_plan",
-        iteration=current_iteration,
-        candidate_id=candidate_id,
-        theorem_name=theorem_name,
-    )
-    planner_prompt = load_prompt_text(plan_prompt_file)
-    plan_started_monotonic = time.monotonic()
-    plan_started_at = iso_timestamp_now()
-    try:
-        (
-            plan_result,
-            generated_plan_summary,
-            generated_proof_sketch,
-            plan_supporting_theorems,
-            intermediate_lemmas,
-            plan_notes,
-        ), _ = request_main_theorem_plan(
-            worker_settings=worker_settings,
-            planner_prompt=planner_prompt,
-            candidate_row={
-                "candidate_id": candidate_id,
-                "statement": statement,
-                "theorem_name": theorem_name,
-                "docstring_summary": docstring_summary,
-                "rationale": rationale,
-                "supporting_theorems": supporting_theorems,
-                "missing_lemmas": missing_lemmas,
-            },
-            derived_entries=derived_entries,
-            theory_context=theorem_context,
-        )
-        append_phase_attempt_record(
-            phase_attempts_path,
-            run_id=run_id,
-            session_type="main_theorem_session",
-            iteration=current_iteration,
-            entity_id=candidate_id,
-            phase="main_theorem_plan",
-            worker_task="main_theorem_plan",
-            started_at=plan_started_at,
-            finished_at=iso_timestamp_now(),
-            duration_ms=monotonic_duration_ms(plan_started_monotonic),
-            success=plan_result == "ok",
-            result=plan_result,
-        )
-        if plan_result == "ok":
-            plan_summary = generated_plan_summary
-            proof_sketch = generated_proof_sketch
-            supporting_theorems = plan_supporting_theorems or list(supporting_theorems)
-        emit_phase_log(
-            phase_logs,
-            "main_theorem_plan_result",
-            iteration=current_iteration,
-            candidate_id=candidate_id,
-            status=plan_result,
-        )
-    except (RuntimeError, ValueError) as exc:
-        plan_notes = f"main theorem plan failed: {exc}"
-        append_phase_attempt_record(
-            phase_attempts_path,
-            run_id=run_id,
-            session_type="main_theorem_session",
-            iteration=current_iteration,
-            entity_id=candidate_id,
-            phase="main_theorem_plan",
-            worker_task="main_theorem_plan",
-            started_at=plan_started_at,
-            finished_at=iso_timestamp_now(),
-            duration_ms=monotonic_duration_ms(plan_started_monotonic),
-            success=False,
-            result="error",
-            error=str(exc),
-        )
-        emit_phase_log(
-            phase_logs,
-            "main_theorem_plan_result",
-            iteration=current_iteration,
-            candidate_id=candidate_id,
-            status="error",
-            error=str(exc),
-        )
-
-    if not proof_sketch:
-        proof_sketch = rationale.strip() or f"Prove {theorem_name} from the current Derived.lean cluster."
-    if plan_summary:
-        theorem_context += f"\n\n-- Main theorem proof plan:\n-- {plan_summary}"
-    if intermediate_lemmas:
-        theorem_context += "\n-- Intermediate lemmas:\n"
-        theorem_context += "\n".join(f"-- {item}" for item in intermediate_lemmas)
-    if plan_notes:
-        theorem_context += f"\n-- Planner notes: {plan_notes}"
+    proof_sketch = rationale.strip() or f"Prove {theorem_name} from the current Derived.lean cluster."
 
     proof_formalizer_prompt = load_prompt_text(formalizer_prompt_file)
     proof_repair_prompt = load_prompt_text(repair_prompt_file)
@@ -741,7 +563,7 @@ def process_manual_main_theorem(
             data_dir=data_dir,
             theorem_name=theorem_name,
             statement=final_stmt.strip() or statement,
-            rationale=plan_summary or rationale,
+            rationale=rationale,
             verify_error_excerpt=verify_error_excerpt,
             missing_lemmas=missing_lemmas,
             intermediate_lemmas=intermediate_lemmas,
@@ -764,7 +586,6 @@ def process_manual_main_theorem(
             "status": "blocked",
             "verify_success": False,
             "verify_error_excerpt": verify_error_excerpt,
-            "plan_summary": plan_summary,
             "followup_candidates": list(followup_refresh.get("followup_candidates", [])),
             "stored_expand_rows": list(followup_refresh.get("stored_expand_rows", [])),
             "priority_refresh_ran": bool(followup_refresh.get("priority_refresh_ran", False)),
@@ -874,7 +695,6 @@ def process_manual_main_theorem(
         "statement": final_stmt.strip() or statement,
         "docstring_summary": docstring_summary,
         "rationale": rationale,
-        "plan_summary": plan_summary,
         "supporting_theorems": [theorem for theorem in supporting_theorems if theorem in known_theorem_names],
         "intermediate_lemmas": intermediate_lemmas,
         "iteration": current_iteration,

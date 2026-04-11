@@ -251,13 +251,17 @@ def test_worker_payloads_include_research_agenda() -> None:
                 return (
                     {
                         "candidate_id": "mt_manual",
-                        "result": "stuck",
-                        "statement": "",
-                        "theorem_name_stem": "",
-                        "docstring_summary": "",
-                        "rationale": "agenda-aligned but not yet ready",
+                        "result": "ok",
+                        "statement": "True",
+                        "theorem_name_stem": "agenda_main_theorem",
+                        "docstring_summary": "Agenda-aligned placeholder main theorem.",
+                        "rationale": "agenda-aligned placeholder candidate under the mandatory main theorem policy",
                         "supporting_theorems": [],
                         "missing_lemmas": [],
+                        "source_problem_ids": ["op_000001"],
+                        "theorem_pattern": "structure_discovery",
+                        "context_note": "The placeholder candidate is positioned as a summary of the active queue and visible derived cluster.",
+                        "conceptual_depth_note": "The placeholder candidate is treated as a structural summary, not a local technical lemma.",
                     },
                     {"worker": "research_agenda_test"},
                 )

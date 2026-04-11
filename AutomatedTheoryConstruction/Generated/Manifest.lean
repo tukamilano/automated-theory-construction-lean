@@ -1,3 +1,0 @@
-import AutomatedTheoryConstruction.Generated.C0001_singleton_sequent_false
-import AutomatedTheoryConstruction.Generated.C0002_support_ok_atom
-import AutomatedTheoryConstruction.Generated.C0003_handed_support_left

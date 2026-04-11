@@ -165,25 +165,29 @@ def main() -> None:
             "agenda_pressure": [],
         }
     elif task_type == "main_theorem_suggest":
+        tracked_problems = payload.get("tracked_problems", [])
+        source_problem_ids = []
+        if isinstance(tracked_problems, list):
+            for item in tracked_problems:
+                if not isinstance(item, dict):
+                    continue
+                problem_id = str(item.get("problem_id", "")).strip()
+                if problem_id:
+                    source_problem_ids.append(problem_id)
+                    break
         result_payload = {
             "candidate_id": str(payload.get("candidate_id", "")),
-            "result": "stuck",
-            "statement": "",
-            "theorem_name_stem": "",
-            "docstring_summary": "",
-            "rationale": "mock_proof_worker: no main theorem suggestion",
+            "result": "ok",
+            "statement": "True",
+            "theorem_name_stem": "smoke_main_theorem",
+            "docstring_summary": "Smoke main theorem.",
+            "rationale": "mock_proof_worker: emit a trivial main theorem under the mandatory main theorem policy",
             "supporting_theorems": [],
             "missing_lemmas": [],
-        }
-    elif task_type == "main_theorem_plan":
-        result_payload = {
-            "candidate_id": str(payload.get("candidate_id", "")),
-            "result": "stuck",
-            "plan_summary": "mock_proof_worker: no plan generated",
-            "proof_sketch": "",
-            "supporting_theorems": [],
-            "intermediate_lemmas": [],
-            "notes": "mock_proof_worker: no main theorem proof plan",
+            "source_problem_ids": source_problem_ids,
+            "theorem_pattern": "structure_discovery",
+            "context_note": "The smoke candidate is positioned as a summary of the currently visible smoke fixture problems.",
+            "conceptual_depth_note": "The smoke candidate is framed as a structural summary rather than a merely technical extension.",
         }
     else:
         raise ValueError(f"unsupported task_type: {task_type}")

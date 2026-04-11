@@ -107,28 +107,29 @@ def _prioritize_open_problems_result(payload: dict[str, Any]) -> dict[str, Any]:
 
 def _main_theorem_suggest_result(payload: dict[str, Any]) -> dict[str, Any]:
     candidate_id = str(payload.get("candidate_id", ""))
+    tracked_problems = payload.get("tracked_problems", [])
+    source_problem_ids: list[str] = []
+    if isinstance(tracked_problems, list):
+        for item in tracked_problems:
+            if not isinstance(item, dict):
+                continue
+            problem_id = str(item.get("problem_id", "")).strip()
+            if problem_id:
+                source_problem_ids.append(problem_id)
+                break
     return {
         "candidate_id": candidate_id,
-        "result": "stuck",
-        "statement": "",
-        "theorem_name_stem": "",
-        "docstring_summary": "",
-        "rationale": "mock_worker: no main theorem suggestion",
+        "result": "ok",
+        "statement": "True",
+        "theorem_name_stem": "mock_main_theorem",
+        "docstring_summary": "Mock main theorem target.",
+        "rationale": "mock_worker: always emit a placeholder main theorem candidate under the non-abstaining contract",
         "supporting_theorems": [],
         "missing_lemmas": [],
-    }
-
-
-def _main_theorem_plan_result(payload: dict[str, Any]) -> dict[str, Any]:
-    candidate_id = str(payload.get("candidate_id", ""))
-    return {
-        "candidate_id": candidate_id,
-        "result": "stuck",
-        "plan_summary": "mock_worker: no plan generated",
-        "proof_sketch": "",
-        "supporting_theorems": [],
-        "intermediate_lemmas": [],
-        "notes": "mock_worker: no main theorem proof plan",
+        "source_problem_ids": source_problem_ids,
+        "theorem_pattern": "structure_discovery",
+        "context_note": "mock_worker: placeholder candidate summarises the visible tracked problem family",
+        "conceptual_depth_note": "mock_worker: placeholder candidate is framed as a structural summary rather than a local technical step",
     }
 
 
@@ -212,8 +213,6 @@ def main() -> None:
             result_payload = _prioritize_open_problems_result(payload)
         elif task_type == "main_theorem_suggest":
             result_payload = _main_theorem_suggest_result(payload)
-        elif task_type == "main_theorem_plan":
-            result_payload = _main_theorem_plan_result(payload)
         elif task_type == "post_theorem_expand":
             result_payload = _post_theorem_expand_result(payload)
         elif task_type == "refactor_derived":

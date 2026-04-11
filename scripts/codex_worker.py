@@ -296,7 +296,6 @@ def main() -> None:
             "apply_derived_compression_item",
             "prioritize_open_problems",
             "main_theorem_suggest",
-            "main_theorem_plan",
             "post_theorem_expand",
         }:
             raise ValueError(f"unsupported task_type: {task_type}")
