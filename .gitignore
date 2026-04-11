@@ -34,7 +34,3 @@ __pycache__/
 
 # Runtime-generated ATC state
 data/runs/
-data/open_problems.jsonl
-data/archived_problems.jsonl
-data/solved_problems.jsonl
-data/theorem_reuse_memory.json
