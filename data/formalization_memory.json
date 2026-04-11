@@ -1164,14 +1164,33 @@
       "lean_error_fingerprint": "statement_formalization"
     },
     {
+      "stage": "",
+      "source_statement": "",
+      "formalized_statement": "",
+      "statement_formalization_notes": "",
       "result": "stuck",
       "verify_success": false,
       "proof_sketch": "Unfold `residualAtomicState` and prove the statement by induction on `A`, with a small auxiliary lemma that `subformula` is transitive. If `A = # t`, then the hypothesis forces `Δ = Γ` and `s = t`; for each `B ∈ Δ`, choose `C := B` using reflexivity of `subformula`, and witness the atom clause by `C := A` since `occurs_atom t (# t)` holds. If `A = B ⧹ C`, the `Γ = []` branch is impossible because `residualAtomicState [] (B ⧹ C) = none`, and otherwise the equation becomes `residualAtomicState ([B] ++ Γ) C = some (Δ, s)`, so the induction hypothesis gives witnesses in `[C] ++ [B] ++ Γ`. A witness already lying in `Γ` is kept, while a witness `C` or `B` is lifted to the single formula `B ⧹ C` because both are immediate subformulas of it and `occurs_atom s` also lifts along that constructor. The `A = C ⧸ B` case is identical, using the recursive call on `residualAtomicState (Γ ++ [B]) C` and the corresponding one-step subformula and `occurs_atom` embeddings into `C ⧸ B`.",
-      "prelude_code": "",
       "proof_text": "",
       "counterexample_text": "",
       "lean_error_excerpt": "formalize worker timeout: Worker returned error: Command '['codex', 'exec', '-', '--sandbox', 'read-only', '--skip-git-repo-check', '--output-last-message', '/tmp/tmpajxrx3rt', '--model', 'gpt-5.4']' timed out after 390 seconds (task_type=formalize)",
       "lean_error_fingerprint": "formalizer_timeout"
+    },
+    {
+      "stage": "statement_formalization",
+      "source_statement": "Prove a residual subformula theorem: if `residualAtomicState Γ A = some (Δ, s)`, then every formula in `Δ` is a subformula of some formula in `Γ` or of `A`, and the atom `s` already occurs in `Γ` or `A`.",
+      "statement_prelude_code": "inductive TpSubformula : Tp → Tp → Prop where\n  | refl (A : Tp) : TpSubformula A A\n  | ldiv_left {A B C : Tp} : TpSubformula A B → TpSubformula A (Tp.ldiv B C)\n  | ldiv_right {A B C : Tp} : TpSubformula A C → TpSubformula A (Tp.ldiv B C)\n  | rdiv_left {A B C : Tp} : TpSubformula A B → TpSubformula A (Tp.rdiv B C)\n  | rdiv_right {A B C : Tp} : TpSubformula A C → TpSubformula A (Tp.rdiv B C)",
+      "formalized_statement": "∀ (Γ : List Tp) (A : Tp) (Δ : List Tp) (s : String),\n  residualAtomicState Γ A = some (Δ, s) →\n    (∀ B ∈ Δ, ∃ C ∈ [A] ++ Γ, TpSubformula B C) ∧\n    ∃ C ∈ [A] ++ Γ, occurs_atom s C",
+      "theorem_name_stem": "residual_root_subformula",
+      "docstring_summary": "Residual atomic states stay inside the root subformula closure.",
+      "statement_formalization_notes": "Introduced a minimal local `TpSubformula` relation because the current context defines `occurs_atom` but no subformula predicate. The phrase “in `Γ` or of `A`” is encoded as membership in `[A] ++ Γ`.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization"
     }
   ],
   "op_000062": [

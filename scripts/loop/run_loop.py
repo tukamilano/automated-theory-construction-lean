@@ -2419,6 +2419,80 @@ def initialize_runtime_state(
         formalization_memory_file.write_text("{}\n", encoding="utf-8")
 
 
+def capture_continuation_runtime_snapshot(
+    *,
+    data_dir: Path,
+    formalization_memory_file: Path,
+    scratch_file: Path,
+    derived_file: Path,
+    derived_cleanup_files: tuple[Path, ...],
+) -> dict[str, str | int | None]:
+    tracked_paths = (
+        data_dir / "open_problems.jsonl",
+        data_dir / ARCHIVED_PROBLEMS_FILENAME,
+        data_dir / "solved_problems.jsonl",
+        data_dir / "counterexamples.jsonl",
+        data_dir / "theorem_reuse_memory.json",
+        theory_state_path(data_dir),
+        formalization_memory_file,
+        scratch_file,
+        derived_file,
+        *derived_cleanup_files,
+    )
+    snapshot: dict[str, str | int | None] = {
+        "__history_row_total__": sum(
+            len(read_jsonl(path))
+            for path in (
+                data_dir / ARCHIVED_PROBLEMS_FILENAME,
+                data_dir / "solved_problems.jsonl",
+                data_dir / "counterexamples.jsonl",
+            )
+        )
+    }
+    for path in tracked_paths:
+        snapshot[str(path.resolve())] = path.read_text(encoding="utf-8") if path.exists() else None
+    return snapshot
+
+
+def restore_continuation_runtime_snapshot(snapshot: dict[str, str | int | None]) -> None:
+    for raw_path, content in snapshot.items():
+        if raw_path.startswith("__"):
+            continue
+        path = Path(raw_path)
+        if content is None:
+            path.unlink(missing_ok=True)
+            continue
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(str(content), encoding="utf-8")
+
+
+def guard_against_unexpected_continuation_reset(
+    *,
+    data_dir: Path,
+    snapshot: dict[str, str | int | None] | None,
+) -> None:
+    if snapshot is None:
+        return
+    before_history_total = int(snapshot.get("__history_row_total__", 0) or 0)
+    if before_history_total <= 0:
+        return
+    after_history_total = sum(
+        len(read_jsonl(path))
+        for path in (
+            data_dir / ARCHIVED_PROBLEMS_FILENAME,
+            data_dir / "solved_problems.jsonl",
+            data_dir / "counterexamples.jsonl",
+        )
+    )
+    if after_history_total != 0:
+        return
+    restore_continuation_runtime_snapshot(snapshot)
+    raise RuntimeError(
+        "Continuation run unexpectedly cleared archived/solved/counterexample state; restored the pre-run snapshot. "
+        "This usually means an initialization/reset path ran during a supposed continuation run."
+    )
+
+
 def run_problem_session(
     *,
     args: Any,
@@ -3279,6 +3353,11 @@ def main() -> None:
     scratch_file = Path(SCRATCH_FILE_PATH)
     memory_path = Path(FORMALIZATION_MEMORY_FILE_PATH)
     archived_problems_path = Path(ARCHIVED_PROBLEMS_FILE_PATH)
+    derived_path = Path(DERIVED_FILE_PATH)
+    derived_cleanup_files = (
+        Path("AutomatedTheoryConstruction/Derived.refactored.preview.lean"),
+        Path("AutomatedTheoryConstruction/Derived.refactored.reviewed.lean"),
+    )
     run_id = build_run_id("loop")
     run_started_at = iso_timestamp_now()
     run_started_monotonic = time.monotonic()
@@ -3293,6 +3372,15 @@ def main() -> None:
     recorded_problem_ids: set[str] = set()
     recorded_theorem_names: set[str] = set()
     repo_root = REPO_ROOT
+    continuation_snapshot = None
+    if not args.initialize_on_start:
+        continuation_snapshot = capture_continuation_runtime_snapshot(
+            data_dir=data_dir,
+            formalization_memory_file=memory_path,
+            scratch_file=scratch_file,
+            derived_file=derived_path,
+            derived_cleanup_files=derived_cleanup_files,
+        )
 
     def record_problem_rows(rows: list[dict[str, Any]], *, iteration: int, session_type: str) -> None:
         for row in rows:
@@ -3328,11 +3416,8 @@ def main() -> None:
             seeds_file=Path(SEEDS_FILE_PATH),
             scratch_file=scratch_file,
             reset_scratch=RESET_SCRATCH_ON_START,
-            derived_file=Path(DERIVED_FILE_PATH),
-            derived_cleanup_files=(
-                Path("AutomatedTheoryConstruction/Derived.refactored.preview.lean"),
-                Path("AutomatedTheoryConstruction/Derived.refactored.reviewed.lean"),
-            ),
+            derived_file=derived_path,
+            derived_cleanup_files=derived_cleanup_files,
             reset_derived=RESET_DERIVED_ON_START,
             formalization_memory_file=memory_path,
             reset_formalization_memory=RESET_FORMALIZATION_MEMORY_ON_START,
@@ -3360,7 +3445,6 @@ def main() -> None:
                 )
             debug_log("Initialization build completed")
     _, base_theory_context = load_theory_context(Path(THEORY_FILE_PATH))
-    derived_path = Path(DERIVED_FILE_PATH)
     derived_entries = extract_derived_theorem_entries(derived_path)
     derived_runtime_state = {
         "generation": load_derived_generation(data_dir),
@@ -3404,29 +3488,40 @@ def main() -> None:
         task_name="prioritize_open_problems",
         base_settings=worker_settings,
     )
-    run_parallel_loop(
-        args=args,
+    try:
+        run_parallel_loop(
+            args=args,
+            data_dir=data_dir,
+            scratch_file=scratch_file,
+            memory_path=memory_path,
+            derived_path=derived_path,
+            repo_root=repo_root,
+            base_theory_context=base_theory_context,
+            derived_entries=derived_entries,
+            run_id=run_id,
+            run_started_at=run_started_at,
+            run_started_monotonic=run_started_monotonic,
+            artifact_paths=artifact_paths,
+            compile_metrics=compile_metrics,
+            worker_settings=worker_settings,
+            prover_worker_settings=prover_worker_settings,
+            prover_statement_worker_settings=prover_statement_worker_settings,
+            formalize_worker_settings=formalize_worker_settings,
+            repair_worker_settings=repair_worker_settings,
+            prioritize_open_problems_worker_settings=prioritize_open_problems_worker_settings,
+            derived_runtime_state=derived_runtime_state,
+            record_problem_rows=record_problem_rows,
+            record_theorem=record_theorem,
+        )
+    except Exception:
+        guard_against_unexpected_continuation_reset(
+            data_dir=data_dir,
+            snapshot=continuation_snapshot,
+        )
+        raise
+    guard_against_unexpected_continuation_reset(
         data_dir=data_dir,
-        scratch_file=scratch_file,
-        memory_path=memory_path,
-        derived_path=derived_path,
-        repo_root=repo_root,
-        base_theory_context=base_theory_context,
-        derived_entries=derived_entries,
-        run_id=run_id,
-        run_started_at=run_started_at,
-        run_started_monotonic=run_started_monotonic,
-        artifact_paths=artifact_paths,
-        compile_metrics=compile_metrics,
-        worker_settings=worker_settings,
-        prover_worker_settings=prover_worker_settings,
-        prover_statement_worker_settings=prover_statement_worker_settings,
-        formalize_worker_settings=formalize_worker_settings,
-        repair_worker_settings=repair_worker_settings,
-        prioritize_open_problems_worker_settings=prioritize_open_problems_worker_settings,
-        derived_runtime_state=derived_runtime_state,
-        record_problem_rows=record_problem_rows,
-        record_theorem=record_theorem,
+        snapshot=continuation_snapshot,
     )
     return
 
