@@ -1,8 +1,15 @@
 from __future__ import annotations
 
 import argparse
+import sys
 from pathlib import Path
 from typing import Any
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+SCRIPTS_ROOT = SCRIPT_DIR.parent
+scripts_root_str = str(SCRIPTS_ROOT)
+if scripts_root_str not in sys.path:
+    sys.path.insert(0, scripts_root_str)
 
 from append_derived import build_derived_entries_from_file
 from common import load_theory_context

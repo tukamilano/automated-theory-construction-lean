@@ -9,10 +9,16 @@ import sys
 import tempfile
 import threading
 import time
-from datetime import datetime
 from pathlib import Path
 from typing import Callable
 from typing import Any
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+SCRIPTS_ROOT = SCRIPT_DIR.parent
+REPO_ROOT = SCRIPTS_ROOT.parent
+scripts_root_str = str(SCRIPTS_ROOT)
+if scripts_root_str not in sys.path:
+    sys.path.insert(0, scripts_root_str)
 
 from proof_packets import (
     FormalizerRequestPacket,
@@ -25,10 +31,6 @@ from proof_packets import (
     normalize_prover_payload,
 )
 
-from append_derived import (
-    append_theorem,
-    build_derived_entries_from_file,
-)
 from common import (
     ARCHIVED_PROBLEMS_FILENAME,
     LEGACY_DEFERRED_PROBLEMS_FILENAME,
@@ -47,16 +49,40 @@ from common import (
     write_json_atomic,
     write_jsonl_atomic,
 )
-from guidance import build_guidance_context, unpack_guidance_context
-from generated_library import build_library_entries
+from derived_entries import extract_derived_theorem_entries
+from guidance import unpack_guidance_context
 from generated_library import ensure_generated_scaffold
 from generated_library import render_scratch_template
 from import_inference import infer_minimal_imports, render_import_block
 from lean_verify import verify_scratch
-from research_agenda import DEFAULT_RESEARCH_AGENDA_PATH
-from research_agenda import load_research_agenda
+from formalization_runtime import attempt_formalization_until_timeout
+from loop_common import build_retry_deadline
+from loop_common import build_run_artifact_paths
+from loop_common import build_run_id
+from loop_common import iso_timestamp_now
+from loop_common import monotonic_duration_ms
+from loop_common import prover_response_fingerprint
+from loop_common import remaining_retry_budget_sec
+from loop_common import update_same_fingerprint_streak
+from loop_helpers import append_derived_entry_cache
+from loop_helpers import append_formalization_memory_entry
+from loop_helpers import append_phase_attempt_record
+from loop_helpers import build_problem_theory_context
+from loop_helpers import emit_phase_log
+from loop_helpers import extract_theorem_code_from_scratch
+from loop_helpers import is_verified_resolution
+from loop_helpers import load_current_guidance
+from loop_helpers import load_current_research_agenda
+from loop_helpers import load_formalization_memory
+from loop_helpers import load_theory_state
+from loop_helpers import normalize_stmt_text
+from loop_helpers import open_problem_priority_label
+from loop_helpers import save_formalization_memory
+from loop_helpers import shortlist_relevant_derived_entries
+from loop_helpers import validate_theorem_name_stem
 from research_agenda import summarize_research_agenda_for_state
 from state_update import apply_state_update
+from theorem_commit import commit_verified_theorem_and_generation
 from theorem_reuse_memory import append_theorem_reuse_memory_entry
 from worker_client import invoke_worker_json, load_task_worker_settings, load_worker_settings
 
@@ -105,17 +131,12 @@ FORMALIZER_COUNTEREXAMPLE_PROMPT_FILE = "prompts/formalize/formalizer_counterexa
 REPAIR_PROOF_PROMPT_FILE = "prompts/formalize/repair_proof.md"
 REPAIR_COUNTEREXAMPLE_PROMPT_FILE = "prompts/formalize/repair_counterexample.md"
 PRIORITIZE_OPEN_PROBLEMS_PROMPT_FILE = "prompts/prioritizer/open_problem_prioritizer.md"
-MAIN_THEOREM_SUGGEST_PROMPT_FILE = "prompts/main_theorem/suggester.md"
-MAIN_THEOREM_PLAN_PROMPT_FILE = "prompts/main_theorem/planner.md"
 EXPANDER_SOLVED_PROOF_PROMPT_FILE = "prompts/expander/solved_proof.md"
-MAIN_THEOREM_POST_EXPAND_PROMPT_FILE = "prompts/expander/post_theorem.md"
 
 BATCH_GENERATOR_SEED_COUNT = 4
 BATCH_GENERATOR_OPEN_TARGET_MIN = 2
 
-THEOREM_NAME_STEM_PATTERN = re.compile(r"^[a-z][a-z0-9_]*$")
 THEOREM_NAME_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_']*$")
-DERIVED_THEOREM_HEADER_PATTERN = re.compile(r"\btheorem\s+([A-Za-z0-9_']+)\s*:")
 UNUSED_VARIABLE_WARNING_PATTERN = re.compile(r"unused variable\s+`([^`]+)`", re.IGNORECASE)
 OPEN_PROBLEM_PRIORITY_ORDER = {
     "high": 0,
@@ -126,93 +147,11 @@ OPEN_PROBLEM_PRIORITY_ORDER = {
 
 DEFAULT_PROVER_RETRY_BUDGET_SEC = 120
 DEFAULT_FORMALIZATION_RETRY_BUDGET_SEC = 300
-DEFAULT_MAIN_THEOREM_FORMALIZATION_RETRY_BUDGET_SEC = 3600
 DEFAULT_MAX_SAME_ERROR_STREAK = 5
-REPO_ROOT = Path(__file__).resolve().parent.parent
-
-
-def build_retry_deadline(budget_sec: int | None) -> float | None:
-    if budget_sec is None:
-        return None
-    return time.monotonic() + max(1, budget_sec)
-
-
-def load_current_research_agenda() -> dict[str, Any]:
-    return load_research_agenda(REPO_ROOT / DEFAULT_RESEARCH_AGENDA_PATH)
-
-
-def load_current_guidance(data_dir: Path) -> dict[str, dict[str, Any]]:
-    return build_guidance_context(
-        theory_state=load_theory_state(data_dir),
-        research_agenda=load_current_research_agenda(),
-    )
-
-
-def remaining_retry_budget_sec(deadline: float | None) -> int | None:
-    if deadline is None:
-        return None
-    remaining = int(deadline - time.monotonic())
-    return max(0, remaining)
-
-
-def update_same_fingerprint_streak(
-    *,
-    last_fingerprint: str,
-    current_fingerprint: str,
-    current_streak: int,
-) -> tuple[str, int]:
-    if not current_fingerprint:
-        return "", 0
-    if current_fingerprint == last_fingerprint:
-        return last_fingerprint, current_streak + 1
-    return current_fingerprint, 1
-
-
-def prover_response_fingerprint(
-    *,
-    result: str,
-    proof_sketch: str,
-    counterexample_text: str,
-) -> str:
-    return " || ".join(
-        [
-            result.strip(),
-            " ".join(proof_sketch.strip().split()),
-            " ".join(counterexample_text.strip().split()),
-        ]
-    )
-PHASE_ATTEMPT_LOCK = threading.Lock()
-FORMALIZATION_MEMORY_LOCK = threading.RLock()
 COMPILE_METRICS_LOCK = threading.Lock()
 LEAN_VERIFY_LOCK = threading.Lock()
 DERIVED_UPDATE_LOCK = threading.Lock()
 THEORY_STATE_FILENAME = "theory_state.json"
-
-
-def iso_timestamp_now() -> str:
-    return datetime.now().astimezone().isoformat(timespec="seconds")
-
-
-def monotonic_duration_ms(started_at: float) -> int:
-    return int((time.monotonic() - started_at) * 1000)
-
-
-def build_run_id(kind: str = "loop") -> str:
-    return f"{time.strftime('%Y%m%d-%H%M%S')}-{kind}"
-
-
-def build_run_artifact_paths(data_dir: Path, run_id: str) -> dict[str, Path]:
-    run_dir = data_dir / "runs" / run_id
-    return {
-        "run_dir": run_dir,
-        "summary": run_dir / "summary.json",
-        "theory_state_history": run_dir / "theory_state_history.jsonl",
-        "phase_attempts": run_dir / "phase_attempts.jsonl",
-        "problem_nodes": run_dir / "problem_nodes.jsonl",
-        "theorem_nodes": run_dir / "theorem_nodes.jsonl",
-        "lineage_edges": run_dir / "lineage_edges.jsonl",
-    }
-
 
 def build_session_scratch_file(base_scratch_file: Path, *, session_type: str, slot_index: int) -> Path:
     stem = base_scratch_file.stem
@@ -227,49 +166,9 @@ def cleanup_parallel_scratch_files(base_scratch_file: Path) -> None:
     for pattern in (
         f"{stem}.loop{suffix}",
         f"{stem}.loop.*{suffix}",
-        f"{stem}.main_theorem_session{suffix}",
-        f"{stem}.main_theorem_session.*{suffix}",
     ):
         for path in base_scratch_file.parent.glob(pattern):
             path.unlink(missing_ok=True)
-
-
-def append_phase_attempt_record(
-    phase_attempts_path: Path,
-    *,
-    run_id: str,
-    session_type: str,
-    iteration: int,
-    entity_id: str,
-    phase: str,
-    worker_task: str,
-    started_at: str,
-    finished_at: str,
-    duration_ms: int,
-    success: bool,
-    result: str,
-    timeout: bool = False,
-    error: str = "",
-) -> None:
-    with PHASE_ATTEMPT_LOCK:
-        append_jsonl(
-            phase_attempts_path,
-            {
-                "run_id": run_id,
-                "session_type": session_type,
-                "iteration": iteration,
-                "entity_id": entity_id,
-                "phase": phase,
-                "worker_task": worker_task,
-                "started_at": started_at,
-                "finished_at": finished_at,
-                "duration_ms": duration_ms,
-                "success": bool(success),
-                "result": result,
-                "timeout": bool(timeout),
-                "error": error,
-            },
-        )
 
 
 def append_problem_node_record(
@@ -385,19 +284,6 @@ def theory_state_path(data_dir: Path) -> Path:
     return data_dir / THEORY_STATE_FILENAME
 
 
-def load_theory_state(data_dir: Path) -> dict[str, Any]:
-    path = theory_state_path(data_dir)
-    if not path.exists():
-        return {}
-    try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except Exception:
-        return {}
-    if not isinstance(payload, dict):
-        return {}
-    return payload
-
-
 def write_theory_state(
     data_dir: Path,
     *,
@@ -495,13 +381,7 @@ def persist_derived_generation(
     write_json_atomic(theory_state_path(data_dir), payload)
     return payload
 
-
-def normalize_stmt_text(stmt: str) -> str:
-    return " ".join(stmt.split())
-
-
 MAX_EXPAND_CANDIDATES_PER_SOLVED_PROOF = 3
-MAX_EXPAND_CANDIDATES_PER_MAIN_THEOREM = 5
 
 
 
@@ -588,10 +468,6 @@ def collect_important_verified_counterexamples(
     return summaries
 
 
-def open_problem_priority_label(row: dict[str, Any]) -> str:
-    return normalize_open_problem_priority(row.get("priority"))
-
-
 def is_solver_eligible_open_problem(row: dict[str, Any]) -> bool:
     return open_problem_priority_label(row) in {"high", "medium"}
 
@@ -666,10 +542,6 @@ def apply_open_problem_priorities(
 
 def needs_bootstrap_priority_refresh(open_rows: list[dict[str, Any]]) -> bool:
     return any(open_problem_priority_label(row) == "unknown" for row in open_rows)
-
-
-def is_verified_resolution(*, verify_success: bool, result: str) -> bool:
-    return bool(verify_success and result in {"proof", "counterexample"})
 
 
 def should_generate_expand_candidates(*, verify_success: bool, result: str) -> bool:
@@ -757,25 +629,6 @@ def validate_prover_output(
         new_problems=[item.strip() for item in new_problems if item.strip()],
         raw_payload=dict(payload),
     )
-
-
-def validate_theorem_name_stem(stem: str) -> str:
-    cleaned = stem.strip()
-    if not cleaned:
-        raise ValueError("prover_statement theorem_name_stem must be non-empty when result=ok")
-    if len(cleaned) > 80:
-        raise ValueError("prover_statement theorem_name_stem must be <= 80 characters")
-    if not THEOREM_NAME_STEM_PATTERN.fullmatch(cleaned):
-        raise ValueError(
-            "prover_statement theorem_name_stem must match ^[a-z][a-z0-9_]*$"
-        )
-    if cleaned.startswith("thm_") or cleaned == "thm":
-        raise ValueError("prover_statement theorem_name_stem must not include the thm prefix")
-    if cleaned.startswith("_") or cleaned.endswith("_") or "__" in cleaned:
-        raise ValueError("prover_statement theorem_name_stem must not have leading/trailing/repeated underscores")
-    if re.search(r"_\d+$", cleaned):
-        raise ValueError("prover_statement theorem_name_stem must not end with a numeric suffix")
-    return cleaned
 
 
 def validate_theorem_name(theorem_name: str) -> str:
@@ -1079,103 +932,6 @@ def validate_open_problem_priority_output(
     )
 
 
-def validate_main_theorem_suggestion_output(
-    payload: dict[str, Any],
-    expected_candidate_id: str,
-) -> tuple[str, str, str, str, str, list[str], list[str]]:
-    required_keys = {
-        "candidate_id",
-        "result",
-        "statement",
-        "theorem_name_stem",
-        "docstring_summary",
-        "rationale",
-        "supporting_theorems",
-        "missing_lemmas",
-    }
-    if set(payload.keys()) != required_keys:
-        raise ValueError("main_theorem_suggest output keys mismatch required contract")
-
-    candidate_id = str(payload.get("candidate_id", "")).strip()
-    if candidate_id != expected_candidate_id:
-        raise ValueError("main_theorem_suggest candidate_id does not match request")
-
-    result = str(payload.get("result", "")).strip()
-    if result not in {"ok", "stuck"}:
-        raise ValueError("main_theorem_suggest result must be ok|stuck")
-
-    statement = str(payload.get("statement", "")).strip()
-    theorem_name_stem = str(payload.get("theorem_name_stem", "")).strip()
-    docstring_summary = str(payload.get("docstring_summary", "")).strip()
-    rationale = str(payload.get("rationale", "")).strip()
-    supporting = payload.get("supporting_theorems", [])
-    missing = payload.get("missing_lemmas", [])
-    if not isinstance(supporting, list) or not isinstance(missing, list):
-        raise ValueError("main_theorem_suggest supporting_theorems and missing_lemmas must be arrays")
-
-    supporting_theorems = [str(item).strip() for item in supporting if str(item).strip()]
-    missing_lemmas = [str(item).strip() for item in missing if str(item).strip()]
-
-    if result == "ok":
-        if not statement:
-            raise ValueError("main_theorem_suggest statement must be non-empty when result=ok")
-        theorem_name_stem = validate_theorem_name_stem(theorem_name_stem)
-        if not docstring_summary:
-            raise ValueError("main_theorem_suggest docstring_summary must be non-empty when result=ok")
-    else:
-        if statement or theorem_name_stem or docstring_summary:
-            raise ValueError("main_theorem_suggest stuck result must not return statement/name/docstring")
-
-    return (
-        result,
-        statement,
-        theorem_name_stem,
-        docstring_summary,
-        rationale,
-        supporting_theorems,
-        missing_lemmas,
-    )
-
-
-def validate_main_theorem_plan_output(
-    payload: dict[str, Any],
-    expected_candidate_id: str,
-) -> tuple[str, str, str, list[str], list[str], str]:
-    required_keys = {
-        "candidate_id",
-        "result",
-        "plan_summary",
-        "proof_sketch",
-        "supporting_theorems",
-        "intermediate_lemmas",
-        "notes",
-    }
-    if set(payload.keys()) != required_keys:
-        raise ValueError("main_theorem_plan output keys mismatch required contract")
-
-    candidate_id = str(payload.get("candidate_id", "")).strip()
-    if candidate_id != expected_candidate_id:
-        raise ValueError("main_theorem_plan candidate_id does not match request")
-
-    result = str(payload.get("result", "")).strip()
-    if result not in {"ok", "stuck"}:
-        raise ValueError("main_theorem_plan result must be ok|stuck")
-
-    plan_summary = str(payload.get("plan_summary", "")).strip()
-    proof_sketch = str(payload.get("proof_sketch", "")).strip()
-    notes = str(payload.get("notes", "")).strip()
-    supporting = payload.get("supporting_theorems", [])
-    intermediate = payload.get("intermediate_lemmas", [])
-    if not isinstance(supporting, list) or not isinstance(intermediate, list):
-        raise ValueError("main_theorem_plan supporting_theorems and intermediate_lemmas must be arrays")
-
-    supporting_theorems = [str(item).strip() for item in supporting if str(item).strip()]
-    intermediate_lemmas = [str(item).strip() for item in intermediate if str(item).strip()]
-    if result == "ok" and not proof_sketch:
-        raise ValueError("main_theorem_plan proof_sketch must be non-empty when result=ok")
-    return result, plan_summary, proof_sketch, supporting_theorems, intermediate_lemmas, notes
-
-
 def load_prompt_text(prompt_file: str) -> str:
     path = Path(prompt_file)
     from prompt_loader import load_prompt_file
@@ -1307,18 +1063,6 @@ def append_current_iteration_log(
     )
 
 
-def emit_phase_log(enabled: bool, phase: str, **fields: Any) -> None:
-    if not enabled:
-        return
-    payload: dict[str, Any] = {
-        "event": "phase",
-        "phase": phase,
-        "ts": int(time.time()),
-    }
-    payload.update(fields)
-    print(payload, flush=True)
-
-
 def emit_parse_phase_log(
     enabled: bool,
     phase: str,
@@ -1355,210 +1099,6 @@ def is_worker_timeout_error(exc: Exception) -> bool:
     if "keyboardinterrupt" in message or "exited with code 130" in message or "interrupt_requested" in message:
         return False
     return "timed out" in message or "timeout" in message
-
-
-def extract_derived_theorem_entries(
-    derived_path: Path,
-    max_theorems: int | None = None,
-) -> list[dict[str, str]]:
-    """Extract theorem entries from Generated plus the active Derived frontier."""
-    generated_root = derived_path.parent / "Generated"
-    fallback_entries = build_library_entries(generated_root=generated_root, derived_file=derived_path)
-    return [
-        {
-            "name": str(entry.get("theorem_name", "")).strip(),
-            "statement": str(entry.get("statement", "")).strip(),
-        }
-        for entry in fallback_entries[:max_theorems]
-        if str(entry.get("theorem_name", "")).strip() and str(entry.get("statement", "")).strip()
-    ]
-
-
-def extract_derived_entry_from_theorem_code(theorem_code: str) -> dict[str, str] | None:
-    theorem_code = theorem_code.strip()
-    if not theorem_code:
-        return None
-
-    matches = list(DERIVED_THEOREM_HEADER_PATTERN.finditer(theorem_code))
-    if not matches:
-        return None
-
-    theorem_name = ""
-    statement = ""
-    for match in matches:
-        candidate_name = str(match.group(1)).strip()
-        if not candidate_name:
-            continue
-        start = match.end()
-        separator_index = -1
-        paren_depth = 0
-        bracket_depth = 0
-        brace_depth = 0
-
-        for index in range(start, len(theorem_code) - 1):
-            ch = theorem_code[index]
-            nxt = theorem_code[index + 1]
-            if ch == "(":
-                paren_depth += 1
-            elif ch == ")":
-                paren_depth = max(paren_depth - 1, 0)
-            elif ch == "[":
-                bracket_depth += 1
-            elif ch == "]":
-                bracket_depth = max(bracket_depth - 1, 0)
-            elif ch == "{":
-                brace_depth += 1
-            elif ch == "}":
-                brace_depth = max(brace_depth - 1, 0)
-            elif (
-                ch == ":"
-                and nxt == "="
-                and paren_depth == 0
-                and bracket_depth == 0
-                and brace_depth == 0
-            ):
-                separator_index = index
-                break
-
-        if separator_index < 0:
-            continue
-        candidate_statement = normalize_stmt_text(theorem_code[start:separator_index].strip())
-        if candidate_statement:
-            theorem_name = candidate_name
-            statement = candidate_statement
-
-    if not theorem_name or not statement:
-        return None
-    return {
-        "name": theorem_name,
-        "statement": statement,
-    }
-
-
-def append_derived_entry_cache(
-    entries: list[dict[str, str]],
-    theorem_code: str,
-) -> None:
-    entry = extract_derived_entry_from_theorem_code(theorem_code)
-    if entry is None:
-        return
-    if any(existing["name"] == entry["name"] for existing in entries):
-        return
-    entries.append(entry)
-
-
-def extract_theorem_code_from_scratch(scratch_path: Path) -> str:
-    scratch_code = scratch_path.read_text(encoding="utf-8")
-    namespace_match = re.search(
-        r"namespace\s+AutomatedTheoryConstruction\b",
-        scratch_code,
-    )
-    if namespace_match is None:
-        debug_log(f"Could not find AutomatedTheoryConstruction namespace in {scratch_path}")
-        return scratch_code.strip()
-    namespace_tail = scratch_code[namespace_match.end() :]
-    end_match = re.search(r"\nend\s+AutomatedTheoryConstruction", namespace_tail)
-    if end_match is None:
-        debug_log(f"Could not find namespace end marker in {scratch_path}")
-        return namespace_tail.strip()
-    return namespace_tail[: end_match.start()].strip()
-
-
-def append_verified_theorem_from_scratch(
-    *,
-    scratch_path: Path,
-    derived_file: Path,
-    derived_entries: list[dict[str, str]],
-    docstring: str,
-    rebuild_derived: bool = True,
-) -> str:
-    theorem_code = extract_theorem_code_from_scratch(scratch_path)
-    if not theorem_code:
-        debug_log(f"extract_theorem_code_from_scratch returned empty for {scratch_path}")
-        return ""
-    if text_contains_sorry(theorem_code):
-        debug_log(f"Refusing to append theorem containing sorry from {scratch_path}")
-        return ""
-    entry = extract_derived_entry_from_theorem_code(theorem_code)
-    theorem_name = str(entry.get("name", "")).strip() if isinstance(entry, dict) else ""
-    if not theorem_name:
-        theorem_matches = list(DERIVED_THEOREM_HEADER_PATTERN.finditer(theorem_code))
-        if not theorem_matches:
-            debug_log(f"Could not extract theorem entry from {scratch_path}")
-            return ""
-        theorem_name = str(theorem_matches[-1].group(1)).strip()
-    if not theorem_name:
-        debug_log(f"Could not extract theorem name from {scratch_path}")
-        return ""
-    # Serialize Derived.lean mutations with Lean verification/import traffic.
-    with LEAN_VERIFY_LOCK:
-        with DERIVED_UPDATE_LOCK:
-            original_content = derived_file.read_text(encoding="utf-8") if derived_file.exists() else ""
-            appended = append_theorem(
-                derived_file,
-                theorem_code,
-                theorem_name,
-                docstring,
-            )
-            if appended:
-                if rebuild_derived:
-                    # Keep Derived's compiled artifacts in sync so downstream scratch checks
-                    # can resolve newly appended theorem names reliably.
-                    build_proc = subprocess.run(
-                        ["lake", "build", "AutomatedTheoryConstruction.Derived"],
-                        capture_output=True,
-                        text=True,
-                        check=False,
-                    )
-                    if build_proc.returncode != 0:
-                        derived_file.write_text(original_content, encoding="utf-8")
-                        stderr = (build_proc.stderr or "").strip()
-                        stdout = (build_proc.stdout or "").strip()
-                        excerpt = stderr or stdout or "lake build AutomatedTheoryConstruction.Derived failed without output"
-                        raise RuntimeError(f"Failed to rebuild Derived after appending theorem: {excerpt}")
-                append_derived_entry_cache(derived_entries, theorem_code)
-                return theorem_code
-            derived_content = derived_file.read_text(encoding="utf-8") if derived_file.exists() else ""
-            if re.search(rf"\btheorem\s+{re.escape(theorem_name)}\b", derived_content):
-                debug_log(
-                    f"Derived.lean already contains theorem {theorem_name}; treating as already-appended from scratch {scratch_path}"
-                )
-                return theorem_code
-            debug_log(
-                f"append_theorem reported no-op for {theorem_name} from {scratch_path}; Derived.lean not changed"
-            )
-    return ""
-
-
-def commit_verified_theorem_and_generation(
-    *,
-    scratch_path: Path,
-    derived_file: Path,
-    derived_entries: list[dict[str, str]],
-    docstring: str,
-    data_dir: Path,
-    derived_runtime_state: dict[str, Any],
-    run_id: str,
-    current_iteration: int,
-    rebuild_derived: bool = True,
-) -> str:
-    committed_theorem_code = append_verified_theorem_from_scratch(
-        scratch_path=scratch_path,
-        derived_file=derived_file,
-        derived_entries=derived_entries,
-        docstring=docstring,
-        rebuild_derived=rebuild_derived,
-    )
-    if committed_theorem_code:
-        next_generation = int(derived_runtime_state.get("generation", 0) or 0) + 1
-        derived_runtime_state["generation"] = next_generation
-        persist_derived_generation(
-            data_dir,
-            generation=next_generation,
-            run_id=run_id,
-            current_iteration=current_iteration,
-        )
-    return committed_theorem_code
 
 
 def store_expand_candidates_and_refresh(
@@ -1667,239 +1207,6 @@ def refresh_open_problem_state(
             "batch_generator_error": str(backfill_report.get("batch_generator_error", "") or backfill_error or ""),
         },
     }
-
-
-def classify_statement_shape(stmt: str) -> dict[str, bool]:
-    normalized = normalize_stmt_text(stmt)
-    return {
-        "has_forall": "∀" in normalized,
-        "has_exists": "∃" in normalized,
-        "has_negation": "¬" in normalized,
-        "has_mul": "*" in normalized,
-        "has_eq": "=" in normalized,
-        "has_subsingleton": "Subsingleton" in normalized,
-    }
-
-
-def extract_relevance_keywords(stmt: str) -> set[str]:
-    words = re.findall(r"[A-Za-z_][A-Za-z0-9_']*", stmt)
-    stopwords = {
-        "Type",
-        "SemigroupLike01",
-        "Mul",
-        "op",
-        "x",
-        "y",
-        "z",
-        "h",
-        "by",
-        "fun",
-        "let",
-        "intro",
-        "have",
-        "show",
-    }
-    keywords = {word for word in words if len(word) >= 4 and word not in stopwords}
-    if "Subsingleton" in stmt:
-        keywords.add("Subsingleton")
-    return keywords
-
-
-def extract_entry_relevance_keywords(entry: dict[str, Any]) -> set[str]:
-    keywords = set(extract_relevance_keywords(str(entry.get("statement", ""))))
-    keywords |= extract_relevance_keywords(str(entry.get("name", "")).replace("_", " "))
-    return keywords
-
-
-def same_relevance_family(target_shape: dict[str, bool], entry_shape: dict[str, bool]) -> bool:
-    return (
-        target_shape["has_forall"] == entry_shape["has_forall"]
-        and target_shape["has_exists"] == entry_shape["has_exists"]
-        and target_shape["has_negation"] == entry_shape["has_negation"]
-        and target_shape["has_mul"] == entry_shape["has_mul"]
-        and target_shape["has_eq"] == entry_shape["has_eq"]
-        and target_shape["has_subsingleton"] == entry_shape["has_subsingleton"]
-    )
-
-
-def summarize_derived_statement(statement: str, max_chars: int = 120) -> str:
-    text = normalize_stmt_text(statement)
-    semigroup_prefix = "∀ {α : Type u} [SemigroupLike01 α], "
-    if text.startswith(semigroup_prefix):
-        text = text[len(semigroup_prefix) :]
-    if len(text) > max_chars:
-        return text[: max_chars - 3] + "..."
-    return text
-
-
-def shortlist_relevant_derived_entries(
-    entries: list[dict[str, Any]],
-    stmt: str,
-    max_entries: int = 5,
-) -> list[dict[str, Any]]:
-    if not entries:
-        return []
-
-    target_norm = normalize_stmt_text(stmt)
-    target_shape = classify_statement_shape(stmt)
-    target_keywords = extract_relevance_keywords(stmt)
-    shortlisted: list[dict[str, Any]] = []
-    seen_names: set[str] = set()
-
-    def add_pass(predicate: Callable[[dict[str, Any]], bool]) -> None:
-        for entry in entries:
-            if entry["name"] in seen_names:
-                continue
-            if normalize_stmt_text(entry["statement"]) == target_norm:
-                continue
-            if not predicate(entry):
-                continue
-            shortlisted.append(entry)
-            seen_names.add(entry["name"])
-            if len(shortlisted) >= max_entries:
-                return
-
-    def entry_shape(entry: dict[str, Any]) -> dict[str, bool]:
-        return classify_statement_shape(entry["statement"])
-
-    add_pass(
-        lambda entry: same_relevance_family(target_shape, entry_shape(entry))
-        and bool(target_keywords & extract_entry_relevance_keywords(entry))
-    )
-    add_pass(lambda entry: same_relevance_family(target_shape, entry_shape(entry)))
-    add_pass(
-        lambda entry: target_shape["has_exists"] == entry_shape(entry)["has_exists"]
-        and target_shape["has_negation"] == entry_shape(entry)["has_negation"]
-        and target_shape["has_mul"] == entry_shape(entry)["has_mul"]
-    )
-    return shortlisted[:max_entries]
-
-
-def render_relevant_derived_context(entries: list[dict[str, Any]], max_chars: int = 1800) -> str:
-    if not entries:
-        return ""
-
-    lines = [
-        "",
-        "-- Relevant verified theorems from Generated/Derived:",
-        "-- Check these theorem names before re-deriving from axioms.",
-    ]
-    for entry in entries:
-        lines.append(f"-- {entry['name']} :: {summarize_derived_statement(entry['statement'])}")
-
-    summary = "\n".join(lines)
-    if len(summary) > max_chars:
-        summary = summary[:max_chars] + "\n-- (relevant theorem list truncated)"
-    return summary
-
-
-def infer_mathlib_search_terms(stmt: str, entries: list[dict[str, Any]], max_terms: int = 10) -> list[str]:
-    target_shape = classify_statement_shape(stmt)
-    terms: list[str] = []
-
-    def add(term: str) -> None:
-        cleaned = term.strip()
-        if not cleaned or cleaned in terms:
-            return
-        terms.append(cleaned)
-
-    for keyword in sorted(extract_relevance_keywords(stmt)):
-        add(keyword)
-
-    if target_shape["has_subsingleton"]:
-        add("Subsingleton")
-        add("Subsingleton.elim")
-    if target_shape["has_exists"]:
-        add("Exists")
-        add("Classical.choose")
-    if target_shape["has_negation"]:
-        add("False")
-        add("by_contra")
-    if target_shape["has_mul"]:
-        add("mul")
-    if target_shape["has_eq"]:
-        add("Eq")
-    if target_shape["has_forall"]:
-        add("forall")
-    for entry in entries:
-        add(str(entry.get("name", "")))
-
-    return terms[:max_terms]
-
-
-def infer_tactic_hints(stmt: str, entries: list[dict[str, Any]], max_tactics: int = 8) -> list[str]:
-    target_shape = classify_statement_shape(stmt)
-    tactics: list[str] = []
-
-    def add(tactic: str) -> None:
-        cleaned = tactic.strip()
-        if not cleaned or cleaned in tactics:
-            return
-        tactics.append(cleaned)
-
-    for tactic in ["simpa", "exact", "rw", "apply", "have", "calc"]:
-        add(tactic)
-
-    if target_shape["has_forall"]:
-        add("intro")
-    if target_shape["has_exists"]:
-        add("refine")
-        add("constructor")
-        add("use")
-        add("rcases")
-    if target_shape["has_negation"]:
-        add("intro")
-        add("exfalso")
-    if target_shape["has_subsingleton"]:
-        add("Subsingleton.elim")
-    if target_shape["has_eq"] and target_shape["has_mul"]:
-        add("simp only")
-    for entry in entries:
-        if entry.get("name"):
-            add(f"simpa using {entry['name']}")
-
-    for tactic in ["aesop", "grind", "omega", "linarith", "nlinarith", "ring_nf", "positivity"]:
-        add(tactic)
-
-    return tactics[:max_tactics]
-
-
-def render_mathlib_hint_context(stmt: str, entries: list[dict[str, Any]], max_chars: int = 900) -> str:
-    search_terms = infer_mathlib_search_terms(stmt, entries)
-    tactic_hints = infer_tactic_hints(stmt, entries)
-    if not search_terms and not tactic_hints:
-        return ""
-
-    lines = [
-        "",
-        "-- Mathlib reuse hints:",
-    ]
-    if search_terms:
-        lines.append(f"-- search keywords: {', '.join(search_terms)}")
-    if tactic_hints:
-        lines.append(f"-- tactic candidates: {', '.join(tactic_hints)}")
-    lines.append("-- Prefer a short proof using existing Mathlib or Derived facts over axiom-only reconstruction.")
-
-    summary = "\n".join(lines)
-    if len(summary) > max_chars:
-        summary = summary[:max_chars] + "\n-- (mathlib hints truncated)"
-    return summary
-
-
-def build_problem_theory_context(
-    theory_context: str,
-    derived_entries: list[dict[str, str]],
-    stmt: str,
-) -> str:
-    relevant_entries = shortlist_relevant_derived_entries(derived_entries, stmt)
-    relevant_summary = render_relevant_derived_context(relevant_entries)
-    mathlib_summary = render_mathlib_hint_context(stmt, relevant_entries)
-    context = theory_context
-    if relevant_summary:
-        context += relevant_summary
-    if mathlib_summary:
-        context += mathlib_summary
-    return context
 
 
 def analyze_lean_failure(
@@ -2108,70 +1415,6 @@ def prune_unused_binders_from_statement(stmt: str, unused_names: list[str]) -> s
     if not kept_binders:
         return body
     return f"∀ {' '.join(kept_binders)}, {body}"
-
-
-def load_formalization_memory(memory_path: Path, problem_id: str) -> list[dict[str, Any]]:
-    with FORMALIZATION_MEMORY_LOCK:
-        if not memory_path.exists():
-            return []
-        try:
-            payload = json.loads(memory_path.read_text(encoding="utf-8"))
-        except Exception:
-            return []
-        if not isinstance(payload, dict):
-            return []
-        rows = payload.get(problem_id, [])
-        if not isinstance(rows, list):
-            return []
-        safe_rows: list[dict[str, Any]] = []
-        for item in rows:
-            if not isinstance(item, dict):
-                continue
-            safe_rows.append(
-                {
-                    "stage": str(item.get("stage", "")),
-                    "source_statement": str(item.get("source_statement", "")),
-                    "formalized_statement": str(item.get("formalized_statement", "")),
-                    "statement_formalization_notes": str(item.get("statement_formalization_notes", "")),
-                    "result": str(item.get("result", "")),
-                    "verify_success": bool(item.get("verify_success", False)),
-                    "proof_sketch": str(item.get("proof_sketch", "")),
-                    "proof_text": str(item.get("proof_text", "")),
-                    "counterexample_text": str(item.get("counterexample_text", "")),
-                    "lean_error_excerpt": str(item.get("lean_error_excerpt", "")),
-                    "lean_error_fingerprint": str(item.get("lean_error_fingerprint", "")),
-                }
-            )
-        return safe_rows
-
-
-def save_formalization_memory(memory_path: Path, problem_id: str, history: list[dict[str, Any]]) -> None:
-    with FORMALIZATION_MEMORY_LOCK:
-        memory_path.parent.mkdir(parents=True, exist_ok=True)
-        payload: dict[str, Any] = {}
-        if memory_path.exists():
-            try:
-                existing = json.loads(memory_path.read_text(encoding="utf-8"))
-                if isinstance(existing, dict):
-                    payload = existing
-            except Exception:
-                payload = {}
-        payload[problem_id] = history[-20:]
-        memory_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
-
-
-def append_formalization_memory_entry(
-    memory_path: Path,
-    problem_id: str,
-    entry: dict[str, Any],
-) -> list[dict[str, Any]]:
-    with FORMALIZATION_MEMORY_LOCK:
-        history = load_formalization_memory(memory_path, problem_id)
-        history.append(entry)
-        if len(history) > 20:
-            history = history[-20:]
-        save_formalization_memory(memory_path, problem_id, history)
-        return history
 
 
 def query_prover_with_retries(
@@ -2799,90 +2042,6 @@ def request_expand_candidates(
     ), expand_worker_meta
 
 
-def request_main_theorem_suggestion(
-    *,
-    worker_settings: Any,
-    suggester_prompt: str,
-    candidate_id: str,
-    derived_entries: list[dict[str, str]],
-    theory_context: str,
-    tracked_rows: list[dict[str, Any]],
-    current_iteration: int,
-    guidance: dict[str, Any],
-) -> tuple[tuple[str, str, str, str, str, list[str], list[str]], dict[str, Any]]:
-    theory_state, research_agenda = unpack_guidance_context(guidance)
-    payload: dict[str, Any] = {
-        "candidate_id": candidate_id,
-        "current_iteration": current_iteration,
-        "derived_theorems": [
-            {
-                "name": str(entry.get("name", "")),
-                "statement": str(entry.get("statement", "")),
-            }
-            for entry in derived_entries
-        ],
-        "theory_context": theory_context,
-        "tracked_problems": [
-            {
-                "problem_id": str(row.get("id", "")),
-                "stmt": str(row.get("stmt", "")),
-                "priority": open_problem_priority_label(row),
-                "queue_status": str(row.get("queue_status", "open")),
-                "source_kind": str(row.get("source_kind", row.get("queue_status", "open"))),
-                "failure_count": int(row.get("failure_count", 0) or 0),
-                "mode": str(row.get("mode", "")),
-                "summary_delta": str(row.get("summary_delta", "")),
-            }
-            for row in tracked_rows[:40]
-        ],
-        "theory_state": theory_state,
-        "research_agenda": research_agenda,
-    }
-    response, worker_meta = invoke_worker_json(
-        settings=worker_settings,
-        task_type="main_theorem_suggest",
-        system_prompt=suggester_prompt,
-        payload=payload,
-        metadata={"candidate_id": candidate_id, "derived_theorem_count": len(derived_entries)},
-    )
-    return validate_main_theorem_suggestion_output(response, candidate_id), worker_meta
-
-
-def request_main_theorem_plan(
-    *,
-    worker_settings: Any,
-    planner_prompt: str,
-    candidate_row: dict[str, Any],
-    derived_entries: list[dict[str, str]],
-    theory_context: str,
-) -> tuple[tuple[str, str, str, list[str], list[str], str], dict[str, Any]]:
-    payload: dict[str, Any] = {
-        "candidate_id": str(candidate_row.get("candidate_id", "")),
-        "statement": str(candidate_row.get("statement", "")),
-        "theorem_name": str(candidate_row.get("theorem_name", "")),
-        "docstring_summary": str(candidate_row.get("docstring_summary", "")),
-        "rationale": str(candidate_row.get("rationale", "")),
-        "supporting_theorems": list(candidate_row.get("supporting_theorems", [])),
-        "missing_lemmas": list(candidate_row.get("missing_lemmas", [])),
-        "derived_theorems": [
-            {
-                "name": str(entry.get("name", "")),
-                "statement": str(entry.get("statement", "")),
-            }
-            for entry in shortlist_relevant_derived_entries(derived_entries, str(candidate_row.get("statement", "")), max_entries=8)
-        ],
-        "theory_context": theory_context,
-    }
-    response, worker_meta = invoke_worker_json(
-        settings=worker_settings,
-        task_type="main_theorem_plan",
-        system_prompt=planner_prompt,
-        payload=payload,
-        metadata={"candidate_id": str(candidate_row.get("candidate_id", ""))},
-    )
-    return validate_main_theorem_plan_output(response, str(candidate_row.get("candidate_id", ""))), worker_meta
-
-
 def request_open_problem_priorities(
     *,
     worker_settings: Any,
@@ -3032,7 +2191,7 @@ def run_batch_generator_subprocess(
     output_file: Path,
     seed_count: int,
 ) -> tuple[list[dict[str, Any]], str]:
-    script_path = (Path(__file__).resolve().parent / "generate_seeds_from_theory.py").resolve()
+    script_path = (SCRIPTS_ROOT / "generate_seeds_from_theory.py").resolve()
     cmd = [
         sys.executable,
         str(script_path),
@@ -3210,591 +2369,6 @@ def backfill_open_problems_if_needed(
     }
 
 
-def attempt_formalization_until_timeout(
-    *,
-    problem_id: str,
-    theorem_name: str,
-    stmt: str,
-    result: str,
-    proof_sketch: str,
-    counterexample_text: str,
-    scratch_file: Path,
-    skip_verify: bool,
-    formalize_worker_settings: Any,
-    repair_worker_settings: Any,
-    formalizer_prompts: dict[str, str],
-    repair_prompts: dict[str, str],
-    open_rows: list[dict[str, Any]],
-    theory_context: str,
-    verify_timeout_sec: int | None = 180,
-    formalization_retry_budget_sec: int | None,
-    memory_path: Path,
-    current_iteration_full_logs: list[dict[str, Any]],
-    initial_prelude_code: str = "",
-    initial_proof_text: str = "",
-    phase_logger: Callable[..., None] | None = None,
-    forbid_sorry: bool = False,
-    max_same_error_streak: int | None = None,
-    retry_initial_formalization_until_budget: bool = False,
-    run_id: str,
-    session_type: str,
-    iteration: int,
-    phase_attempts_path: Path,
-    compile_metrics: dict[str, Any],
-) -> tuple[bool, str | None, str, str, str, str, str, str]:
-    verify_success = False
-    current_theorem_name = validate_theorem_name(theorem_name)
-    current_stmt = stmt
-    verify_error_excerpt = ""
-    prelude_code = initial_prelude_code
-    proof_text = initial_proof_text
-    attempted_strengthened_statements = {normalize_stmt_text(current_stmt)}
-    best_verified_candidate: dict[str, Any] | None = None
-    deadline = build_retry_deadline(formalization_retry_budget_sec)
-
-    if result not in {"proof", "counterexample"}:
-        # Preserve stuck exploration history so future timeout handling
-        # can mine subgoal candidates from prior reasoning.
-        persisted_history = load_formalization_memory(memory_path, problem_id)
-        persisted_history.append(
-            {
-                "result": result,
-                "verify_success": verify_success,
-                "proof_sketch": proof_sketch,
-                "prelude_code": prelude_code,
-                "proof_text": proof_text,
-                "counterexample_text": counterexample_text,
-                "lean_error_excerpt": verify_error_excerpt,
-                "lean_error_fingerprint": "non_formalized_result",
-            }
-        )
-        save_formalization_memory(memory_path, problem_id, persisted_history)
-        return verify_success, current_theorem_name, result, prelude_code, proof_text, counterexample_text, verify_error_excerpt, current_stmt
-
-    initial_formalize_round = 0
-    initial_retry_instruction = ""
-    previous_initial_result = ""
-    previous_initial_prelude_code = ""
-    previous_initial_proof_text = ""
-    previous_initial_counterexample_text = ""
-    if not prelude_code.strip() and not proof_text.strip():
-        while True:
-            if (
-                retry_initial_formalization_until_budget
-                and deadline is not None
-                and initial_formalize_round > 0
-                and time.monotonic() >= deadline
-            ):
-                if not verify_error_excerpt:
-                    verify_error_excerpt = (
-                        "formalization retry budget exhausted before initial formalization produced Lean code"
-                    )
-                return (
-                    verify_success,
-                    current_theorem_name,
-                    "stuck",
-                    prelude_code,
-                    proof_text,
-                    counterexample_text,
-                    verify_error_excerpt,
-                    current_stmt,
-                )
-            try:
-                same_problem_history_tail = load_formalization_memory(memory_path, problem_id)[-8:]
-                proof_lean_started_monotonic = time.monotonic()
-                proof_lean_started_at = iso_timestamp_now()
-                result, proof_sketch, prelude_code, proof_text, counterexample_text = request_initial_formalization(
-                    formalize_worker_settings=formalize_worker_settings,
-                    formalizer_prompt=select_formalizer_prompt(formalizer_prompts, result=result),
-                    problem_id=problem_id,
-                    stmt=current_stmt,
-                    result=result,
-                    proof_sketch=proof_sketch,
-                    counterexample_text=counterexample_text,
-                    open_rows=open_rows,
-                    theory_context=theory_context,
-                    current_iteration_full_logs=current_iteration_full_logs,
-                    same_problem_history_tail=same_problem_history_tail,
-                    retry_round=initial_formalize_round,
-                    retry_instruction=initial_retry_instruction,
-                    previous_result=previous_initial_result,
-                    previous_prelude_code=previous_initial_prelude_code,
-                    previous_proof_text=previous_initial_proof_text,
-                    previous_counterexample_text=previous_initial_counterexample_text,
-                )
-            except RuntimeError as exc:
-                append_phase_attempt_record(
-                    phase_attempts_path,
-                    run_id=run_id,
-                    session_type=session_type,
-                    iteration=iteration,
-                    entity_id=problem_id,
-                    phase="proof_lean",
-                    worker_task="formalize",
-                    started_at=proof_lean_started_at,
-                    finished_at=iso_timestamp_now(),
-                    duration_ms=monotonic_duration_ms(proof_lean_started_monotonic),
-                    success=False,
-                    result="timeout" if is_worker_timeout_error(exc) else "error",
-                    timeout=is_worker_timeout_error(exc),
-                    error=str(exc),
-                )
-                if is_worker_timeout_error(exc):
-                    persisted_history = load_formalization_memory(memory_path, problem_id)
-                    verify_error_excerpt = f"formalize worker timeout: {exc}"
-                    persisted_history.append(
-                        {
-                            "result": "stuck",
-                            "verify_success": verify_success,
-                            "proof_sketch": proof_sketch,
-                            "prelude_code": prelude_code,
-                            "proof_text": proof_text,
-                            "counterexample_text": counterexample_text,
-                            "lean_error_excerpt": verify_error_excerpt,
-                            "lean_error_fingerprint": "formalizer_timeout",
-                        }
-                    )
-                    save_formalization_memory(memory_path, problem_id, persisted_history)
-                    if not retry_initial_formalization_until_budget:
-                        return (
-                            verify_success,
-                            current_theorem_name,
-                            "stuck",
-                            prelude_code,
-                            proof_text,
-                            counterexample_text,
-                            verify_error_excerpt,
-                            current_stmt,
-                        )
-                    previous_initial_result = "stuck"
-                    previous_initial_prelude_code = prelude_code
-                    previous_initial_proof_text = proof_text
-                    previous_initial_counterexample_text = counterexample_text
-                    initial_retry_instruction = (
-                        "Previous formalize attempt timed out before producing Lean code. "
-                        "Try a materially different proof route or a smaller reusable decomposition. "
-                        "Only return `stuck` if no defensible Lean path remains."
-                    )
-                    initial_formalize_round += 1
-                    prelude_code = ""
-                    proof_text = ""
-                    counterexample_text = ""
-                    continue
-                raise
-            append_phase_attempt_record(
-                phase_attempts_path,
-                run_id=run_id,
-                session_type=session_type,
-                iteration=iteration,
-                entity_id=problem_id,
-                phase="proof_lean",
-                worker_task="formalize",
-                started_at=proof_lean_started_at,
-                finished_at=iso_timestamp_now(),
-                duration_ms=monotonic_duration_ms(proof_lean_started_monotonic),
-                success=result in {"proof", "counterexample"},
-                result=result,
-            )
-            if result in {"proof", "counterexample"}:
-                break
-
-            persisted_history = load_formalization_memory(memory_path, problem_id)
-            persisted_history.append(
-                {
-                    "result": result,
-                    "verify_success": verify_success,
-                    "proof_sketch": proof_sketch,
-                    "prelude_code": prelude_code,
-                    "proof_text": proof_text,
-                    "counterexample_text": counterexample_text,
-                    "lean_error_excerpt": verify_error_excerpt,
-                    "lean_error_fingerprint": "formalizer_returned_stuck",
-                }
-            )
-            save_formalization_memory(memory_path, problem_id, persisted_history)
-            if not retry_initial_formalization_until_budget:
-                return (
-                    verify_success,
-                    current_theorem_name,
-                    result,
-                    prelude_code,
-                    proof_text,
-                    counterexample_text,
-                    verify_error_excerpt,
-                    current_stmt,
-                )
-            verify_error_excerpt = (
-                "formalizer returned stuck before Lean verification"
-            )
-            previous_initial_result = result
-            previous_initial_prelude_code = prelude_code
-            previous_initial_proof_text = proof_text
-            previous_initial_counterexample_text = counterexample_text
-            initial_retry_instruction = (
-                "Previous formalize attempt returned `stuck` before Lean verification. "
-                "Try a different proof route, intermediate lemma cut, or counterexample direction if the proof direction is unsound. "
-                "Only return `stuck` if no defensible Lean path remains."
-            )
-            initial_formalize_round += 1
-            prelude_code = ""
-            proof_text = ""
-            counterexample_text = ""
-
-    persisted_history = load_formalization_memory(memory_path, problem_id)
-    repair_round = 0
-    repair_history: list[dict[str, Any]] = list(persisted_history)
-    last_error_fingerprint = ""
-    same_error_streak = 0
-
-    def restore_best_verified_candidate() -> tuple[bool, str | None, str, str, str, str, str, str]:
-        assert best_verified_candidate is not None
-        best_result = str(best_verified_candidate["result"])
-        best_stmt = str(best_verified_candidate["stmt"])
-        best_prelude_code = str(best_verified_candidate["prelude_code"])
-        best_proof_text = str(best_verified_candidate["proof_text"])
-        best_counterexample_text = str(best_verified_candidate["counterexample_text"])
-        best_verify_error_excerpt = str(best_verified_candidate["verify_error_excerpt"])
-        write_formalization_candidate_to_scratch(
-            scratch_file=scratch_file,
-            theorem_name=current_theorem_name,
-            stmt=best_stmt,
-            result=best_result,
-            prelude_code=best_prelude_code,
-            proof_text=best_proof_text,
-            counterexample_text=best_counterexample_text,
-        )
-        return (
-            True,
-            current_theorem_name,
-            best_result,
-            best_prelude_code,
-            best_proof_text,
-            best_counterexample_text,
-            best_verify_error_excerpt,
-            best_stmt,
-        )
-
-    while True:
-        if phase_logger is not None:
-            phase_logger(
-                phase="formalize_and_verify",
-                status="begin",
-                problem_id=problem_id,
-                result=result,
-                repair_round=repair_round,
-            )
-        theorem_name, scratch_code = formalize_to_scratch(
-            theorem_name=current_theorem_name,
-            stmt=current_stmt,
-            mode=result,
-            prelude_code=prelude_code,
-            proof_text=proof_text,
-            counterexample_text=counterexample_text,
-        )
-
-        lean_diagnostics = ""
-        verify_stderr_text = ""
-        verify_stdout_text = ""
-        scratch_file.parent.mkdir(parents=True, exist_ok=True)
-        scratch_file.write_text(scratch_code, encoding="utf-8")
-        if skip_verify:
-            verify_success = True
-            verify_error_excerpt = ""
-            verify_error_analysis = {
-                "fingerprint": "verify_skipped",
-                "categories": ["verify_skipped"],
-                "top_lines": [],
-            }
-        else:
-            verify_started_at = iso_timestamp_now()
-            verify_started_monotonic = time.monotonic()
-            with LEAN_VERIFY_LOCK:
-                verify_result = verify_scratch(problem_id, result, scratch_file, timeout_sec=verify_timeout_sec)
-            update_compile_metrics(compile_metrics, verify_result)
-            verify_success = bool(verify_result.get("success", False))
-            verify_stderr_text = str(verify_result.get("stderr", ""))
-            verify_stdout_text = str(verify_result.get("stdout", ""))
-            lean_diagnostics = (verify_stderr_text + "\n" + verify_stdout_text).strip()
-            if not verify_success:
-                verify_stderr = verify_stderr_text.strip()
-                verify_stdout = verify_stdout_text.strip()
-                verify_error_excerpt = (verify_stderr or verify_stdout).splitlines()[0] if (verify_stderr or verify_stdout) else "Lean verification failed"
-            else:
-                verify_error_excerpt = ""
-            verify_error_analysis = analyze_lean_failure(
-                verify_stderr_text,
-                verify_stdout_text,
-                verify_result=verify_result,
-            )
-            append_phase_attempt_record(
-                phase_attempts_path,
-                run_id=run_id,
-                session_type=session_type,
-                iteration=iteration,
-                entity_id=problem_id,
-                phase="verify",
-                worker_task="scratch_verify",
-                started_at=verify_started_at,
-                finished_at=iso_timestamp_now(),
-                duration_ms=int(verify_result.get("duration_ms", monotonic_duration_ms(verify_started_monotonic)) or 0),
-                success=verify_success,
-                result="verified" if verify_success else "failed",
-            )
-
-        if phase_logger is not None:
-            phase_logger(
-                phase="formalize_and_verify_result",
-                problem_id=problem_id,
-                result=result,
-                repair_round=repair_round,
-                verify_success=verify_success,
-                error_fingerprint=str(verify_error_analysis.get("fingerprint", "")),
-            )
-
-        if verify_success:
-            if file_contains_sorry(scratch_file):
-                verify_success = False
-                verify_error_excerpt = "Lean verification succeeded but proof still contains sorry"
-                verify_error_analysis = {
-                    "fingerprint": "verified_theorem_contains_sorry",
-                    "categories": ["contains_sorry"],
-                    "top_lines": [verify_error_excerpt],
-                }
-            else:
-                last_error_fingerprint = ""
-                same_error_streak = 0
-        if verify_success:
-            best_verified_candidate = {
-                "stmt": current_stmt,
-                "result": result,
-                "prelude_code": prelude_code,
-                "proof_text": proof_text,
-                "counterexample_text": counterexample_text,
-                "verify_error_excerpt": verify_error_excerpt,
-            }
-            unused_names = extract_unused_variable_names(verify_stderr_text, verify_stdout_text)
-            strengthened_stmt = (
-                prune_unused_binders_from_statement(current_stmt, unused_names)
-                if result == "proof" and not skip_verify
-                else current_stmt
-            )
-            strengthened_norm = normalize_stmt_text(strengthened_stmt)
-            if (
-                result == "proof"
-                and strengthened_stmt != current_stmt
-                and strengthened_norm not in attempted_strengthened_statements
-            ):
-                attempted_strengthened_statements.add(strengthened_norm)
-                current_stmt = strengthened_stmt
-                continue
-            success_fingerprint = str(verify_error_analysis.get("fingerprint", "verified"))
-            repair_history.append(
-                {
-                    "result": result,
-                    "verify_success": True,
-                    "proof_sketch": proof_sketch,
-                    "prelude_code": prelude_code,
-                    "proof_text": proof_text,
-                    "counterexample_text": counterexample_text,
-                    "lean_error_excerpt": verify_error_excerpt,
-                    "lean_error_fingerprint": success_fingerprint,
-                }
-            )
-            if len(repair_history) > 20:
-                repair_history = repair_history[-20:]
-            save_formalization_memory(memory_path, problem_id, repair_history)
-            return (
-                verify_success,
-                current_theorem_name,
-                result,
-                prelude_code,
-                proof_text,
-                counterexample_text,
-                verify_error_excerpt,
-                current_stmt,
-            )
-
-        if deadline is not None and time.monotonic() >= deadline:
-            save_formalization_memory(memory_path, problem_id, repair_history)
-            if best_verified_candidate is not None:
-                return restore_best_verified_candidate()
-            return (
-                verify_success,
-                current_theorem_name,
-                result,
-                prelude_code,
-                proof_text,
-                counterexample_text,
-                verify_error_excerpt,
-                current_stmt,
-            )
-
-        error_fingerprint = str(verify_error_analysis.get("fingerprint", "no_diagnostics"))
-        error_categories = verify_error_analysis.get("categories", [])
-        lean_error_top_lines = verify_error_analysis.get("top_lines", [])
-        last_error_fingerprint, same_error_streak = update_same_fingerprint_streak(
-            last_fingerprint=last_error_fingerprint,
-            current_fingerprint=error_fingerprint,
-            current_streak=same_error_streak,
-        )
-        if best_verified_candidate is not None and normalize_stmt_text(current_stmt) != normalize_stmt_text(str(best_verified_candidate["stmt"])):
-            retry_instruction = (
-                "The previous theorem already verified. A stronger candidate statement was formed by removing unused binders "
-                "from `stmt`. Try to prove this stronger `stmt`; if the old proof no longer fits, revise `prelude_code` and "
-                "`proof_text` minimally so the new statement verifies. proof_text must be Lean tactic code only."
-            )
-        else:
-            retry_instruction = (
-                "Previous proof/counterexample failed Lean formalization or verification. "
-                "Read the Lean diagnostics carefully. Revise proof_sketch if the strategy was wrong, "
-                "then fix prelude_code and proof_text to match. proof_text must be Lean tactic code only."
-            )
-
-        repair_history.append(
-            {
-                "result": result,
-                "verify_success": verify_success,
-                "proof_sketch": proof_sketch,
-                "prelude_code": prelude_code,
-                "proof_text": proof_text,
-                "counterexample_text": counterexample_text,
-                "lean_error_excerpt": verify_error_excerpt,
-                "lean_error_fingerprint": error_fingerprint,
-            }
-        )
-        if len(repair_history) > 4:
-            repair_history = repair_history[-20:]
-        save_formalization_memory(memory_path, problem_id, repair_history)
-
-        repair_round += 1
-        if max_same_error_streak is not None and same_error_streak >= max_same_error_streak:
-            save_formalization_memory(memory_path, problem_id, repair_history)
-            if best_verified_candidate is not None:
-                return restore_best_verified_candidate()
-            return (
-                False,
-                current_theorem_name,
-                result,
-                prelude_code,
-                proof_text,
-                counterexample_text,
-                verify_error_excerpt,
-                current_stmt,
-            )
-        if phase_logger is not None:
-            phase_logger(
-                phase="repair",
-                problem_id=problem_id,
-                repair_round=repair_round,
-                error_fingerprint=error_fingerprint,
-            )
-        repair_request = RepairRequestPacket(
-            problem_id=problem_id,
-            stmt=current_stmt,
-            theory_context=theory_context,
-            retry_instruction=retry_instruction,
-            error_fingerprint=error_fingerprint,
-            error_categories=error_categories,
-            previous_result=result,
-            previous_proof_sketch=proof_sketch,
-            previous_prelude_code=prelude_code,
-            previous_proof_text=proof_text,
-            previous_counterexample_text=counterexample_text,
-            repair_history_tail=repair_history[-8:],
-            lean_error_excerpt=verify_error_excerpt,
-            lean_error_top_lines=lean_error_top_lines,
-            lean_diagnostics="\n".join(lean_diagnostics.splitlines()[:60]),
-            current_scratch_code=scratch_code or "",
-            mathlib_import_in_scratch=True,
-        )
-        current_repair_prompt = select_formalizer_prompt(repair_prompts, result=result)
-
-        try:
-            repair_started_monotonic = time.monotonic()
-            repair_started_at = iso_timestamp_now()
-            repaired, repair_worker_meta = invoke_worker_json(
-                settings=repair_worker_settings,
-                task_type="repair",
-                system_prompt=current_repair_prompt,
-                payload=repair_request.to_payload(),
-                metadata={"problem_id": problem_id, "repair_round": repair_round},
-            )
-            append_current_iteration_log(
-                current_iteration_full_logs,
-                stage="repair",
-                index=repair_round,
-                worker_meta=repair_worker_meta,
-            )
-        except RuntimeError as exc:
-            append_phase_attempt_record(
-                phase_attempts_path,
-                run_id=run_id,
-                session_type=session_type,
-                iteration=iteration,
-                entity_id=problem_id,
-                phase="repair_lean",
-                worker_task="repair",
-                started_at=repair_started_at,
-                finished_at=iso_timestamp_now(),
-                duration_ms=monotonic_duration_ms(repair_started_monotonic),
-                success=False,
-                result="timeout" if is_worker_timeout_error(exc) else "error",
-                timeout=is_worker_timeout_error(exc),
-                error=str(exc),
-            )
-            if is_worker_timeout_error(exc):
-                verify_error_excerpt = f"repair worker timeout: {exc}"
-                save_formalization_memory(memory_path, problem_id, repair_history)
-                if best_verified_candidate is not None:
-                    return restore_best_verified_candidate()
-                return (
-                    verify_success,
-                    theorem_name,
-                    result,
-                    prelude_code,
-                    proof_text,
-                    counterexample_text,
-                    verify_error_excerpt,
-                    current_stmt,
-                )
-            raise
-        append_phase_attempt_record(
-            phase_attempts_path,
-            run_id=run_id,
-            session_type=session_type,
-            iteration=iteration,
-            entity_id=problem_id,
-            phase="repair_lean",
-            worker_task="repair",
-            started_at=repair_started_at,
-            finished_at=iso_timestamp_now(),
-            duration_ms=monotonic_duration_ms(repair_started_monotonic),
-            success=True,
-            result="ok",
-        )
-        try:
-            result, proof_sketch, prelude_code, proof_text, counterexample_text = validate_formalizer_output(
-                repaired,
-                problem_id,
-            ).as_tuple()
-        except ValueError as exc:
-            verify_error_excerpt = f"repair output invalid: {exc}"
-            continue
-        if result not in {"proof", "counterexample"}:
-            save_formalization_memory(memory_path, problem_id, repair_history)
-            if best_verified_candidate is not None:
-                return restore_best_verified_candidate()
-            return (
-                False,
-                current_theorem_name,
-                result,
-                prelude_code,
-                proof_text,
-                counterexample_text,
-                verify_error_excerpt,
-                current_stmt,
-            )
-
 def initialize_runtime_state(
     data_dir: Path,
     seeds_file: Path,
@@ -3844,582 +2418,6 @@ def initialize_runtime_state(
     if reset_formalization_memory:
         formalization_memory_file.parent.mkdir(parents=True, exist_ok=True)
         formalization_memory_file.write_text("{}\n", encoding="utf-8")
-
-
-def run_manual_main_theorem_check(
-    *,
-    worker_settings: Any,
-    scratch_file: Path,
-    derived_file: Path,
-    derived_entries: list[dict[str, str]],
-    data_dir: Path,
-    base_theory_context: str,
-    formalization_memory_path: Path,
-    formalize_worker_settings: Any,
-    repair_worker_settings: Any,
-    formalizer_prompt_file: str,
-    repair_prompt_file: str,
-    suggest_prompt_file: str,
-    plan_prompt_file: str,
-    post_expand_prompt_file: str,
-    prioritize_open_problems_worker_settings: Any,
-    prioritize_open_problems_prompt_file: str,
-    theory_file: Path,
-    repo_root: Path,
-    batch_generator_seed_count: int,
-    batch_generator_open_target_min: int,
-    current_iteration: int,
-    skip_verify: bool,
-    verify_timeout_sec: int | None,
-    formalization_retry_budget_sec: int | None,
-    max_same_error_streak: int,
-    failure_threshold: int,
-    phase_logs: bool,
-    run_id: str,
-    phase_attempts_path: Path,
-    compile_metrics: dict[str, Any],
-    state_lock: threading.Lock,
-    derived_runtime_state: dict[str, Any],
-) -> dict[str, Any]:
-    suggest_prompt = load_prompt_text(suggest_prompt_file)
-    open_rows = [normalize_open_problem_row(row) for row in read_jsonl(data_dir / "open_problems.jsonl")]
-    archived_rows = read_archived_problem_rows(data_dir)
-    tracked_rows = [dict(row, queue_status="open") for row in open_rows]
-    tracked_rows.extend(dict(row, queue_status="archived") for row in archived_rows)
-    candidate_id = "mt_manual"
-    emit_phase_log(
-        phase_logs,
-        "main_theorem_suggest",
-        iteration=current_iteration,
-        candidate_id=candidate_id,
-        derived_theorem_count=len(derived_entries),
-        open_problem_count=len(open_rows),
-        tracked_problem_count=len(tracked_rows),
-    )
-    suggest_started_monotonic = time.monotonic()
-    suggest_started_at = iso_timestamp_now()
-    try:
-        (
-            result,
-            statement,
-            theorem_name_stem,
-            docstring_summary,
-            rationale,
-            supporting_theorems,
-            missing_lemmas,
-        ), _ = request_main_theorem_suggestion(
-            worker_settings=worker_settings,
-            suggester_prompt=suggest_prompt,
-            candidate_id=candidate_id,
-            derived_entries=derived_entries,
-            theory_context=base_theory_context,
-            tracked_rows=tracked_rows,
-            current_iteration=current_iteration,
-            guidance=load_current_guidance(data_dir),
-        )
-    except (RuntimeError, ValueError) as exc:
-        append_phase_attempt_record(
-            phase_attempts_path,
-            run_id=run_id,
-            session_type="main_theorem_session",
-            iteration=current_iteration,
-            entity_id=candidate_id,
-            phase="main_theorem_suggest",
-            worker_task="main_theorem_suggest",
-            started_at=suggest_started_at,
-            finished_at=iso_timestamp_now(),
-            duration_ms=monotonic_duration_ms(suggest_started_monotonic),
-            success=False,
-            result="error",
-            error=str(exc),
-        )
-        emit_phase_log(
-            phase_logs,
-            "main_theorem_suggest_result",
-            iteration=current_iteration,
-            candidate_id=candidate_id,
-            status="error",
-            error=str(exc),
-        )
-        return {
-            "status": "main_theorem_suggest_error",
-            "processed": False,
-            "verify_success": False,
-            "error": str(exc),
-        }
-    append_phase_attempt_record(
-        phase_attempts_path,
-        run_id=run_id,
-        session_type="main_theorem_session",
-        iteration=current_iteration,
-        entity_id=candidate_id,
-        phase="main_theorem_suggest",
-        worker_task="main_theorem_suggest",
-        started_at=suggest_started_at,
-        finished_at=iso_timestamp_now(),
-        duration_ms=monotonic_duration_ms(suggest_started_monotonic),
-        success=result == "ok",
-        result=result,
-    )
-
-    emit_phase_log(
-        phase_logs,
-        "main_theorem_suggest_result",
-        iteration=current_iteration,
-        candidate_id=candidate_id,
-        status=result,
-    )
-    if result != "ok":
-        return {
-            "status": "main_theorem_suggest_stuck",
-            "processed": False,
-            "verify_success": False,
-        }
-
-    report = process_manual_main_theorem(
-        candidate_id=candidate_id,
-        statement=statement,
-        theorem_name=f"main_thm_{theorem_name_stem}",
-        docstring_summary=docstring_summary,
-        rationale=rationale,
-        supporting_theorems=supporting_theorems,
-        missing_lemmas=missing_lemmas,
-        scratch_file=scratch_file,
-        derived_file=derived_file,
-        derived_entries=derived_entries,
-        data_dir=data_dir,
-        base_theory_context=base_theory_context,
-        formalization_memory_path=formalization_memory_path,
-        formalize_worker_settings=formalize_worker_settings,
-        repair_worker_settings=repair_worker_settings,
-        worker_settings=worker_settings,
-        formalizer_prompt_file=formalizer_prompt_file,
-        repair_prompt_file=repair_prompt_file,
-        plan_prompt_file=plan_prompt_file,
-        post_expand_prompt_file=post_expand_prompt_file,
-        prioritize_open_problems_worker_settings=prioritize_open_problems_worker_settings,
-        prioritize_open_problems_prompt_file=prioritize_open_problems_prompt_file,
-        theory_file=theory_file,
-        repo_root=repo_root,
-        batch_generator_seed_count=batch_generator_seed_count,
-        batch_generator_open_target_min=batch_generator_open_target_min,
-        current_iteration=current_iteration,
-        skip_verify=skip_verify,
-        verify_timeout_sec=verify_timeout_sec,
-        formalization_retry_budget_sec=formalization_retry_budget_sec,
-        max_same_error_streak=max_same_error_streak,
-        failure_threshold=failure_threshold,
-        phase_logs=phase_logs,
-        run_id=run_id,
-        phase_attempts_path=phase_attempts_path,
-        theory_state_history_path=Path(phase_attempts_path).parent / "theory_state_history.jsonl",
-        compile_metrics=compile_metrics,
-        state_lock=state_lock,
-        derived_runtime_state=derived_runtime_state,
-    )
-    report["suggested_statement"] = statement
-    report["suggested_rationale"] = rationale
-    return report
-
-
-def process_manual_main_theorem(
-    *,
-    candidate_id: str,
-    statement: str,
-    theorem_name: str,
-    docstring_summary: str,
-    rationale: str,
-    supporting_theorems: list[str],
-    missing_lemmas: list[str],
-    scratch_file: Path,
-    derived_file: Path,
-    derived_entries: list[dict[str, str]],
-    data_dir: Path,
-    base_theory_context: str,
-    formalization_memory_path: Path,
-    formalize_worker_settings: Any,
-    repair_worker_settings: Any,
-    worker_settings: Any,
-    formalizer_prompt_file: str,
-    repair_prompt_file: str,
-    plan_prompt_file: str,
-    post_expand_prompt_file: str,
-    prioritize_open_problems_worker_settings: Any,
-    prioritize_open_problems_prompt_file: str,
-    theory_file: Path,
-    repo_root: Path,
-    batch_generator_seed_count: int,
-    batch_generator_open_target_min: int,
-    current_iteration: int,
-    skip_verify: bool,
-    verify_timeout_sec: int | None,
-    formalization_retry_budget_sec: int | None,
-    max_same_error_streak: int,
-    failure_threshold: int,
-    phase_logs: bool,
-    run_id: str,
-    phase_attempts_path: Path,
-    theory_state_history_path: Path,
-    compile_metrics: dict[str, Any],
-    state_lock: threading.Lock,
-    derived_runtime_state: dict[str, Any],
-) -> dict[str, Any]:
-    statement = statement.strip()
-    theorem_name = theorem_name.strip()
-    if not statement or not theorem_name:
-        return {
-            "processed": False,
-            "candidate_id": candidate_id,
-            "status": "blocked",
-            "verify_success": False,
-        }
-
-    scratch_file.parent.mkdir(parents=True, exist_ok=True)
-    scratch_file.write_text(SCRATCH_TEMPLATE, encoding="utf-8")
-
-    theorem_context = build_problem_theory_context(base_theory_context, derived_entries, statement)
-    current_iteration_full_logs: list[dict[str, Any]] = []
-    plan_summary = ""
-    proof_sketch = ""
-    plan_notes = ""
-    intermediate_lemmas: list[str] = []
-    emit_phase_log(
-        phase_logs,
-        "main_theorem_plan",
-        iteration=current_iteration,
-        candidate_id=candidate_id,
-        theorem_name=theorem_name,
-    )
-    planner_prompt = load_prompt_text(plan_prompt_file)
-    plan_started_monotonic = time.monotonic()
-    plan_started_at = iso_timestamp_now()
-    try:
-        (
-            plan_result,
-            generated_plan_summary,
-            generated_proof_sketch,
-            plan_supporting_theorems,
-            intermediate_lemmas,
-            plan_notes,
-        ), _ = request_main_theorem_plan(
-            worker_settings=worker_settings,
-            planner_prompt=planner_prompt,
-            candidate_row={
-                "candidate_id": candidate_id,
-                "statement": statement,
-                "theorem_name": theorem_name,
-                "docstring_summary": docstring_summary,
-                "rationale": rationale,
-                "supporting_theorems": supporting_theorems,
-                "missing_lemmas": missing_lemmas,
-            },
-            derived_entries=derived_entries,
-            theory_context=theorem_context,
-        )
-        append_phase_attempt_record(
-            phase_attempts_path,
-            run_id=run_id,
-            session_type="main_theorem_session",
-            iteration=current_iteration,
-            entity_id=candidate_id,
-            phase="main_theorem_plan",
-            worker_task="main_theorem_plan",
-            started_at=plan_started_at,
-            finished_at=iso_timestamp_now(),
-            duration_ms=monotonic_duration_ms(plan_started_monotonic),
-            success=plan_result == "ok",
-            result=plan_result,
-        )
-        if plan_result == "ok":
-            plan_summary = generated_plan_summary
-            proof_sketch = generated_proof_sketch
-            supporting_theorems = plan_supporting_theorems or list(supporting_theorems)
-        emit_phase_log(
-            phase_logs,
-            "main_theorem_plan_result",
-            iteration=current_iteration,
-            candidate_id=candidate_id,
-            status=plan_result,
-        )
-    except (RuntimeError, ValueError) as exc:
-        plan_notes = f"main theorem plan failed: {exc}"
-        append_phase_attempt_record(
-            phase_attempts_path,
-            run_id=run_id,
-            session_type="main_theorem_session",
-            iteration=current_iteration,
-            entity_id=candidate_id,
-            phase="main_theorem_plan",
-            worker_task="main_theorem_plan",
-            started_at=plan_started_at,
-            finished_at=iso_timestamp_now(),
-            duration_ms=monotonic_duration_ms(plan_started_monotonic),
-            success=False,
-            result="error",
-            error=str(exc),
-        )
-        emit_phase_log(
-            phase_logs,
-            "main_theorem_plan_result",
-            iteration=current_iteration,
-            candidate_id=candidate_id,
-            status="error",
-            error=str(exc),
-        )
-
-    if not proof_sketch:
-        proof_sketch = rationale.strip() or f"Prove {theorem_name} from the current Derived.lean cluster."
-    if plan_summary:
-        theorem_context += f"\n\n-- Main theorem proof plan:\n-- {plan_summary}"
-    if intermediate_lemmas:
-        theorem_context += "\n-- Intermediate lemmas:\n"
-        theorem_context += "\n".join(f"-- {item}" for item in intermediate_lemmas)
-    if plan_notes:
-        theorem_context += f"\n-- Planner notes: {plan_notes}"
-
-    proof_formalizer_prompt = load_prompt_text(formalizer_prompt_file)
-    proof_repair_prompt = load_prompt_text(repair_prompt_file)
-    verify_success, _, result, _, _, _, verify_error_excerpt, final_stmt = attempt_formalization_until_timeout(
-        problem_id=candidate_id,
-        theorem_name=theorem_name,
-        stmt=statement,
-        result="proof",
-        proof_sketch=proof_sketch,
-        counterexample_text="",
-        scratch_file=scratch_file,
-        skip_verify=skip_verify,
-        formalize_worker_settings=formalize_worker_settings,
-        repair_worker_settings=repair_worker_settings,
-        formalizer_prompts={"proof": proof_formalizer_prompt, "counterexample": proof_formalizer_prompt},
-        repair_prompts={"proof": proof_repair_prompt, "counterexample": proof_repair_prompt},
-        open_rows=[normalize_open_problem_row(row) for row in read_jsonl(data_dir / "open_problems.jsonl")],
-        theory_context=theorem_context,
-        verify_timeout_sec=verify_timeout_sec,
-        formalization_retry_budget_sec=formalization_retry_budget_sec,
-        memory_path=formalization_memory_path,
-        current_iteration_full_logs=current_iteration_full_logs,
-        initial_proof_text="",
-        phase_logger=(lambda **fields: emit_phase_log(phase_logs, iteration=current_iteration, **fields)),
-        forbid_sorry=True,
-        max_same_error_streak=max_same_error_streak,
-        retry_initial_formalization_until_budget=True,
-        run_id=run_id,
-        session_type="main_theorem_session",
-        iteration=current_iteration,
-        phase_attempts_path=phase_attempts_path,
-        compile_metrics=compile_metrics,
-    )
-    emit_phase_log(
-        phase_logs,
-        "main_theorem_formalization_result",
-        iteration=current_iteration,
-        candidate_id=candidate_id,
-        theorem_name=theorem_name,
-        result=result,
-        verify_success=verify_success,
-        error_excerpt=verify_error_excerpt,
-    )
-
-    if not is_verified_resolution(verify_success=verify_success, result=result):
-        return {
-            "processed": True,
-            "candidate_id": candidate_id,
-            "status": "blocked",
-            "verify_success": False,
-            "verify_error_excerpt": verify_error_excerpt,
-            "plan_summary": plan_summary,
-        }
-
-    theorem_code = extract_theorem_code_from_scratch(scratch_file)
-    derived_entries_for_context = [dict(entry) for entry in derived_entries]
-    if theorem_code:
-        append_derived_entry_cache(derived_entries_for_context, theorem_code)
-    emit_phase_log(
-        phase_logs,
-        "main_theorem_append_derived",
-        iteration=current_iteration,
-        candidate_id=candidate_id,
-        theorem_name=theorem_name,
-        appended=bool(theorem_code),
-    )
-    known_theorem_names = {
-        str(entry.get("name", "")).strip()
-        for entry in derived_entries_for_context
-        if str(entry.get("name", "")).strip()
-    }
-
-    post_expand_candidates: list[dict[str, str]] = []
-    post_expand_error = ""
-    theorem_context = build_problem_theory_context(base_theory_context, derived_entries_for_context, final_stmt)
-    if theorem_code:
-        emit_phase_log(
-            phase_logs,
-            "post_theorem_expand",
-            iteration=current_iteration,
-            candidate_id=candidate_id,
-            theorem_name=theorem_name,
-        )
-        post_expand_started_monotonic = time.monotonic()
-        post_expand_started_at = iso_timestamp_now()
-        try:
-            post_expand_candidates, _ = request_expand_candidates(
-                worker_settings=worker_settings,
-                expand_prompt=load_prompt_text(post_expand_prompt_file),
-                task_type="post_theorem_expand",
-                problem_id=candidate_id,
-                stmt=final_stmt,
-                original_stmt=statement,
-                result=result,
-                verify_success=verify_success,
-                theory_context=theorem_context,
-                open_rows=[normalize_open_problem_row(row) for row in read_jsonl(data_dir / "open_problems.jsonl")],
-                existing_new_problems=[],
-                verify_error_excerpt="",
-                current_iteration_full_logs=current_iteration_full_logs,
-                same_problem_history_tail=load_formalization_memory(formalization_memory_path, candidate_id)[-8:],
-                theory_state=load_theory_state(data_dir),
-                max_candidates=MAX_EXPAND_CANDIDATES_PER_MAIN_THEOREM,
-            )
-            append_phase_attempt_record(
-                phase_attempts_path,
-                run_id=run_id,
-                session_type="main_theorem_session",
-                iteration=current_iteration,
-                entity_id=candidate_id,
-                phase="post_theorem_expand",
-                worker_task="post_theorem_expand",
-                started_at=post_expand_started_at,
-                finished_at=iso_timestamp_now(),
-                duration_ms=monotonic_duration_ms(post_expand_started_monotonic),
-                success=True,
-                result="ok",
-            )
-            emit_phase_log(
-                phase_logs,
-                "post_theorem_expand_result",
-                iteration=current_iteration,
-                candidate_id=candidate_id,
-                generated_problem_count=len(post_expand_candidates),
-            )
-        except (RuntimeError, ValueError) as exc:
-            post_expand_error = str(exc)
-            append_phase_attempt_record(
-                phase_attempts_path,
-                run_id=run_id,
-                session_type="main_theorem_session",
-                iteration=current_iteration,
-                entity_id=candidate_id,
-                phase="post_theorem_expand",
-                worker_task="post_theorem_expand",
-                started_at=post_expand_started_at,
-                finished_at=iso_timestamp_now(),
-                duration_ms=monotonic_duration_ms(post_expand_started_monotonic),
-                success=False,
-                result="error",
-                error=post_expand_error,
-            )
-            emit_phase_log(
-                phase_logs,
-                "post_theorem_expand_result",
-                iteration=current_iteration,
-                candidate_id=candidate_id,
-                status="error",
-                error=post_expand_error,
-            )
-
-    theorem_reuse_payload = {
-        "candidate_id": candidate_id,
-        "theorem_name": theorem_name,
-        "statement": final_stmt.strip() or statement,
-        "docstring_summary": docstring_summary,
-        "rationale": rationale,
-        "plan_summary": plan_summary,
-        "supporting_theorems": [
-            theorem for theorem in supporting_theorems
-            if theorem in known_theorem_names
-        ],
-        "intermediate_lemmas": intermediate_lemmas,
-        "iteration": current_iteration,
-        "appended_to_derived": bool(theorem_code),
-    }
-    with state_lock:
-        committed_theorem_code = commit_verified_theorem_and_generation(
-            scratch_path=scratch_file,
-            derived_file=derived_file,
-            derived_entries=derived_entries,
-            docstring=docstring_summary,
-            data_dir=data_dir,
-            derived_runtime_state=derived_runtime_state,
-            run_id=run_id,
-            current_iteration=current_iteration,
-            rebuild_derived=not skip_verify,
-        )
-        theorem_reuse_payload["appended_to_derived"] = bool(committed_theorem_code)
-        append_theorem_reuse_memory_entry(
-            data_dir / "theorem_reuse_memory.json",
-            theorem_reuse_payload,
-        )
-        refresh_outcome = store_expand_candidates_and_refresh(
-            data_dir=data_dir,
-            statements_with_rationale=post_expand_candidates,
-            source="post_theorem_expand",
-            source_problem_id=theorem_name,
-            source_kind="main_theorem",
-            prioritize_worker_settings=prioritize_open_problems_worker_settings,
-            prioritizer_prompt_file=prioritize_open_problems_prompt_file,
-            derived_entries=derived_entries,
-            current_iteration=current_iteration,
-            failure_threshold=failure_threshold,
-            run_id=run_id,
-            theory_state_history_path=theory_state_history_path,
-            theory_file=theory_file,
-            derived_file=derived_file,
-            repo_root=repo_root,
-            batch_generator_seed_count=batch_generator_seed_count,
-            batch_generator_open_target_min=batch_generator_open_target_min,
-            allow_backfill=False,
-        )
-        stored_expand_rows = list(refresh_outcome.get("stored_expand_rows", []))
-        priority_refresh_ran = bool(refresh_outcome.get("priority_refresh_ran", False))
-        priority_refresh_error = str(refresh_outcome.get("priority_refresh_error", ""))
-        priority_refresh_report = dict(refresh_outcome.get("priority_refresh_report", {}))
-        if bool(refresh_outcome.get("priority_refresh_failed", False)):
-            return {
-                "processed": True,
-                "candidate_id": candidate_id,
-                "status": "proved",
-                "verify_success": True,
-                "theorem_name": theorem_name,
-                "statement": final_stmt.strip() or statement,
-                "theorem_code": committed_theorem_code,
-                "supporting_theorems": list(supporting_theorems),
-                "post_theorem_expand_candidates": post_expand_candidates,
-                "stored_expand_rows": stored_expand_rows,
-                "post_theorem_expand_error": post_expand_error,
-                "batch_generator_added_problem_rows": list(priority_refresh_report.get("batch_generator_added_problem_rows", [])),
-                "batch_generator_error": str(priority_refresh_report.get("batch_generator_error", "")),
-                "promoted_expand_rows": [],
-                "priority_refresh_ran": False,
-                "priority_refresh_error": priority_refresh_error,
-            }
-    return {
-        "processed": True,
-        "candidate_id": candidate_id,
-        "status": "proved",
-        "verify_success": True,
-        "theorem_name": theorem_name,
-        "statement": final_stmt.strip() or statement,
-        "theorem_code": committed_theorem_code,
-        "supporting_theorems": list(supporting_theorems),
-        "post_theorem_expand_candidates": post_expand_candidates,
-        "stored_expand_rows": stored_expand_rows,
-        "post_theorem_expand_error": post_expand_error,
-        "batch_generator_added_problem_rows": list(priority_refresh_report.get("batch_generator_added_problem_rows", [])) if priority_refresh_ran else [],
-        "batch_generator_error": str(priority_refresh_report.get("batch_generator_error", "")) if priority_refresh_ran else "",
-        "promoted_expand_rows": list(priority_refresh_report.get("worker_meta", {}).get("promoted_expand_rows", [])) if priority_refresh_ran else [],
-        "priority_refresh_ran": priority_refresh_ran,
-        "priority_refresh_error": priority_refresh_error,
-    }
 
 
 def run_problem_session(
@@ -4750,7 +2748,7 @@ def run_problem_session(
             theory_state_history_path=artifact_paths["theory_state_history"],
             theory_file=Path(THEORY_FILE_PATH),
             derived_file=derived_path,
-            repo_root=Path(__file__).resolve().parent.parent,
+            repo_root=REPO_ROOT,
             batch_generator_seed_count=args.seed_count,
             batch_generator_open_target_min=BATCH_GENERATOR_OPEN_TARGET_MIN,
             allow_backfill=False,
@@ -4828,8 +2826,6 @@ def run_parallel_loop(
     prover_statement_worker_settings: Any,
     formalize_worker_settings: Any,
     repair_worker_settings: Any,
-    main_theorem_formalize_worker_settings: Any,
-    main_theorem_repair_worker_settings: Any,
     prioritize_open_problems_worker_settings: Any,
     derived_runtime_state: dict[str, Any],
     record_problem_rows: Callable[..., None],
@@ -4840,15 +2836,10 @@ def run_parallel_loop(
     state_lock = threading.Lock()
     reserved_problem_ids: set[str] = set()
     problem_futures: dict[concurrent.futures.Future, dict[str, Any]] = {}
-    main_theorem_future: concurrent.futures.Future | None = None
     launched_iterations = 0
     completed_problem_sessions = 0
     pending_priority_refresh_ran_for_report = False
     pending_priority_refresh_error_for_report = ""
-    next_main_theorem_check_count = next_main_theorem_trigger_count(
-        len(derived_entries),
-        args.main_theorem_interval,
-    )
     stop_requested = False
     interrupt_notice_emitted = False
 
@@ -4906,7 +2897,7 @@ def run_parallel_loop(
                 reason="bootstrap",
             )
             pending_priority_refresh_error_for_report = priority_refresh_error
-    max_workers = max(1, int(args.parallel_sessions)) + (1 if args.main_theorem_interval > 0 else 0)
+    max_workers = max(1, int(args.parallel_sessions))
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
         while True:
             made_progress = False
@@ -4977,61 +2968,6 @@ def run_parallel_loop(
                 pending_priority_refresh_error_for_report = ""
                 print(report)
 
-            if main_theorem_future is not None and main_theorem_future.done():
-                made_progress = True
-                auto_main_theorem_report = dict(main_theorem_future.result())
-                main_theorem_future = None
-                current_iteration = int(auto_main_theorem_report.get("current_iteration", launched_iterations) or launched_iterations)
-                main_theorem_name = str(auto_main_theorem_report.get("theorem_name", "")).strip()
-                main_candidate_id = str(auto_main_theorem_report.get("candidate_id", "")).strip()
-                if bool(auto_main_theorem_report.get("verify_success", False)) and main_theorem_name:
-                    record_theorem(
-                        main_theorem_name,
-                        str(auto_main_theorem_report.get("statement", "")),
-                        iteration=current_iteration,
-                        session_type="main_theorem_session",
-                    )
-                    if main_candidate_id:
-                        append_lineage_edge_record(
-                            artifact_paths["lineage_edges"],
-                            run_id=run_id,
-                            iteration=current_iteration,
-                            session_type="main_theorem_session",
-                            parent_id=main_candidate_id,
-                            child_id=main_theorem_name,
-                            edge_type="proved_as_main",
-                        )
-                    for supporting_theorem in list(auto_main_theorem_report.get("supporting_theorems", [])):
-                        supporting_name = str(supporting_theorem).strip()
-                        if not supporting_name or not main_candidate_id:
-                            continue
-                        append_lineage_edge_record(
-                            artifact_paths["lineage_edges"],
-                            run_id=run_id,
-                            iteration=current_iteration,
-                            session_type="main_theorem_session",
-                            parent_id=supporting_name,
-                            child_id=main_candidate_id,
-                            edge_type="selected_as_main",
-                        )
-                record_problem_rows(
-                    list(auto_main_theorem_report.get("batch_generator_added_problem_rows", [])),
-                    iteration=current_iteration,
-                    session_type="batch_generator",
-                )
-                emit_phase_log(
-                    args.phase_logs,
-                    "main_theorem_interval_result",
-                    iteration=current_iteration,
-                    status=str(auto_main_theorem_report.get("status", "")),
-                    verify_success=bool(auto_main_theorem_report.get("verify_success", False)),
-                    processed=bool(auto_main_theorem_report.get("processed", False)),
-                )
-                next_main_theorem_check_count = next_main_theorem_trigger_count(
-                    len(derived_entries),
-                    args.main_theorem_interval,
-                )
-
             with state_lock:
                 open_rows = [normalize_open_problem_row(row) for row in read_jsonl(open_path)]
                 archived_rows = read_archived_problem_rows(data_dir)
@@ -5056,7 +2992,6 @@ def run_parallel_loop(
             if (
                 not stop_requested
                 and can_launch_more_iterations
-                and main_theorem_future is None
                 and (
                     (
                         len(problem_futures) < int(args.parallel_sessions)
@@ -5171,62 +3106,7 @@ def run_parallel_loop(
                 }
                 made_progress = True
 
-            if (
-                not stop_requested
-                and args.main_theorem_interval > 0
-                and main_theorem_future is None
-                and next_main_theorem_check_count is not None
-                and len(derived_entries) >= next_main_theorem_check_count
-            ):
-                emit_phase_log(
-                    args.phase_logs,
-                    "main_theorem_interval_reached",
-                    iteration=max(launched_iterations, 1),
-                    derived_theorem_count=len(derived_entries),
-                    threshold=next_main_theorem_check_count,
-                )
-                main_theorem_future = executor.submit(
-                    run_manual_main_theorem_check,
-                    worker_settings=worker_settings,
-                    scratch_file=build_session_scratch_file(scratch_file, session_type="main_theorem_session", slot_index=1),
-                    derived_file=derived_path,
-                    derived_entries=[dict(entry) for entry in derived_entries],
-                    data_dir=data_dir,
-                    base_theory_context=base_theory_context,
-                    formalization_memory_path=memory_path,
-                    formalize_worker_settings=main_theorem_formalize_worker_settings,
-                    repair_worker_settings=main_theorem_repair_worker_settings,
-                    formalizer_prompt_file=FORMALIZER_PROOF_PROMPT_FILE,
-                    repair_prompt_file=REPAIR_PROOF_PROMPT_FILE,
-                    suggest_prompt_file=MAIN_THEOREM_SUGGEST_PROMPT_FILE,
-                    plan_prompt_file=MAIN_THEOREM_PLAN_PROMPT_FILE,
-                    post_expand_prompt_file=MAIN_THEOREM_POST_EXPAND_PROMPT_FILE,
-                    prioritize_open_problems_worker_settings=prioritize_open_problems_worker_settings,
-                    prioritize_open_problems_prompt_file=PRIORITIZE_OPEN_PROBLEMS_PROMPT_FILE,
-                    theory_file=Path(THEORY_FILE_PATH),
-                    repo_root=Path(__file__).resolve().parent.parent,
-            batch_generator_seed_count=args.seed_count,
-                    batch_generator_open_target_min=BATCH_GENERATOR_OPEN_TARGET_MIN,
-                    current_iteration=max(launched_iterations, 1),
-                    skip_verify=args.skip_verify,
-                    verify_timeout_sec=(None if args.main_theorem_verify_timeout == 0 else args.main_theorem_verify_timeout),
-                    formalization_retry_budget_sec=(
-                        None
-                        if args.main_theorem_formalization_retry_budget_sec == 0
-                        else args.main_theorem_formalization_retry_budget_sec
-                    ),
-                    max_same_error_streak=args.max_same_error_streak,
-                    failure_threshold=args.open_problem_failure_threshold,
-                    phase_logs=args.phase_logs,
-                    run_id=run_id,
-                    phase_attempts_path=artifact_paths["phase_attempts"],
-                    compile_metrics=compile_metrics,
-                    state_lock=state_lock,
-                    derived_runtime_state=derived_runtime_state,
-                )
-                made_progress = True
-
-            if stop_requested and not problem_futures and main_theorem_future is None:
+            if stop_requested and not problem_futures:
                 finalize_run_summary(
                     artifact_paths["summary"],
                     run_id=run_id,
@@ -5246,26 +3126,25 @@ def run_parallel_loop(
                 return
 
             if args.max_iterations is not None and launched_iterations >= args.max_iterations and not problem_futures:
-                if main_theorem_future is None:
-                    finalize_run_summary(
-                        artifact_paths["summary"],
-                        run_id=run_id,
-                        started_at=run_started_at,
-                        started_monotonic=run_started_monotonic,
-                        metrics=compile_metrics,
-                        status="max_iterations_reached",
-                    )
-                    print(
-                        {
-                            "status": "max_iterations_reached",
-                            "iterations_completed": completed_problem_sessions,
-                            "priority_refresh_ran": pending_priority_refresh_ran_for_report,
-                            "priority_refresh_error": pending_priority_refresh_error_for_report,
-                        }
-                    )
-                    return
+                finalize_run_summary(
+                    artifact_paths["summary"],
+                    run_id=run_id,
+                    started_at=run_started_at,
+                    started_monotonic=run_started_monotonic,
+                    metrics=compile_metrics,
+                    status="max_iterations_reached",
+                )
+                print(
+                    {
+                        "status": "max_iterations_reached",
+                        "iterations_completed": completed_problem_sessions,
+                        "priority_refresh_ran": pending_priority_refresh_ran_for_report,
+                        "priority_refresh_error": pending_priority_refresh_error_for_report,
+                    }
+                )
+                return
 
-            if not tracked_rows and not problem_futures and main_theorem_future is None:
+            if not tracked_rows and not problem_futures:
                 finalize_run_summary(
                     artifact_paths["summary"],
                     run_id=run_id,
@@ -5285,7 +3164,7 @@ def run_parallel_loop(
                 )
                 return
 
-            if not open_path.exists() and not archived_path.exists() and not problem_futures and main_theorem_future is None:
+            if not open_path.exists() and not archived_path.exists() and not problem_futures:
                 finalize_run_summary(
                     artifact_paths["summary"],
                     run_id=run_id,
@@ -5305,8 +3184,6 @@ def run_parallel_loop(
                 return
 
             all_futures = list(problem_futures.keys())
-            if main_theorem_future is not None:
-                all_futures.append(main_theorem_future)
             if not made_progress and all_futures:
                 try:
                     concurrent.futures.wait(all_futures, return_when=concurrent.futures.FIRST_COMPLETED)
@@ -5320,7 +3197,6 @@ def run_parallel_loop(
                                 "status": "interrupt_requested",
                                 "iterations_completed": completed_problem_sessions,
                                 "active_problem_sessions": len(problem_futures),
-                                "active_main_theorem_session": main_theorem_future is not None,
                             }
                         )
 
@@ -5358,12 +3234,6 @@ def prebuild_lean_project() -> list[dict[str, Any]]:
     return results
 
 
-def next_main_theorem_trigger_count(current_count: int, interval: int) -> int | None:
-    if interval <= 0:
-        return None
-    return ((current_count // interval) + 1) * interval
-
-
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run the minimal prototype loop.")
     worker_timeout_help = "Per worker subprocess timeout in seconds."
@@ -5378,10 +3248,6 @@ def main() -> None:
     parser.add_argument("--parallel-sessions", type=int, default=1)
     parser.add_argument("--seed-count", type=int, default=BATCH_GENERATOR_SEED_COUNT)
     parser.add_argument("--open-problem-failure-threshold", type=int, default=2)
-    parser.add_argument("--main-theorem-interval", type=int, default=0)
-    parser.add_argument("--main-theorem-formalize-worker-timeout", type=int, help=worker_timeout_help)
-    parser.add_argument("--main-theorem-repair-worker-timeout", type=int, help=worker_timeout_help)
-    parser.add_argument("--main-theorem-verify-timeout", type=int, default=600, help=verify_timeout_help)
     parser.add_argument("--prover-retry-budget-sec", type=int, default=DEFAULT_PROVER_RETRY_BUDGET_SEC, help=retry_budget_help)
     parser.add_argument(
         "--formalization-retry-budget-sec",
@@ -5390,12 +3256,6 @@ def main() -> None:
         help=retry_budget_help,
     )
     parser.add_argument("--max-same-error-streak", type=int, default=DEFAULT_MAX_SAME_ERROR_STREAK)
-    parser.add_argument(
-        "--main-theorem-formalization-retry-budget-sec",
-        type=int,
-        default=3600,
-        help=retry_budget_help,
-    )
     args = parser.parse_args()
     if args.max_iterations is not None and args.max_iterations < 0:
         raise ValueError("--max-iterations must be >= 0")
@@ -5405,22 +3265,12 @@ def main() -> None:
         raise ValueError("--parallel-sessions must be >= 1")
     if args.seed_count < 1:
         raise ValueError("--seed-count must be >= 1")
-    if args.main_theorem_interval < 0:
-        raise ValueError("--main-theorem-interval must be >= 0")
-    if args.main_theorem_formalize_worker_timeout is not None and args.main_theorem_formalize_worker_timeout < 0:
-        raise ValueError("--main-theorem-formalize-worker-timeout must be >= 0")
-    if args.main_theorem_repair_worker_timeout is not None and args.main_theorem_repair_worker_timeout < 0:
-        raise ValueError("--main-theorem-repair-worker-timeout must be >= 0")
-    if args.main_theorem_verify_timeout < 0:
-        raise ValueError("--main-theorem-verify-timeout must be >= 0")
     if args.prover_retry_budget_sec < 0:
         raise ValueError("--prover-retry-budget-sec must be >= 0")
     if args.formalization_retry_budget_sec < 0:
         raise ValueError("--formalization-retry-budget-sec must be >= 0")
     if args.max_same_error_streak < 1:
         raise ValueError("--max-same-error-streak must be >= 1")
-    if args.main_theorem_formalization_retry_budget_sec < 0:
-        raise ValueError("--main-theorem-formalization-retry-budget-sec must be >= 0")
     data_dir = Path(DATA_DIR_PATH)
     scratch_file = Path(SCRATCH_FILE_PATH)
     memory_path = Path(FORMALIZATION_MEMORY_FILE_PATH)
@@ -5438,7 +3288,7 @@ def main() -> None:
     }
     recorded_problem_ids: set[str] = set()
     recorded_theorem_names: set[str] = set()
-    repo_root = Path(__file__).resolve().parent.parent
+    repo_root = REPO_ROOT
 
     def record_problem_rows(rows: list[dict[str, Any]], *, iteration: int, session_type: str) -> None:
         for row in rows:
@@ -5546,18 +3396,6 @@ def main() -> None:
         task_name="repair",
         base_settings=worker_settings,
     )
-    main_theorem_formalize_worker_settings = load_task_worker_settings(
-        task_name="formalize",
-        base_settings=worker_settings,
-        timeout_override=args.main_theorem_formalize_worker_timeout,
-        codex_timeout_override=args.main_theorem_formalize_worker_timeout,
-    )
-    main_theorem_repair_worker_settings = load_task_worker_settings(
-        task_name="repair",
-        base_settings=worker_settings,
-        timeout_override=args.main_theorem_repair_worker_timeout,
-        codex_timeout_override=args.main_theorem_repair_worker_timeout,
-    )
     prioritize_open_problems_worker_settings = load_task_worker_settings(
         task_name="prioritize_open_problems",
         base_settings=worker_settings,
@@ -5581,8 +3419,6 @@ def main() -> None:
         prover_statement_worker_settings=prover_statement_worker_settings,
         formalize_worker_settings=formalize_worker_settings,
         repair_worker_settings=repair_worker_settings,
-        main_theorem_formalize_worker_settings=main_theorem_formalize_worker_settings,
-        main_theorem_repair_worker_settings=main_theorem_repair_worker_settings,
         prioritize_open_problems_worker_settings=prioritize_open_problems_worker_settings,
         derived_runtime_state=derived_runtime_state,
         record_problem_rows=record_problem_rows,

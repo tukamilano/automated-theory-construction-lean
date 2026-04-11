@@ -19,7 +19,7 @@ def main() -> int:
         completed = subprocess.run(
             [
                 sys.executable,
-                str(REPO_ROOT / "scripts" / "apply_try_at_each_step_rewrites.py"),
+                str(REPO_ROOT / "scripts" / "refactor" / "apply_try_at_each_step_rewrites.py"),
                 "--input-file",
                 str(input_file),
                 "--dry-run",

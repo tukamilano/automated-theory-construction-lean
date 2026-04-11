@@ -102,13 +102,6 @@ def _add_loop_tuning_flags(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--prover-retry-budget-sec", type=int, help="Whole retry-loop budget in seconds.")
     parser.add_argument("--formalization-retry-budget-sec", type=int, help="Whole retry-loop budget in seconds.")
     parser.add_argument("--max-same-error-streak", type=int)
-    parser.add_argument("--main-theorem-interval", type=int)
-    parser.add_argument("--main-theorem-formalize-worker-timeout", type=int, help="Per worker subprocess timeout in seconds.")
-    parser.add_argument("--main-theorem-repair-worker-timeout", type=int, help="Per worker subprocess timeout in seconds.")
-    parser.add_argument("--main-theorem-verify-timeout", type=int, help="Per Lean verification timeout in seconds.")
-    parser.add_argument(
-        "--main-theorem-formalization-retry-budget-sec", type=int, help="Whole retry-loop budget in seconds."
-    )
 
 
 def _add_pipeline_refactor_toggles(parser: argparse.ArgumentParser, *, default: bool | None = None) -> None:
@@ -116,7 +109,6 @@ def _add_pipeline_refactor_toggles(parser: argparse.ArgumentParser, *, default: 
         "run-seed",
         "run-refactor-pass-1_5",
         "run-refactor-pass-2",
-        "run-main-theorem-session",
     ):
         parser.add_argument(f"--{flag}", action=argparse.BooleanOptionalAction, default=default)
 
@@ -172,7 +164,7 @@ def _seed_command(args: argparse.Namespace, config: AppConfig) -> tuple[list[str
 
 
 def _loop_command(args: argparse.Namespace, config: AppConfig) -> tuple[list[str], dict[str, str]]:
-    cmd = _python_command("run_loop.py")
+    cmd = _python_command("loop/run_loop.py")
     _append_bool_flag(cmd, "--initialize-on-start", config.runtime.initialize_on_start)
     _append_bool_flag(cmd, "--phase-logs", config.runtime.phase_logs)
     if args.skip_verify:
@@ -184,31 +176,11 @@ def _loop_command(args: argparse.Namespace, config: AppConfig) -> tuple[list[str
     _append_flag(cmd, "--prover-retry-budget-sec", config.runtime.prover_retry_budget_sec)
     _append_flag(cmd, "--formalization-retry-budget-sec", config.runtime.formalization_retry_budget_sec)
     _append_flag(cmd, "--max-same-error-streak", config.runtime.max_same_error_streak)
-    if config.runtime.run_main_theorem_session:
-        _append_flag(cmd, "--main-theorem-interval", config.runtime.main_theorem_interval)
-    else:
-        cmd.extend(["--main-theorem-interval", "0"])
-    _append_flag(
-        cmd,
-        "--main-theorem-formalize-worker-timeout",
-        config.runtime.main_theorem_formalize_worker_timeout,
-    )
-    _append_flag(
-        cmd,
-        "--main-theorem-repair-worker-timeout",
-        config.runtime.main_theorem_repair_worker_timeout,
-    )
-    _append_flag(cmd, "--main-theorem-verify-timeout", config.runtime.main_theorem_verify_timeout)
-    _append_flag(
-        cmd,
-        "--main-theorem-formalization-retry-budget-sec",
-        config.runtime.main_theorem_formalization_retry_budget_sec,
-    )
     return cmd, build_worker_env(config)
 
 
 def _pipeline_command(args: argparse.Namespace, config: AppConfig) -> tuple[list[str], dict[str, str]]:
-    cmd = _python_command("run_pipeline.py")
+    cmd = _python_command("loop/run_pipeline.py")
     for path in args.context_file:
         cmd.extend(["--context-file", path])
     _append_flag(cmd, "--seed-count", config.runtime.seed_count)
@@ -226,23 +198,6 @@ def _pipeline_command(args: argparse.Namespace, config: AppConfig) -> tuple[list
     _append_flag(cmd, "--prover-retry-budget-sec", config.runtime.prover_retry_budget_sec)
     _append_flag(cmd, "--formalization-retry-budget-sec", config.runtime.formalization_retry_budget_sec)
     _append_flag(cmd, "--max-same-error-streak", config.runtime.max_same_error_streak)
-    _append_flag(cmd, "--main-theorem-interval", config.runtime.main_theorem_interval)
-    _append_flag(
-        cmd,
-        "--main-theorem-formalize-worker-timeout",
-        config.runtime.main_theorem_formalize_worker_timeout,
-    )
-    _append_flag(
-        cmd,
-        "--main-theorem-repair-worker-timeout",
-        config.runtime.main_theorem_repair_worker_timeout,
-    )
-    _append_flag(cmd, "--main-theorem-verify-timeout", config.runtime.main_theorem_verify_timeout)
-    _append_flag(
-        cmd,
-        "--main-theorem-formalization-retry-budget-sec",
-        config.runtime.main_theorem_formalization_retry_budget_sec,
-    )
     _append_flag(cmd, "--preview-file", args.preview_file or config.paths.preview_file)
     _append_flag(cmd, "--review-output-file", args.review_output_file or config.paths.reviewed_file)
     _append_flag(cmd, "--review-report-file", args.review_report_file or config.paths.review_report_file)
@@ -266,14 +221,64 @@ def _pipeline_command(args: argparse.Namespace, config: AppConfig) -> tuple[list
     _append_bool_flag(cmd, "--run-seed", config.runtime.run_seed)
     _append_bool_flag(cmd, "--run-refactor-pass-1_5", config.runtime.run_refactor_pass_1_5)
     _append_bool_flag(cmd, "--run-refactor-pass-2", config.runtime.run_refactor_pass_2)
-    _append_bool_flag(cmd, "--run-main-theorem-session", config.runtime.run_main_theorem_session)
     if args.no_review_verify:
         cmd.append("--no-review-verify")
     return cmd, build_worker_env(config)
 
 
+def _main_theorem_command(args: argparse.Namespace, config: AppConfig) -> tuple[list[str], dict[str, str]]:
+    cmd = _python_command("main_theorem/run_main_theorem_session.py")
+    cmd.append("--enable-worker")
+    formalization_retry_budget_sec = (
+        args.formalization_retry_budget_sec
+        if args.formalization_retry_budget_sec is not None
+        else config.runtime.formalization_retry_budget_sec
+    )
+    max_same_error_streak = (
+        args.max_same_error_streak if args.max_same_error_streak is not None else config.runtime.max_same_error_streak
+    )
+    open_problem_failure_threshold = (
+        args.open_problem_failure_threshold
+        if args.open_problem_failure_threshold is not None
+        else config.runtime.open_problem_failure_threshold
+    )
+    batch_generator_seed_count = (
+        args.batch_generator_seed_count if args.batch_generator_seed_count is not None else config.runtime.seed_count
+    )
+    _append_flag(cmd, "--theory-file", args.theory_file or config.paths.theory_file)
+    _append_flag(cmd, "--derived-file", args.derived_file or config.paths.derived_file)
+    _append_flag(cmd, "--scratch-file", args.scratch_file or config.paths.scratch_file)
+    _append_flag(cmd, "--data-dir", args.data_dir or config.paths.data_dir)
+    _append_flag(
+        cmd,
+        "--formalization-memory-file",
+        args.formalization_memory_file or (config.paths.data_dir / "formalization_memory.json"),
+    )
+    _append_flag(
+        cmd,
+        "--phase-attempts-file",
+        args.phase_attempts_file or (config.paths.data_dir / "manual_main_theorem_phase_attempts.jsonl"),
+    )
+    _append_flag(cmd, "--run-id", args.run_id)
+    _append_flag(cmd, "--current-iteration", args.current_iteration)
+    _append_bool_flag(
+        cmd,
+        "--phase-logs",
+        config.runtime.phase_logs if args.phase_logs is None else args.phase_logs,
+    )
+    if args.skip_verify:
+        cmd.append("--skip-verify")
+    _append_flag(cmd, "--verify-timeout", args.verify_timeout)
+    _append_flag(cmd, "--formalization-retry-budget-sec", formalization_retry_budget_sec)
+    _append_flag(cmd, "--max-same-error-streak", max_same_error_streak)
+    _append_flag(cmd, "--open-problem-failure-threshold", open_problem_failure_threshold)
+    _append_flag(cmd, "--batch-generator-seed-count", batch_generator_seed_count)
+    _append_flag(cmd, "--batch-generator-open-target-min", args.batch_generator_open_target_min)
+    return cmd, build_worker_env(config)
+
+
 def _review_command(args: argparse.Namespace, config: AppConfig) -> tuple[list[str], dict[str, str]]:
-    cmd = _python_command("direct_refactor_derived.py")
+    cmd = _python_command("refactor/direct_refactor_derived.py")
     cmd.extend(
         [
             "--input-file",
@@ -300,7 +305,7 @@ def _review_command(args: argparse.Namespace, config: AppConfig) -> tuple[list[s
 def _rewrite_command(args: argparse.Namespace, config: AppConfig) -> tuple[list[str], dict[str, str]]:
     input_file = args.input_file or config.paths.preview_file
     output_file = args.output_file or input_file
-    cmd = _python_command("apply_try_at_each_step_rewrites.py")
+    cmd = _python_command("refactor/apply_try_at_each_step_rewrites.py")
     cmd.extend(
         [
             "--input-file",
@@ -321,7 +326,7 @@ def _rewrite_command(args: argparse.Namespace, config: AppConfig) -> tuple[list[
 
 
 def _materialize_generated_command(args: argparse.Namespace, config: AppConfig) -> tuple[list[str], dict[str, str]]:
-    cmd = _python_command("refactor_derived_to_generated.py")
+    cmd = _python_command("refactor/refactor_derived_to_generated.py")
     _append_flag(cmd, "--derived-file", getattr(args, "derived_file", None) or config.paths.derived_file)
     _append_flag(cmd, "--deps-file", args.deps_file)
     _append_flag(cmd, "--theory-file", getattr(args, "theory_file", None) or config.paths.theory_file)
@@ -351,7 +356,7 @@ def _materialize_generated_command(args: argparse.Namespace, config: AppConfig) 
 
 
 def _extract_derived_deps_command(args: argparse.Namespace, config: AppConfig) -> tuple[list[str], dict[str, str]]:
-    cmd = _python_command("extract_derived_dependencies.py")
+    cmd = _python_command("refactor/extract_derived_dependencies.py")
     _append_flag(cmd, "--derived-file", getattr(args, "derived_file", None) or config.paths.derived_file)
     _append_flag(cmd, "--output-file", args.output_file)
     _append_flag(cmd, "--extractor-file", args.extractor_file)
@@ -385,7 +390,6 @@ def _build_parser() -> argparse.ArgumentParser:
     loop.add_argument("--skip-verify", action="store_true")
     _add_initialize_phase_flags(loop, default=None)
     _add_loop_tuning_flags(loop)
-    loop.add_argument("--run-main-theorem-session", action=argparse.BooleanOptionalAction, default=None)
 
     pipeline = subparsers.add_parser("pipeline", help="Run seed -> loop -> preview copy -> rewrite -> review.")
     _add_common_flags(pipeline)
@@ -404,6 +408,27 @@ def _build_parser() -> argparse.ArgumentParser:
     _add_pipeline_artifact_flags(pipeline, include_review_output_file=True, include_theorem_reuse_memory=True)
     _add_review_flags(pipeline)
     _add_pipeline_refactor_toggles(pipeline, default=None)
+
+    main_theorem = subparsers.add_parser("main-theorem", help="Run a one-shot main theorem session.")
+    _add_common_flags(main_theorem)
+    _add_worker_flags(main_theorem)
+    _add_loop_task_worker_flags(main_theorem)
+    main_theorem.add_argument("--theory-file")
+    main_theorem.add_argument("--derived-file")
+    main_theorem.add_argument("--scratch-file")
+    main_theorem.add_argument("--data-dir")
+    main_theorem.add_argument("--formalization-memory-file")
+    main_theorem.add_argument("--phase-attempts-file")
+    main_theorem.add_argument("--run-id")
+    main_theorem.add_argument("--current-iteration", type=int)
+    main_theorem.add_argument("--phase-logs", action=argparse.BooleanOptionalAction, default=None)
+    main_theorem.add_argument("--skip-verify", action="store_true")
+    main_theorem.add_argument("--verify-timeout", type=int)
+    main_theorem.add_argument("--formalization-retry-budget-sec", type=int)
+    main_theorem.add_argument("--max-same-error-streak", type=int)
+    main_theorem.add_argument("--open-problem-failure-threshold", type=int)
+    main_theorem.add_argument("--batch-generator-seed-count", type=int)
+    main_theorem.add_argument("--batch-generator-open-target-min", type=int)
 
     review = subparsers.add_parser("review", help="Run the second review-polish pass.")
     _add_common_flags(review)
@@ -499,6 +524,7 @@ def main() -> int:
         "seed": _seed_command,
         "loop": _loop_command,
         "pipeline": _pipeline_command,
+        "main-theorem": _main_theorem_command,
         "rewrite": _rewrite_command,
         "review": _review_command,
         "materialize-generated": _materialize_generated_command,

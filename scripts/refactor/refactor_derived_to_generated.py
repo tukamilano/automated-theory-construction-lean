@@ -9,6 +9,12 @@ import time
 from pathlib import Path
 from typing import Any
 
+SCRIPT_DIR = Path(__file__).resolve().parent
+SCRIPTS_ROOT = SCRIPT_DIR.parent
+scripts_root_str = str(SCRIPTS_ROOT)
+if scripts_root_str not in sys.path:
+    sys.path.insert(0, scripts_root_str)
+
 from extract_derived_dependencies import extract_derived_dependencies
 from generated_library import DEFAULT_GENERATED_CATALOG
 from generated_library import DEFAULT_GENERATED_MANIFEST
@@ -33,7 +39,7 @@ DERIVED_TEMPLATE = (
     "end AutomatedTheoryConstruction\n"
 )
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
+REPO_ROOT = SCRIPTS_ROOT.parent
 DEFAULT_DERIVED_FILE = Path("AutomatedTheoryConstruction/Derived.lean")
 DEFAULT_PLAN_FILE = Path("data/derived-chunk-plan.json")
 SLUG_TOKEN_PATTERN = re.compile(r"[A-Za-z][A-Za-z0-9']*")

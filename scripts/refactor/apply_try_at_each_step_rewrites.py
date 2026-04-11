@@ -27,18 +27,12 @@ class Candidate:
     raw_suggestion: str
     suggestion: str
     stripped_annotation: str | None
-    shortened_steps_count: int
-    goal_is_prop: bool
     start_idx: int
     end_idx: int
 
     @property
     def span_text(self) -> str:
         return self.old_to_end_of_branch or self.old_text
-
-    @property
-    def span_length(self) -> int:
-        return self.end_idx - self.start_idx
 
 
 def load_json(path: Path) -> Any:
@@ -54,6 +48,40 @@ def dump_json(path: Path, payload: dict[str, Any]) -> None:
 def maybe_dump_json(path: Path | None, payload: dict[str, Any]) -> None:
     if path is None:
         return
+    dump_json(path, payload)
+
+
+def file_observation(path: Path) -> dict[str, Any]:
+    observed: dict[str, Any] = {"path": str(path), "exists": path.exists()}
+    if not path.exists():
+        return observed
+    stat = path.stat()
+    observed["size_bytes"] = stat.st_size
+    observed["mtime_epoch_sec"] = stat.st_mtime
+    return observed
+
+
+def write_progress_report(
+    path: Path | None,
+    *,
+    input_file: Path,
+    output_file: Path,
+    tactic: str,
+    phase: str,
+    extra: dict[str, Any] | None = None,
+) -> None:
+    if path is None:
+        return
+    payload = {
+        "status": "running",
+        "stop_reason": phase,
+        "input_file": str(input_file),
+        "output_file": str(output_file),
+        "tactic": tactic,
+        "output_observation": file_observation(output_file),
+    }
+    if extra:
+        payload.update(extra)
     dump_json(path, payload)
 
 
@@ -215,8 +243,6 @@ def build_candidates(raw_results: list[dict[str, Any]], source_text: str) -> lis
                 raw_suggestion=raw_suggestion,
                 suggestion=suggestion,
                 stripped_annotation=stripped_annotation,
-                shortened_steps_count=int(item.get("shortenedStepsCount") or 0),
-                goal_is_prop=bool(item.get("goalIsProp")),
                 start_idx=start_idx,
                 end_idx=end_idx,
             )
@@ -227,16 +253,7 @@ def build_candidates(raw_results: list[dict[str, Any]], source_text: str) -> lis
 def select_non_overlapping(candidates: list[Candidate]) -> list[Candidate]:
     selected: list[Candidate] = []
     occupied: list[tuple[int, int]] = []
-    ranked = sorted(
-        candidates,
-        key=lambda candidate: (
-            candidate.span_length,
-            candidate.shortened_steps_count,
-            int(candidate.goal_is_prop),
-        ),
-        reverse=True,
-    )
-    for candidate in ranked:
+    for candidate in sorted(candidates, key=lambda candidate: candidate.start_idx):
         overlaps = any(not (candidate.end_idx <= start or end <= candidate.start_idx) for start, end in occupied)
         if overlaps:
             continue
@@ -322,6 +339,17 @@ def main() -> int:
         effective_raw_output_file = raw_output_file or (temp_root / "raw.json")
         copy_input_if_needed(input_file, output_file)
         write_backup_if_needed(output_file, backup_file)
+        write_progress_report(
+            apply_report_file,
+            input_file=input_file,
+            output_file=output_file,
+            tactic=args.tactic,
+            phase="starting",
+            extra={
+                "backup_file": str(backup_file) if backup_file is not None else None,
+                "raw_output_file": str(raw_output_file) if raw_output_file is not None else None,
+            },
+        )
 
         debug_log(
             "Running tryAtEachStep: "
@@ -372,32 +400,25 @@ def main() -> int:
         debug_log(
             f"Loaded tryAtEachStep results: raw={len(raw_results)} parseable={len(candidates)} selected={len(selected)}"
         )
+        write_progress_report(
+            apply_report_file,
+            input_file=input_file,
+            output_file=output_file,
+            tactic=args.tactic,
+            phase="candidates_loaded",
+            extra={
+                "raw_result_count": len(raw_results),
+                "parseable_candidate_count": len(candidates),
+                "selected_candidate_count": len(selected),
+            },
+        )
 
         applied: list[dict[str, Any]] = []
-        skipped: list[dict[str, Any]] = []
-        failed: list[dict[str, Any]] = []
+        rejected: list[dict[str, Any]] = []
         current_text = source_text
 
         for candidate in selected:
-            located = locate_span(
-                current_text,
-                start_line=candidate.start_line,
-                start_col=candidate.start_col,
-                span_text=candidate.span_text,
-            )
-            if located is None:
-                skipped.append(
-                    {
-                        "parent_name": candidate.parent_name,
-                        "start_line": candidate.start_line,
-                        "start_col": candidate.start_col,
-                        "reason": "span_not_found_after_prior_rewrites",
-                    }
-                )
-                continue
-
-            start_idx, end_idx = located
-            prefix = indentation_prefix(current_text, start_idx)
+            prefix = indentation_prefix(current_text, candidate.start_idx)
             replacement = format_replacement(candidate.suggestion, prefix)
             debug_log(
                 "Trying rewrite: "
@@ -411,9 +432,9 @@ def main() -> int:
                     else ""
                 )
             )
-            trial_text = current_text[:start_idx] + replacement + current_text[end_idx:]
+            trial_text = current_text[: candidate.start_idx] + replacement + current_text[candidate.end_idx :]
             output_file.write_text(trial_text, encoding="utf-8")
-            ok, verify_log = verify_lean_file(output_file, timeout_sec=args.verify_timeout)
+            ok, _verify_log = verify_lean_file(output_file, timeout_sec=args.verify_timeout)
             if ok:
                 debug_log(
                     "Accepted rewrite: "
@@ -430,8 +451,28 @@ def main() -> int:
                         "raw_suggestion": candidate.raw_suggestion,
                         "stripped_annotation": candidate.stripped_annotation,
                         "replacement": replacement,
-                        "shortened_steps_count": candidate.shortened_steps_count,
                     }
+                )
+                write_progress_report(
+                    apply_report_file,
+                    input_file=input_file,
+                    output_file=output_file,
+                    tactic=args.tactic,
+                    phase="applying_rewrites",
+                    extra={
+                        "raw_result_count": len(raw_results),
+                        "parseable_candidate_count": len(candidates),
+                        "selected_candidate_count": len(selected),
+                        "processed_candidate_count": len(applied) + len(rejected),
+                        "applied_count": len(applied),
+                        "rejected_count": len(rejected),
+                        "last_candidate": {
+                            "parent_name": candidate.parent_name,
+                            "start_line": candidate.start_line,
+                            "start_col": candidate.start_col,
+                            "result": "accepted",
+                        },
+                    },
                 )
                 continue
 
@@ -440,7 +481,7 @@ def main() -> int:
                 "Rejected rewrite after verification failure: "
                 f"{candidate.parent_name}:{candidate.start_line}:{candidate.start_col}"
             )
-            failed.append(
+            rejected.append(
                 {
                     "parent_name": candidate.parent_name,
                     "start_line": candidate.start_line,
@@ -450,12 +491,45 @@ def main() -> int:
                     "raw_suggestion": candidate.raw_suggestion,
                     "stripped_annotation": candidate.stripped_annotation,
                     "replacement": replacement,
-                    "shortened_steps_count": candidate.shortened_steps_count,
-                    "verify_log_excerpt": verify_log.splitlines()[:20],
                 }
+            )
+            write_progress_report(
+                apply_report_file,
+                input_file=input_file,
+                output_file=output_file,
+                tactic=args.tactic,
+                phase="applying_rewrites",
+                extra={
+                    "raw_result_count": len(raw_results),
+                    "parseable_candidate_count": len(candidates),
+                    "selected_candidate_count": len(selected),
+                    "processed_candidate_count": len(applied) + len(rejected),
+                    "applied_count": len(applied),
+                    "rejected_count": len(rejected),
+                    "last_candidate": {
+                        "parent_name": candidate.parent_name,
+                        "start_line": candidate.start_line,
+                        "start_col": candidate.start_col,
+                        "result": "rejected",
+                    },
+                },
             )
 
         output_file.write_text(current_text, encoding="utf-8")
+        write_progress_report(
+            apply_report_file,
+            input_file=input_file,
+            output_file=output_file,
+            tactic=args.tactic,
+            phase="final_verify",
+            extra={
+                "raw_result_count": len(raw_results),
+                "parseable_candidate_count": len(candidates),
+                "selected_candidate_count": len(selected),
+                "applied_count": len(applied),
+                "rejected_count": len(rejected),
+            },
+        )
         final_ok, final_verify_log = verify_lean_file(output_file, timeout_sec=args.verify_timeout)
         status = "ok" if final_ok else "error"
         report = {
@@ -470,11 +544,9 @@ def main() -> int:
             "parseable_candidate_count": len(candidates),
             "selected_candidate_count": len(selected),
             "applied_count": len(applied),
-            "skipped_count": len(skipped),
-            "failed_count": len(failed),
+            "rejected_count": len(rejected),
             "applied": applied,
-            "skipped": skipped,
-            "failed": failed,
+            "rejected": rejected,
             "final_verify_success": final_ok,
             "final_verify_log_excerpt": final_verify_log.splitlines()[:20],
         }

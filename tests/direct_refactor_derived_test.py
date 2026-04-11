@@ -11,6 +11,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT / "scripts"))
+sys.path.insert(0, str(REPO_ROOT / "scripts" / "refactor"))
 
 
 import direct_refactor_derived as review_mod
@@ -45,6 +46,9 @@ def main() -> int:
                 path.write_text("placeholder\n", encoding="utf-8")
 
             def fake_run_llm_exec(**_: object) -> subprocess.CompletedProcess[str]:
+                running_report = json.loads(report_file.read_text(encoding="utf-8"))
+                if running_report["status"] != "running":
+                    raise RuntimeError(f"expected live running report before worker returns: {running_report}")
                 return subprocess.CompletedProcess(
                     args=["codex"],
                     returncode=0,
@@ -104,6 +108,52 @@ def main() -> int:
                 raise RuntimeError(f"expected worker stdout in raw-output mode: {stdout_text!r}")
             if "worker stderr line 1" not in stderr_text:
                 raise RuntimeError(f"expected worker stderr in raw-output mode: {stderr_text!r}")
+
+            def fake_run_llm_exec_invalid(**_: object) -> subprocess.CompletedProcess[str]:
+                output_file.write_text(
+                    """import Mathlib
+import AutomatedTheoryConstruction.Theory
+
+set_option autoImplicit false
+
+namespace AutomatedTheoryConstruction
+
+end AutomatedTheoryConstruction
+""",
+                    encoding="utf-8",
+                )
+                return subprocess.CompletedProcess(
+                    args=["codex"],
+                    returncode=0,
+                    stdout="worker stdout line 1\n",
+                    stderr="",
+                )
+
+            review_mod.run_llm_exec = fake_run_llm_exec_invalid
+            code, stdout_text, stderr_text = _run_main(
+                [
+                    "direct_refactor_derived.py",
+                    "--input-file",
+                    str(input_file),
+                    "--output-file",
+                    str(output_file),
+                    "--report-file",
+                    str(report_file),
+                    "--policy-file",
+                    str(policy_file),
+                    "--lean-rule-file",
+                    str(lean_rule_file),
+                    "--mathlib-usage-file",
+                    str(mathlib_usage_file),
+                ]
+            )
+            if code == 0:
+                raise RuntimeError("expected inventory validation failure for destructive output")
+            report = json.loads(stdout_text)
+            if report["stop_reason"] != "inventory_changed":
+                raise RuntimeError(f"unexpected destructive-output report: {report}")
+            if report["before_theorem_count"] <= report["after_theorem_count"]:
+                raise RuntimeError(f"expected theorem inventory shrinkage: {report}")
     finally:
         review_mod.run_llm_exec = original_run_llm_exec
     return 0

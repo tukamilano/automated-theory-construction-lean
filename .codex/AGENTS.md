@@ -12,7 +12,7 @@ Main entry points:
 - `AutomatedTheoryConstruction/Theory.lean`
 - `AutomatedTheoryConstruction/Derived.lean`
 - `AutomatedTheoryConstruction/Scratch.lean`
-- `scripts/run_loop.py`
+- `scripts/loop/run_loop.py`
 - `scripts/codex_worker.py`
 - `.codex/skills/`
 

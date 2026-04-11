@@ -2,548 +2,267 @@
   "boundary_loads": [
     {
       "after_index": 0,
-      "after_name": "AutomatedTheoryConstruction.singleton_self_rdiv_derivable",
-      "before_name": "AutomatedTheoryConstruction.thm_sequent_degree_bound_000005_is_false",
-      "load": 0.97619
+      "after_name": "AutomatedTheoryConstruction.thm_sequent_degree_bound_000005_is_false",
+      "before_name": "AutomatedTheoryConstruction.thm_singleton_sequent_eq_000002_is_false",
+      "load": 0.0
     },
     {
       "after_index": 1,
-      "after_name": "AutomatedTheoryConstruction.thm_sequent_degree_bound_000005_is_false",
-      "before_name": "AutomatedTheoryConstruction.thm_singleton_sequent_eq_000002_is_false",
-      "load": 0.47619
+      "after_name": "AutomatedTheoryConstruction.thm_singleton_sequent_eq_000002_is_false",
+      "before_name": "AutomatedTheoryConstruction.thm_singleton_atom_derivation_shape_000009_is_false",
+      "load": 0.0
     },
     {
       "after_index": 2,
-      "after_name": "AutomatedTheoryConstruction.thm_singleton_sequent_eq_000002_is_false",
-      "before_name": "AutomatedTheoryConstruction.thm_singleton_atom_derivation_shape_000009_is_false",
-      "load": 0.142857
+      "after_name": "AutomatedTheoryConstruction.thm_singleton_atom_derivation_shape_000009_is_false",
+      "before_name": "AutomatedTheoryConstruction.thm_atom_count_bounded_by_context_000010_is_false",
+      "load": 0.0
     },
     {
       "after_index": 3,
-      "after_name": "AutomatedTheoryConstruction.thm_singleton_atom_derivation_shape_000009_is_false",
-      "before_name": "AutomatedTheoryConstruction.atom_count",
-      "load": 0.142857
+      "after_name": "AutomatedTheoryConstruction.thm_atom_count_bounded_by_context_000010_is_false",
+      "before_name": "AutomatedTheoryConstruction.thm_singleton_nonatom_derivation_shape_000013",
+      "load": 0.0
     },
     {
       "after_index": 4,
-      "after_name": "AutomatedTheoryConstruction.atom_count",
-      "before_name": "AutomatedTheoryConstruction.atom_count_list",
-      "load": 0.97619
+      "after_name": "AutomatedTheoryConstruction.thm_singleton_nonatom_derivation_shape_000013",
+      "before_name": "AutomatedTheoryConstruction.thm_singleton_atomic_sequent_iff_000011",
+      "load": 0.0
     },
     {
       "after_index": 5,
-      "after_name": "AutomatedTheoryConstruction.atom_count_list",
-      "before_name": "AutomatedTheoryConstruction.thm_atom_count_bounded_by_context_000010_is_false",
-      "load": 0.97619
+      "after_name": "AutomatedTheoryConstruction.thm_singleton_atomic_sequent_iff_000011",
+      "before_name": "AutomatedTheoryConstruction.thm_singleton_atom_sequent_iff_000018",
+      "load": 0.447293
     },
     {
       "after_index": 6,
-      "after_name": "AutomatedTheoryConstruction.thm_atom_count_bounded_by_context_000010_is_false",
-      "before_name": "AutomatedTheoryConstruction.singleton_nonatom_sequent_cases_forward",
-      "load": -0.0
+      "after_name": "AutomatedTheoryConstruction.thm_singleton_atom_sequent_iff_000018",
+      "before_name": "AutomatedTheoryConstruction.thm_singleton_sequent_iff_cases_000022",
+      "load": 0.447293
     },
     {
       "after_index": 7,
-      "after_name": "AutomatedTheoryConstruction.singleton_nonatom_sequent_cases_forward",
-      "before_name": "AutomatedTheoryConstruction.thm_singleton_nonatom_derivation_shape_000013",
-      "load": 0.95
+      "after_name": "AutomatedTheoryConstruction.thm_singleton_sequent_iff_cases_000022",
+      "before_name": "AutomatedTheoryConstruction.thm_atom_context_sequent_cases_000023",
+      "load": 0.11396
     },
     {
       "after_index": 8,
-      "after_name": "AutomatedTheoryConstruction.thm_singleton_nonatom_derivation_shape_000013",
-      "before_name": "AutomatedTheoryConstruction.thm_singleton_atomic_sequent_iff_000011",
-      "load": 0.45
+      "after_name": "AutomatedTheoryConstruction.thm_atom_context_sequent_cases_000023",
+      "before_name": "AutomatedTheoryConstruction.thm_atom_goal_candidate_cases_000007",
+      "load": 0.11396
     },
     {
       "after_index": 9,
-      "after_name": "AutomatedTheoryConstruction.thm_singleton_atomic_sequent_iff_000011",
-      "before_name": "AutomatedTheoryConstruction.thm_singleton_atom_sequent_iff_000018",
-      "load": 1.715812
+      "after_name": "AutomatedTheoryConstruction.thm_atom_goal_candidate_cases_000007",
+      "before_name": "AutomatedTheoryConstruction.thm_occurs_atom_from_context_000021_is_false",
+      "load": 0.280627
     },
     {
       "after_index": 10,
-      "after_name": "AutomatedTheoryConstruction.thm_singleton_atom_sequent_iff_000018",
-      "before_name": "AutomatedTheoryConstruction.thm_singleton_sequent_iff_cases_000022",
-      "load": 0.965812
+      "after_name": "AutomatedTheoryConstruction.thm_occurs_atom_from_context_000021_is_false",
+      "before_name": "AutomatedTheoryConstruction.support_ok_replace",
+      "load": 1.87038
     },
     {
       "after_index": 11,
-      "after_name": "AutomatedTheoryConstruction.thm_singleton_sequent_iff_cases_000022",
-      "before_name": "AutomatedTheoryConstruction.thm_atom_context_sequent_cases_000023",
-      "load": 0.432479
+      "after_name": "AutomatedTheoryConstruction.support_ok_replace",
+      "before_name": "AutomatedTheoryConstruction.support_ok_self_singleton",
+      "load": 2.475141
     },
     {
       "after_index": 12,
-      "after_name": "AutomatedTheoryConstruction.thm_atom_context_sequent_cases_000023",
-      "before_name": "AutomatedTheoryConstruction.thm_atom_goal_candidate_cases_000007",
-      "load": 0.182479
+      "after_name": "AutomatedTheoryConstruction.support_ok_self_singleton",
+      "before_name": "AutomatedTheoryConstruction.thm_derivable_support_ok_000032",
+      "load": 2.391808
     },
     {
       "after_index": 13,
-      "after_name": "AutomatedTheoryConstruction.thm_atom_goal_candidate_cases_000007",
-      "before_name": "AutomatedTheoryConstruction.occurs_atom",
-      "load": 0.29359
+      "after_name": "AutomatedTheoryConstruction.thm_derivable_support_ok_000032",
+      "before_name": "AutomatedTheoryConstruction.thm_atomic_candidate_tree_iff_sequent_000030",
+      "load": 1.308475
     },
     {
       "after_index": 14,
-      "after_name": "AutomatedTheoryConstruction.occurs_atom",
-      "before_name": "AutomatedTheoryConstruction.thm_occurs_atom_from_context_000021_is_false",
-      "load": 1.962395
+      "after_name": "AutomatedTheoryConstruction.thm_atomic_candidate_tree_iff_sequent_000030",
+      "before_name": "AutomatedTheoryConstruction.thm_support_closure_matches_support_ok_000036",
+      "load": 1.835398
     },
     {
       "after_index": 15,
-      "after_name": "AutomatedTheoryConstruction.thm_occurs_atom_from_context_000021_is_false",
-      "before_name": "AutomatedTheoryConstruction.support_ok",
-      "load": 1.462395
+      "after_name": "AutomatedTheoryConstruction.thm_support_closure_matches_support_ok_000036",
+      "before_name": "AutomatedTheoryConstruction.thm_candidate_tree_iff_sequent_000038",
+      "load": 1.318731
     },
     {
       "after_index": 16,
-      "after_name": "AutomatedTheoryConstruction.support_ok",
-      "before_name": "AutomatedTheoryConstruction.support_ok_replace",
-      "load": 2.368645
+      "after_name": "AutomatedTheoryConstruction.thm_candidate_tree_iff_sequent_000038",
+      "before_name": "AutomatedTheoryConstruction.thm_support_closure_exact_complete_000041_is_false",
+      "load": 1.062321
     },
     {
       "after_index": 17,
-      "after_name": "AutomatedTheoryConstruction.support_ok_replace",
-      "before_name": "AutomatedTheoryConstruction.support_ok_self_singleton",
-      "load": 2.594836
+      "after_name": "AutomatedTheoryConstruction.thm_support_closure_exact_complete_000041_is_false",
+      "before_name": "AutomatedTheoryConstruction.thm_handed_support_closure_iff_sequent_000048",
+      "load": 0.860398
     },
     {
       "after_index": 18,
-      "after_name": "AutomatedTheoryConstruction.support_ok_self_singleton",
-      "before_name": "AutomatedTheoryConstruction.thm_derivable_support_ok_000032",
-      "load": 2.228169
+      "after_name": "AutomatedTheoryConstruction.thm_handed_support_closure_iff_sequent_000048",
+      "before_name": "AutomatedTheoryConstruction.exists_left_tp_of_isLeftOnly",
+      "load": 1.148926
     },
     {
       "after_index": 19,
-      "after_name": "AutomatedTheoryConstruction.thm_derivable_support_ok_000032",
-      "before_name": "AutomatedTheoryConstruction.AtomicCandidateTree",
-      "load": 0.978169
+      "after_name": "AutomatedTheoryConstruction.exists_left_tp_of_isLeftOnly",
+      "before_name": "AutomatedTheoryConstruction.exists_right_tp_of_isRightOnly",
+      "load": 2.763151
     },
     {
       "after_index": 20,
-      "after_name": "AutomatedTheoryConstruction.AtomicCandidateTree",
-      "before_name": "AutomatedTheoryConstruction.thm_atomic_candidate_tree_iff_sequent_000030",
-      "load": 0.978169
+      "after_name": "AutomatedTheoryConstruction.exists_right_tp_of_isRightOnly",
+      "before_name": "AutomatedTheoryConstruction.exists_left_ctx_of_allLeftOnly",
+      "load": 2.971484
     },
     {
       "after_index": 21,
-      "after_name": "AutomatedTheoryConstruction.thm_atomic_candidate_tree_iff_sequent_000030",
-      "before_name": "AutomatedTheoryConstruction.SupportClosure",
-      "load": 1.099659
+      "after_name": "AutomatedTheoryConstruction.exists_left_ctx_of_allLeftOnly",
+      "before_name": "AutomatedTheoryConstruction.exists_right_ctx_of_allRightOnly",
+      "load": 3.114341
     },
     {
       "after_index": 22,
-      "after_name": "AutomatedTheoryConstruction.SupportClosure",
-      "before_name": "AutomatedTheoryConstruction.thm_support_closure_matches_support_ok_000036",
-      "load": 1.099659
+      "after_name": "AutomatedTheoryConstruction.exists_right_ctx_of_allRightOnly",
+      "before_name": "AutomatedTheoryConstruction.thm_full_one_sided_conservativity_000042",
+      "load": 3.197674
     },
     {
       "after_index": 23,
-      "after_name": "AutomatedTheoryConstruction.thm_support_closure_matches_support_ok_000036",
-      "before_name": "AutomatedTheoryConstruction.supportClosure_atom_iff_occurs_in_context",
-      "load": 1.105135
+      "after_name": "AutomatedTheoryConstruction.thm_full_one_sided_conservativity_000042",
+      "before_name": "AutomatedTheoryConstruction.thm_residual_support_normal_form_000050",
+      "load": 2.114341
     },
     {
       "after_index": 24,
-      "after_name": "AutomatedTheoryConstruction.supportClosure_atom_iff_occurs_in_context",
-      "before_name": "AutomatedTheoryConstruction.CandidateTree",
-      "load": 0.846802
+      "after_name": "AutomatedTheoryConstruction.thm_residual_support_normal_form_000050",
+      "before_name": "AutomatedTheoryConstruction.leftHandedSupportClosure_iff_sequent",
+      "load": 2.242913
     },
     {
       "after_index": 25,
-      "after_name": "AutomatedTheoryConstruction.CandidateTree",
-      "before_name": "AutomatedTheoryConstruction.thm_candidate_tree_iff_sequent_000038",
-      "load": 0.846802
+      "after_name": "AutomatedTheoryConstruction.leftHandedSupportClosure_iff_sequent",
+      "before_name": "AutomatedTheoryConstruction.rightHandedSupportClosure_iff_sequent",
+      "load": 2.850055
     },
     {
       "after_index": 26,
-      "after_name": "AutomatedTheoryConstruction.thm_candidate_tree_iff_sequent_000038",
-      "before_name": "AutomatedTheoryConstruction.candidateTree_atom_iff_atomicCandidateTree",
-      "load": 1.29774
+      "after_name": "AutomatedTheoryConstruction.rightHandedSupportClosure_iff_sequent",
+      "before_name": "AutomatedTheoryConstruction.thm_one_sided_handed_conservativity_000051",
+      "load": 2.273132
     },
     {
       "after_index": 27,
-      "after_name": "AutomatedTheoryConstruction.candidateTree_atom_iff_atomicCandidateTree",
-      "before_name": "AutomatedTheoryConstruction.supportClosure_ldiv_atom_counterexample",
-      "load": 0.854883
+      "after_name": "AutomatedTheoryConstruction.thm_one_sided_handed_conservativity_000051",
+      "before_name": "AutomatedTheoryConstruction.thm_residual_candidate_tree_bijection_000055",
+      "load": 1.094164
     },
     {
       "after_index": 28,
-      "after_name": "AutomatedTheoryConstruction.supportClosure_ldiv_atom_counterexample",
-      "before_name": "AutomatedTheoryConstruction.thm_support_closure_exact_complete_000041_is_false",
-      "load": 1.063857
+      "after_name": "AutomatedTheoryConstruction.thm_residual_candidate_tree_bijection_000055",
+      "before_name": "AutomatedTheoryConstruction.thm_residual_graph_recognizes_sequent_000062",
+      "load": 0.6737
     },
     {
       "after_index": 29,
-      "after_name": "AutomatedTheoryConstruction.thm_support_closure_exact_complete_000041_is_false",
-      "before_name": "AutomatedTheoryConstruction.HandedSupportClosure",
-      "load": 0.563857
+      "after_name": "AutomatedTheoryConstruction.thm_residual_graph_recognizes_sequent_000062",
+      "before_name": "AutomatedTheoryConstruction.thm_residual_atomic_branch_bound_000057",
+      "load": 0.3737
     },
     {
       "after_index": 30,
-      "after_name": "AutomatedTheoryConstruction.HandedSupportClosure",
-      "before_name": "AutomatedTheoryConstruction.handedSupportClosure_iff_candidateTree",
-      "load": 1.716131
-    },
-    {
-      "after_index": 31,
-      "after_name": "AutomatedTheoryConstruction.handedSupportClosure_iff_candidateTree",
-      "before_name": "AutomatedTheoryConstruction.thm_handed_support_closure_iff_sequent_000048",
-      "load": 1.516131
-    },
-    {
-      "after_index": 32,
-      "after_name": "AutomatedTheoryConstruction.thm_handed_support_closure_iff_sequent_000048",
-      "before_name": "AutomatedTheoryConstruction.isLeftOnly",
-      "load": 0.732118
-    },
-    {
-      "after_index": 33,
-      "after_name": "AutomatedTheoryConstruction.isLeftOnly",
-      "before_name": "AutomatedTheoryConstruction.isRightOnly",
-      "load": 1.08214
-    },
-    {
-      "after_index": 34,
-      "after_name": "AutomatedTheoryConstruction.isRightOnly",
-      "before_name": "AutomatedTheoryConstruction.toLeftTp?",
-      "load": 1.441275
-    },
-    {
-      "after_index": 35,
-      "after_name": "AutomatedTheoryConstruction.toLeftTp?",
-      "before_name": "AutomatedTheoryConstruction.toRightTp?",
-      "load": 2.42744
-    },
-    {
-      "after_index": 36,
-      "after_name": "AutomatedTheoryConstruction.toRightTp?",
-      "before_name": "AutomatedTheoryConstruction.toLeftCtx?",
-      "load": 3.42486
-    },
-    {
-      "after_index": 37,
-      "after_name": "AutomatedTheoryConstruction.toLeftCtx?",
-      "before_name": "AutomatedTheoryConstruction.toRightCtx?",
-      "load": 3.800257
-    },
-    {
-      "after_index": 38,
-      "after_name": "AutomatedTheoryConstruction.toRightCtx?",
-      "before_name": "AutomatedTheoryConstruction.leftTranslatedSequent",
-      "load": 4.192175
-    },
-    {
-      "after_index": 39,
-      "after_name": "AutomatedTheoryConstruction.leftTranslatedSequent",
-      "before_name": "AutomatedTheoryConstruction.rightTranslatedSequent",
-      "load": 3.857254
-    },
-    {
-      "after_index": 40,
-      "after_name": "AutomatedTheoryConstruction.rightTranslatedSequent",
-      "before_name": "AutomatedTheoryConstruction.exists_left_tp_of_isLeftOnly",
-      "load": 3.549411
-    },
-    {
-      "after_index": 41,
-      "after_name": "AutomatedTheoryConstruction.exists_left_tp_of_isLeftOnly",
-      "before_name": "AutomatedTheoryConstruction.exists_right_tp_of_isRightOnly",
-      "load": 3.891276
-    },
-    {
-      "after_index": 42,
-      "after_name": "AutomatedTheoryConstruction.exists_right_tp_of_isRightOnly",
-      "before_name": "AutomatedTheoryConstruction.exists_left_ctx_of_allLeftOnly",
-      "load": 4.287308
-    },
-    {
-      "after_index": 43,
-      "after_name": "AutomatedTheoryConstruction.exists_left_ctx_of_allLeftOnly",
-      "before_name": "AutomatedTheoryConstruction.exists_right_ctx_of_allRightOnly",
-      "load": 4.013859
-    },
-    {
-      "after_index": 44,
-      "after_name": "AutomatedTheoryConstruction.exists_right_ctx_of_allRightOnly",
-      "before_name": "AutomatedTheoryConstruction.thm_full_one_sided_conservativity_000042",
-      "load": 3.912571
-    },
-    {
-      "after_index": 45,
-      "after_name": "AutomatedTheoryConstruction.thm_full_one_sided_conservativity_000042",
-      "before_name": "AutomatedTheoryConstruction.residualAtomicState",
-      "load": 1.815771
-    },
-    {
-      "after_index": 46,
-      "after_name": "AutomatedTheoryConstruction.residualAtomicState",
-      "before_name": "AutomatedTheoryConstruction.thm_residual_support_normal_form_000050",
-      "load": 2.581583
-    },
-    {
-      "after_index": 47,
-      "after_name": "AutomatedTheoryConstruction.thm_residual_support_normal_form_000050",
-      "before_name": "AutomatedTheoryConstruction.leftHandedSupportClosure",
-      "load": 1.974608
-    },
-    {
-      "after_index": 48,
-      "after_name": "AutomatedTheoryConstruction.leftHandedSupportClosure",
-      "before_name": "AutomatedTheoryConstruction.rightHandedSupportClosure",
-      "load": 2.761909
-    },
-    {
-      "after_index": 49,
-      "after_name": "AutomatedTheoryConstruction.rightHandedSupportClosure",
-      "before_name": "AutomatedTheoryConstruction.leftTranslatedHandedSupportClosure",
-      "load": 3.5631
-    },
-    {
-      "after_index": 50,
-      "after_name": "AutomatedTheoryConstruction.leftTranslatedHandedSupportClosure",
-      "before_name": "AutomatedTheoryConstruction.rightTranslatedHandedSupportClosure",
-      "load": 3.238695
-    },
-    {
-      "after_index": 51,
-      "after_name": "AutomatedTheoryConstruction.rightTranslatedHandedSupportClosure",
-      "before_name": "AutomatedTheoryConstruction.left_handed_support_closure_iff_handed_support_closure",
-      "load": 2.9381
-    },
-    {
-      "after_index": 52,
-      "after_name": "AutomatedTheoryConstruction.left_handed_support_closure_iff_handed_support_closure",
-      "before_name": "AutomatedTheoryConstruction.right_handed_support_closure_iff_handed_support_closure",
-      "load": 3.027955
-    },
-    {
-      "after_index": 53,
-      "after_name": "AutomatedTheoryConstruction.right_handed_support_closure_iff_handed_support_closure",
-      "before_name": "AutomatedTheoryConstruction.leftHandedSupportClosure_iff_sequent",
-      "load": 3.119622
-    },
-    {
-      "after_index": 54,
-      "after_name": "AutomatedTheoryConstruction.leftHandedSupportClosure_iff_sequent",
-      "before_name": "AutomatedTheoryConstruction.rightHandedSupportClosure_iff_sequent",
-      "load": 2.893286
-    },
-    {
-      "after_index": 55,
-      "after_name": "AutomatedTheoryConstruction.rightHandedSupportClosure_iff_sequent",
-      "before_name": "AutomatedTheoryConstruction.thm_one_sided_handed_conservativity_000051",
-      "load": 2.836968
-    },
-    {
-      "after_index": 56,
-      "after_name": "AutomatedTheoryConstruction.thm_one_sided_handed_conservativity_000051",
-      "before_name": "AutomatedTheoryConstruction.thm_sequent_iff_residual_atomic_witness",
-      "load": 0.624881
-    },
-    {
-      "after_index": 57,
-      "after_name": "AutomatedTheoryConstruction.thm_sequent_iff_residual_atomic_witness",
-      "before_name": "AutomatedTheoryConstruction.thm_residual_candidate_tree_bijection_000055",
-      "load": 0.996593
-    },
-    {
-      "after_index": 58,
-      "after_name": "AutomatedTheoryConstruction.thm_residual_candidate_tree_bijection_000055",
-      "before_name": "AutomatedTheoryConstruction.AtomicResidualState",
-      "load": 0.389367
-    },
-    {
-      "after_index": 59,
-      "after_name": "AutomatedTheoryConstruction.AtomicResidualState",
-      "before_name": "AutomatedTheoryConstruction.AtomicResidualGraphStep",
-      "load": 0.639367
-    },
-    {
-      "after_index": 60,
-      "after_name": "AutomatedTheoryConstruction.AtomicResidualGraphStep",
-      "before_name": "AutomatedTheoryConstruction.AtomicResidualGraphAccepts",
-      "load": 0.639367
-    },
-    {
-      "after_index": 61,
-      "after_name": "AutomatedTheoryConstruction.AtomicResidualGraphAccepts",
-      "before_name": "AutomatedTheoryConstruction.atomicResidualGraphAccepts_iff_atomicCandidateTree",
-      "load": 0.639367
-    },
-    {
-      "after_index": 62,
-      "after_name": "AutomatedTheoryConstruction.atomicResidualGraphAccepts_iff_atomicCandidateTree",
-      "before_name": "AutomatedTheoryConstruction.thm_residual_graph_recognizes_sequent_000062",
-      "load": 0.889367
-    },
-    {
-      "after_index": 63,
-      "after_name": "AutomatedTheoryConstruction.thm_residual_graph_recognizes_sequent_000062",
-      "before_name": "AutomatedTheoryConstruction.AtomicBranchLength",
-      "load": 0.190954
-    },
-    {
-      "after_index": 64,
-      "after_name": "AutomatedTheoryConstruction.AtomicBranchLength",
-      "before_name": "AutomatedTheoryConstruction.thm_residual_atomic_branch_bound_000057",
-      "load": 0.190954
-    },
-    {
-      "after_index": 65,
       "after_name": "AutomatedTheoryConstruction.thm_residual_atomic_branch_bound_000057",
       "before_name": "AutomatedTheoryConstruction.thm_same_handed_support_exactness_000059_is_false",
-      "load": 0.140954
+      "load": 0.230843
     }
   ],
   "clusters": [
     {
       "chunk_id": "chunk_001",
-      "end_index": 12,
-      "end_line": 205,
+      "end_index": 7,
+      "end_line": 178,
       "left_cut_load": null,
       "node_names": [
-        "AutomatedTheoryConstruction.singleton_self_rdiv_derivable",
         "AutomatedTheoryConstruction.thm_sequent_degree_bound_000005_is_false",
         "AutomatedTheoryConstruction.thm_singleton_sequent_eq_000002_is_false",
         "AutomatedTheoryConstruction.thm_singleton_atom_derivation_shape_000009_is_false",
-        "AutomatedTheoryConstruction.atom_count",
-        "AutomatedTheoryConstruction.atom_count_list",
         "AutomatedTheoryConstruction.thm_atom_count_bounded_by_context_000010_is_false",
-        "AutomatedTheoryConstruction.singleton_nonatom_sequent_cases_forward",
         "AutomatedTheoryConstruction.thm_singleton_nonatom_derivation_shape_000013",
         "AutomatedTheoryConstruction.thm_singleton_atomic_sequent_iff_000011",
         "AutomatedTheoryConstruction.thm_singleton_atom_sequent_iff_000018",
-        "AutomatedTheoryConstruction.thm_singleton_sequent_iff_cases_000022",
-        "AutomatedTheoryConstruction.thm_atom_context_sequent_cases_000023"
+        "AutomatedTheoryConstruction.thm_singleton_sequent_iff_cases_000022"
       ],
-      "right_cut_load": 0.182479,
-      "size": 13,
+      "right_cut_load": 0.11396,
+      "size": 8,
       "start_index": 0,
-      "start_line": 15
+      "start_line": 16
     },
     {
       "chunk_id": "chunk_002",
-      "end_index": 24,
-      "end_line": 497,
-      "left_cut_load": 0.182479,
+      "end_index": 17,
+      "end_line": 591,
+      "left_cut_load": 0.11396,
       "node_names": [
+        "AutomatedTheoryConstruction.thm_atom_context_sequent_cases_000023",
         "AutomatedTheoryConstruction.thm_atom_goal_candidate_cases_000007",
-        "AutomatedTheoryConstruction.occurs_atom",
         "AutomatedTheoryConstruction.thm_occurs_atom_from_context_000021_is_false",
-        "AutomatedTheoryConstruction.support_ok",
         "AutomatedTheoryConstruction.support_ok_replace",
         "AutomatedTheoryConstruction.support_ok_self_singleton",
         "AutomatedTheoryConstruction.thm_derivable_support_ok_000032",
-        "AutomatedTheoryConstruction.AtomicCandidateTree",
         "AutomatedTheoryConstruction.thm_atomic_candidate_tree_iff_sequent_000030",
-        "AutomatedTheoryConstruction.SupportClosure",
         "AutomatedTheoryConstruction.thm_support_closure_matches_support_ok_000036",
-        "AutomatedTheoryConstruction.supportClosure_atom_iff_occurs_in_context"
+        "AutomatedTheoryConstruction.thm_candidate_tree_iff_sequent_000038",
+        "AutomatedTheoryConstruction.thm_support_closure_exact_complete_000041_is_false"
       ],
-      "right_cut_load": 0.846802,
-      "size": 12,
-      "start_index": 13,
-      "start_line": 231
+      "right_cut_load": 0.860398,
+      "size": 10,
+      "start_index": 8,
+      "start_line": 208
     },
     {
       "chunk_id": "chunk_003",
-      "end_index": 32,
-      "end_line": 633,
-      "left_cut_load": 0.846802,
+      "end_index": 31,
+      "end_line": 1066,
+      "left_cut_load": 0.860398,
       "node_names": [
-        "AutomatedTheoryConstruction.CandidateTree",
-        "AutomatedTheoryConstruction.thm_candidate_tree_iff_sequent_000038",
-        "AutomatedTheoryConstruction.candidateTree_atom_iff_atomicCandidateTree",
-        "AutomatedTheoryConstruction.supportClosure_ldiv_atom_counterexample",
-        "AutomatedTheoryConstruction.thm_support_closure_exact_complete_000041_is_false",
-        "AutomatedTheoryConstruction.HandedSupportClosure",
-        "AutomatedTheoryConstruction.handedSupportClosure_iff_candidateTree",
-        "AutomatedTheoryConstruction.thm_handed_support_closure_iff_sequent_000048"
-      ],
-      "right_cut_load": 0.732118,
-      "size": 8,
-      "start_index": 25,
-      "start_line": 503
-    },
-    {
-      "chunk_id": "chunk_004",
-      "end_index": 45,
-      "end_line": 748,
-      "left_cut_load": 0.732118,
-      "node_names": [
-        "AutomatedTheoryConstruction.isLeftOnly",
-        "AutomatedTheoryConstruction.isRightOnly",
-        "AutomatedTheoryConstruction.toLeftTp?",
-        "AutomatedTheoryConstruction.toRightTp?",
-        "AutomatedTheoryConstruction.toLeftCtx?",
-        "AutomatedTheoryConstruction.toRightCtx?",
-        "AutomatedTheoryConstruction.leftTranslatedSequent",
-        "AutomatedTheoryConstruction.rightTranslatedSequent",
+        "AutomatedTheoryConstruction.thm_handed_support_closure_iff_sequent_000048",
         "AutomatedTheoryConstruction.exists_left_tp_of_isLeftOnly",
         "AutomatedTheoryConstruction.exists_right_tp_of_isRightOnly",
         "AutomatedTheoryConstruction.exists_left_ctx_of_allLeftOnly",
         "AutomatedTheoryConstruction.exists_right_ctx_of_allRightOnly",
-        "AutomatedTheoryConstruction.thm_full_one_sided_conservativity_000042"
-      ],
-      "right_cut_load": 1.815771,
-      "size": 13,
-      "start_index": 33,
-      "start_line": 639
-    },
-    {
-      "chunk_id": "chunk_005",
-      "end_index": 58,
-      "end_line": 961,
-      "left_cut_load": 1.815771,
-      "node_names": [
-        "AutomatedTheoryConstruction.residualAtomicState",
+        "AutomatedTheoryConstruction.thm_full_one_sided_conservativity_000042",
         "AutomatedTheoryConstruction.thm_residual_support_normal_form_000050",
-        "AutomatedTheoryConstruction.leftHandedSupportClosure",
-        "AutomatedTheoryConstruction.rightHandedSupportClosure",
-        "AutomatedTheoryConstruction.leftTranslatedHandedSupportClosure",
-        "AutomatedTheoryConstruction.rightTranslatedHandedSupportClosure",
-        "AutomatedTheoryConstruction.left_handed_support_closure_iff_handed_support_closure",
-        "AutomatedTheoryConstruction.right_handed_support_closure_iff_handed_support_closure",
         "AutomatedTheoryConstruction.leftHandedSupportClosure_iff_sequent",
         "AutomatedTheoryConstruction.rightHandedSupportClosure_iff_sequent",
         "AutomatedTheoryConstruction.thm_one_sided_handed_conservativity_000051",
-        "AutomatedTheoryConstruction.thm_sequent_iff_residual_atomic_witness",
-        "AutomatedTheoryConstruction.thm_residual_candidate_tree_bijection_000055"
-      ],
-      "right_cut_load": 0.389367,
-      "size": 13,
-      "start_index": 46,
-      "start_line": 768
-    },
-    {
-      "chunk_id": "chunk_006",
-      "end_index": 66,
-      "end_line": 1107,
-      "left_cut_load": 0.389367,
-      "node_names": [
-        "AutomatedTheoryConstruction.AtomicResidualState",
-        "AutomatedTheoryConstruction.AtomicResidualGraphStep",
-        "AutomatedTheoryConstruction.AtomicResidualGraphAccepts",
-        "AutomatedTheoryConstruction.atomicResidualGraphAccepts_iff_atomicCandidateTree",
+        "AutomatedTheoryConstruction.thm_residual_candidate_tree_bijection_000055",
         "AutomatedTheoryConstruction.thm_residual_graph_recognizes_sequent_000062",
-        "AutomatedTheoryConstruction.AtomicBranchLength",
         "AutomatedTheoryConstruction.thm_residual_atomic_branch_bound_000057",
         "AutomatedTheoryConstruction.thm_same_handed_support_exactness_000059_is_false"
       ],
       "right_cut_load": null,
-      "size": 8,
-      "start_index": 59,
-      "start_line": 989
+      "size": 14,
+      "start_index": 18,
+      "start_line": 612
     }
   ],
   "deps_file": "data/derived-deps.json",
-  "ignored_external_reference_count": 749,
+  "ignored_external_reference_count": 0,
   "ignored_forward_reference_count": 0,
   "ignored_self_reference_count": 0,
-  "internal_edge_count": 136,
-  "node_count": 67,
+  "internal_edge_count": 50,
+  "node_count": 32,
   "parameters": {
     "cut_penalty": 0.25,
     "max_nodes": 14,
@@ -551,6 +270,6 @@
     "target_nodes": 10
   },
   "plan_version": 1,
-  "source_file": "/home/kei.tsukamoto/ATC_private/AutomatedTheoryConstruction/Derived.lean",
-  "summary": "6 chunks over 67 declarations using 136 internal dependencies"
+  "source_file": "AutomatedTheoryConstruction/Derived.refactored.reviewed.lean",
+  "summary": "3 chunks over 32 declarations using 50 internal dependencies"
 }

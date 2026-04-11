@@ -22,19 +22,17 @@ GENERATED_LOCAL_MANIFEST_VERIFY_TIMEOUT ?= 300
 WORKER_COMMAND ?= uv run scripts/codex_worker.py
 WORKER_TIMEOUT ?= 420
 CODEX_TIMEOUT ?= 390
-MAIN_THEOREM_INTERVAL ?= 10
-MAIN_THEOREM_FORMALIZE_WORKER_TIMEOUT ?= 900
-MAIN_THEOREM_REPAIR_WORKER_TIMEOUT ?= 600
 
 SEED_ARGS ?=
 LOOP_ARGS ?=
 PIPELINE_ARGS ?=
+MAIN_THEOREM_ARGS ?=
 REWRITE_ARGS ?=
 REVIEW_ARGS ?=
 MATERIALIZE_ARGS ?=
 GENERATED_LOCAL_ARGS ?=
 
-.PHONY: help build check check-theory check-derived check-scratch smoke seed loop loop-continue pipeline rewrite review refactor-to-generated-materialized
+.PHONY: help build check check-theory check-derived check-scratch smoke seed loop loop-continue pipeline main-theorem rewrite review refactor-to-generated
 
 help:
 	@printf '%s\n' \
@@ -49,19 +47,19 @@ help:
 		'  make loop          - run the default worker loop via scripts/atc_cli.py loop' \
 		'  make loop-continue - same as loop, but keep current runtime state' \
 		'  make pipeline      - run seed -> loop -> rewrite -> review via scripts/atc_cli.py pipeline' \
+		'  make main-theorem  - run a one-shot main theorem session via scripts/atc_cli.py main-theorem' \
 		'  make rewrite       - run scripts/atc_cli.py rewrite' \
 		'  make review        - run scripts/atc_cli.py review' \
-		'  make refactor-to-generated-materialized - run pass1.5 -> pass2 -> split -> local pass1.2 -> local pass1.3' \
+		'  make refactor-to-generated - run pass1.5 -> pass2 -> split -> local pass1.2 -> local pass1.3' \
 		'' \
 		'Common overrides:' \
 		'  WORKER_COMMAND="uv run scripts/mock_worker.py"' \
 		'  WORKER_TIMEOUT=600 CODEX_TIMEOUT=540' \
-		'  MAIN_THEOREM_INTERVAL=10 MAIN_THEOREM_FORMALIZE_WORKER_TIMEOUT=900' \
-		'  MAIN_THEOREM_REPAIR_WORKER_TIMEOUT=600' \
 		'  THEORY_FILE=... DERIVED_FILE=... SCRATCH_FILE=...' \
 		'  THEORY_FILE should point to the Theory.lean entry module' \
 		'  SEED_ARGS="--context-file path/to/context.tex --seed-count 4"' \
 		'  LOOP_ARGS="--max-iterations 40"' \
+		'  MAIN_THEOREM_ARGS="--skip-verify --current-iteration 0"' \
 		'  PIPELINE_ARGS="--context-file path/to/context.tex --max-iterations 40"'
 
 build:
@@ -93,9 +91,6 @@ loop:
 		--worker-command "$(WORKER_COMMAND)" \
 		--worker-timeout "$(WORKER_TIMEOUT)" \
 		--codex-timeout "$(CODEX_TIMEOUT)" \
-		--main-theorem-interval $(MAIN_THEOREM_INTERVAL) \
-		--main-theorem-formalize-worker-timeout $(MAIN_THEOREM_FORMALIZE_WORKER_TIMEOUT) \
-		--main-theorem-repair-worker-timeout $(MAIN_THEOREM_REPAIR_WORKER_TIMEOUT) \
 		$(LOOP_ARGS)
 
 loop-continue:
@@ -104,9 +99,6 @@ loop-continue:
 		--worker-timeout "$(WORKER_TIMEOUT)" \
 		--codex-timeout "$(CODEX_TIMEOUT)" \
 		--no-initialize-on-start \
-		--main-theorem-interval $(MAIN_THEOREM_INTERVAL) \
-		--main-theorem-formalize-worker-timeout $(MAIN_THEOREM_FORMALIZE_WORKER_TIMEOUT) \
-		--main-theorem-repair-worker-timeout $(MAIN_THEOREM_REPAIR_WORKER_TIMEOUT) \
 		$(LOOP_ARGS)
 
 pipeline:
@@ -114,12 +106,16 @@ pipeline:
 		--worker-command "$(WORKER_COMMAND)" \
 		--worker-timeout "$(WORKER_TIMEOUT)" \
 		--codex-timeout "$(CODEX_TIMEOUT)" \
-		--main-theorem-interval $(MAIN_THEOREM_INTERVAL) \
-		--main-theorem-formalize-worker-timeout $(MAIN_THEOREM_FORMALIZE_WORKER_TIMEOUT) \
-		--main-theorem-repair-worker-timeout $(MAIN_THEOREM_REPAIR_WORKER_TIMEOUT) \
 		--preview-file $(PREVIEW_FILE) \
 		--review-output-file $(REVIEWED_FILE) \
 		$(PIPELINE_ARGS)
+
+main-theorem:
+	$(ATC) main-theorem \
+		--theory-file $(THEORY_FILE) \
+		--derived-file $(DERIVED_FILE) \
+		--scratch-file $(SCRATCH_FILE) \
+		$(MAIN_THEOREM_ARGS)
 
 rewrite:
 	$(ATC) rewrite \
@@ -135,7 +131,7 @@ review:
 		--output-file $(REVIEWED_FILE) \
 		$(REVIEW_ARGS)
 
-refactor-to-generated-materialized:
+refactor-to-generated:
 	cp $(DERIVED_FILE) $(PREVIEW_FILE)
 	$(ATC) rewrite \
 		--input-file $(PREVIEW_FILE) \

@@ -4,8 +4,15 @@ import argparse
 import json
 import math
 import re
+import sys
 from pathlib import Path
 from typing import Any
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+SCRIPTS_ROOT = SCRIPT_DIR.parent
+scripts_root_str = str(SCRIPTS_ROOT)
+if scripts_root_str not in sys.path:
+    sys.path.insert(0, scripts_root_str)
 
 from common import write_json_atomic
 
@@ -15,6 +22,7 @@ DEFAULT_DEPS_FILE = Path("data/derived-deps.json")
 DEFAULT_OUTPUT_FILE = Path("data/derived-chunk-plan.json")
 
 DECL_PATTERN = re.compile(r"^(theorem|lemma|def|abbrev|inductive|structure)\s+([^\s:({]+)", re.MULTILINE)
+THEOREM_KINDS = {"theorem", "lemma"}
 
 
 def _round_float(value: float) -> float:
@@ -27,7 +35,7 @@ def load_json(path: Path) -> Any:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def parse_declaration_order(derived_text: str) -> list[dict[str, Any]]:
+def parse_declaration_entries(derived_text: str) -> list[dict[str, Any]]:
     declarations: list[dict[str, Any]] = []
     for match in DECL_PATTERN.finditer(derived_text):
         declarations.append(
@@ -41,6 +49,35 @@ def parse_declaration_order(derived_text: str) -> list[dict[str, Any]]:
     if not declarations:
         raise ValueError("Derived file did not contain any supported declarations")
     return declarations
+
+
+def parse_declaration_order(derived_text: str) -> list[dict[str, Any]]:
+    entries = parse_declaration_entries(derived_text)
+    grouped: list[dict[str, Any]] = []
+    pending_prefix_entries: list[dict[str, Any]] = []
+
+    def build_group(members: list[dict[str, Any]], *, anchor: dict[str, Any]) -> dict[str, Any]:
+        return {
+            "kind": anchor["kind"],
+            "short_name": anchor["short_name"],
+            "name": anchor["name"],
+            "line": int(members[0]["line"]),
+            "anchor_line": int(anchor["line"]),
+            "member_names": [str(member["name"]) for member in members],
+            "member_kinds": [str(member["kind"]) for member in members],
+        }
+
+    for entry in entries:
+        if str(entry["kind"]) in THEOREM_KINDS:
+            members = pending_prefix_entries + [entry]
+            grouped.append(build_group(members, anchor=entry))
+            pending_prefix_entries = []
+            continue
+        pending_prefix_entries.append(entry)
+
+    for entry in pending_prefix_entries:
+        grouped.append(build_group([entry], anchor=entry))
+    return grouped
 
 
 def load_declaration_order(derived_file: Path) -> list[dict[str, Any]]:

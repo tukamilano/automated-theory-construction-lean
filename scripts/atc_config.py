@@ -65,18 +65,12 @@ class RuntimeConfig:
     run_seed: bool = True
     run_refactor_pass_1_5: bool = True
     run_refactor_pass_2: bool = True
-    run_main_theorem_session: bool = True
     try_at_each_step_tactic: str = "with_reducible exact?"
     open_problem_failure_threshold: int = 2
     generated_repair_verify_timeout: int = 300
     prover_retry_budget_sec: int = 120
     formalization_retry_budget_sec: int = 300
     max_same_error_streak: int = 5
-    main_theorem_interval: int = 0
-    main_theorem_formalize_worker_timeout: int | None = None
-    main_theorem_repair_worker_timeout: int | None = None
-    main_theorem_verify_timeout: int = 600
-    main_theorem_formalization_retry_budget_sec: int = 3600
 
 
 @dataclass
@@ -554,14 +548,6 @@ def load_app_config(args: Any) -> tuple[AppConfig, dict[str, str]]:
             )
             or "with_reducible exact?"
         ),
-        run_main_theorem_session=bool(
-            choose_bool(
-                cli_names=("run_main_theorem_session",),
-                file_keys=("runtime", "run_main_theorem_session"),
-                default=True,
-                label="runtime.run_main_theorem_session",
-            )
-        ),
         open_problem_failure_threshold=int(
             choose_int(
                 cli_names=("open_problem_failure_threshold",),
@@ -605,47 +591,6 @@ def load_app_config(args: Any) -> tuple[AppConfig, dict[str, str]]:
                 default=5,
                 minimum=1,
                 label="runtime.max_same_error_streak",
-            )
-        ),
-        main_theorem_interval=int(
-            choose_int(
-                cli_names=("main_theorem_interval",),
-                file_keys=("runtime", "main_theorem_interval"),
-                default=0,
-                minimum=0,
-                label="runtime.main_theorem_interval",
-            )
-        ),
-        main_theorem_formalize_worker_timeout=choose_int(
-            cli_names=("main_theorem_formalize_worker_timeout",),
-            file_keys=("runtime", "main_theorem_formalize_worker_timeout"),
-            default=None,
-            minimum=0,
-            label="runtime.main_theorem_formalize_worker_timeout",
-        ),
-        main_theorem_repair_worker_timeout=choose_int(
-            cli_names=("main_theorem_repair_worker_timeout",),
-            file_keys=("runtime", "main_theorem_repair_worker_timeout"),
-            default=None,
-            minimum=0,
-            label="runtime.main_theorem_repair_worker_timeout",
-        ),
-        main_theorem_verify_timeout=int(
-            choose_int(
-                cli_names=("main_theorem_verify_timeout",),
-                file_keys=("runtime", "main_theorem_verify_timeout"),
-                default=600,
-                minimum=0,
-                label="runtime.main_theorem_verify_timeout",
-            )
-        ),
-        main_theorem_formalization_retry_budget_sec=int(
-            choose_int(
-                cli_names=("main_theorem_formalization_retry_budget_sec",),
-                file_keys=("runtime", "main_theorem_formalization_retry_budget_sec"),
-                default=3600,
-                minimum=0,
-                label="runtime.main_theorem_formalization_retry_budget_sec",
             )
         ),
     )

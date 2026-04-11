@@ -7,8 +7,9 @@ import subprocess
 import sys
 from pathlib import Path
 
-
-REPO_ROOT = Path(__file__).resolve().parent.parent
+SCRIPT_DIR = Path(__file__).resolve().parent
+SCRIPTS_ROOT = SCRIPT_DIR.parent
+REPO_ROOT = SCRIPTS_ROOT.parent
 DEFAULT_THEORY = Path("AutomatedTheoryConstruction/Theory.lean")
 DEFAULT_DERIVED = Path("AutomatedTheoryConstruction/Derived.lean")
 DEFAULT_SEEDS = Path("AutomatedTheoryConstruction/seeds.jsonl")
@@ -130,7 +131,7 @@ def build_loop_command(args: argparse.Namespace) -> list[str]:
         "uv",
         "run",
         "python",
-        "scripts/run_loop.py",
+        "scripts/loop/run_loop.py",
         "--no-initialize-on-start",
     ]
     if not args.phase_logs:
@@ -157,26 +158,6 @@ def build_loop_command(args: argparse.Namespace) -> list[str]:
     append_optional_flag(cmd, "--prover-retry-budget-sec", args.prover_retry_budget_sec)
     append_optional_flag(cmd, "--formalization-retry-budget-sec", args.formalization_retry_budget_sec)
     append_optional_flag(cmd, "--max-same-error-streak", args.max_same_error_streak)
-    if args.run_main_theorem_session:
-        append_optional_flag(cmd, "--main-theorem-interval", args.main_theorem_interval)
-    else:
-        cmd.extend(["--main-theorem-interval", "0"])
-    append_optional_flag(
-        cmd,
-        "--main-theorem-formalize-worker-timeout",
-        args.main_theorem_formalize_worker_timeout,
-    )
-    append_optional_flag(
-        cmd,
-        "--main-theorem-repair-worker-timeout",
-        args.main_theorem_repair_worker_timeout,
-    )
-    append_optional_flag(cmd, "--main-theorem-verify-timeout", args.main_theorem_verify_timeout)
-    append_optional_flag(
-        cmd,
-        "--main-theorem-formalization-retry-budget-sec",
-        args.main_theorem_formalization_retry_budget_sec,
-    )
     return cmd
 
 
@@ -185,7 +166,7 @@ def build_review_command_with_input(args: argparse.Namespace, *, input_file: str
         "uv",
         "run",
         "python",
-        "scripts/direct_refactor_derived.py",
+        "scripts/refactor/direct_refactor_derived.py",
         "--input-file",
         input_file,
         "--output-file",
@@ -206,7 +187,7 @@ def build_rewrite_command(args: argparse.Namespace, *, input_file: str, output_f
         "uv",
         "run",
         "python",
-        "scripts/apply_try_at_each_step_rewrites.py",
+        "scripts/refactor/apply_try_at_each_step_rewrites.py",
         "--input-file",
         input_file,
         "--output-file",
@@ -257,15 +238,10 @@ def _add_budget_flags(parser: argparse.ArgumentParser) -> None:
     retry_budget_help = "Whole retry-loop budget in seconds."
     parser.add_argument("--prover-retry-budget-sec", type=int, help=retry_budget_help)
     parser.add_argument("--formalization-retry-budget-sec", type=int, help=retry_budget_help)
-    parser.add_argument("--main-theorem-formalization-retry-budget-sec", type=int, help=retry_budget_help)
 
 
 def _add_loop_tuning_flags(parser: argparse.ArgumentParser, *, worker_timeout_help: str, verify_timeout_help: str) -> None:
     parser.add_argument("--open-problem-failure-threshold", type=int)
-    parser.add_argument("--main-theorem-interval", type=int)
-    parser.add_argument("--main-theorem-formalize-worker-timeout", type=int, help=worker_timeout_help)
-    parser.add_argument("--main-theorem-repair-worker-timeout", type=int, help=worker_timeout_help)
-    parser.add_argument("--main-theorem-verify-timeout", type=int, help=verify_timeout_help)
     parser.add_argument("--max-same-error-streak", type=int)
 
 
@@ -273,7 +249,6 @@ def _add_pass_toggles(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--run-seed", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--run-refactor-pass-1_5", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--run-refactor-pass-2", action=argparse.BooleanOptionalAction, default=True)
-    parser.add_argument("--run-main-theorem-session", action=argparse.BooleanOptionalAction, default=True)
 
 
 def _add_path_flags(parser: argparse.ArgumentParser) -> None:
@@ -367,7 +342,7 @@ def main() -> int:
 
     if args.run_refactor_pass_1_5:
         rewrite_cmd = build_rewrite_command(args, input_file=rewrite_input, output_file=rewrite_output)
-        rewrite_result = run_stage("refactor-pass-1_5", rewrite_cmd, dry_run=args.dry_run, capture_output=True)
+        rewrite_result = run_stage("refactor-pass-1_5", rewrite_cmd, dry_run=args.dry_run)
         if rewrite_result is None or rewrite_result.returncode == 0:
             review_input = rewrite_output
         else:

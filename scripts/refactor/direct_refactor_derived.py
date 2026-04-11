@@ -3,9 +3,21 @@ from __future__ import annotations
 import argparse
 import shutil
 import sys
+import threading
+import time
 from pathlib import Path
+from typing import Any
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+SCRIPTS_ROOT = SCRIPT_DIR.parent
+scripts_root_str = str(SCRIPTS_ROOT)
+if scripts_root_str not in sys.path:
+    sys.path.insert(0, scripts_root_str)
 
 from derived_refactor_utils import build_report
+from derived_refactor_utils import compare_theorem_inventories
+from derived_refactor_utils import debug_log
+from derived_refactor_utils import extract_theorem_entries_from_code
 from derived_refactor_utils import print_report
 from derived_refactor_utils import write_report
 from llm_exec import build_exec_command
@@ -19,6 +31,7 @@ DEFAULT_REPORT = Path("AutomatedTheoryConstruction/Derived.refactored.reviewed.r
 DEFAULT_POLICY = Path(".codex/skills/lean-review-refactor-policy/SKILL.md")
 DEFAULT_LEAN_RULE = Path(".codex/skills/lean-rule/SKILL.md")
 DEFAULT_MATHLIB_USAGE = Path(".codex/skills/mathlib-usage/SKILL.md")
+HEARTBEAT_INTERVAL_SEC = 10.0
 
 
 def _tail_excerpt(text: str, *, max_lines: int = 8, max_chars: int = 800) -> list[str]:
@@ -32,6 +45,52 @@ def _tail_excerpt(text: str, *, max_lines: int = 8, max_chars: int = 800) -> lis
     trimmed = joined[-max_chars:]
     trimmed_lines = [line for line in trimmed.splitlines() if line.strip()]
     return trimmed_lines or excerpt[-1:]
+
+
+def _file_observation(path: Path) -> dict[str, Any]:
+    observed: dict[str, Any] = {"path": str(path), "exists": path.exists()}
+    if not path.exists():
+        return observed
+    stat = path.stat()
+    observed["size_bytes"] = stat.st_size
+    observed["mtime_epoch_sec"] = stat.st_mtime
+    return observed
+
+
+def _write_running_report(
+    report_file: Path,
+    *,
+    input_file: Path,
+    output_file: Path,
+    provider: str,
+    model: str | None,
+    sandbox: str,
+    verify_requested: bool,
+    skip_copy: bool,
+    phase: str,
+    elapsed_sec: float,
+    extra: dict[str, Any] | None = None,
+) -> None:
+    write_report(
+        report_file,
+        build_report(
+            "running",
+            phase,
+            input_file=input_file,
+            output_file=output_file,
+            report_file=report_file,
+            extra={
+                "provider": provider,
+                "model": model or "",
+                "sandbox": sandbox,
+                "verify_requested": verify_requested,
+                "skip_copy": skip_copy,
+                "elapsed_sec": round(elapsed_sec, 1),
+                "output_observation": _file_observation(output_file),
+                **(extra or {}),
+            },
+        ),
+    )
 
 
 def build_prompt(
@@ -97,6 +156,7 @@ def main() -> int:
     policy_file = Path(args.policy_file)
     lean_rule_file = Path(args.lean_rule_file)
     mathlib_usage_file = Path(args.mathlib_usage_file)
+    before_entries = extract_theorem_entries_from_code(input_file, input_file.read_text(encoding="utf-8")) if input_file.exists() else []
 
     if not input_file.exists():
         report = build_report(
@@ -127,6 +187,24 @@ def main() -> int:
     output_file.parent.mkdir(parents=True, exist_ok=True)
     if not args.skip_copy:
         shutil.copyfile(input_file, output_file)
+    debug_log(
+        "Review pass setup complete: "
+        f"input={input_file} output={output_file} copied={'no' if args.skip_copy else 'yes'}"
+    )
+    started_monotonic = time.monotonic()
+    _write_running_report(
+        report_file,
+        input_file=input_file,
+        output_file=output_file,
+        provider=provider,
+        model=args.model,
+        sandbox=args.sandbox,
+        verify_requested=not args.no_verify,
+        skip_copy=bool(args.skip_copy),
+        phase="worker_pending",
+        elapsed_sec=0.0,
+        extra={"before_theorem_count": len(before_entries)},
+    )
 
     prompt = build_prompt(
         input_file=input_file,
@@ -167,6 +245,41 @@ def main() -> int:
         print_report(report)
         return 0
 
+    stop_heartbeat = threading.Event()
+
+    def _heartbeat() -> None:
+        last_signature: tuple[bool, int | None, float | None] | None = None
+        while not stop_heartbeat.wait(HEARTBEAT_INTERVAL_SEC):
+            observation = _file_observation(output_file)
+            signature = (
+                bool(observation.get("exists")),
+                int(observation.get("size_bytes")) if observation.get("size_bytes") is not None else None,
+                float(observation.get("mtime_epoch_sec")) if observation.get("mtime_epoch_sec") is not None else None,
+            )
+            elapsed = time.monotonic() - started_monotonic
+            if signature != last_signature:
+                debug_log(
+                    "Review pass heartbeat: "
+                    f"elapsed={elapsed:.1f}s size={observation.get('size_bytes', 0)}"
+                )
+                last_signature = signature
+            _write_running_report(
+                report_file,
+                input_file=input_file,
+                output_file=output_file,
+                provider=provider,
+                model=args.model,
+                sandbox=args.sandbox,
+                verify_requested=not args.no_verify,
+                skip_copy=bool(args.skip_copy),
+                phase="worker_running",
+                elapsed_sec=elapsed,
+                extra={"before_theorem_count": len(before_entries)},
+            )
+
+    heartbeat_thread = threading.Thread(target=_heartbeat, name="review-heartbeat", daemon=True)
+    heartbeat_thread.start()
+
     try:
         completed = run_llm_exec(
             provider=provider,
@@ -176,6 +289,8 @@ def main() -> int:
             capture_output=True,
         )
     except Exception as exc:
+        stop_heartbeat.set()
+        heartbeat_thread.join(timeout=1.0)
         report = build_report(
             "error",
             "worker_error",
@@ -194,6 +309,8 @@ def main() -> int:
         write_report(report_file, report)
         print_report(report)
         return 1
+    stop_heartbeat.set()
+    heartbeat_thread.join(timeout=1.0)
 
     if args.print_worker_output:
         if completed.stdout:
@@ -203,7 +320,7 @@ def main() -> int:
             sys.stderr.write(completed.stderr)
             sys.stderr.flush()
 
-    status = "ok" if completed.returncode == 0 else "error"
+    stop_reason = "completed" if completed.returncode == 0 else "worker_error"
     stdout_excerpt = _tail_excerpt(completed.stdout or "")
     stderr_excerpt = _tail_excerpt(completed.stderr or "")
     if completed.returncode != 0:
@@ -219,14 +336,42 @@ def main() -> int:
         "verify_requested": not args.no_verify,
         "skip_copy": bool(args.skip_copy),
         "returncode": completed.returncode,
+        "elapsed_sec": round(time.monotonic() - started_monotonic, 1),
     }
-    if completed.returncode != 0:
+    if completed.returncode == 0:
+        try:
+            refactored_code = output_file.read_text(encoding="utf-8")
+        except Exception as exc:
+            stop_reason = "output_read_failed"
+            extra["output_read_error"] = str(exc)
+        else:
+            after_entries = extract_theorem_entries_from_code(output_file, refactored_code)
+            inventory_check = compare_theorem_inventories(before_entries, after_entries)
+            extra["before_theorem_count"] = inventory_check["before_theorem_count"]
+            extra["after_theorem_count"] = inventory_check["after_theorem_count"]
+            if not inventory_check["ok"]:
+                stop_reason = "inventory_changed"
+                extra["missing_names"] = inventory_check["missing_names"]
+                extra["changed_statements"] = inventory_check["changed_statements"]
+    else:
         extra["stdout_excerpt"] = stdout_excerpt
         extra["stderr_excerpt"] = stderr_excerpt
+    status = "ok" if stop_reason == "completed" else "error"
+    stop_detail = ""
+    if stop_reason == "worker_error":
+        stop_detail = f"review command exited with code {completed.returncode}"
+    elif stop_reason == "output_read_failed":
+        stop_detail = f"review output could not be read: {extra.get('output_read_error', '')}"
+    elif stop_reason == "inventory_changed":
+        stop_detail = (
+            "review output changed theorem inventory: "
+            f"missing={len(extra.get('missing_names', []))}, "
+            f"changed_statements={len(extra.get('changed_statements', []))}"
+        )
     report = build_report(
         status,
-        "completed" if completed.returncode == 0 else "worker_error",
-        stop_detail="" if completed.returncode == 0 else f"review command exited with code {completed.returncode}",
+        stop_reason,
+        stop_detail=stop_detail,
         input_file=input_file,
         output_file=output_file,
         report_file=report_file,
@@ -234,7 +379,7 @@ def main() -> int:
     )
     write_report(report_file, report)
     print_report(report)
-    return completed.returncode
+    return 0 if status == "ok" else 1
 
 
 if __name__ == "__main__":
