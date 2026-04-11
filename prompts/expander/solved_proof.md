@@ -54,12 +54,19 @@ For every returned candidate:
 - It must be meaningfully distinct from the current target and visible verified results.
 - It must explain why it is not peripheral.
 - It should be concise and avoid bloated formulations; prefer shorter core statements that capture a single, reusable idea.
+- Prefer the shortest statement that captures the reusable idea.
+- Do not bundle multiple conclusions, regimes, or case splits into one candidate.
+- Avoid long hypothesis stacks unless each hypothesis is essential to a single sharp claim.
+- If a candidate can be split into a cleaner core theorem and a later corollary, return only the core theorem.
 
 ## low_quality_candidates_to_reject
 - cosmetic rewrites
 - variable-renamings
 - notation-only rewrites
 - long, verbose restatements that duplicate the same content with cosmetic elaboration
+- statements that combine several theorem-sized ideas into one candidate
+- statements with long scaffolding or multiple nonessential qualifiers
+- conjunction-style candidates that should be split into separate problems
 - one-off example checks with only local value
 - shallow specializations or shallow generalizations that preserve the same content
 - local decompositions when a stronger outward-looking follow-up is available

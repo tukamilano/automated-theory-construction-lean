@@ -1,0 +1,3 @@
+import AutomatedTheoryConstruction.Generated.C0001_sequent_singleton_false
+import AutomatedTheoryConstruction.Generated.C0002_support_ok_candidate
+import AutomatedTheoryConstruction.Generated.C0003_handed_support_left

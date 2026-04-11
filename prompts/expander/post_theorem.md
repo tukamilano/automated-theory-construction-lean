@@ -31,6 +31,10 @@ When `verify_success = true` and `result = counterexample`:
 - Use `theory_state` and `research_agenda` as primary value guidance after local plausibility is established.
 - Reject weak, duplicate, cosmetic, or merely nearby statements.
 - Return candidates in concise, theorem-sized form: one core claim per candidate, avoiding verbose scaffolding.
+- Prefer the shortest statement that captures the reusable idea.
+- Do not bundle multiple conclusions, regimes, or case splits into one candidate.
+- Avoid long hypothesis stacks unless each hypothesis is essential to a single sharp claim.
+- If a candidate can be split into a cleaner core theorem and a later corollary, return only the core theorem.
 - De-duplicate against:
   - `open_problems`
   - visible `Derived.lean` statements
@@ -49,6 +53,9 @@ When `verify_success = true` and `result = counterexample`:
 - statements whose main role is bookkeeping
 - statements justified only by matching agenda words
 - statements that do not clearly advance a `desired_summary_changes`, `current_bottlenecks`, or `missing_bridges` item
+- statements that combine several theorem-sized ideas into one candidate
+- statements with long scaffolding or multiple nonessential qualifiers
+- conjunction-style candidates that should be split into separate problems
 - verbose restatements that pad language without increasing theorem-level content
 
 ## output_schema

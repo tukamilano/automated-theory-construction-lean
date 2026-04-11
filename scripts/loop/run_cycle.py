@@ -153,7 +153,7 @@ def main() -> int:
     parser.add_argument("--formalization-retry-budget-sec", type=int, default=300)
     parser.add_argument("--max-same-error-streak", type=int, default=5)
     parser.add_argument("--generated-repair-verify-timeout", type=int, default=300)
-    parser.add_argument("--generated-local-worker-timeout", type=int, default=390)
+    parser.add_argument("--generated-local-worker-timeout", type=int, default=300)
     parser.add_argument("--generated-local-manifest-verify-timeout", type=int, default=300)
     parser.add_argument("--generated-local-max-rounds-per-pass", type=int, default=5)
     parser.add_argument("--initialize-on-start", action=argparse.BooleanOptionalAction, default=False)

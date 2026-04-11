@@ -1,15 +1,15 @@
 {
   "paths": {
-    "theory_file": "../AutomatedTheoryConstruction/Theory.lean",
-    "derived_file": "../AutomatedTheoryConstruction/Derived.lean",
-    "scratch_file": "../AutomatedTheoryConstruction/Scratch.lean",
-    "seeds_file": "../AutomatedTheoryConstruction/seeds.jsonl",
-    "data_dir": "../data",
-    "prompt_dir": "../prompts",
-    "log_dir": "../data/runs",
-    "preview_file": "../AutomatedTheoryConstruction/Derived.refactored.preview.lean",
-    "reviewed_file": "../AutomatedTheoryConstruction/Derived.refactored.reviewed.lean",
-    "theorem_reuse_memory_file": "../data/theorem_reuse_memory.json"
+    "theory_file": "AutomatedTheoryConstruction/Theory.lean",
+    "derived_file": "AutomatedTheoryConstruction/Derived.lean",
+    "scratch_file": "AutomatedTheoryConstruction/Scratch.lean",
+    "seeds_file": "AutomatedTheoryConstruction/seeds.jsonl",
+    "data_dir": "data",
+    "prompt_dir": "prompts",
+    "log_dir": "data/runs",
+    "preview_file": "AutomatedTheoryConstruction/Derived.refactored.preview.lean",
+    "reviewed_file": "AutomatedTheoryConstruction/Derived.refactored.reviewed.lean",
+    "theorem_reuse_memory_file": "data/theorem_reuse_memory.json"
   },
   "worker": {
     "command": "uv run scripts/codex_worker.py",
