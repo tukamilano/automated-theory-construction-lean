@@ -97,33 +97,104 @@ def _prioritize_open_problems_result(payload: dict[str, Any]) -> dict[str, Any]:
             "guidance": "Prefer neutral exploratory problems in mock mode.",
             "rationale": "Mock worker does not compute a real global direction.",
         },
+        "desired_summary_changes": [],
+        "current_bottlenecks": [],
+        "overexplored_patterns": [],
+        "missing_bridges": [],
+        "agenda_pressure": [],
     }
 
 
-def _main_theorem_suggest_result(payload: dict[str, Any]) -> dict[str, Any]:
-    candidate_id = str(payload.get("candidate_id", ""))
+def _main_theorem_generate_result(payload: dict[str, Any]) -> dict[str, Any]:
+    candidate_set_id = str(payload.get("candidate_set_id", ""))
+    tracked_problems = payload.get("tracked_problems", [])
+    source_problem_ids: list[str] = []
+    if isinstance(tracked_problems, list):
+        for item in tracked_problems:
+            if not isinstance(item, dict):
+                continue
+            problem_id = str(item.get("problem_id", "")).strip()
+            if problem_id:
+                source_problem_ids.append(problem_id)
+            if len(source_problem_ids) >= 2:
+                break
     return {
-        "candidate_id": candidate_id,
-        "result": "stuck",
-        "statement": "",
-        "theorem_name_stem": "",
-        "docstring_summary": "",
-        "rationale": "mock_worker: no main theorem suggestion",
-        "supporting_theorems": [],
-        "missing_lemmas": [],
+        "candidate_set_id": candidate_set_id,
+        "candidates": [
+            {
+                "candidate_rank_seed": 1,
+                "statement": "True",
+                "theorem_name_stem": "mock_main_theorem_summary",
+                "docstring_summary": "Mock summary theorem target.",
+                "rationale": "mock_worker: placeholder structural summary candidate",
+                "supporting_theorems": [],
+                "missing_lemmas": [],
+                "source_problem_ids": list(source_problem_ids),
+                "theorem_pattern": "structure_discovery",
+                "context_note": "mock_worker: candidate 1 summarises the visible tracked problem family",
+                "conceptual_depth_note": "mock_worker: candidate 1 is framed as a structural summary rather than a local technical step",
+            },
+            {
+                "candidate_rank_seed": 2,
+                "statement": "True -> True",
+                "theorem_name_stem": "mock_main_theorem_bridge",
+                "docstring_summary": "Mock bridge theorem target.",
+                "rationale": "mock_worker: placeholder bridge-style candidate",
+                "supporting_theorems": [],
+                "missing_lemmas": [],
+                "source_problem_ids": list(source_problem_ids),
+                "theorem_pattern": "new_theorem",
+                "context_note": "mock_worker: candidate 2 is positioned as the strongest placeholder title-level result",
+                "conceptual_depth_note": "mock_worker: candidate 2 is framed around a reusable bridge rather than bookkeeping",
+            },
+            {
+                "candidate_rank_seed": 3,
+                "statement": "True ∧ True",
+                "theorem_name_stem": "mock_main_theorem_framework",
+                "docstring_summary": "Mock framework theorem target.",
+                "rationale": "mock_worker: placeholder framework-style candidate",
+                "supporting_theorems": [],
+                "missing_lemmas": [],
+                "source_problem_ids": list(source_problem_ids),
+                "theorem_pattern": "framework_introduction",
+                "context_note": "mock_worker: candidate 3 is positioned as a framework consequence of the visible theory",
+                "conceptual_depth_note": "mock_worker: candidate 3 is framed as a conceptual interface rather than a technical extension",
+            },
+        ],
     }
 
 
-def _main_theorem_plan_result(payload: dict[str, Any]) -> dict[str, Any]:
-    candidate_id = str(payload.get("candidate_id", ""))
+def _main_theorem_select_result(payload: dict[str, Any]) -> dict[str, Any]:
+    candidate_set_id = str(payload.get("candidate_set_id", ""))
+    candidates = payload.get("candidates", [])
+    candidate_rank_seeds = [
+        int(item.get("candidate_rank_seed", 0))
+        for item in candidates
+        if isinstance(item, dict) and isinstance(item.get("candidate_rank_seed"), int)
+    ]
+    selected_candidate_rank_seed = 2 if 2 in candidate_rank_seeds else (candidate_rank_seeds[0] if candidate_rank_seeds else 1)
+    ranking: list[dict[str, Any]] = []
+    for rank, candidate_rank_seed in enumerate(
+        [selected_candidate_rank_seed] + [seed for seed in candidate_rank_seeds if seed != selected_candidate_rank_seed],
+        start=1,
+    ):
+        ranking.append(
+            {
+                "candidate_rank_seed": candidate_rank_seed,
+                "rank": rank,
+                "decision": "select" if rank == 1 else "reject",
+                "reason": (
+                    "mock_worker: selected as the strongest placeholder title-level theorem"
+                    if rank == 1
+                    else f"mock_worker: ranked below the selected placeholder candidate at rank {rank}"
+                ),
+            }
+        )
     return {
-        "candidate_id": candidate_id,
-        "result": "stuck",
-        "plan_summary": "mock_worker: no plan generated",
-        "proof_sketch": "",
-        "supporting_theorems": [],
-        "intermediate_lemmas": [],
-        "notes": "mock_worker: no main theorem proof plan",
+        "candidate_set_id": candidate_set_id,
+        "selected_candidate_rank_seed": selected_candidate_rank_seed,
+        "selection_summary": "mock_worker: choose the strongest placeholder candidate from the fixed candidate set",
+        "ranking": ranking,
     }
 
 
@@ -205,10 +276,10 @@ def main() -> None:
             result_payload = _expand_result(payload)
         elif task_type == "prioritize_open_problems":
             result_payload = _prioritize_open_problems_result(payload)
-        elif task_type == "main_theorem_suggest":
-            result_payload = _main_theorem_suggest_result(payload)
-        elif task_type == "main_theorem_plan":
-            result_payload = _main_theorem_plan_result(payload)
+        elif task_type == "main_theorem_generate":
+            result_payload = _main_theorem_generate_result(payload)
+        elif task_type == "main_theorem_select":
+            result_payload = _main_theorem_select_result(payload)
         elif task_type == "post_theorem_expand":
             result_payload = _post_theorem_expand_result(payload)
         elif task_type == "refactor_derived":

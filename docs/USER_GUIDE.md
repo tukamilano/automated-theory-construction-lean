@@ -29,6 +29,17 @@ If you split your theory across multiple files under `AutomatedTheoryConstructio
 `AutomatedTheoryConstruction/research_agenda.md` is the persistent external value function. Seed generation, open-problem prioritization, and problem expansion read it automatically.
 Optional extra reference files can still be passed ad hoc with `--context-file`.
 
+## Swap the Proof Engine (without touching planning logic)
+
+The loop treats planning/reasoning (`prover`, `formalizer`, `repair`) and Lean verification (`Scratch.lean` check) as separate concerns.
+You can replace only the verification engine used for `Scratch.lean` checks.
+
+- Set `ATC_PROOF_EXECUTOR` to a CLI command before running `atc_cli`.
+- Keep prover/formalize/repair worker commands unchanged.
+- Export contract-compatible JSON from the external process.
+
+For complete schema and replacement steps, follow [`PROOF_EXECUTOR.md`](PROOF_EXECUTOR.md).
+
 ## Quick Mental Model
 
 ```text
@@ -54,23 +65,8 @@ Optional extra reference files can still be passed ad hoc with `--context-file`.
 |   accumulated verified theorems           |
 +-------------------------------------------+
         ↓
-[scripts/refactor_derived.py]
-  final local refactor sweep
-        ↓
 [Derived.refactored.preview.lean]
-        ↓
-[scripts/run_compression_pass.py]
-  pass 1.2 exact-duplicate collapse with incremental repair
-        ↓
-[Derived.refactored.preview.lean]
-        ↓
-[scripts/run_proof_retarget_pass.py]
-  pass 1.3 proof-retarget compression with incremental repair
-        ↓
-[Derived.refactored.preview.lean]
-        ↓
-[scripts/run_presentation_pass.py]
-  optional pass 1.4 presentation shaping
+  copy of Derived.lean used for review-time refactors
         ↓
 [Derived.refactored.preview.lean]
         ↓
@@ -84,6 +80,29 @@ Optional extra reference files can still be passed ad hoc with `--context-file`.
         ↓
 [Derived.refactored.reviewed.lean]
 ```
+
+## Refactor Design
+
+The recommended refactor design is:
+
+```text
+pass 1.5
+  whole-file rewrite cleanup
+        ↓
+pass 2.0
+  whole-file review-focused cleanup
+        ↓
+split into Generated/C000x_*.lean
+        ↓
+per-file validation after split
+        ↓
+lake build AutomatedTheoryConstruction.Generated.Manifest
+and repair at the whole-Generated level if needed
+```
+
+The key idea is that pass 1.5 and pass 2.0 are global stabilization passes, while generated-file splitting is used to make local validation and edits tractable.
+
+`scripts/atc_cli.py materialize-generated` is the entrypoint for the split-based stage. It materializes `Generated/C000x_*.lean`, rebuilds `Manifest.lean` / `catalog.json`, and then performs generated-file verification and optional generated-level repair.
 
 ## Common Commands
 
@@ -142,13 +161,18 @@ uv run python scripts/atc_cli.py pipeline \
 Run the final refactor stages of `Derived.lean`:
 
 ```bash
-uv run python scripts/atc_cli.py refactor
-uv run python scripts/atc_cli.py compress
-uv run python scripts/atc_cli.py retarget
-uv run python scripts/atc_cli.py present
+cp AutomatedTheoryConstruction/Derived.lean AutomatedTheoryConstruction/Derived.refactored.preview.lean
 uv run python scripts/atc_cli.py rewrite
 uv run python scripts/atc_cli.py review
 ```
+
+Run the split-based Generated materialization stage:
+
+```bash
+uv run python scripts/atc_cli.py materialize-generated
+```
+
+This stage prints progress directly to stderr while materializing generated chunks and rebuilding the manifest.
 
 Equivalent `Makefile` shortcuts remain available:
 
@@ -156,7 +180,6 @@ Equivalent `Makefile` shortcuts remain available:
 make seed SEED_ARGS="--seed-count 4"
 make loop LOOP_ARGS="--max-iterations 40"
 make pipeline PIPELINE_ARGS="--max-iterations 40"
-make refactor
 make rewrite
 make review
 ```

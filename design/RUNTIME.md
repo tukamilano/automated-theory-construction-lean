@@ -28,7 +28,23 @@ Each iteration runs the following stages:
 8. Run `expand` to suggest additional problems, biased by the current `next_direction` when available.
 9. Apply deterministic state updates to `open`, `solved`, and `counterexamples`.
 
+Verification in step 5 uses the `scripts/lean_verify.py` entrypoint. If `ATC_PROOF_EXECUTOR` is set, it delegates the actual check to that command instead of running `lake env lean` locally.
+
 Open problems may be either Lean-formal statements or semi-formal research prompts. If a problem cannot be formalized, it stays open.
+
+## Guidance Model
+
+Runtime guidance uses two inputs together:
+
+- `AutomatedTheoryConstruction/research_agenda.md`: long-horizon value guidance describing what counts as meaningful progress.
+- `data/theory_state.json`: short-horizon frontier state describing what matters now.
+
+These play different roles and should be read together:
+
+- `research_agenda.md`: what counts as progress
+- `theory_state.json`: what matters now
+
+Problem generation, open-problem prioritization, and follow-up opportunity proposal should therefore always consume both inputs together. Neither file should be treated as a sufficient standalone source for value judgments at runtime.
 
 ## Repository Layout
 
@@ -107,48 +123,15 @@ ATC_CODEX_TIMEOUT=390 \
 uv run scripts/run_loop.py
 ```
 
-## Final Three-Stage Refactor For `Derived.lean`
+## Final Refactor Pipeline For `Derived.lean`
 
 After the main loop has accumulated enough theorems in `AutomatedTheoryConstruction/Derived.lean`, run the final cleanup in staged passes.
 
-Pass 1 runs a preview-oriented local refactor sweep over the accumulated `Derived.lean` theorems and writes a preview file:
+First copy the accumulated `Derived.lean` theorems into the preview file:
 
 ```bash
-uv run python scripts/refactor_derived.py \
-  --worker-command "uv run python scripts/codex_worker.py" \
-  --output-file AutomatedTheoryConstruction/Derived.refactored.preview.lean
-```
-
-When `--worker-timeout` is omitted for `scripts/refactor_derived.py`, the refactor worker defaults to no outer timeout. Set `--worker-timeout <seconds>` or `ATC_REFACTOR_DERIVED_WORKER_TIMEOUT` if you want a bound for this pass.
-
-Pass 1.2 keeps the same preview file but applies exact-duplicate collapse in place:
-
-```bash
-uv run python scripts/run_compression_pass.py \
-  --input-file AutomatedTheoryConstruction/Derived.refactored.preview.lean \
-  --output-file AutomatedTheoryConstruction/Derived.refactored.preview.lean \
-  --plan-file AutomatedTheoryConstruction/Derived.compression.plan.json \
-  --report-file AutomatedTheoryConstruction/Derived.compression.report.json
-```
-
-Pass 1.3 then keeps the same preview file but applies proof-retarget rewrites in place:
-
-```bash
-uv run python scripts/run_proof_retarget_pass.py \
-  --input-file AutomatedTheoryConstruction/Derived.refactored.preview.lean \
-  --output-file AutomatedTheoryConstruction/Derived.refactored.preview.lean \
-  --plan-file AutomatedTheoryConstruction/Derived.proof_retarget.plan.json \
-  --report-file AutomatedTheoryConstruction/Derived.proof_retarget.report.json
-```
-
-Pass 1.4 optionally applies presentation-only shaping in place:
-
-```bash
-uv run python scripts/run_presentation_pass.py \
-  --input-file AutomatedTheoryConstruction/Derived.refactored.preview.lean \
-  --output-file AutomatedTheoryConstruction/Derived.refactored.preview.lean \
-  --plan-file AutomatedTheoryConstruction/Derived.presentation.plan.json \
-  --report-file AutomatedTheoryConstruction/Derived.presentation.report.json
+cp AutomatedTheoryConstruction/Derived.lean \
+  AutomatedTheoryConstruction/Derived.refactored.preview.lean
 ```
 
 Pass 1.5 rewrites the preview in place using parseable `tryAtEachStep` suggestions:
@@ -177,10 +160,6 @@ uv run python scripts/direct_refactor_derived.py --skip-copy
 
 If you use `scripts/atc_cli.py` or `atc.json`, the stage toggles are:
 
-- `runtime.run_refactor_pass_1`
-- `runtime.run_refactor_pass_1_2`
-- `runtime.run_refactor_pass_1_3`
-- `runtime.run_refactor_pass_1_4`
 - `runtime.run_refactor_pass_1_5`
 - `runtime.run_refactor_pass_2`
 
@@ -200,12 +179,8 @@ By default, `scripts/generate_seeds_from_theory.py` initializes a fresh runtime 
 - delete `AutomatedTheoryConstruction/Derived.compression.report.json` if present
 - delete `AutomatedTheoryConstruction/Derived.proof_retarget.plan.json` if present
 - delete `AutomatedTheoryConstruction/Derived.proof_retarget.report.json` if present
-- delete `AutomatedTheoryConstruction/Derived.presentation.plan.json` if present
-- delete `AutomatedTheoryConstruction/Derived.presentation.report.json` if present
-- delete `AutomatedTheoryConstruction/Derived.refactor.pass1.log.jsonl` if present
 - delete `AutomatedTheoryConstruction/Derived.compression.executor.log.jsonl` if present
 - delete `AutomatedTheoryConstruction/Derived.proof_retarget.executor.log.jsonl` if present
-- delete `AutomatedTheoryConstruction/Derived.presentation.executor.log.jsonl` if present
 - delete `AutomatedTheoryConstruction/Derived.refactored.reviewed.lean` if present
 - run `lake build` for `AutomatedTheoryConstruction.Theory` and `AutomatedTheoryConstruction.Derived`
 

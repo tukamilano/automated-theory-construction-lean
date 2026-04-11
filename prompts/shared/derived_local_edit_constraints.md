@@ -1,0 +1,2 @@
+- No theorem renames, statement changes, deletions.
+- No global file reorganization.

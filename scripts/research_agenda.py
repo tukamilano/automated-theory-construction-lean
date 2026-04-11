@@ -18,6 +18,8 @@ _SECTION_KEY_BY_HEADING = {
 _SECTION_KEYS = tuple(_SECTION_KEY_BY_HEADING.values())
 _BULLET_PREFIX_PATTERN = re.compile(r"^(?:[-*+]\s+|\d+\.\s+)")
 _HEADING_PATTERN = re.compile(r"^\s{0,3}#{2,6}\s+(.+?)\s*$")
+_NUMBERED_HEADING_PREFIX_PATTERN = re.compile(r"^\s*\d+(?:\.\d+)*[.)]?\s+")
+_SURROUNDING_STRONG_PATTERN = re.compile(r"^\*\*(.+?)\*\*$")
 
 
 def empty_research_agenda() -> dict[str, Any]:
@@ -31,7 +33,17 @@ def _normalize_section_item(line: str) -> str:
     stripped = line.strip()
     if not stripped:
         return ""
-    return _BULLET_PREFIX_PATTERN.sub("", stripped).strip()
+    normalized = _BULLET_PREFIX_PATTERN.sub("", stripped).strip()
+    strong_match = _SURROUNDING_STRONG_PATTERN.match(normalized)
+    if strong_match:
+        normalized = strong_match.group(1).strip()
+    return normalized
+
+
+def _normalize_heading(line: str) -> str:
+    normalized = line.strip().lower()
+    normalized = _NUMBERED_HEADING_PREFIX_PATTERN.sub("", normalized)
+    return normalized
 
 
 def parse_research_agenda_markdown(text: str) -> dict[str, Any]:
@@ -45,7 +57,7 @@ def parse_research_agenda_markdown(text: str) -> dict[str, Any]:
     for line in text.splitlines():
         heading_match = _HEADING_PATTERN.match(line)
         if heading_match:
-            heading = heading_match.group(1).strip().lower()
+            heading = _normalize_heading(heading_match.group(1))
             current_section = _SECTION_KEY_BY_HEADING.get(heading)
             continue
         if current_section is not None:
@@ -55,6 +67,8 @@ def parse_research_agenda_markdown(text: str) -> dict[str, Any]:
         items: list[str] = []
         seen: set[str] = set()
         for line in lines:
+            if not _BULLET_PREFIX_PATTERN.match(line.strip()):
+                continue
             item = _normalize_section_item(line)
             if not item:
                 continue
@@ -95,7 +109,9 @@ def format_research_agenda_prompt_block(research_agenda: dict[str, Any] | None) 
         ("soft_constraints", "Soft constraints"),
     )
     lines = [
-        "- Research agenda: treat the following as external value guidance for what kinds of problems are worth generating.",
+        "- Research agenda: treat the following as external value guidance for what kinds of problems count as meaningful progress.",
+        "- Treat this agenda as primary guidance when judging what counts as meaningful progress.",
+        "- Use this agenda to prefer summary-changing, structurally central problems over safe peripheral extensions.",
         "- This agenda is a strong preference, not a hard constraint; still reject duplicates, shallow restatements, and mathematically weak proposals.",
     ]
     for key, label in section_labels:

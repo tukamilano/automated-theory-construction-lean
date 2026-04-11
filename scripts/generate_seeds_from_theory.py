@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import argparse
-import json
+import os
 import sys
 import tempfile
 from pathlib import Path
 from typing import Any
+import json
 
 from common import (
     ARCHIVED_PROBLEMS_FILENAME,
@@ -13,8 +14,14 @@ from common import (
     LEGACY_PRUNED_OPEN_PROBLEMS_FILENAME,
     dedupe_problem_rows_by_stmt,
     load_theory_context,
+    read_jsonl,
     write_jsonl_atomic,
 )
+from guidance import build_guidance_context, unpack_guidance_context
+from generated_library import DEFAULT_GENERATED_CATALOG
+from generated_library import DEFAULT_GENERATED_MANIFEST
+from generated_library import DEFAULT_GENERATED_ROOT
+from generated_library import ensure_generated_scaffold
 from llm_exec import build_exec_command
 from llm_exec import resolve_provider
 from llm_exec import run_llm_exec
@@ -42,52 +49,37 @@ DEFAULT_ARCHIVED = Path("data/archived_problems.jsonl")
 DEFAULT_RESEARCH_AGENDA = DEFAULT_REPO_ROOT / DEFAULT_RESEARCH_AGENDA_PATH
 
 
+def _resolve_model(explicit: str | None) -> str | None:
+    model = (explicit or os.getenv("ATC_CODEX_MODEL") or "").strip()
+    return model or None
+
+
+def _is_unsupported_model_error(provider: str, model: str | None, stderr: str) -> bool:
+    return bool(
+        model
+        and provider == "codex"
+        and "not supported" in stderr.lower()
+        and "model" in stderr.lower()
+    )
+
+
+def _is_capacity_error(provider: str, stderr: str) -> bool:
+    lowered = stderr.lower()
+    return bool(
+        provider == "codex"
+        and (
+            "at capacity" in lowered
+            or "selected model is at capacity" in lowered
+        )
+    )
+
+
 def _preview_file_for(derived_file: Path) -> Path:
     return derived_file.with_name(f"{derived_file.stem}.refactored.preview{derived_file.suffix}")
 
 
 def _reviewed_file_for(derived_file: Path) -> Path:
     return derived_file.with_name(f"{derived_file.stem}.refactored.reviewed{derived_file.suffix}")
-
-
-def _compression_plan_file_for(derived_file: Path) -> Path:
-    return derived_file.with_name(f"{derived_file.stem}.compression.plan.json")
-
-
-def _compression_report_file_for(derived_file: Path) -> Path:
-    return derived_file.with_name(f"{derived_file.stem}.compression.report.json")
-
-
-def _proof_retarget_plan_file_for(derived_file: Path) -> Path:
-    return derived_file.with_name(f"{derived_file.stem}.proof_retarget.plan.json")
-
-
-def _proof_retarget_report_file_for(derived_file: Path) -> Path:
-    return derived_file.with_name(f"{derived_file.stem}.proof_retarget.report.json")
-
-
-def _presentation_plan_file_for(derived_file: Path) -> Path:
-    return derived_file.with_name(f"{derived_file.stem}.presentation.plan.json")
-
-
-def _presentation_report_file_for(derived_file: Path) -> Path:
-    return derived_file.with_name(f"{derived_file.stem}.presentation.report.json")
-
-
-def _refactor_pass_1_log_file_for(derived_file: Path) -> Path:
-    return derived_file.with_name(f"{derived_file.stem}.refactor.pass1.log.jsonl")
-
-
-def _compression_executor_log_file_for(derived_file: Path) -> Path:
-    return derived_file.with_name(f"{derived_file.stem}.compression.executor.log.jsonl")
-
-
-def _proof_retarget_executor_log_file_for(derived_file: Path) -> Path:
-    return derived_file.with_name(f"{derived_file.stem}.proof_retarget.executor.log.jsonl")
-
-
-def _presentation_executor_log_file_for(derived_file: Path) -> Path:
-    return derived_file.with_name(f"{derived_file.stem}.presentation.executor.log.jsonl")
 
 
 def _try_at_each_step_raw_output_file_for(derived_file: Path) -> Path:
@@ -109,11 +101,19 @@ def reset_runtime_before_seed_generation(
     archived_problems_file: Path,
 ) -> None:
     data_dir.mkdir(parents=True, exist_ok=True)
+    generated_root = derived_file.parent / DEFAULT_GENERATED_ROOT.name
+    ensure_generated_scaffold(
+        generated_root=generated_root,
+        manifest_file=generated_root / DEFAULT_GENERATED_MANIFEST.name,
+        catalog_file=generated_root / DEFAULT_GENERATED_CATALOG.name,
+    )
     seeds_file.unlink(missing_ok=True)
     write_jsonl_atomic(data_dir / "open_problems.jsonl", [])
     write_jsonl_atomic(archived_problems_file, [])
     write_jsonl_atomic(data_dir / "solved_problems.jsonl", [])
     write_jsonl_atomic(data_dir / "counterexamples.jsonl", [])
+    (data_dir / "theorem_reuse_memory.json").write_text('{"entries": []}\n', encoding="utf-8")
+    (data_dir / "expand_candidates.jsonl").unlink(missing_ok=True)
     (data_dir / LEGACY_DEFERRED_PROBLEMS_FILENAME).unlink(missing_ok=True)
     (data_dir / LEGACY_PRUNED_OPEN_PROBLEMS_FILENAME).unlink(missing_ok=True)
     theory_state_path(data_dir).unlink(missing_ok=True)
@@ -205,11 +205,12 @@ def build_prompt(
     context_files: list[Path],
     seed_count: int,
     extra_instruction: str,
-    theory_state: dict[str, Any] | None = None,
-    research_agenda: dict[str, Any] | None = None,
+    guidance: dict[str, Any],
+    recent_opportunities: list[dict[str, Any]] | None = None,
 ) -> str:
     if not theory_files:
         raise ValueError("theory_files must be non-empty")
+    theory_state, research_agenda = unpack_guidance_context(guidance)
 
     read_lines = [f"- {path.resolve()}" for path in theory_files]
     if derived_file is not None:
@@ -227,11 +228,18 @@ def build_prompt(
     theory_summary_block = ""
     counterexample_block = ""
     next_direction_block = ""
+    theory_frontier_block = ""
+    opportunity_block = ""
     research_agenda_block = format_research_agenda_prompt_block(research_agenda)
-    state = dict(theory_state or {})
+    state = dict(theory_state)
     theory_snapshot = str(state.get("theory_snapshot", "")).strip()
     direction = state.get("next_direction")
     important_counterexamples = state.get("important_verified_counterexamples", [])
+    desired_summary_changes = state.get("desired_summary_changes", [])
+    current_bottlenecks = state.get("current_bottlenecks", [])
+    overexplored_patterns = state.get("overexplored_patterns", [])
+    missing_bridges = state.get("missing_bridges", [])
+    agenda_pressure = state.get("agenda_pressure", [])
     if theory_snapshot:
         theory_summary_block += f"- Current theory snapshot: {theory_snapshot}\n"
     if isinstance(important_counterexamples, list):
@@ -258,6 +266,57 @@ def build_prompt(
             next_direction_block += (
                 "- This direction is a strong preference, not a hard constraint. Keep some diversity and allow a small number of clearly stronger problems outside it.\n"
             )
+    if isinstance(desired_summary_changes, list):
+        normalized_summary_changes = [str(item).strip() for item in desired_summary_changes if str(item).strip()]
+        if normalized_summary_changes:
+            theory_frontier_block += (
+                "- Prefer problems whose resolution would change the theory summary in one of these ways: "
+                f"{'; '.join(normalized_summary_changes[:4])}\n"
+            )
+    if isinstance(current_bottlenecks, list):
+        normalized_bottlenecks = [str(item).strip() for item in current_bottlenecks if str(item).strip()]
+        if normalized_bottlenecks:
+            theory_frontier_block += (
+                "- Current bottlenecks to address: "
+                f"{'; '.join(normalized_bottlenecks[:4])}\n"
+            )
+    if isinstance(missing_bridges, list):
+        normalized_missing_bridges = [str(item).strip() for item in missing_bridges if str(item).strip()]
+        if normalized_missing_bridges:
+            theory_frontier_block += (
+                "- Missing bridges worth targeting: "
+                f"{'; '.join(normalized_missing_bridges[:4])}\n"
+            )
+    if isinstance(overexplored_patterns, list):
+        normalized_overexplored_patterns = [str(item).strip() for item in overexplored_patterns if str(item).strip()]
+        if normalized_overexplored_patterns:
+            theory_frontier_block += (
+                "- Strongly down-rank problems that fit these overexplored patterns unless they unlock a broader structural step: "
+                f"{'; '.join(normalized_overexplored_patterns[:4])}\n"
+            )
+    if isinstance(agenda_pressure, list):
+        normalized_agenda_pressure = [str(item).strip() for item in agenda_pressure if str(item).strip()]
+        if normalized_agenda_pressure:
+            theory_frontier_block += (
+                "- Additional progress pressure from the current theory state: "
+                f"{'; '.join(normalized_agenda_pressure[:4])}\n"
+            )
+    if isinstance(recent_opportunities, list):
+        rendered_opportunities: list[str] = []
+        for item in recent_opportunities:
+            if not isinstance(item, dict):
+                continue
+            statement = str(item.get("stmt", "")).strip()
+            mode = str(item.get("mode", "")).strip() or "expand_candidate"
+            signal = str(item.get("summary_delta", "")).strip()
+            if not statement or not signal:
+                continue
+            rendered_opportunities.append(f"{mode}: {statement} [signal: {signal}]")
+        if rendered_opportunities:
+            opportunity_block += (
+                "- Recent expand candidates (signal only, not mandatory targets): "
+                f"{'; '.join(rendered_opportunities[:3])}\n"
+            )
 
     return f"""Read these files before generating seeds:
 {chr(10).join(read_lines)}
@@ -271,18 +330,26 @@ Task:
 - Each candidate must be one standalone Lean proposition string suitable for the `stmt` field in `seeds.jsonl`.
 
 Mathematical scope:
+- Treat `theory_state` and `research_agenda` as primary guidance for what counts as meaningful progress.
 - Prefer statements that materially sharpen or extend the visible theory: structural consequences, converses or separations, existence or uniqueness claims, impossibility claims, fixpoint consequences, or useful intermediate lemmas.
+- Prefer problems that would change the theory summary, address a bottleneck, or connect currently separate parts of the theory.
+- Also allow locally scoped but sharp lemmas when they isolate a real obstruction, threshold, criterion, normal form, or reusable reduction step that would materially simplify a blocked proof path.
 - Do not default to immediate one-line corollaries or cosmetic rewrites of visible lemmas.
 - Use only objects, notation, classes, predicates, and constructions that already exist in the files above.
 - Reuse exact symbol names from the source files. Do not invent new definitions or predicates.
+- Prefer notation-first Lean statements when the theory already defines notation or abbreviations.
+- For example, prefer `x ≐ y`, `⊠x`, `□x`, `¬⊬ x`, `GödelFixpoint`, and `HenkinFixpoint` over expanded forms like `ACR.Equivalent x y`, `ACR.Reft.reft x`, or other unnecessarily fully-qualified operator names.
+- Avoid mixed-style statements that partially use notation but still spell out operator definitions by path when notation is already available.
 - Quantify every extra variable or witness explicitly inside the proposition.
 - Keep assumptions minimal but sufficient.
-{theory_summary_block}{counterexample_block}{next_direction_block}{research_agenda_block}
+{theory_summary_block}{counterexample_block}{next_direction_block}{theory_frontier_block}{opportunity_block}{research_agenda_block}
 
 Quality filter:
 {theory_files_rule}{derived_rule}- Do not propose a theorem that is already present in the read files up to cosmetic rewrites, alpha-renaming, trivial reassociation of binders, or other shallow reformulations.
 - Do not propose propositions that are vacuous, purely definitional unfoldings, or trivial preorder facts.
 - Avoid seeds that differ only by notation changes, variable renaming, or tiny local rewrites.
+- A local lemma is acceptable when it has sharp content and clear reuse or bottleneck-relief value; do not reject it merely because it is not theory-global.
+- Strongly avoid safe peripheral extensions that fit known overexplored patterns unless they are the clearest route to a broader organizing result.
 - Keep the seeds mathematically diverse when possible.
 - Make each proposition read like something that could be pasted directly into a theorem statement in Lean.
 {extra_block}
@@ -337,6 +404,20 @@ def validate_seed_payload(payload: dict[str, Any], seed_count: int) -> list[str]
     return seeds
 
 
+def build_batch_generator_rows(*, seeds: list[str], seed_src: str) -> list[dict[str, Any]]:
+    return [
+        {
+            "id": f"op_{index:06d}",
+            "stmt": stmt,
+            "src": seed_src,
+            "priority": "unknown",
+            "priority_rationale": "",
+            "failure_count": 0,
+        }
+        for index, stmt in enumerate(seeds, 1)
+    ]
+
+
 def run_llm(
     *,
     prompt: str,
@@ -346,6 +427,7 @@ def run_llm(
     provider: str,
     model: str | None,
 ) -> str:
+    resolved_model = _resolve_model(model)
     with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", delete=False, suffix=".json") as schema_handle:
         json.dump(schema, schema_handle, ensure_ascii=False, indent=2)
         schema_path = Path(schema_handle.name)
@@ -354,24 +436,43 @@ def run_llm(
         output_path = Path(output_handle.name)
 
     try:
-        completed = run_llm_exec(
-            provider=provider,
-            prompt=prompt,
-            sandbox=sandbox,
-            model=model,
-            cwd=repo_root,
-            output_schema_path=schema_path,
-            output_last_message_path=output_path,
-        )
+        def run_once(use_model: bool):
+            return run_llm_exec(
+                provider=provider,
+                prompt=prompt,
+                sandbox=sandbox,
+                model=resolved_model if use_model else None,
+                cwd=repo_root,
+                output_schema_path=schema_path,
+                output_last_message_path=output_path,
+            )
+
+        completed = run_once(use_model=True)
         if completed.returncode != 0:
             stderr = (completed.stderr or "").strip()
-            raise RuntimeError(f"{provider} exec failed ({completed.returncode}): {stderr}")
+            if _is_unsupported_model_error(provider, resolved_model, stderr):
+                completed = run_once(use_model=False)
+            elif _is_capacity_error(provider, stderr) and resolved_model:
+                completed = run_once(use_model=False)
+
+            if completed.returncode != 0:
+                retry_stderr = (completed.stderr or "").strip()
+                raise RuntimeError(f"{provider} exec failed ({completed.returncode}): {retry_stderr}")
 
         text = output_path.read_text(encoding="utf-8") if output_path.exists() else ""
         if not text.strip():
             text = (completed.stdout or "").strip()
         if not text.strip():
-            raise RuntimeError(f"{provider} exec returned no final message")
+            stderr = (completed.stderr or "").strip()
+            details: list[str] = []
+            if resolved_model:
+                details.append(f"model={resolved_model}")
+            if stderr:
+                details.append(f"stderr={stderr}")
+            if completed.stdout:
+                details.append(f"stdout={completed.stdout.strip()}")
+            suffix = f" ({'; '.join(details)})" if details else ""
+            raise RuntimeError(f"{provider} exec returned no final message{suffix}")
         return text
     finally:
         schema_path.unlink(missing_ok=True)
@@ -380,7 +481,7 @@ def run_llm(
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Generate seeds.jsonl from a Theory.lean entry module using the configured LLM CLI."
+        description="Generate a batch of open-problem candidates from a Theory.lean entry module using the configured LLM CLI."
     )
     parser.add_argument("--theory-file", default=str(DEFAULT_THEORY))
     parser.add_argument("--derived-file", default=str(DEFAULT_DERIVED))
@@ -429,16 +530,6 @@ def main() -> int:
             derived_file=derived_file,
             derived_cleanup_files=(
                 _preview_file_for(derived_file),
-                _compression_plan_file_for(derived_file),
-                _compression_report_file_for(derived_file),
-                _proof_retarget_plan_file_for(derived_file),
-                _proof_retarget_report_file_for(derived_file),
-                _presentation_plan_file_for(derived_file),
-                _presentation_report_file_for(derived_file),
-                _refactor_pass_1_log_file_for(derived_file),
-                _compression_executor_log_file_for(derived_file),
-                _proof_retarget_executor_log_file_for(derived_file),
-                _presentation_executor_log_file_for(derived_file),
                 _reviewed_file_for(derived_file),
                 _try_at_each_step_raw_output_file_for(derived_file),
                 _try_at_each_step_apply_report_file_for(derived_file),
@@ -452,8 +543,11 @@ def main() -> int:
         effective_derived: Path | None = derived_file
     else:
         effective_derived = None
-    effective_theory_state = load_theory_state((repo_root / DEFAULT_DATA_DIR).resolve())
-    effective_research_agenda = load_research_agenda(DEFAULT_RESEARCH_AGENDA)
+    effective_guidance = build_guidance_context(
+        theory_state=load_theory_state((repo_root / DEFAULT_DATA_DIR).resolve()),
+        research_agenda=load_research_agenda(DEFAULT_RESEARCH_AGENDA),
+    )
+    recent_opportunities = read_jsonl((repo_root / DEFAULT_DATA_DIR / "open_problems.jsonl").resolve())[-12:]
 
     prompt = build_prompt(
         theory_files=theory_files,
@@ -461,8 +555,8 @@ def main() -> int:
         context_files=context_files,
         seed_count=args.seed_count,
         extra_instruction=args.extra_instruction,
-        theory_state=effective_theory_state,
-        research_agenda=effective_research_agenda,
+        guidance=effective_guidance,
+        recent_opportunities=recent_opportunities,
     )
     schema = build_output_schema(args.seed_count)
 
@@ -491,24 +585,17 @@ def main() -> int:
     payload = _extract_json_object(raw_output)
     seeds = validate_seed_payload(payload, args.seed_count)
 
-    rows = [
-        {
-            "id": f"op_{index:06d}",
-            "stmt": stmt,
-            "src": args.seed_src,
-            "priority": "unknown",
-            "priority_rationale": "",
-            "failure_count": 0,
-        }
-        for index, stmt in enumerate(seeds, 1)
-    ]
+    rows = build_batch_generator_rows(
+        seeds=seeds,
+        seed_src=args.seed_src,
+    )
     write_jsonl_atomic(output_file, rows)
     if args.initialize_runtime_state:
         sync_open_problems_from_seed_rows(
             data_dir=(repo_root / DEFAULT_DATA_DIR).resolve(),
             rows=rows,
         )
-    sys.stdout.write(f"Wrote {len(rows)} seeds to {output_file}\n")
+    sys.stdout.write(f"Wrote {len(rows)} batch-generated problems to {output_file}\n")
     if args.initialize_runtime_state:
         sys.stdout.write("Reset runtime state before seed generation and loaded the regenerated seeds into open problems.\n")
     return 0

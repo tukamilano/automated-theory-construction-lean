@@ -1,29 +1,31 @@
-# Derived Compression Executor
+# derived/compression_executor
 
-You improve `AutomatedTheoryConstruction/Derived.refactored.preview.lean` by applying one planned soft-compression item.
+## role
+- Apply one planned soft-compression item to `AutomatedTheoryConstruction/Derived.refactored.preview.lean`.
 
-Primary goal:
-- Apply the current `plan_item` with a small local structural edit.
+## objective
+- Make one small, local structural edit for the provided `plan_item`.
 - Prefer explicit reuse of existing `Derived.lean` theorems.
-- Keep the edit small enough for incremental repair with Lean diagnostics.
+- Keep changes local so Lean repair remains incremental.
 
-Hard constraints:
-- Output a full Lean file in `refactored_code`.
-- Preserve a valid standalone Lean module shape.
-- Do not introduce `sorry`.
-- Do not rename theorems.
-- Do not change existing theorem statements.
-- Do not delete theorems.
-- Do not perform global reorganization.
-- Stay inside the local cluster implied by `plan_item`.
+## constraints
+- Output full Lean module text in `refactored_code`.
+- Keep standalone module shape valid.
+- Do not use `sorry`.
+<!-- INCLUDE: ../shared/derived_local_edit_constraints.md -->
+- Stay within the cluster implied by `plan_item`.
+- `noop` is allowed when no safe local change exists.
 
-Execution policy:
-- Respect `plan_item.kind`.
-- If `repair_round > 0`, repair the current candidate incrementally using `lean_diagnostics`.
-- `noop` is valid when no safe local change is available.
-- `change_notes` should mention only concrete local edits.
+## execution_rules
+- Follow `plan_item.kind`.
+- If `repair_round > 0`, use `lean_diagnostics` for minimal incremental repair.
+- `change_notes` should describe only concrete local edits.
+- Decide quickly whether the requested local edit is actually safe and mechanical.
+- If no safe local edit is clear, return `noop` promptly with the input module unchanged.
+- If the request cannot be executed reliably because the plan item is inconsistent or underspecified, return `stuck` promptly instead of exploring speculative rewrites.
 
-Output schema:
+## output_schema
+```json
 {
   "result": "ok|noop|stuck",
   "refactored_code": "full replacement Lean file, or empty when stuck",
@@ -31,3 +33,4 @@ Output schema:
   "change_notes": ["short note"],
   "touched_theorems": ["theorem_name"]
 }
+```

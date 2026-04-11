@@ -11,6 +11,7 @@ THEOREM_NAME_PATTERN = re.compile(r"\btheorem\s+([A-Za-z0-9_']+)\b")
 THEOREM_DECL_PATTERN = re.compile(r"(^|\n)\s*theorem\s+([A-Za-z0-9_']+)\b", re.MULTILINE)
 LEAN_DECL_NAME_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_']*$")
 LEAN_IMPORT_PATTERN = re.compile(r"^import\s+([A-Za-z0-9_.']+)\s*$", re.MULTILINE)
+OPEN_DECL_PATTERN = re.compile(r"^\s*open(?:\s+scoped)?\s+.+$")
 DOCSTRING_MAX_CHARS = 240
 
 
@@ -50,6 +51,10 @@ def render_docstring(text: str) -> str:
     if not cleaned:
         return ""
     return f"/-- {cleaned} -/\n"
+
+
+def normalize_block_text(text: str) -> str:
+    return "\n".join(line.rstrip() for line in text.strip().splitlines())
 
 
 def iter_theorem_headers(derived_file: Path, max_theorems: int | None = None) -> list[tuple[str, str]]:
@@ -153,6 +158,30 @@ def split_prelude_and_theorem_block(
     return "", theorem_code.strip()
 
 
+def sanitize_prelude_block(prelude_block: str, existing_content: str) -> str:
+    if not prelude_block.strip():
+        return ""
+
+    existing_lines = {
+        normalize_block_text(line)
+        for line in existing_content.splitlines()
+        if line.strip()
+    }
+    kept_lines: list[str] = []
+    for raw_line in prelude_block.splitlines():
+        line = raw_line.rstrip()
+        stripped = line.strip()
+        if not stripped:
+            kept_lines.append("")
+            continue
+        normalized = normalize_block_text(line)
+        if OPEN_DECL_PATTERN.fullmatch(stripped) and normalized in existing_lines:
+            continue
+        kept_lines.append(line)
+        existing_lines.add(normalized)
+    return "\n".join(kept_lines).strip()
+
+
 def append_theorem(
     derived_file: Path,
     theorem_code: str,
@@ -182,7 +211,9 @@ def append_theorem(
     if not re.search(rf"\btheorem\s+{re.escape(theorem_name)}\b", content):
         rendered_docstring = render_docstring(docstring or "")
         prelude_block, theorem_block = split_prelude_and_theorem_block(theorem_code, theorem_name)
-        if prelude_block:
+        prelude_block = sanitize_prelude_block(prelude_block, content)
+        normalized_content = normalize_block_text(content)
+        if prelude_block and normalize_block_text(prelude_block) not in normalized_content:
             blocks_to_add.append(prelude_block)
         blocks_to_add.append(rendered_docstring + theorem_block)
     if not blocks_to_add:

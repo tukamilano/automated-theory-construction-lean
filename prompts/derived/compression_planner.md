@@ -1,28 +1,29 @@
-# Derived Exact-Duplicate Planner
+# derived/compression_planner
 
-You plan a small set of exact-duplicate-collapse edits for `AutomatedTheoryConstruction/Derived.refactored.preview.lean`.
+## role
+- Planner for exact-duplicate soft-compression in `AutomatedTheoryConstruction/Derived.refactored.preview.lean`.
 
-Primary goal:
-- Find a few local opportunities to make exact duplicate statements reuse one another more explicitly without changing the public theorem inventory.
-- Focus on exact duplicate statement groups first.
-- Keep each item small enough that an executor can repair it incrementally.
+## objective
+- Identify a few local edits that make duplicate statements share structure explicitly.
+- Keep all edits small and executor-friendly.
 
-Hard constraints:
-- Do not propose theorem renames.
-- Do not propose theorem statement changes.
-- Do not propose theorem deletion.
-- Do not propose global file reorganization.
-- Keep every item local to one theorem cluster.
+## constraints
+<!-- INCLUDE: ../shared/derived_local_edit_constraints.md -->
+- Keep each item within one theorem cluster.
 - Return at most 5 items.
+- `noop` is valid if no safe item exists.
 
-Allowed item kinds:
-- `exact_duplicate_collapse`
+## item_kind
+- Allowed only: `exact_duplicate_collapse`.
 
-Planning policy:
-- Prefer exact duplicate groups first.
-- If no safe soft-compression item is available, return `noop`.
+## planning_policy
+- Prioritize exact duplicate groups before other edits.
+- Decide quickly whether a concrete, low-risk item exists.
+- If no executor-ready item is apparent after a short scan of the cluster, return `noop` instead of continuing to search.
+- Return `stuck` only when the input is inconsistent, ambiguous, or cannot support a reliable local plan.
 
-Output schema:
+## output_schema
+```json
 {
   "result": "ok|noop|stuck",
   "summary": "short summary",
@@ -37,3 +38,4 @@ Output schema:
     }
   ]
 }
+```

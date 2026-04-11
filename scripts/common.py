@@ -103,6 +103,18 @@ def normalize_open_problem_row(row: dict[str, Any]) -> dict[str, Any]:
 
     src = str(normalized.get("src", "generated") or "generated").strip() or "generated"
     normalized["src"] = src
+    normalized["mode"] = str(normalized.get("mode", "local_support") or "local_support").strip() or "local_support"
+    normalized["summary_delta"] = str(normalized.get("summary_delta", "") or "").strip()
+    # Legacy metadata fields are intentionally dropped from the normalized row.
+    normalized.pop("bottleneck_hit", None)
+    normalized.pop("agenda_alignment", None)
+    normalized.pop("why_not_peripheral", None)
+    normalized.pop("unlocks", None)
+    parent_problem_ids = normalized.get("parent_problem_ids", [])
+    if isinstance(parent_problem_ids, list):
+        normalized["parent_problem_ids"] = [str(item).strip() for item in parent_problem_ids if str(item).strip()]
+    else:
+        normalized["parent_problem_ids"] = []
     normalized["priority"] = normalize_open_problem_priority(normalized.get("priority"))
     normalized["priority_rationale"] = str(normalized.get("priority_rationale", "") or "").strip()
     normalized["failure_count"] = _coerce_nonnegative_int(normalized.get("failure_count"), 0)
@@ -258,6 +270,27 @@ def collect_repo_local_lean_context_files(
         visited.add(resolved)
 
     visit(resolved_entry)
+
+    # `Theory.lean` is the Lean import boundary used by Derived/Scratch, but for
+    # prompt-facing context we also want nearby Lambek developments that are not
+    # imported directly because some aggregate imports currently trigger notation
+    # ambiguities or heavy rebuild failures in Lean.
+    theory_path = (resolved_repo_root / "AutomatedTheoryConstruction" / "Theory.lean").resolve()
+    if resolved_entry == theory_path:
+        lambek_files = sorted(
+            {
+                path.resolve()
+                for path in (resolved_repo_root / "AutomatedTheoryConstruction").glob("Lambek*.lean")
+            }
+            | {
+                path.resolve()
+                for path in (resolved_repo_root / "AutomatedTheoryConstruction" / "Lambek").rglob("*.lean")
+            }
+        )
+        for path in lambek_files:
+            if path not in visited and path not in visiting:
+                ordered_files.append(path)
+                visited.add(path)
     return ordered_files
 
 

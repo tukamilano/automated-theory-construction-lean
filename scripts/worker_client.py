@@ -14,6 +14,8 @@ class WorkerSettings:
     command: str
     timeout_sec: int | None
     propagate_timeout: bool
+    codex_timeout_sec: int | None = None
+    propagate_codex_timeout: bool = False
 
 
 def _single_line_excerpt(text: str, limit: int = 240) -> str:
@@ -38,25 +40,38 @@ def _resolve_timeout_seconds(timeout_text: str | None, default: int | None) -> i
 def load_worker_settings(
     command_override: str | None,
     timeout_override: int | None,
+    codex_timeout_override: int | None = None,
     default_timeout_sec: int | None = 180,
 ) -> WorkerSettings:
     command = (command_override or os.getenv("ATC_WORKER_COMMAND") or "").strip()
     timeout_env_text = os.getenv("ATC_WORKER_TIMEOUT")
+    codex_timeout_env_text = os.getenv("ATC_CODEX_TIMEOUT")
     timeout_from_env = _resolve_timeout_seconds(timeout_env_text, default_timeout_sec)
+    codex_timeout_from_env = _resolve_timeout_seconds(codex_timeout_env_text, None)
     timeout_sec = (
         None if timeout_override == 0 else timeout_override
     ) if timeout_override is not None else timeout_from_env
+    codex_timeout_sec = (
+        None if codex_timeout_override == 0 else codex_timeout_override
+    ) if codex_timeout_override is not None else codex_timeout_from_env
     propagate_timeout = timeout_override is not None or bool((timeout_env_text or "").strip())
+    propagate_codex_timeout = (
+        codex_timeout_override is not None or bool((codex_timeout_env_text or "").strip())
+    )
 
     if not command:
         raise ValueError("Worker command is required. Set --worker-command or ATC_WORKER_COMMAND.")
     if timeout_sec is not None and timeout_sec <= 0:
         raise ValueError("Worker timeout must be > 0 seconds.")
+    if codex_timeout_sec is not None and codex_timeout_sec <= 0:
+        raise ValueError("Worker codex timeout must be > 0 seconds.")
 
     return WorkerSettings(
         command=command,
         timeout_sec=timeout_sec,
         propagate_timeout=propagate_timeout,
+        codex_timeout_sec=codex_timeout_sec,
+        propagate_codex_timeout=propagate_codex_timeout,
     )
 
 
@@ -66,9 +81,12 @@ def load_task_worker_settings(
     base_settings: WorkerSettings,
     command_override: str | None = None,
     timeout_override: int | None = None,
+    codex_timeout_override: int | None = None,
 ) -> WorkerSettings:
     env_prefix = f"ATC_{task_name.upper()}_WORKER"
+    codex_env_prefix = f"ATC_{task_name.upper()}"
     timeout_env_text = os.getenv(f"{env_prefix}_TIMEOUT")
+    codex_timeout_env_text = os.getenv(f"{codex_env_prefix}_CODEX_TIMEOUT")
     command = (
         command_override
         or os.getenv(f"{env_prefix}_COMMAND")
@@ -78,24 +96,40 @@ def load_task_worker_settings(
         timeout_env_text,
         base_settings.timeout_sec,
     )
+    codex_timeout_from_env = _resolve_timeout_seconds(
+        codex_timeout_env_text,
+        base_settings.codex_timeout_sec,
+    )
     timeout_sec = (
         None if timeout_override == 0 else timeout_override
     ) if timeout_override is not None else timeout_from_env
+    codex_timeout_sec = (
+        None if codex_timeout_override == 0 else codex_timeout_override
+    ) if codex_timeout_override is not None else codex_timeout_from_env
     propagate_timeout = (
         timeout_override is not None
         or bool((timeout_env_text or "").strip())
         or base_settings.propagate_timeout
+    )
+    propagate_codex_timeout = (
+        codex_timeout_override is not None
+        or bool((codex_timeout_env_text or "").strip())
+        or base_settings.propagate_codex_timeout
     )
 
     if not command:
         raise ValueError(f"{task_name} worker command must not be empty.")
     if timeout_sec is not None and timeout_sec <= 0:
         raise ValueError(f"{task_name} worker timeout must be > 0 seconds.")
+    if codex_timeout_sec is not None and codex_timeout_sec <= 0:
+        raise ValueError(f"{task_name} worker codex timeout must be > 0 seconds.")
 
     return WorkerSettings(
         command=command,
         timeout_sec=timeout_sec,
         propagate_timeout=propagate_timeout,
+        codex_timeout_sec=codex_timeout_sec,
+        propagate_codex_timeout=propagate_codex_timeout,
     )
 
 
@@ -194,6 +228,10 @@ def invoke_worker_json(
     if settings.propagate_timeout:
         worker_env[f"ATC_{task_type.upper()}_WORKER_TIMEOUT"] = (
             "0" if settings.timeout_sec is None else str(settings.timeout_sec)
+        )
+    if settings.propagate_codex_timeout:
+        worker_env[f"ATC_{task_type.upper()}_CODEX_TIMEOUT"] = (
+            "0" if settings.codex_timeout_sec is None else str(settings.codex_timeout_sec)
         )
 
     try:
