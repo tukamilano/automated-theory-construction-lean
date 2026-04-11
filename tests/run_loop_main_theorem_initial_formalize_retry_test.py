@@ -39,7 +39,7 @@ def main() -> int:
 
             verify_success, theorem_name, result, prelude_code, proof_text, counterexample_text, verify_error_excerpt, stmt = (
                 run_loop.attempt_formalization_until_timeout(
-                    problem_id="mt_manual",
+                    problem_id="mt_main_theorem",
                     theorem_name="main_thm_example",
                     stmt="False -> False",
                     result="proof",

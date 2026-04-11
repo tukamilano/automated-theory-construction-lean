@@ -14,6 +14,7 @@ for search_path in (SCRIPTS_ROOT, LOOP_ROOT):
     if search_path_str not in sys.path:
         sys.path.insert(0, search_path_str)
 
+from common import append_jsonl
 from common import normalize_open_problem_row
 from common import read_archived_problem_rows
 from common import read_jsonl
@@ -42,8 +43,10 @@ from theorem_reuse_memory import append_theorem_reuse_memory_entry
 from worker_client import invoke_worker_json
 
 
-SCRATCH_TEMPLATE = render_scratch_template()
+SCRATCH_TEMPLATE = render_scratch_template(include_generated_manifest=False)
 MAX_EXPAND_CANDIDATES_PER_MAIN_THEOREM = 5
+MAIN_THEOREM_CANDIDATE_COUNT = 3
+MAIN_THEOREM_PATTERNS = {"new_theorem", "structure_discovery", "framework_introduction"}
 
 
 def load_prompt_text(prompt_file: str) -> str:
@@ -89,6 +92,63 @@ def _build_main_theorem_followup_candidates(
     for item in intermediate_lemmas:
         add_candidate(item, f"Intermediate lemma suggested while proving `{theorem_name}`.")
     return candidates
+
+
+def _summarize_main_theorem_candidates(candidates: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [
+        {
+            "candidate_rank_seed": int(candidate["candidate_rank_seed"]),
+            "theorem_name_stem": str(candidate["theorem_name_stem"]),
+            "statement": str(candidate["statement"]),
+            "theorem_pattern": str(candidate["theorem_pattern"]),
+        }
+        for candidate in candidates
+    ]
+
+
+def _summarize_main_theorem_ranking(
+    ranking: list[dict[str, Any]],
+    candidate_lookup: dict[int, dict[str, Any]],
+) -> list[dict[str, Any]]:
+    ranking_summary: list[dict[str, Any]] = []
+    for entry in ranking:
+        candidate_rank_seed = int(entry["candidate_rank_seed"])
+        candidate = candidate_lookup[candidate_rank_seed]
+        ranking_summary.append(
+            {
+                "rank": int(entry["rank"]),
+                "candidate_rank_seed": candidate_rank_seed,
+                "decision": str(entry["decision"]),
+                "theorem_name_stem": str(candidate["theorem_name_stem"]),
+                "statement": str(candidate["statement"]),
+                "reason": str(entry["reason"]),
+            }
+        )
+    return ranking_summary
+
+
+def _append_main_theorem_session_event(
+    session_events_path: Path | None,
+    *,
+    event: str,
+    run_id: str,
+    iteration: int,
+    candidate_set_id: str,
+    payload: dict[str, Any],
+) -> None:
+    if session_events_path is None:
+        return
+    append_jsonl(
+        session_events_path,
+        {
+            "event": event,
+            "run_id": run_id,
+            "iteration": iteration,
+            "candidate_set_id": candidate_set_id,
+            "recorded_at": iso_timestamp_now(),
+            **payload,
+        },
+    )
 
 
 def _store_main_theorem_followups(
@@ -153,14 +213,35 @@ def _store_main_theorem_followups(
     return refresh_outcome
 
 
-def validate_main_theorem_suggestion_output(
-    payload: dict[str, Any],
-    expected_candidate_id: str,
-    known_problem_ids: list[str],
-) -> tuple[str, str, str, str, str, list[str], list[str], list[str]]:
+def _build_main_theorem_tracked_problem_payload(
+    tracked_rows: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], list[str]]:
+    visible_tracked_rows = tracked_rows[:40]
+    payload_rows = [
+        {
+            "problem_id": str(row.get("id", "")),
+            "stmt": str(row.get("stmt", "")),
+            "priority": open_problem_priority_label(row),
+            "queue_status": str(row.get("queue_status", "open")),
+            "source_kind": str(row.get("source_kind", row.get("queue_status", "open"))),
+            "failure_count": int(row.get("failure_count", 0) or 0),
+            "mode": str(row.get("mode", "")),
+            "summary_delta": str(row.get("summary_delta", "")),
+        }
+        for row in visible_tracked_rows
+    ]
+    known_problem_ids = [str(row.get("problem_id", "")).strip() for row in payload_rows if str(row.get("problem_id", "")).strip()]
+    return payload_rows, known_problem_ids
+
+
+def _validate_main_theorem_candidate(
+    raw_candidate: dict[str, Any],
+    *,
+    known_problem_id_set: set[str],
+    candidate_index: int,
+) -> dict[str, Any]:
     required_keys = {
-        "candidate_id",
-        "result",
+        "candidate_rank_seed",
         "statement",
         "theorem_name_stem",
         "docstring_summary",
@@ -172,33 +253,30 @@ def validate_main_theorem_suggestion_output(
         "context_note",
         "conceptual_depth_note",
     }
-    if set(payload.keys()) != required_keys:
-        raise ValueError("main_theorem_suggest output keys mismatch required contract")
+    if set(raw_candidate.keys()) != required_keys:
+        raise ValueError(f"main_theorem candidate {candidate_index} keys mismatch required contract")
 
-    candidate_id = str(payload.get("candidate_id", "")).strip()
-    if candidate_id != expected_candidate_id:
-        raise ValueError("main_theorem_suggest candidate_id does not match request")
+    candidate_rank_seed = raw_candidate.get("candidate_rank_seed")
+    if not isinstance(candidate_rank_seed, int):
+        raise ValueError(f"main_theorem candidate {candidate_index} candidate_rank_seed must be an integer")
 
-    result = str(payload.get("result", "")).strip()
-    if result != "ok":
-        raise ValueError("main_theorem_suggest result must be ok")
+    statement = str(raw_candidate.get("statement", "")).strip()
+    theorem_name_stem = validate_theorem_name_stem(str(raw_candidate.get("theorem_name_stem", "")).strip())
+    docstring_summary = str(raw_candidate.get("docstring_summary", "")).strip()
+    rationale = str(raw_candidate.get("rationale", "")).strip()
+    theorem_pattern = str(raw_candidate.get("theorem_pattern", "")).strip()
+    context_note = str(raw_candidate.get("context_note", "")).strip()
+    conceptual_depth_note = str(raw_candidate.get("conceptual_depth_note", "")).strip()
+    supporting_value = raw_candidate.get("supporting_theorems", [])
+    missing_value = raw_candidate.get("missing_lemmas", [])
+    source_problem_ids_value = raw_candidate.get("source_problem_ids", [])
+    if not isinstance(supporting_value, list) or not isinstance(missing_value, list) or not isinstance(source_problem_ids_value, list):
+        raise ValueError(
+            f"main_theorem candidate {candidate_index} supporting_theorems, missing_lemmas, and source_problem_ids must be arrays"
+        )
 
-    statement = str(payload.get("statement", "")).strip()
-    theorem_name_stem = str(payload.get("theorem_name_stem", "")).strip()
-    docstring_summary = str(payload.get("docstring_summary", "")).strip()
-    rationale = str(payload.get("rationale", "")).strip()
-    theorem_pattern = str(payload.get("theorem_pattern", "")).strip()
-    context_note = str(payload.get("context_note", "")).strip()
-    conceptual_depth_note = str(payload.get("conceptual_depth_note", "")).strip()
-    supporting = payload.get("supporting_theorems", [])
-    missing = payload.get("missing_lemmas", [])
-    source_problem_ids_value = payload.get("source_problem_ids", [])
-    if not isinstance(supporting, list) or not isinstance(missing, list) or not isinstance(source_problem_ids_value, list):
-        raise ValueError("main_theorem_suggest supporting_theorems, missing_lemmas, and source_problem_ids must be arrays")
-
-    supporting_theorems = [str(item).strip() for item in supporting if str(item).strip()]
-    missing_lemmas = [str(item).strip() for item in missing if str(item).strip()]
-    known_problem_id_set = {str(item).strip() for item in known_problem_ids if str(item).strip()}
+    supporting_theorems = [str(item).strip() for item in supporting_value if str(item).strip()]
+    missing_lemmas = [str(item).strip() for item in missing_value if str(item).strip()]
     source_problem_ids: list[str] = []
     seen_source_ids: set[str] = set()
     for item in source_problem_ids_value:
@@ -206,52 +284,210 @@ def validate_main_theorem_suggestion_output(
         if not problem_id or problem_id in seen_source_ids:
             continue
         if known_problem_id_set and problem_id not in known_problem_id_set:
-            raise ValueError(f"main_theorem_suggest source_problem_id is not in tracked_problems: {problem_id}")
+            raise ValueError(f"main_theorem candidate {candidate_index} source_problem_id is not in tracked_problems: {problem_id}")
         seen_source_ids.add(problem_id)
         source_problem_ids.append(problem_id)
 
     if not statement:
-        raise ValueError("main_theorem_suggest statement must be non-empty when result=ok")
-    theorem_name_stem = validate_theorem_name_stem(theorem_name_stem)
+        raise ValueError(f"main_theorem candidate {candidate_index} statement must be non-empty")
     if not docstring_summary:
-        raise ValueError("main_theorem_suggest docstring_summary must be non-empty when result=ok")
+        raise ValueError(f"main_theorem candidate {candidate_index} docstring_summary must be non-empty")
+    if not rationale:
+        raise ValueError(f"main_theorem candidate {candidate_index} rationale must be non-empty")
     if known_problem_id_set and not source_problem_ids:
-        raise ValueError("main_theorem_suggest source_problem_ids must be non-empty when tracked_problems are available")
-    if theorem_pattern not in {"new_theorem", "structure_discovery", "framework_introduction"}:
-        raise ValueError("main_theorem_suggest theorem_pattern must be new_theorem|structure_discovery|framework_introduction")
+        raise ValueError(f"main_theorem candidate {candidate_index} source_problem_ids must be non-empty")
+    if theorem_pattern not in MAIN_THEOREM_PATTERNS:
+        raise ValueError(
+            "main_theorem candidate theorem_pattern must be new_theorem|structure_discovery|framework_introduction"
+        )
     if not context_note:
-        raise ValueError("main_theorem_suggest context_note must be non-empty when result=ok")
+        raise ValueError(f"main_theorem candidate {candidate_index} context_note must be non-empty")
     if not conceptual_depth_note:
-        raise ValueError("main_theorem_suggest conceptual_depth_note must be non-empty when result=ok")
+        raise ValueError(f"main_theorem candidate {candidate_index} conceptual_depth_note must be non-empty")
 
-    return (
-        result,
-        statement,
-        theorem_name_stem,
-        docstring_summary,
-        rationale,
-        supporting_theorems,
-        missing_lemmas,
-        source_problem_ids,
-    )
+    return {
+        "candidate_rank_seed": candidate_rank_seed,
+        "statement": statement,
+        "theorem_name_stem": theorem_name_stem,
+        "docstring_summary": docstring_summary,
+        "rationale": rationale,
+        "supporting_theorems": supporting_theorems,
+        "missing_lemmas": missing_lemmas,
+        "source_problem_ids": source_problem_ids,
+        "theorem_pattern": theorem_pattern,
+        "context_note": context_note,
+        "conceptual_depth_note": conceptual_depth_note,
+    }
 
 
-def request_main_theorem_suggestion(
+def validate_main_theorem_candidate_set_output(
+    payload: dict[str, Any],
+    expected_candidate_set_id: str,
+    known_problem_ids: list[str],
+) -> list[dict[str, Any]]:
+    required_keys = {"candidate_set_id", "candidates"}
+    if set(payload.keys()) != required_keys:
+        raise ValueError("main_theorem_generate output keys mismatch required contract")
+
+    candidate_set_id = str(payload.get("candidate_set_id", "")).strip()
+    if candidate_set_id != expected_candidate_set_id:
+        raise ValueError("main_theorem_generate candidate_set_id does not match request")
+
+    raw_candidates = payload.get("candidates", [])
+    if not isinstance(raw_candidates, list):
+        raise ValueError("main_theorem_generate candidates must be an array")
+    if len(raw_candidates) != MAIN_THEOREM_CANDIDATE_COUNT:
+        raise ValueError(f"main_theorem_generate must return exactly {MAIN_THEOREM_CANDIDATE_COUNT} candidates")
+
+    known_problem_id_set = {str(item).strip() for item in known_problem_ids if str(item).strip()}
+    normalized_candidates: list[dict[str, Any]] = []
+    seen_rank_seeds: set[int] = set()
+    seen_statement_norms: set[str] = set()
+    seen_theorem_name_stems: set[str] = set()
+    theorem_patterns: set[str] = set()
+    for candidate_index, item in enumerate(raw_candidates, start=1):
+        if not isinstance(item, dict):
+            raise ValueError("main_theorem_generate candidates must contain only objects")
+        candidate = _validate_main_theorem_candidate(
+            item,
+            known_problem_id_set=known_problem_id_set,
+            candidate_index=candidate_index,
+        )
+        candidate_rank_seed = int(candidate["candidate_rank_seed"])
+        if candidate_rank_seed < 1 or candidate_rank_seed > MAIN_THEOREM_CANDIDATE_COUNT:
+            raise ValueError("main_theorem_generate candidate_rank_seed must be within the fixed candidate set")
+        if candidate_rank_seed in seen_rank_seeds:
+            raise ValueError("main_theorem_generate candidate_rank_seed values must be unique")
+        seen_rank_seeds.add(candidate_rank_seed)
+
+        statement_norm = " ".join(str(candidate["statement"]).split()).lower()
+        if statement_norm in seen_statement_norms:
+            raise ValueError("main_theorem_generate candidate statements must be distinct")
+        seen_statement_norms.add(statement_norm)
+
+        theorem_name_stem = str(candidate["theorem_name_stem"])
+        if theorem_name_stem in seen_theorem_name_stems:
+            raise ValueError("main_theorem_generate theorem_name_stem values must be unique")
+        seen_theorem_name_stems.add(theorem_name_stem)
+
+        theorem_patterns.add(str(candidate["theorem_pattern"]))
+        normalized_candidates.append(candidate)
+
+    if seen_rank_seeds != set(range(1, MAIN_THEOREM_CANDIDATE_COUNT + 1)):
+        raise ValueError("main_theorem_generate candidate_rank_seed values must cover the fixed candidate set")
+    if len(theorem_patterns) < 2:
+        raise ValueError("main_theorem_generate candidate set must contain at least two distinct theorem patterns")
+
+    return sorted(normalized_candidates, key=lambda item: int(item["candidate_rank_seed"]))
+
+
+def validate_main_theorem_selection_output(
+    payload: dict[str, Any],
+    *,
+    expected_candidate_set_id: str,
+    candidates: list[dict[str, Any]],
+) -> tuple[int, str, list[dict[str, Any]]]:
+    required_keys = {"candidate_set_id", "selected_candidate_rank_seed", "selection_summary", "ranking"}
+    if set(payload.keys()) != required_keys:
+        raise ValueError("main_theorem_select output keys mismatch required contract")
+
+    candidate_set_id = str(payload.get("candidate_set_id", "")).strip()
+    if candidate_set_id != expected_candidate_set_id:
+        raise ValueError("main_theorem_select candidate_set_id does not match request")
+
+    selected_candidate_rank_seed = payload.get("selected_candidate_rank_seed")
+    if not isinstance(selected_candidate_rank_seed, int):
+        raise ValueError("main_theorem_select selected_candidate_rank_seed must be an integer")
+
+    selection_summary = str(payload.get("selection_summary", "")).strip()
+    if not selection_summary:
+        raise ValueError("main_theorem_select selection_summary must be non-empty")
+
+    ranking_value = payload.get("ranking", [])
+    if not isinstance(ranking_value, list):
+        raise ValueError("main_theorem_select ranking must be an array")
+    if len(ranking_value) != len(candidates):
+        raise ValueError("main_theorem_select ranking length must match candidate count")
+
+    candidate_rank_seed_set = {int(candidate["candidate_rank_seed"]) for candidate in candidates}
+    normalized_ranking: list[dict[str, Any]] = []
+    seen_candidate_rank_seeds: set[int] = set()
+    seen_ranks: set[int] = set()
+    selected_entries = 0
+    for item in ranking_value:
+        if not isinstance(item, dict):
+            raise ValueError("main_theorem_select ranking entries must be objects")
+        if set(item.keys()) != {"candidate_rank_seed", "rank", "decision", "reason"}:
+            raise ValueError("main_theorem_select ranking entry keys mismatch required contract")
+
+        candidate_rank_seed = item.get("candidate_rank_seed")
+        rank = item.get("rank")
+        if not isinstance(candidate_rank_seed, int) or not isinstance(rank, int):
+            raise ValueError("main_theorem_select ranking candidate_rank_seed and rank must be integers")
+        decision = str(item.get("decision", "")).strip()
+        reason = str(item.get("reason", "")).strip()
+        if candidate_rank_seed not in candidate_rank_seed_set:
+            raise ValueError("main_theorem_select ranking candidate_rank_seed must refer to an input candidate")
+        if candidate_rank_seed in seen_candidate_rank_seeds:
+            raise ValueError("main_theorem_select ranking candidate_rank_seed values must be unique")
+        if rank < 1 or rank > len(candidates):
+            raise ValueError("main_theorem_select ranking rank is out of bounds")
+        if rank in seen_ranks:
+            raise ValueError("main_theorem_select ranking rank values must be unique")
+        if decision not in {"select", "reject"}:
+            raise ValueError("main_theorem_select decision must be select or reject")
+        if not reason:
+            raise ValueError("main_theorem_select reason must be non-empty")
+        if decision == "select":
+            selected_entries += 1
+
+        seen_candidate_rank_seeds.add(candidate_rank_seed)
+        seen_ranks.add(rank)
+        normalized_ranking.append(
+            {
+                "candidate_rank_seed": candidate_rank_seed,
+                "rank": rank,
+                "decision": decision,
+                "reason": reason,
+            }
+        )
+
+    if seen_candidate_rank_seeds != candidate_rank_seed_set:
+        raise ValueError("main_theorem_select ranking must cover each input candidate exactly once")
+    if seen_ranks != set(range(1, len(candidates) + 1)):
+        raise ValueError("main_theorem_select ranking must cover every rank exactly once")
+    if selected_entries != 1:
+        raise ValueError("main_theorem_select must mark exactly one candidate as select")
+    if selected_candidate_rank_seed not in candidate_rank_seed_set:
+        raise ValueError("main_theorem_select selected_candidate_rank_seed must refer to an input candidate")
+
+    ranking_by_rank = {int(item["rank"]): item for item in normalized_ranking}
+    top_entry = ranking_by_rank[1]
+    if int(top_entry["candidate_rank_seed"]) != selected_candidate_rank_seed or str(top_entry["decision"]) != "select":
+        raise ValueError("main_theorem_select rank 1 must be the selected candidate")
+    for rank in range(2, len(candidates) + 1):
+        if str(ranking_by_rank[rank]["decision"]) != "reject":
+            raise ValueError("main_theorem_select ranks below 1 must be rejected")
+
+    return selected_candidate_rank_seed, selection_summary, sorted(normalized_ranking, key=lambda item: int(item["rank"]))
+
+
+def request_main_theorem_candidate_set(
     *,
     worker_settings: Any,
-    suggester_prompt: str,
-    candidate_id: str,
+    generator_prompt: str,
+    candidate_set_id: str,
     derived_entries: list[dict[str, str]],
     theory_context: str,
     tracked_rows: list[dict[str, Any]],
     current_iteration: int,
     guidance: dict[str, Any],
-) -> tuple[tuple[str, str, str, str, str, list[str], list[str], list[str]], dict[str, Any]]:
-    visible_tracked_rows = tracked_rows[:40]
-    known_problem_ids = [str(row.get("id", "")).strip() for row in visible_tracked_rows if str(row.get("id", "")).strip()]
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    tracked_problem_payload, known_problem_ids = _build_main_theorem_tracked_problem_payload(tracked_rows)
     theory_state, research_agenda = unpack_guidance_context(guidance)
     payload: dict[str, Any] = {
-        "candidate_id": candidate_id,
+        "candidate_set_id": candidate_set_id,
+        "candidate_count": MAIN_THEOREM_CANDIDATE_COUNT,
         "current_iteration": current_iteration,
         "derived_theorems": [
             {
@@ -261,33 +497,68 @@ def request_main_theorem_suggestion(
             for entry in derived_entries
         ],
         "theory_context": theory_context,
-        "tracked_problems": [
-            {
-                "problem_id": str(row.get("id", "")),
-                "stmt": str(row.get("stmt", "")),
-                "priority": open_problem_priority_label(row),
-                "queue_status": str(row.get("queue_status", "open")),
-                "source_kind": str(row.get("source_kind", row.get("queue_status", "open"))),
-                "failure_count": int(row.get("failure_count", 0) or 0),
-                "mode": str(row.get("mode", "")),
-                "summary_delta": str(row.get("summary_delta", "")),
-            }
-            for row in visible_tracked_rows
-        ],
+        "tracked_problems": tracked_problem_payload,
         "theory_state": theory_state,
         "research_agenda": research_agenda,
     }
     response, worker_meta = invoke_worker_json(
         settings=worker_settings,
-        task_type="main_theorem_suggest",
-        system_prompt=suggester_prompt,
+        task_type="main_theorem_generate",
+        system_prompt=generator_prompt,
         payload=payload,
-        metadata={"candidate_id": candidate_id, "derived_theorem_count": len(derived_entries)},
+        metadata={"candidate_set_id": candidate_set_id, "derived_theorem_count": len(derived_entries)},
     )
-    return validate_main_theorem_suggestion_output(response, candidate_id, known_problem_ids), worker_meta
+    return validate_main_theorem_candidate_set_output(response, candidate_set_id, known_problem_ids), worker_meta
 
 
-def run_manual_main_theorem_check(
+def request_main_theorem_selection(
+    *,
+    worker_settings: Any,
+    selector_prompt: str,
+    candidate_set_id: str,
+    candidates: list[dict[str, Any]],
+    derived_entries: list[dict[str, str]],
+    theory_context: str,
+    tracked_rows: list[dict[str, Any]],
+    current_iteration: int,
+    guidance: dict[str, Any],
+) -> tuple[tuple[int, str, list[dict[str, Any]]], dict[str, Any]]:
+    tracked_problem_payload, _ = _build_main_theorem_tracked_problem_payload(tracked_rows)
+    theory_state, research_agenda = unpack_guidance_context(guidance)
+    payload: dict[str, Any] = {
+        "candidate_set_id": candidate_set_id,
+        "current_iteration": current_iteration,
+        "candidates": candidates,
+        "derived_theorems": [
+            {
+                "name": str(entry.get("name", "")),
+                "statement": str(entry.get("statement", "")),
+            }
+            for entry in derived_entries
+        ],
+        "theory_context": theory_context,
+        "tracked_problems": tracked_problem_payload,
+        "theory_state": theory_state,
+        "research_agenda": research_agenda,
+    }
+    response, worker_meta = invoke_worker_json(
+        settings=worker_settings,
+        task_type="main_theorem_select",
+        system_prompt=selector_prompt,
+        payload=payload,
+        metadata={"candidate_set_id": candidate_set_id, "candidate_count": len(candidates)},
+    )
+    return (
+        validate_main_theorem_selection_output(
+            response,
+            expected_candidate_set_id=candidate_set_id,
+            candidates=candidates,
+        ),
+        worker_meta,
+    )
+
+
+def run_main_theorem_session(
     *,
     worker_settings: Any,
     scratch_file: Path,
@@ -300,7 +571,8 @@ def run_manual_main_theorem_check(
     repair_worker_settings: Any,
     formalizer_prompt_file: str,
     repair_prompt_file: str,
-    suggest_prompt_file: str,
+    generate_prompt_file: str,
+    select_prompt_file: str,
     post_expand_prompt_file: str,
     prioritize_open_problems_worker_settings: Any,
     prioritize_open_problems_prompt_file: str,
@@ -316,47 +588,42 @@ def run_manual_main_theorem_check(
     failure_threshold: int,
     phase_logs: bool,
     run_id: str,
-    phase_attempts_path: Path,
+    phase_attempts_path: Path | None,
+    session_events_path: Path | None,
     compile_metrics: dict[str, Any],
     state_lock: threading.Lock,
     derived_runtime_state: dict[str, Any],
 ) -> dict[str, Any]:
-    suggest_prompt = load_prompt_text(suggest_prompt_file)
+    generate_prompt = load_prompt_text(generate_prompt_file)
+    select_prompt = load_prompt_text(select_prompt_file)
     open_rows = [normalize_open_problem_row(row) for row in read_jsonl(data_dir / "open_problems.jsonl")]
     archived_rows = read_archived_problem_rows(data_dir)
     tracked_rows = [dict(row, queue_status="open") for row in open_rows]
     tracked_rows.extend(dict(row, queue_status="archived") for row in archived_rows)
-    candidate_id = "mt_manual"
+    candidate_set_id = "mt_main_theorem"
+    guidance = load_current_guidance(data_dir)
     emit_phase_log(
         phase_logs,
-        "main_theorem_suggest",
+        "main_theorem_generate",
         iteration=current_iteration,
-        candidate_id=candidate_id,
+        candidate_set_id=candidate_set_id,
         derived_theorem_count=len(derived_entries),
         open_problem_count=len(open_rows),
         tracked_problem_count=len(tracked_rows),
+        candidate_count=MAIN_THEOREM_CANDIDATE_COUNT,
     )
-    suggest_started_monotonic = time.monotonic()
-    suggest_started_at = iso_timestamp_now()
+    generate_started_monotonic = time.monotonic()
+    generate_started_at = iso_timestamp_now()
     try:
-        (
-            result,
-            statement,
-            theorem_name_stem,
-            docstring_summary,
-            rationale,
-            supporting_theorems,
-            missing_lemmas,
-            source_problem_ids,
-        ), _ = request_main_theorem_suggestion(
+        candidates, _ = request_main_theorem_candidate_set(
             worker_settings=worker_settings,
-            suggester_prompt=suggest_prompt,
-            candidate_id=candidate_id,
+            generator_prompt=generate_prompt,
+            candidate_set_id=candidate_set_id,
             derived_entries=derived_entries,
             theory_context=base_theory_context,
             tracked_rows=tracked_rows,
             current_iteration=current_iteration,
-            guidance=load_current_guidance(data_dir),
+            guidance=guidance,
         )
     except (RuntimeError, ValueError) as exc:
         append_phase_attempt_record(
@@ -364,26 +631,34 @@ def run_manual_main_theorem_check(
             run_id=run_id,
             session_type="main_theorem_session",
             iteration=current_iteration,
-            entity_id=candidate_id,
-            phase="main_theorem_suggest",
-            worker_task="main_theorem_suggest",
-            started_at=suggest_started_at,
+            entity_id=candidate_set_id,
+            phase="main_theorem_generate",
+            worker_task="main_theorem_generate",
+            started_at=generate_started_at,
             finished_at=iso_timestamp_now(),
-            duration_ms=monotonic_duration_ms(suggest_started_monotonic),
+            duration_ms=monotonic_duration_ms(generate_started_monotonic),
             success=False,
             result="error",
             error=str(exc),
         )
         emit_phase_log(
             phase_logs,
-            "main_theorem_suggest_result",
+            "main_theorem_generate_result",
             iteration=current_iteration,
-            candidate_id=candidate_id,
+            candidate_set_id=candidate_set_id,
             status="error",
             error=str(exc),
         )
+        _append_main_theorem_session_event(
+            session_events_path,
+            event="main_theorem_generate_result",
+            run_id=run_id,
+            iteration=current_iteration,
+            candidate_set_id=candidate_set_id,
+            payload={"status": "error", "error": str(exc)},
+        )
         return {
-            "status": "main_theorem_suggest_error",
+            "status": "main_theorem_generate_error",
             "processed": False,
             "verify_success": False,
             "error": str(exc),
@@ -393,31 +668,157 @@ def run_manual_main_theorem_check(
         run_id=run_id,
         session_type="main_theorem_session",
         iteration=current_iteration,
-        entity_id=candidate_id,
-        phase="main_theorem_suggest",
-        worker_task="main_theorem_suggest",
-        started_at=suggest_started_at,
+        entity_id=candidate_set_id,
+        phase="main_theorem_generate",
+        worker_task="main_theorem_generate",
+        started_at=generate_started_at,
         finished_at=iso_timestamp_now(),
-        duration_ms=monotonic_duration_ms(suggest_started_monotonic),
-        success=result == "ok",
-        result=result,
+        duration_ms=monotonic_duration_ms(generate_started_monotonic),
+        success=True,
+        result="ok",
     )
     emit_phase_log(
         phase_logs,
-        "main_theorem_suggest_result",
+        "main_theorem_generate_result",
         iteration=current_iteration,
-        candidate_id=candidate_id,
-        status=result,
+        candidate_set_id=candidate_set_id,
+        status="ok",
+        candidate_count=len(candidates),
+        candidates=_summarize_main_theorem_candidates(candidates),
+    )
+    _append_main_theorem_session_event(
+        session_events_path,
+        event="main_theorem_generate_result",
+        run_id=run_id,
+        iteration=current_iteration,
+        candidate_set_id=candidate_set_id,
+        payload={
+            "status": "ok",
+            "candidate_count": len(candidates),
+            "candidates": _summarize_main_theorem_candidates(candidates),
+        },
     )
 
-    report = process_manual_main_theorem(
-        candidate_id=candidate_id,
-        statement=statement,
-        theorem_name=f"main_thm_{theorem_name_stem}",
-        docstring_summary=docstring_summary,
-        rationale=rationale,
-        supporting_theorems=supporting_theorems,
-        missing_lemmas=missing_lemmas,
+    emit_phase_log(
+        phase_logs,
+        "main_theorem_select",
+        iteration=current_iteration,
+        candidate_set_id=candidate_set_id,
+        candidate_count=len(candidates),
+    )
+    select_started_monotonic = time.monotonic()
+    select_started_at = iso_timestamp_now()
+    try:
+        (selected_candidate_rank_seed, selection_summary, ranking), _ = request_main_theorem_selection(
+            worker_settings=worker_settings,
+            selector_prompt=select_prompt,
+            candidate_set_id=candidate_set_id,
+            candidates=candidates,
+            derived_entries=derived_entries,
+            theory_context=base_theory_context,
+            tracked_rows=tracked_rows,
+            current_iteration=current_iteration,
+            guidance=guidance,
+        )
+    except (RuntimeError, ValueError) as exc:
+        append_phase_attempt_record(
+            phase_attempts_path,
+            run_id=run_id,
+            session_type="main_theorem_session",
+            iteration=current_iteration,
+            entity_id=candidate_set_id,
+            phase="main_theorem_select",
+            worker_task="main_theorem_select",
+            started_at=select_started_at,
+            finished_at=iso_timestamp_now(),
+            duration_ms=monotonic_duration_ms(select_started_monotonic),
+            success=False,
+            result="error",
+            error=str(exc),
+        )
+        emit_phase_log(
+            phase_logs,
+            "main_theorem_select_result",
+            iteration=current_iteration,
+            candidate_set_id=candidate_set_id,
+            status="error",
+            error=str(exc),
+        )
+        _append_main_theorem_session_event(
+            session_events_path,
+            event="main_theorem_select_result",
+            run_id=run_id,
+            iteration=current_iteration,
+            candidate_set_id=candidate_set_id,
+            payload={"status": "error", "error": str(exc)},
+        )
+        return {
+            "status": "main_theorem_select_error",
+            "processed": False,
+            "verify_success": False,
+            "error": str(exc),
+            "generated_candidates": candidates,
+        }
+    append_phase_attempt_record(
+        phase_attempts_path,
+        run_id=run_id,
+        session_type="main_theorem_session",
+        iteration=current_iteration,
+        entity_id=candidate_set_id,
+        phase="main_theorem_select",
+        worker_task="main_theorem_select",
+        started_at=select_started_at,
+        finished_at=iso_timestamp_now(),
+        duration_ms=monotonic_duration_ms(select_started_monotonic),
+        success=True,
+        result="ok",
+    )
+    candidate_lookup = {int(candidate["candidate_rank_seed"]): candidate for candidate in candidates}
+    selected_candidate = candidate_lookup[selected_candidate_rank_seed]
+    emit_phase_log(
+        phase_logs,
+        "main_theorem_select_result",
+        iteration=current_iteration,
+        candidate_set_id=candidate_set_id,
+        status="ok",
+        selected_candidate_rank_seed=selected_candidate_rank_seed,
+        selection_summary=selection_summary,
+        selected_candidate={
+            "candidate_rank_seed": int(selected_candidate["candidate_rank_seed"]),
+            "theorem_name_stem": str(selected_candidate["theorem_name_stem"]),
+            "statement": str(selected_candidate["statement"]),
+            "theorem_pattern": str(selected_candidate["theorem_pattern"]),
+        },
+        ranking=_summarize_main_theorem_ranking(ranking, candidate_lookup),
+    )
+    _append_main_theorem_session_event(
+        session_events_path,
+        event="main_theorem_select_result",
+        run_id=run_id,
+        iteration=current_iteration,
+        candidate_set_id=candidate_set_id,
+        payload={
+            "status": "ok",
+            "selected_candidate_rank_seed": selected_candidate_rank_seed,
+            "selection_summary": selection_summary,
+            "selected_candidate": {
+                "candidate_rank_seed": int(selected_candidate["candidate_rank_seed"]),
+                "theorem_name_stem": str(selected_candidate["theorem_name_stem"]),
+                "statement": str(selected_candidate["statement"]),
+                "theorem_pattern": str(selected_candidate["theorem_pattern"]),
+            },
+            "ranking": _summarize_main_theorem_ranking(ranking, candidate_lookup),
+        },
+    )
+
+    report = process_main_theorem(
+        candidate_id=candidate_set_id,
+        statement=str(selected_candidate["statement"]),
+        theorem_name=f"main_thm_{selected_candidate['theorem_name_stem']}",
+        docstring_summary=str(selected_candidate["docstring_summary"]),
+        rationale=str(selected_candidate["rationale"]),
+        supporting_theorems=list(selected_candidate["supporting_theorems"]),
+        missing_lemmas=list(selected_candidate["missing_lemmas"]),
         scratch_file=scratch_file,
         derived_file=derived_file,
         derived_entries=derived_entries,
@@ -445,18 +846,27 @@ def run_manual_main_theorem_check(
         phase_logs=phase_logs,
         run_id=run_id,
         phase_attempts_path=phase_attempts_path,
-        theory_state_history_path=Path(phase_attempts_path).parent / "theory_state_history.jsonl",
+        theory_state_history_path=(
+            (phase_attempts_path.parent if phase_attempts_path is not None else data_dir)
+            / "theory_state_history.jsonl"
+        ),
         compile_metrics=compile_metrics,
         state_lock=state_lock,
         derived_runtime_state=derived_runtime_state,
     )
-    report["suggested_statement"] = statement
-    report["suggested_rationale"] = rationale
-    report["source_problem_ids"] = list(source_problem_ids)
+    report["generated_candidates"] = candidates
+    report["selected_candidate_rank_seed"] = selected_candidate_rank_seed
+    report["selection_summary"] = selection_summary
+    report["ranking"] = ranking
+    report["suggested_statement"] = str(selected_candidate["statement"])
+    report["suggested_rationale"] = str(selected_candidate["rationale"])
+    report["source_problem_ids"] = list(selected_candidate["source_problem_ids"])
+    if session_events_path is not None:
+        report["session_events_file"] = str(session_events_path)
     return report
 
 
-def process_manual_main_theorem(
+def process_main_theorem(
     *,
     candidate_id: str,
     statement: str,
@@ -491,7 +901,7 @@ def process_manual_main_theorem(
     failure_threshold: int,
     phase_logs: bool,
     run_id: str,
-    phase_attempts_path: Path,
+    phase_attempts_path: Path | None,
     theory_state_history_path: Path,
     compile_metrics: dict[str, Any],
     state_lock: threading.Lock,

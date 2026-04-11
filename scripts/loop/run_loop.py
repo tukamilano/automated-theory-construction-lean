@@ -94,7 +94,7 @@ def debug_log(msg: str) -> None:
 
 
 
-SCRATCH_TEMPLATE = render_scratch_template()
+SCRATCH_TEMPLATE = render_scratch_template(include_generated_manifest=False)
 
 SCRATCH_OPEN_DECLS = (
     "open Mathling.Lambek.ProductFree\n"
@@ -976,7 +976,6 @@ def formalize_to_scratch(
         render_import_block(extra_imports)
         +
         "import AutomatedTheoryConstruction.Lambek\n"
-        "import AutomatedTheoryConstruction.Generated.Manifest\n"
         "import AutomatedTheoryConstruction.Derived\n\n"
         "set_option autoImplicit false\n\n"
         "namespace AutomatedTheoryConstruction\n\n"

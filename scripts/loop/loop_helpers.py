@@ -58,7 +58,7 @@ def load_current_guidance(data_dir: Path) -> dict[str, dict[str, Any]]:
 
 
 def append_phase_attempt_record(
-    phase_attempts_path: Path,
+    phase_attempts_path: Path | None,
     *,
     run_id: str,
     session_type: str,
@@ -74,6 +74,8 @@ def append_phase_attempt_record(
     timeout: bool = False,
     error: str = "",
 ) -> None:
+    if phase_attempts_path is None:
+        return
     with PHASE_ATTEMPT_LOCK:
         append_jsonl(
             phase_attempts_path,

@@ -18,7 +18,7 @@ for search_path in (SCRIPTS_ROOT, LOOP_ROOT):
 
 from common import load_theory_context
 from derived_entries import extract_derived_theorem_entries
-from main_theorem_session import run_manual_main_theorem_check
+from main_theorem_session import run_main_theorem_session
 from worker_client import load_task_worker_settings
 from worker_client import load_worker_settings
 
@@ -33,9 +33,10 @@ def main() -> None:
     parser.add_argument("--scratch-file", default="AutomatedTheoryConstruction/Scratch.lean")
     parser.add_argument("--data-dir", default="data")
     parser.add_argument("--formalization-memory-file", default="data/formalization_memory.json")
-    parser.add_argument("--phase-attempts-file", default="data/manual_main_theorem_phase_attempts.jsonl")
+    parser.add_argument("--phase-attempts-file")
+    parser.add_argument("--session-events-file")
     parser.add_argument("--report-file")
-    parser.add_argument("--run-id", default="manual-main-theorem-check")
+    parser.add_argument("--run-id", default="main-theorem-session")
     parser.add_argument("--current-iteration", type=int, default=0)
     parser.add_argument("--phase-logs", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--enable-worker", action="store_true")
@@ -78,7 +79,12 @@ def main() -> None:
     derived_file = Path(args.derived_file)
     theory_file = Path(args.theory_file)
     memory_path = Path(args.formalization_memory_file)
-    phase_attempts_path = Path(args.phase_attempts_file)
+    phase_attempts_path = Path(args.phase_attempts_file) if args.phase_attempts_file else None
+    session_events_path = (
+        Path(args.session_events_file)
+        if args.session_events_file
+        else data_dir / "runs" / args.run_id / "main_theorem.events.jsonl"
+    )
     _, base_theory_context = load_theory_context(theory_file)
     derived_entries = extract_derived_theorem_entries(derived_file)
 
@@ -116,7 +122,7 @@ def main() -> None:
             codex_timeout_override=args.prioritize_open_problems_worker_timeout,
         )
 
-    report = run_manual_main_theorem_check(
+    report = run_main_theorem_session(
         worker_settings=worker_settings,
         scratch_file=scratch_file,
         derived_file=derived_file,
@@ -128,7 +134,8 @@ def main() -> None:
         repair_worker_settings=repair_worker_settings,
         formalizer_prompt_file="prompts/formalize/formalizer_proof.md",
         repair_prompt_file="prompts/formalize/repair_proof.md",
-        suggest_prompt_file="prompts/main_theorem/suggester.md",
+        generate_prompt_file="prompts/main_theorem/generate.md",
+        select_prompt_file="prompts/main_theorem/select.md",
         post_expand_prompt_file="prompts/expander/post_theorem.md",
         prioritize_open_problems_worker_settings=prioritize_open_problems_worker_settings,
         prioritize_open_problems_prompt_file="prompts/prioritizer/open_problem_prioritizer.md",
@@ -145,6 +152,7 @@ def main() -> None:
         phase_logs=args.phase_logs,
         run_id=args.run_id,
         phase_attempts_path=phase_attempts_path,
+        session_events_path=session_events_path,
         compile_metrics={
             "compile_attempt_count": 0,
             "compile_success_count": 0,

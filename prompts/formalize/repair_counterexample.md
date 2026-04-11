@@ -36,4 +36,3 @@
 ## prelude_rules
 - By default avoid fresh `def`/`abbrev`/`structure`/`class`/`inductive` in prelude unless essential.
 - No `import`, `namespace`, `section`, `axiom`, or `theorem`.
-<!-- INCLUDE: ../shared/formalize_semigrouplike01.md -->

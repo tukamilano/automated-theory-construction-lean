@@ -35,7 +35,7 @@ def attempt_formalization_until_timeout(
     run_id: str,
     session_type: str,
     iteration: int,
-    phase_attempts_path: Path,
+    phase_attempts_path: Path | None,
     compile_metrics: dict[str, Any],
 ) -> tuple[bool, str | None, str, str, str, str, str, str]:
     from run_loop import LEAN_VERIFY_LOCK

@@ -37,7 +37,6 @@
 - `prelude_code` is optional and only for genuinely helpful declarations (no `import`, `namespace`, `section`, `axiom`, `theorem`).
 - Keep it material: avoid cosmetic aliases or one-off helper names.
 - If structural cleanup helps the proof, introduce `def`/`abbrev`/`structure`/`inductive`/short helper lemmas when reusable.
-<!-- INCLUDE: ../shared/formalize_semigrouplike01.md -->
 
 ## output_behavior
 - If a valid direction remains: keep `result` as `proof`.

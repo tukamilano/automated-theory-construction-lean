@@ -242,7 +242,7 @@ def _cycle_command(args: argparse.Namespace, config: AppConfig) -> tuple[list[st
     _append_flag(
         cmd,
         "--phase-attempts-file",
-        args.phase_attempts_file or (config.paths.data_dir / "manual_main_theorem_phase_attempts.jsonl"),
+        args.phase_attempts_file,
     )
     _append_flag(cmd, "--preview-file", args.preview_file or config.paths.preview_file)
     _append_flag(cmd, "--review-output-file", args.review_output_file or config.paths.reviewed_file)
@@ -347,8 +347,9 @@ def _main_theorem_command(args: argparse.Namespace, config: AppConfig) -> tuple[
     _append_flag(
         cmd,
         "--phase-attempts-file",
-        args.phase_attempts_file or (config.paths.data_dir / "manual_main_theorem_phase_attempts.jsonl"),
+        args.phase_attempts_file,
     )
+    _append_flag(cmd, "--session-events-file", getattr(args, "session_events_file", None))
     _append_flag(cmd, "--run-id", args.run_id)
     _append_flag(cmd, "--current-iteration", args.current_iteration)
     _append_bool_flag(
@@ -488,8 +489,6 @@ def _build_parser() -> argparse.ArgumentParser:
     cycle.add_argument("--theory-file")
     cycle.add_argument("--derived-file")
     cycle.add_argument("--scratch-file")
-    cycle.add_argument("--worker-command")
-    cycle.add_argument("--worker-timeout", type=int)
     cycle.add_argument("--data-dir")
     cycle.add_argument("--formalization-memory-file")
     cycle.add_argument("--phase-attempts-file")
@@ -546,6 +545,7 @@ def _build_parser() -> argparse.ArgumentParser:
     main_theorem.add_argument("--data-dir")
     main_theorem.add_argument("--formalization-memory-file")
     main_theorem.add_argument("--phase-attempts-file")
+    main_theorem.add_argument("--session-events-file")
     main_theorem.add_argument("--run-id")
     main_theorem.add_argument("--current-iteration", type=int)
     main_theorem.add_argument("--phase-logs", action=argparse.BooleanOptionalAction, default=None)

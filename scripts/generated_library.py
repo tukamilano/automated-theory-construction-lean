@@ -27,18 +27,24 @@ _COMMON_PREAMBLE = (
 CHUNK_STEM_PATTERN = re.compile(r"^C(\d{4})(?:_|$)")
 
 
-def render_scratch_template() -> str:
+def render_scratch_template(*, include_generated_manifest: bool = True) -> str:
+    imports = [
+        "import Mathlib",
+        "import AutomatedTheoryConstruction.Lambek",
+    ]
+    if include_generated_manifest:
+        imports.append("import AutomatedTheoryConstruction.Generated.Manifest")
+    imports.append("import AutomatedTheoryConstruction.Derived")
+    import_block = "\n".join(imports)
     return (
-        "import Mathlib\n"
-        "import AutomatedTheoryConstruction.Lambek\n"
-        "import AutomatedTheoryConstruction.Generated.Manifest\n"
-        "import AutomatedTheoryConstruction.Derived\n\n"
-        "set_option autoImplicit false\n\n"
-        "namespace AutomatedTheoryConstruction\n\n"
-        "open Mathling.Lambek.ProductFree\n"
-        "open scoped Mathling.Lambek.ProductFree\n\n"
-        "-- Temporary Lean code generated for verification is written here.\n\n"
-        "end AutomatedTheoryConstruction\n"
+        import_block
+        + "\n\n"
+        + "set_option autoImplicit false\n\n"
+        + "namespace AutomatedTheoryConstruction\n\n"
+        + "open Mathling.Lambek.ProductFree\n"
+        + "open scoped Mathling.Lambek.ProductFree\n\n"
+        + "-- Temporary Lean code generated for verification is written here.\n\n"
+        + "end AutomatedTheoryConstruction\n"
     )
 
 

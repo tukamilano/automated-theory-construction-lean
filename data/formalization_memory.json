@@ -1074,14 +1074,53 @@
   ],
   "mt_manual": [
     {
+      "stage": "",
+      "source_statement": "",
+      "formalized_statement": "",
+      "statement_formalization_notes": "",
       "result": "stuck",
       "verify_success": false,
       "proof_sketch": "Handle the left and right conjuncts separately. For the left side, use `thm_handed_support_closure_iff_sequent_000048` and the first half of `thm_residual_support_normal_form_000050` to replace `(Γ ⇒ A)` with existence of `Δ, s` such that `residualAtomicState Γ A = some (Δ, s)` and `AtomicCandidateTree Δ s`. Prove by induction on `A` following the recursion of `residualAtomicState` that if all formulas in `Γ` are `isLeftOnly` and `A` is `isLeftOnly`, then any such residual context `Δ` is also all `isLeftOnly`; then `thm_atomic_candidate_tree_iff_sequent_000030` gives `Δ ⇒ # s`, and `thm_full_one_sided_conservativity_000042` specialized to atomic `# s` rewrites this to `leftTranslatedSequent Δ (# s)`. The reverse implication is the same chain backwards, and the right-handed conjunct is symmetric with `isRightOnly` and `rightTranslatedSequent`.",
-      "prelude_code": "",
       "proof_text": "",
       "counterexample_text": "",
       "lean_error_excerpt": "formalize worker timeout: Worker returned error: Command '['codex', 'exec', '-', '--sandbox', 'read-only', '--skip-git-repo-check', '--output-last-message', '/tmp/tmpmizo2zna', '--model', 'gpt-5.4']' timed out after 390 seconds (task_type=formalize)",
       "lean_error_fingerprint": "formalizer_timeout"
+    },
+    {
+      "stage": "",
+      "source_statement": "",
+      "formalized_statement": "",
+      "statement_formalization_notes": "",
+      "result": "proof",
+      "verify_success": false,
+      "proof_sketch": "The target is exactly the already verified theorem `thm_residual_graph_recognizes_sequent_000062` in `AutomatedTheoryConstruction.Derived`, so the proof is a direct `simpa` reuse.",
+      "proof_text": "simpa using AutomatedTheoryConstruction.thm_residual_graph_recognizes_sequent_000062",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:1:0: error: import AutomatedTheoryConstruction.Derived failed, environment already contains 'AutomatedTheoryConstruction.residualAtomicState.match_1' from AutomatedTheoryConstruction.Generated.C0003_handed_support_left",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:1:0: error: import AutomatedTheoryConstruction.Derived failed, environment already contains 'AutomatedTheoryConstruction.residualAtomicState.match_1' from AutomatedTheoryConstruction.Generated.C0003_handed_support_left | toolchain=leanprover/lean4:v4.29.0-rc6"
+    },
+    {
+      "stage": "",
+      "source_statement": "",
+      "formalized_statement": "",
+      "statement_formalization_notes": "",
+      "result": "proof",
+      "verify_success": false,
+      "proof_sketch": "The previous term was fine, but the imported module was not: `AutomatedTheoryConstruction.Generated.Manifest` already exposes `thm_residual_graph_recognizes_sequent_000062`, together with `residualAtomicState` and `AtomicResidualGraphAccepts`. So the repair is to keep the same one-line `simpa` proof while avoiding any dependency on `AutomatedTheoryConstruction.Derived`.",
+      "proof_text": "simpa using AutomatedTheoryConstruction.thm_residual_graph_recognizes_sequent_000062",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:1:0: error: import AutomatedTheoryConstruction.Derived failed, environment already contains 'AutomatedTheoryConstruction.residualAtomicState.match_1' from AutomatedTheoryConstruction.Generated.C0003_handed_support_left",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:1:0: error: import AutomatedTheoryConstruction.Derived failed, environment already contains 'AutomatedTheoryConstruction.residualAtomicState.match_1' from AutomatedTheoryConstruction.Generated.C0003_handed_support_left | toolchain=leanprover/lean4:v4.29.0-rc6"
+    },
+    {
+      "result": "proof",
+      "verify_success": false,
+      "proof_sketch": "Direct reuse of the already available theorem `thm_residual_graph_recognizes_sequent_000062`; in the generated environment it is exposed by `Generated.Manifest`, so the target closes by `simpa`.",
+      "prelude_code": "",
+      "proof_text": "simpa using thm_residual_graph_recognizes_sequent_000062",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:1:0: error: import AutomatedTheoryConstruction.Derived failed, environment already contains 'AutomatedTheoryConstruction.residualAtomicState.match_1' from AutomatedTheoryConstruction.Generated.C0003_handed_support_left",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:1:0: error: import AutomatedTheoryConstruction.Derived failed, environment already contains 'AutomatedTheoryConstruction.residualAtomicState.match_1' from AutomatedTheoryConstruction.Generated.C0003_handed_support_left | toolchain=leanprover/lean4:v4.29.0-rc6"
     }
   ],
   "op_000061": [
@@ -1310,6 +1349,31 @@
       "counterexample_text": "",
       "lean_error_excerpt": "formalize worker timeout: Worker returned error: Command '['codex', 'exec', '-', '--sandbox', 'read-only', '--skip-git-repo-check', '--output-last-message', '/tmp/tmpf17h0x88', '--model', 'gpt-5.4']' timed out after 390 seconds (task_type=formalize)",
       "lean_error_fingerprint": "formalizer_timeout"
+    }
+  ],
+  "mt_main_theorem": [
+    {
+      "stage": "",
+      "source_statement": "",
+      "formalized_statement": "",
+      "statement_formalization_notes": "",
+      "result": "counterexample",
+      "verify_success": false,
+      "proof_sketch": "The statement is false. Use the existing same-handed counterexample `bad := #\"p\" ⧹ #\"p\"`. Its residual atomic state at goal `#\"p\"` is `some ([bad], \"p\")`; the residual context is left-only and contains an occurrence of `\"p\"`, but graph acceptance would imply `[bad] ⇒ #\"p\"`, contradicting the verified singleton-atom sequent characterization.",
+      "proof_text": "",
+      "counterexample_text": "Take `bad := #\"p\" ⧹ #\"p\"`, `Γ = [bad]`, `A = #\"p\"`, `Δ = [bad]`, and `s = \"p\"`. Then `residualAtomicState Γ A = some (Δ, s)` by simplification. Also `(∀ x ∈ Δ, isLeftOnly x)` holds, since `bad` is left-only, so the same-handed premise is satisfied. The right side `∃ B ∈ Δ, occurs_atom s B` holds with `B = bad`, because `occurs_atom \"p\" (#\"p\" ⧹ #\"p\")` is true. But `AtomicResidualGraphAccepts (Δ, s)` is false: otherwise, using `thm_residual_graph_recognizes_sequent_000062` together with the residual-state equality, we would obtain `[bad] ⇒ #\"p\"`; then `thm_singleton_atomic_sequent_iff_000011` would force `bad = #\"p\"`, contradiction. So for this residual state, occurrence holds while acceptance fails.",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:1:0: error: import AutomatedTheoryConstruction.Derived failed, environment already contains 'AutomatedTheoryConstruction.residualAtomicState.match_1' from AutomatedTheoryConstruction.Generated.C0003_handed_support_left",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:1:0: error: import AutomatedTheoryConstruction.Derived failed, environment already contains 'AutomatedTheoryConstruction.residualAtomicState.match_1' from AutomatedTheoryConstruction.Generated.C0003_handed_support_left | toolchain=leanprover/lean4:v4.29.0-rc6"
+    },
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "Use the residual support normal form for `SupportClosure`, then split on whether the unique residual atomic state is graph-accepting. Acceptance gives derivability via residual graph recognition; non-acceptance gives the second disjunct. Conversely, derivability implies support by `thm_derivable_support_ok_000032`, and an explicit residual witness gives `SupportClosure` directly.",
+      "prelude_code": "",
+      "proof_text": "intro Γ A\nconstructor\n· intro hsup\n  rcases ((thm_residual_support_normal_form_000050 Γ A).2).mp hsup with ⟨Δ, s, hres, hocc⟩\n  by_cases hacc : AtomicResidualGraphAccepts (Δ, s)\n  · left\n    exact (thm_residual_graph_recognizes_sequent_000062 Γ A).2 ⟨Δ, s, hres, hacc⟩\n  · right\n    exact ⟨Δ, s, hres, hocc, hacc⟩\n· intro h\n  rcases h with hseq | ⟨Δ, s, hres, hocc, _hacc⟩\n  · rw [thm_support_closure_matches_support_ok_000036]\n    exact thm_derivable_support_ok_000032 hseq\n  · exact ((thm_residual_support_normal_form_000050 Γ A).2).mpr ⟨Δ, s, hres, hocc⟩",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "no_diagnostics | toolchain=leanprover/lean4:v4.29.0-rc6"
     }
   ]
 }

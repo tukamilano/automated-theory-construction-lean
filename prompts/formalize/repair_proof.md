@@ -37,4 +37,3 @@
 ## prelude_rules
 - `prelude_code` only for verification-critical shaping, not cosmetic cleanup.
 - No `import`, `namespace`, `section`, `axiom`, `theorem`.
-<!-- INCLUDE: ../shared/formalize_semigrouplike01.md -->

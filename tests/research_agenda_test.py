@@ -10,11 +10,15 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT / "scripts"))
+sys.path.insert(0, str(REPO_ROOT / "scripts" / "loop"))
 
 
 import generate_seeds_from_theory
 import run_loop
 from guidance import build_guidance_context
+from main_theorem import main_theorem_session
+from main_theorem.main_theorem_session import request_main_theorem_candidate_set
+from main_theorem.main_theorem_session import request_main_theorem_selection
 from research_agenda import DEFAULT_RESEARCH_AGENDA_PATH
 from research_agenda import LEGACY_RESEARCH_AGENDA_PATH
 from research_agenda import empty_research_agenda
@@ -208,6 +212,7 @@ def test_worker_payloads_include_research_agenda() -> None:
     }
     captured_payloads: dict[str, dict[str, object]] = {}
     original_invoke_worker_json = run_loop.invoke_worker_json
+    original_main_theorem_invoke_worker_json = main_theorem_session.invoke_worker_json
     original_load_current_research_agenda = run_loop.load_current_research_agenda
 
     try:
@@ -247,27 +252,87 @@ def test_worker_payloads_include_research_agenda() -> None:
                     },
                     {"worker": "research_agenda_test"},
                 )
-            if task_type == "main_theorem_suggest":
+            if task_type == "main_theorem_generate":
                 return (
                     {
-                        "candidate_id": "mt_manual",
-                        "result": "ok",
-                        "statement": "True",
-                        "theorem_name_stem": "agenda_main_theorem",
-                        "docstring_summary": "Agenda-aligned placeholder main theorem.",
-                        "rationale": "agenda-aligned placeholder candidate under the mandatory main theorem policy",
-                        "supporting_theorems": [],
-                        "missing_lemmas": [],
-                        "source_problem_ids": ["op_000001"],
-                        "theorem_pattern": "structure_discovery",
-                        "context_note": "The placeholder candidate is positioned as a summary of the active queue and visible derived cluster.",
-                        "conceptual_depth_note": "The placeholder candidate is treated as a structural summary, not a local technical lemma.",
+                        "candidate_set_id": "mt_main_theorem",
+                        "candidates": [
+                            {
+                                "candidate_rank_seed": 1,
+                                "statement": "True",
+                                "theorem_name_stem": "agenda_main_theorem_summary",
+                                "docstring_summary": "Agenda summary placeholder theorem.",
+                                "rationale": "agenda-aligned structural summary candidate",
+                                "supporting_theorems": [],
+                                "missing_lemmas": [],
+                                "source_problem_ids": ["op_000001"],
+                                "theorem_pattern": "structure_discovery",
+                                "context_note": "The summary candidate is positioned as a compression of the active queue and visible derived cluster.",
+                                "conceptual_depth_note": "The summary candidate is treated as a structural summary, not a local technical lemma.",
+                            },
+                            {
+                                "candidate_rank_seed": 2,
+                                "statement": "True -> True",
+                                "theorem_name_stem": "agenda_main_theorem_bridge",
+                                "docstring_summary": "Agenda bridge placeholder theorem.",
+                                "rationale": "agenda-aligned bridge candidate",
+                                "supporting_theorems": [],
+                                "missing_lemmas": [],
+                                "source_problem_ids": ["op_000001"],
+                                "theorem_pattern": "new_theorem",
+                                "context_note": "The bridge candidate is positioned as the strongest title-level summary theorem in the placeholder fixture.",
+                                "conceptual_depth_note": "The bridge candidate is treated as a reusable structural bridge.",
+                            },
+                            {
+                                "candidate_rank_seed": 3,
+                                "statement": "True ∧ True",
+                                "theorem_name_stem": "agenda_main_theorem_framework",
+                                "docstring_summary": "Agenda framework placeholder theorem.",
+                                "rationale": "agenda-aligned framework candidate",
+                                "supporting_theorems": [],
+                                "missing_lemmas": [],
+                                "source_problem_ids": ["op_000001"],
+                                "theorem_pattern": "framework_introduction",
+                                "context_note": "The framework candidate is positioned as a framework consequence of the placeholder theory.",
+                                "conceptual_depth_note": "The framework candidate is treated as a conceptual interface rather than a technical step.",
+                            },
+                        ],
+                    },
+                    {"worker": "research_agenda_test"},
+                )
+            if task_type == "main_theorem_select":
+                return (
+                    {
+                        "candidate_set_id": "mt_main_theorem",
+                        "selected_candidate_rank_seed": 2,
+                        "selection_summary": "The bridge-style placeholder candidate best matches the active agenda.",
+                        "ranking": [
+                            {
+                                "candidate_rank_seed": 2,
+                                "rank": 1,
+                                "decision": "select",
+                                "reason": "Best matches the agenda's structural bridge pressure.",
+                            },
+                            {
+                                "candidate_rank_seed": 1,
+                                "rank": 2,
+                                "decision": "reject",
+                                "reason": "Good summary, but less decisive than the selected bridge theorem.",
+                            },
+                            {
+                                "candidate_rank_seed": 3,
+                                "rank": 3,
+                                "decision": "reject",
+                                "reason": "More framework-oriented and less direct than the selected theorem.",
+                            },
+                        ],
                     },
                     {"worker": "research_agenda_test"},
                 )
             raise RuntimeError(f"unexpected task_type: {task_type}")
 
         run_loop.invoke_worker_json = fake_invoke_worker_json
+        main_theorem_session.invoke_worker_json = fake_invoke_worker_json
 
         run_loop.request_open_problem_priorities(
             worker_settings={},
@@ -295,10 +360,21 @@ def test_worker_payloads_include_research_agenda() -> None:
             theory_state={},
             max_candidates=2,
         )
-        run_loop.request_main_theorem_suggestion(
+        candidates, _ = request_main_theorem_candidate_set(
             worker_settings={},
-            suggester_prompt="unused",
-            candidate_id="mt_manual",
+            generator_prompt="unused",
+            candidate_set_id="mt_main_theorem",
+            derived_entries=[],
+            theory_context="",
+            tracked_rows=[{"id": "op_000001", "stmt": "True", "src": "seed"}],
+            current_iteration=1,
+            guidance=build_guidance_context(theory_state={}, research_agenda=agenda),
+        )
+        request_main_theorem_selection(
+            worker_settings={},
+            selector_prompt="unused",
+            candidate_set_id="mt_main_theorem",
+            candidates=candidates,
             derived_entries=[],
             theory_context="",
             tracked_rows=[{"id": "op_000001", "stmt": "True", "src": "seed"}],
@@ -307,9 +383,10 @@ def test_worker_payloads_include_research_agenda() -> None:
         )
     finally:
         run_loop.invoke_worker_json = original_invoke_worker_json
+        main_theorem_session.invoke_worker_json = original_main_theorem_invoke_worker_json
         run_loop.load_current_research_agenda = original_load_current_research_agenda
 
-    for task_type in ("prioritize_open_problems", "expand", "main_theorem_suggest"):
+    for task_type in ("prioritize_open_problems", "expand", "main_theorem_generate", "main_theorem_select"):
         payload = captured_payloads.get(task_type)
         if payload is None:
             raise RuntimeError(f"missing captured payload for {task_type}")

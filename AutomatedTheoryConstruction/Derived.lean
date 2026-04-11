@@ -1106,4 +1106,22 @@ theorem thm_same_handed_support_exactness_000059_is_false : ¬((∀ (Γ : List T
     (thm_singleton_atomic_sequent_iff_000011 (A := bad) (s := "p")).mp hseq
   simp [bad] at heq
 
+
+/-- The gap between ordinary support closure and true derivability is exactly a residual atomic root-state obstruction. -/
+theorem main_thm_support_closure_residual_obstruction : ∀ (Γ : List Tp) (A : Tp), SupportClosure Γ A ↔ ((Γ ⇒ A) ∨ ∃ Δ s, residualAtomicState Γ A = some (Δ, s) ∧ (∃ B ∈ Δ, occurs_atom s B) ∧ ¬ AtomicResidualGraphAccepts (Δ, s)) := by
+  intro Γ A
+  constructor
+  · intro hsup
+    rcases ((thm_residual_support_normal_form_000050 Γ A).2).mp hsup with ⟨Δ, s, hres, hocc⟩
+    by_cases hacc : AtomicResidualGraphAccepts (Δ, s)
+    · left
+      exact (thm_residual_graph_recognizes_sequent_000062 Γ A).2 ⟨Δ, s, hres, hacc⟩
+    · right
+      exact ⟨Δ, s, hres, hocc, hacc⟩
+  · intro h
+    rcases h with hseq | ⟨Δ, s, hres, hocc, _hacc⟩
+    · rw [thm_support_closure_matches_support_ok_000036]
+      exact thm_derivable_support_ok_000032 hseq
+    · exact ((thm_residual_support_normal_form_000050 Γ A).2).mpr ⟨Δ, s, hres, hocc⟩
+
 end AutomatedTheoryConstruction

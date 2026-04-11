@@ -33,4 +33,3 @@
 - By default avoid new `def`/`abbrev`/`structure`/`class`/`inductive` in `prelude_code`.
 - Allowed only when essential for refutation.
 - No `import`, `namespace`, `section`, `axiom`, `theorem` in prelude.
-<!-- INCLUDE: ../shared/formalize_semigrouplike01.md -->

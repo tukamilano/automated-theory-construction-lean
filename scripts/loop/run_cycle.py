@@ -129,7 +129,7 @@ def main() -> int:
     parser.add_argument("--worker-timeout", type=int)
     parser.add_argument("--data-dir", default="data")
     parser.add_argument("--formalization-memory-file", default="data/formalization_memory.json")
-    parser.add_argument("--phase-attempts-file", default="data/manual_main_theorem_phase_attempts.jsonl")
+    parser.add_argument("--phase-attempts-file")
     parser.add_argument("--preview-file", default=DEFAULT_PREVIEW_FILE)
     parser.add_argument("--review-output-file", default=DEFAULT_REVIEW_OUTPUT_FILE)
     parser.add_argument("--review-report-file", default=DEFAULT_REVIEW_REPORT_FILE)
@@ -173,7 +173,7 @@ def main() -> int:
     manifest_file = Path(args.manifest_file)
     catalog_file = Path(args.catalog_file)
     snapshot_root = Path(args.snapshot_root)
-    phase_attempts_file = Path(args.phase_attempts_file)
+    phase_attempts_file = Path(args.phase_attempts_file) if args.phase_attempts_file else None
 
     start_iteration = _read_current_iteration(data_dir)
     target_iteration = start_iteration + args.cycle_iterations
@@ -263,8 +263,6 @@ def main() -> int:
                     str(data_dir),
                     "--formalization-memory-file",
                     str(args.formalization_memory_file),
-                    "--phase-attempts-file",
-                    str(phase_attempts_file),
                     "--run-id",
                     cycle_id,
                     "--current-iteration",
@@ -282,6 +280,7 @@ def main() -> int:
                     "--max-same-error-streak",
                     str(args.max_same_error_streak),
                 ]
+                _append_flag(main_theorem_cmd, "--phase-attempts-file", phase_attempts_file)
                 _append_flag(main_theorem_cmd, "--worker-command", args.worker_command)
                 _append_flag(main_theorem_cmd, "--worker-timeout", args.worker_timeout)
                 _append_bool_flag(main_theorem_cmd, "--phase-logs", bool(args.phase_logs))

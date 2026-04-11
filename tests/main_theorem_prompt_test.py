@@ -6,8 +6,8 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
 
-def test_suggester_prompt_preserves_main_theorem_language() -> None:
-    prompt = (REPO_ROOT / "prompts" / "main_theorem" / "suggester.md").read_text(encoding="utf-8")
+def test_generate_prompt_preserves_main_theorem_language() -> None:
+    prompt = (REPO_ROOT / "prompts" / "main_theorem" / "generate.md").read_text(encoding="utf-8")
     required_snippets = (
         "conceptual compression",
         "corollaries, helpers, or special cases",
@@ -15,15 +15,15 @@ def test_suggester_prompt_preserves_main_theorem_language() -> None:
         "desired_summary_changes",
         "missing_bridges",
         "overexplored_patterns",
-        "There is no abstain path.",
+        "Build 3 materially distinct candidates",
     )
     for snippet in required_snippets:
         if snippet not in prompt:
-            raise RuntimeError(f"missing preserved suggester guidance: {snippet}")
+            raise RuntimeError(f"missing preserved generator guidance: {snippet}")
 
 
-def test_suggester_prompt_adds_selector_publishability_guidance() -> None:
-    prompt = (REPO_ROOT / "prompts" / "main_theorem" / "suggester.md").read_text(encoding="utf-8")
+def test_generate_prompt_adds_candidate_set_guidance() -> None:
+    prompt = (REPO_ROOT / "prompts" / "main_theorem" / "generate.md").read_text(encoding="utf-8")
     required_snippets = (
         "paper-worthy summary theorem candidate",
         "Use `Derived.lean` as the primary grounding source",
@@ -31,6 +31,8 @@ def test_suggester_prompt_adds_selector_publishability_guidance() -> None:
         "reconstruct a stronger summary theorem",
         "Do not behave like a local problem expander.",
         "title-level result",
+        "\"candidate_set_id\": \"<match input>\"",
+        "\"candidate_rank_seed\": 1",
         "\"source_problem_ids\": [\"tracked problem ids that seeded this reconstructed summary theorem\"]",
         "admissible_main_theorem_patterns",
         "research_quality_standard",
@@ -41,7 +43,25 @@ def test_suggester_prompt_adds_selector_publishability_guidance() -> None:
     )
     for snippet in required_snippets:
         if snippet not in prompt:
-            raise RuntimeError(f"missing new selector guidance: {snippet}")
+            raise RuntimeError(f"missing generator candidate-set guidance: {snippet}")
+
+
+def test_select_prompt_adds_explicit_ranking_guidance() -> None:
+    prompt = (REPO_ROOT / "prompts" / "main_theorem" / "select.md").read_text(encoding="utf-8")
+    required_snippets = (
+        "You must choose only from the provided `candidates`.",
+        "Do not invent a new candidate.",
+        "There is no abstain path.",
+        "explicit ranking",
+        "\"selected_candidate_rank_seed\": 2",
+        "\"rank\": 1",
+        "\"decision\": \"select\"",
+        "\"decision\": \"reject\"",
+        "Rejected reasons should explain why the candidate lost relative to the winner",
+    )
+    for snippet in required_snippets:
+        if snippet not in prompt:
+            raise RuntimeError(f"missing selector ranking guidance: {snippet}")
 
 
 def test_planner_prompt_is_removed() -> None:
@@ -51,8 +71,9 @@ def test_planner_prompt_is_removed() -> None:
 
 
 def main() -> int:
-    test_suggester_prompt_preserves_main_theorem_language()
-    test_suggester_prompt_adds_selector_publishability_guidance()
+    test_generate_prompt_preserves_main_theorem_language()
+    test_generate_prompt_adds_candidate_set_guidance()
+    test_select_prompt_adds_explicit_ranking_guidance()
     test_planner_prompt_is_removed()
     print("main theorem prompt test passed")
     return 0
