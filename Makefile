@@ -151,7 +151,7 @@ refactor-to-generated:
 		--catalog-file $(GENERATED_CATALOG_FILE) \
 		--plan-file $(DERIVED_CHUNK_PLAN_FILE) \
 		$(MATERIALIZE_ARGS)
-	$(PYTHON) scripts/run_generated_local_passes.py \
+	$(PYTHON) scripts/refactor/run_generated_local_passes.py \
 		--generated-root $(GENERATED_ROOT) \
 		--theory-file $(THEORY_FILE) \
 		--worker-command "$(WORKER_COMMAND)" \

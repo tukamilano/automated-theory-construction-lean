@@ -22,7 +22,7 @@ theorem thm_sequent_degree_bound_000005_is_false : ¬(∀ {Γ : List Tp} {A : Tp
     simpa [p] using
       (Sequent.ldiv_l (Δ := [p]) (A := p) (Γ := []) (B := p) (Λ := []) (C := p) hp hp)
   have hseq : [p] ⇒ bad := by
-    have hne : [p] ≠ [] := by simp
+    have hne : [p] ≠ [] := by exact nonempty_premises hp
     simpa [bad, p] using
       (Sequent.rdiv_r (Γ := [p]) (A := Tp.ldiv p p) (B := p) hne hldiv)
   have hle : tp_degree bad ≤ list_degree [p] := h hseq
@@ -46,12 +46,12 @@ theorem thm_singleton_atom_derivation_shape_000009_is_false : ¬(∀ {s : String
   rcases h (s := "x") (A := # "x") hax with ⟨Δ, hΔ, hEq | hEq⟩
   · have hne : Δ ≠ [] := nonempty_premises hΔ
     cases Δ with
-    | nil => exact hne rfl
+    | nil => exact false_of_ne hne
     | cons A Γ =>
         simp at hEq
   · have hne : Δ ≠ [] := nonempty_premises hΔ
     cases Δ with
-    | nil => exact hne rfl
+    | nil => exact false_of_ne hne
     | cons A Γ =>
         simp at hEq
 
@@ -78,7 +78,7 @@ theorem thm_atom_count_bounded_by_context_000010_is_false : ¬(∀ {Γ : List Tp
     simpa [p] using
       (Sequent.ldiv_l (Δ := [p]) (A := p) (Γ := []) (B := p) (Λ := []) (C := p) hp hp)
   have hseq : [p] ⇒ bad := by
-    have hne : [p] ≠ [] := by simp
+    have hne : [p] ≠ [] := by exact nonempty_premises hp
     simpa [bad, p] using
       (Sequent.rdiv_r (Γ := [p]) (A := p ⧹ p) (B := p) hne hldiv)
   have hle : atom_count bad ≤ atom_count_list [p] := h hseq
@@ -117,7 +117,7 @@ theorem thm_singleton_atomic_sequent_iff_000011 : ∀ {A : Tp} {s : String}, ([A
           rcases hx with rfl
           simp [is_atom]
         have hsingle : [Tp.atom name] = [Tp.atom s] := atom_generation hctx h
-        simpa using List.singleton_inj.mp hsingle
+        exact List.head_eq_of_cons_eq hsingle
     | ldiv A B =>
         unfold prove1 at hp
         simp [candidates, picks, splits] at hp
@@ -165,12 +165,12 @@ theorem thm_singleton_atom_sequent_iff_000018 : ∀ {s : String} {A : Tp}, ([# s
         simpa using rdiv_invertible h
   · intro h
     rcases h with rfl | h | h
-    · exact Sequent.ax
+    · exact thm_singleton_atomic_sequent_iff_000011.mpr rfl
     · rcases h with ⟨B, C, rfl, hBC⟩
-      have hne : ([# s] : List Tp) ≠ [] := by simp
+      have hne : ([# s] : List Tp) ≠ [] := by exact List.cons_ne_nil (#s) []
       simpa using Sequent.ldiv_r hne hBC
     · rcases h with ⟨B, C, rfl, hCB⟩
-      have hne : ([# s] : List Tp) ≠ [] := by simp
+      have hne : ([# s] : List Tp) ≠ [] := by exact List.cons_ne_nil (#s) []
       simpa using Sequent.rdiv_r hne hCB
 
 
@@ -182,7 +182,7 @@ theorem thm_singleton_sequent_iff_cases_000022 : ∀ {A C : Tp}, ([A] ⇒ C) ↔
     cases C with
     | atom s =>
         left
-        exact (thm_singleton_atomic_sequent_iff_000011 (A := A) (s := s)).mp h
+        exact thm_singleton_atomic_sequent_iff_000011.mp h
     | ldiv B D =>
         right
         left
@@ -197,10 +197,10 @@ theorem thm_singleton_sequent_iff_cases_000022 : ∀ {A C : Tp}, ([A] ⇒ C) ↔
     rcases h with rfl | h | h
     · exact Sequent.ax
     · rcases h with ⟨B, D, rfl, hBD⟩
-      have hne : ([A] : List Tp) ≠ [] := by simp
+      have hne : ([A] : List Tp) ≠ [] := by exact List.cons_ne_nil A []
       simpa using Sequent.ldiv_r hne hBD
     · rcases h with ⟨B, D, rfl, hDB⟩
-      have hne : ([A] : List Tp) ≠ [] := by simp
+      have hne : ([A] : List Tp) ≠ [] := by exact List.cons_ne_nil A []
       simpa using Sequent.rdiv_r hne hDB
 
 
@@ -217,17 +217,17 @@ theorem thm_atom_context_sequent_cases_000023 : ∀ {Γ : List Tp} {A : Tp}, (�
         right
         left
         refine ⟨nonempty_premises h, B, C, rfl, ?_⟩
-        simpa using ldiv_invertible h
+        exact ldiv_invertible h
     | rdiv C B =>
         right
         right
         refine ⟨nonempty_premises h, B, C, rfl, ?_⟩
-        simpa using rdiv_invertible h
+        exact rdiv_invertible h
   · intro h
     rcases h with ⟨s, rfl, rfl⟩ | ⟨hne, B, C, rfl, h⟩ | ⟨hne, B, C, rfl, h⟩
-    · exact Sequent.ax
-    · simpa using Sequent.ldiv_r hne h
-    · simpa using Sequent.rdiv_r hne h
+    · exact thm_singleton_atomic_sequent_iff_000011.mpr rfl
+    · exact Sequent.ldiv_r hne h
+    · exact Sequent.rdiv_r hne h
 
 
 /-- Atomic sequents are singleton axioms or decompose through a candidate. -/
@@ -235,8 +235,7 @@ theorem thm_atom_goal_candidate_cases_000007 : ∀ (Γ : List Tp) (s : String), 
   intro Γ s h
   cases h with
   | ax =>
-      left
-      rfl
+      exact Or.symm (Or.inr rfl)
   | rdiv_l d_arg d_main =>
       rename_i Δ A Γ₁ B Λ
       right
@@ -271,7 +270,7 @@ theorem thm_occurs_atom_from_context_000021_is_false : ¬(∀ {Γ : List Tp} {A 
     simpa [p, q] using
       (Sequent.ldiv_l (Δ := [p]) (A := p) (Γ := []) (B := q) (Λ := []) (C := q) hp hq)
   have hseq : [p] ⇒ bad := by
-    have hne : [p] ≠ [] := by simp
+    have hne : [p] ≠ [] := by exact nonempty_premises hp
     simpa [bad, p, q] using
       (Sequent.rdiv_r (Γ := [p]) (A := p ⧹ q) (B := q) hne hldiv)
   have hocc : occurs_atom "q" bad := by
@@ -305,7 +304,7 @@ lemma support_ok_replace
       · refine ⟨B', ?_, hocc s hXocc⟩
         simp
       · refine ⟨X, ?_, hXocc⟩
-        simp [hX]
+        exact List.mem_append_right (Γ ++ L ++ [B'] ++ R) hX
   | ldiv D C ihD ihC =>
       rcases h with ⟨_, hC⟩
       constructor
@@ -322,10 +321,10 @@ lemma support_ok_replace
 lemma support_ok_self_singleton (A : Tp) : support_ok [A] A := by
   induction A with
   | atom s =>
-      refine ⟨# s, by simp, by simp [occurs_atom]⟩
+      refine ⟨# s, by exact List.mem_singleton.mpr rfl, by simp [occurs_atom]⟩
   | ldiv B C ihB ihC =>
       constructor
-      · simp
+      · exact List.cons_ne_nil (B \ C) []
       · simpa using
           (support_ok_replace
             (Γ := []) (L := [B]) (R := []) (Λ := [])
@@ -333,7 +332,7 @@ lemma support_ok_self_singleton (A : Tp) : support_ok [A] A := by
             (fun s hs => by simp [occurs_atom, hs]) ihC)
   | rdiv C B ihC ihB =>
       constructor
-      · simp
+      · exact List.cons_ne_nil (C / B) []
       · simpa using
           (support_ok_replace
             (Γ := []) (L := []) (R := [B]) (Λ := [])
@@ -345,12 +344,11 @@ theorem thm_derivable_support_ok_000032 : ∀ {Γ : List Tp} {A : Tp}, (Γ ⇒ A
   intro Γ A h
   induction h with
   | ax =>
-      rename_i A
-      simpa using support_ok_self_singleton A
+      (expose_names; exact support_ok_self_singleton A_1)
   | rdiv_r hne hBA ih =>
-      exact ⟨hne, by simpa using ih⟩
+      exact ⟨hne, by exact ((fun a => ih) ∘ fun a => Γ) Γ⟩
   | ldiv_r hne hAB ih =>
-      exact ⟨hne, by simpa using ih⟩
+      exact ⟨hne, by exact ((fun a => ih) ∘ fun a => Γ) Γ⟩
   | rdiv_l d_arg d_main ih_arg ih_main =>
       rename_i Δ A' Γ' B Λ C
       simpa [List.append_assoc] using
@@ -391,21 +389,19 @@ theorem thm_atomic_candidate_tree_iff_sequent_000030 : ∀ (Γ : List Tp) (s : S
   · intro h
     induction h with
     | base s =>
-        exact Sequent.ax
+        exact thm_singleton_atomic_sequent_iff_000011.mpr rfl
     | step_rdiv Γ L Δ Λ A B s hc harg hrec ih =>
         have hΓ : Γ = L ++ [B ⧸ A] ++ Δ ++ Λ := by
           symm
           simpa using (candidates_list_degree (Γ := Γ) (c := Cand.rdiv L B A Δ Λ) hc)
         subst Γ
-        simpa [List.append_assoc] using
-          (Sequent.rdiv_l (Γ := L) (Δ := Δ) (A := A) (B := B) (Λ := Λ) (C := # s) harg ih)
+        exact Sequent.rdiv_l harg ih
     | step_ldiv Γ Γ₁ Δ R A B s hc harg hrec ih =>
         have hΓ : Γ = Γ₁ ++ Δ ++ [A ⧹ B] ++ R := by
           symm
           simpa using (candidates_list_degree (Γ := Γ) (c := Cand.ldiv Γ₁ Δ A B R) hc)
         subst Γ
-        simpa [List.append_assoc] using
-          (Sequent.ldiv_l (Γ := Γ₁) (Δ := Δ) (A := A) (B := B) (Λ := R) (C := # s) harg ih)
+        exact Sequent.ldiv_l harg ih
   · have hcomplete : ∀ (Γ : List Tp) (s : String), (Γ ⇒ # s) → AtomicCandidateTree Γ s := by
       intro Γ s
       let n := list_degree Γ
@@ -414,7 +410,7 @@ theorem thm_atomic_candidate_tree_iff_sequent_000030 : ∀ (Γ : List Tp) (s : S
         refine Nat.strong_induction_on n ?_
         intro n ih Γ s hdeg h
         rcases thm_atom_goal_candidate_cases_000007 Γ s h with rfl | ⟨c, hc, hcases⟩
-        · simpa using AtomicCandidateTree.base s
+        · exact AtomicCandidateTree.base s
         · cases c with
           | rdiv L B A Δ Λ =>
               rcases hcases with ⟨harg, hrec⟩
@@ -472,13 +468,13 @@ theorem thm_support_closure_matches_support_ok_000036 : ∀ (Γ : List Tp) (A : 
   · intro h
     induction h with
     | self A =>
-        simpa using support_ok_self_singleton A
+        exact support_ok_self_singleton A
     | ldiv_r Γ B C hΓ h ih =>
         exact ⟨hΓ, by simpa using ih⟩
     | rdiv_r Γ C B hΓ h ih =>
         exact ⟨hΓ, by simpa using ih⟩
     | replace Γ L R Λ B B' C hocc h ih =>
-        simpa [List.append_assoc] using support_ok_replace hocc ih
+        exact support_ok_replace hocc ih
   · revert Γ
     induction A with
     | atom s =>
@@ -501,7 +497,7 @@ theorem thm_support_closure_matches_support_ok_000036 : ∀ (Γ : List Tp) (A : 
             (B := # s) (B' := B) (C := # s)
             (fun t ht => by
               simp [occurs_atom] at ht
-              simpa [ht] using hocc)
+              exact (Eq.to_iff (congrFun (congrArg occurs_atom (id (Eq.symm ht))) B)).mpr hocc)
             (SupportClosure.self (# s)))
     | ldiv B C ihB ihC =>
         intro Γ h
@@ -545,21 +541,19 @@ theorem thm_candidate_tree_iff_sequent_000038 : ∀ (Γ : List Tp) (A : Tp), Can
   · intro h
     induction h with
     | base s =>
-        exact Sequent.ax
+        exact thm_singleton_atomic_sequent_iff_000011.mpr rfl
     | step_rdiv Γ L Δ Λ A B s hc harg hrec ih =>
         have hΓ : Γ = L ++ [B ⧸ A] ++ Δ ++ Λ := by
           symm
           simpa using (candidates_list_degree (Γ := Γ) (c := Cand.rdiv L B A Δ Λ) hc)
         subst Γ
-        simpa [List.append_assoc] using
-          (Sequent.rdiv_l (Γ := L) (Δ := Δ) (A := A) (B := B) (Λ := Λ) (C := # s) harg ih)
+        exact Sequent.rdiv_l harg ih
     | step_ldiv Γ Γ₁ Δ R A B s hc harg hrec ih =>
         have hΓ : Γ = Γ₁ ++ Δ ++ [A ⧹ B] ++ R := by
           symm
           simpa using (candidates_list_degree (Γ := Γ) (c := Cand.ldiv Γ₁ Δ A B R) hc)
         subst Γ
-        simpa [List.append_assoc] using
-          (Sequent.ldiv_l (Γ := Γ₁) (Δ := Δ) (A := A) (B := B) (Λ := R) (C := # s) harg ih)
+        exact Sequent.ldiv_l harg ih
     | ldiv_r Γ A B hne hrec ih =>
         exact Sequent.ldiv_r hne ih
     | rdiv_r Γ A B hne hrec ih =>
@@ -568,7 +562,7 @@ theorem thm_candidate_tree_iff_sequent_000038 : ∀ (Γ : List Tp) (A : Tp), Can
       intro Γ s h
       induction h with
       | base s =>
-          simpa using CandidateTree.base s
+          exact CandidateTree.base s
       | step_rdiv Γ L Δ Λ A B s hc harg hrec ih =>
           exact CandidateTree.step_rdiv Γ L Δ Λ A B s hc harg ih
       | step_ldiv Γ Γ₁ Δ R A B s hc harg hrec ih =>
@@ -589,7 +583,7 @@ theorem thm_candidate_tree_iff_sequent_000038 : ∀ (Γ : List Tp) (A : Tp), Can
           have hne : Γ ≠ [] := nonempty_premises h
           have hinner : Γ ++ [A] ⇒ B := rdiv_invertible h
           exact CandidateTree.rdiv_r Γ A B hne (ihB (Γ ++ [A]) hinner)
-    exact hcomplete A Γ
+    exact fun a => (hcomplete A Γ ∘ fun a_1 => a) Γ
 
 
 /-- Support closure is exactly derivability. -/
@@ -603,7 +597,7 @@ theorem thm_support_closure_exact_complete_000041_is_false : ¬(∀ (Γ : List T
         (B := #"p") (B' := bad) (C := #"p")
         (fun s hs => by
           simp [occurs_atom, bad] at hs ⊢
-          exact hs)
+          exact (String.append_left_inj s).mp (congrFun (congrArg HAppend.hAppend hs) s))
         (SupportClosure.self (#"p")))
   have hseq : [bad] ⇒ #"p" := (h [bad] (#"p")).mp hsc
   have heq : bad = #"p" :=
@@ -724,10 +718,9 @@ lemma exists_left_ctx_of_allLeftOnly {Γ : List Tp}
   | nil =>
       refine ⟨[], ?_, ?_⟩ <;> rfl
   | cons x xs ih =>
-      have hx : isLeftOnly x := hΓ x (by simp)
+      have hx : isLeftOnly x := hΓ x (by exact List.mem_cons_self)
       have hxs : ∀ y ∈ xs, isLeftOnly y := by
-        intro y hy
-        exact hΓ y (by simp [hy])
+        exact fun y a => List.forall_mem_of_forall_mem_cons hΓ y a
       rcases exists_left_tp_of_isLeftOnly hx with ⟨xL, hxL, hx_pf⟩
       rcases ih hxs with ⟨xsL, hxsL, hxs_pf⟩
       refine ⟨xL :: xsL, ?_, ?_⟩
@@ -742,10 +735,9 @@ lemma exists_right_ctx_of_allRightOnly {Γ : List Tp}
   | nil =>
       refine ⟨[], ?_, ?_⟩ <;> rfl
   | cons x xs ih =>
-      have hx : isRightOnly x := hΓ x (by simp)
+      have hx : isRightOnly x := hΓ x (by exact List.mem_cons_self)
       have hxs : ∀ y ∈ xs, isRightOnly y := by
-        intro y hy
-        exact hΓ y (by simp [hy])
+        exact fun y a => List.forall_mem_of_forall_mem_cons hΓ y a
       rcases exists_right_tp_of_isRightOnly hx with ⟨xR, hxR, hx_pf⟩
       rcases ih hxs with ⟨xsR, hxsR, hxs_pf⟩
       refine ⟨xR :: xsR, ?_, ?_⟩
@@ -937,8 +929,7 @@ theorem thm_residual_candidate_tree_bijection_000055 : ∀ (Γ : List Tp) (A : T
           ⟨x.1.1, x.1.2, x.2.1, x.2.2⟩))
   refine ⟨reconstruct, ?_⟩
   constructor
-  · intro x y _
-    exact hS.elim x y
+  · exact Function.injective_of_subsingleton reconstruct
   · intro htree
     have hseq : Γ ⇒ A :=
       (thm_candidate_tree_iff_sequent_000038 Γ A).mp htree
@@ -947,8 +938,7 @@ theorem thm_residual_candidate_tree_bijection_000055 : ∀ (Γ : List Tp) (A : T
     rcases ((thm_residual_support_normal_form_000050 Γ A).1).mp hhand with
       ⟨Δ, s, hres, hatom⟩
     let x : S := ⟨(Δ, s), ⟨hres, hatom⟩⟩
-    refine ⟨x, ?_⟩
-    exact Subsingleton.elim _ _
+    exact exists_apply_eq_apply reconstruct x
 
 
 open Mathling.Lambek.ProductFree
@@ -990,16 +980,16 @@ theorem thm_residual_graph_recognizes_sequent_000062 : ∀ (Γ : List Tp) (A : T
     | step hstep hacc ih =>
         cases hstep with
         | rdiv Γ L Δ Λ A B s hc harg =>
-            simpa using AtomicCandidateTree.step_rdiv Γ L Δ Λ A B s hc harg ih
+            exact AtomicCandidateTree.step_rdiv (Γ, s).1 L Δ Λ A B (Γ, s).2 hc harg ih
         | ldiv Γ Γ₁ Δ R A B s hc harg =>
-            simpa using AtomicCandidateTree.step_ldiv Γ Γ₁ Δ R A B s hc harg ih
+            exact AtomicCandidateTree.step_ldiv (Γ, s).1 Γ₁ Δ R A B (Γ, s).2 hc harg ih
   have htree_to_graph :
       ∀ {Δ : List Tp} {s : String},
         AtomicCandidateTree Δ s → AtomicResidualGraphAccepts (Δ, s)
   · intro Δ s htree
     induction htree with
     | base s =>
-        simpa using AtomicResidualGraphAccepts.base s
+        exact AtomicResidualGraphAccepts.base s
     | step_rdiv Γ L Δ Λ A B s hc harg hrec ih =>
         exact AtomicResidualGraphAccepts.step
           (AtomicResidualGraphStep.rdiv Γ L Δ Λ A B s hc harg) ih
@@ -1049,7 +1039,7 @@ theorem thm_residual_atomic_branch_bound_000057 : ∀ (Γ : List Tp) (A : Tp) (�
     intro Δ s n h
     induction h with
     | base s =>
-        simp [list_degree, tp_degree]
+        exact Nat.zero_le (list_degree [#s])
     | step_rdiv Γ L Δ Λ A B s n hc harg hrec ih =>
         have hΓ : Γ = L ++ [B ⧸ A] ++ Δ ++ Λ := by
           symm
@@ -1058,7 +1048,7 @@ theorem thm_residual_atomic_branch_bound_000057 : ∀ (Γ : List Tp) (A : Tp) (�
           rw [hΓ]
           simp [list_degree_traversible, List.append_assoc, list_degree, tp_degree]
           omega
-        exact le_trans (Nat.succ_le_succ ih) hgap
+        exact add_le_of_add_le_right hgap ih
     | step_ldiv Γ Γ₁ Δ R A B s n hc harg hrec ih =>
         have hΓ : Γ = Γ₁ ++ Δ ++ [A ⧹ B] ++ R := by
           symm
@@ -1067,8 +1057,8 @@ theorem thm_residual_atomic_branch_bound_000057 : ∀ (Γ : List Tp) (A : Tp) (�
           rw [hΓ]
           simp [list_degree_traversible, List.append_assoc, list_degree, tp_degree]
           omega
-        exact le_trans (Nat.succ_le_succ ih) hgap
-  exact hmain hlen
+        exact add_le_of_add_le_right hgap ih
+  exact le_of_eq_of_le rfl (hmain hlen)
 
 
 /-- Same-handed support closure agrees with handed support closure. -/
@@ -1096,7 +1086,7 @@ theorem thm_same_handed_support_exactness_000059_is_false : ¬((∀ (Γ : List T
         (B := #"p") (B' := bad) (C := #"p")
         (fun s hs => by
           simp [occurs_atom, bad] at hs ⊢
-          exact hs)
+          exact (String.append_left_inj s).mp (congrFun (congrArg HAppend.hAppend hs) s))
         (SupportClosure.self (#"p")))
   have hhand : HandedSupportClosure [bad] (#"p") :=
     (h.1 [bad] (#"p") hleft hA).mp hsc

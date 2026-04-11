@@ -191,7 +191,7 @@
     {
       "chunk_id": "chunk_001",
       "end_index": 7,
-      "end_line": 178,
+      "end_line": 174,
       "left_cut_load": null,
       "node_names": [
         "AutomatedTheoryConstruction.thm_sequent_degree_bound_000005_is_false",
@@ -211,7 +211,7 @@
     {
       "chunk_id": "chunk_002",
       "end_index": 17,
-      "end_line": 591,
+      "end_line": 567,
       "left_cut_load": 0.11396,
       "node_names": [
         "AutomatedTheoryConstruction.thm_atom_context_sequent_cases_000023",
@@ -228,12 +228,12 @@
       "right_cut_load": 0.860398,
       "size": 10,
       "start_index": 8,
-      "start_line": 208
+      "start_line": 204
     },
     {
       "chunk_id": "chunk_003",
       "end_index": 31,
-      "end_line": 1066,
+      "end_line": 1020,
       "left_cut_load": 0.860398,
       "node_names": [
         "AutomatedTheoryConstruction.thm_handed_support_closure_iff_sequent_000048",
@@ -254,7 +254,7 @@
       "right_cut_load": null,
       "size": 14,
       "start_index": 18,
-      "start_line": 612
+      "start_line": 584
     }
   ],
   "deps_file": "data/derived-deps.json",
