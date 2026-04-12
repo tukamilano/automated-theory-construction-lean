@@ -3,6 +3,8 @@ SHELL := /bin/sh
 LAKE ?= lake
 PYTHON ?= uv run python
 ATC ?= $(PYTHON) scripts/atc_cli.py
+CONTINUE_CONFIG ?= configs/atc.continue.json
+ATC_COMMON_ARGS ?=
 
 THEORY_FILE ?= AutomatedTheoryConstruction/Theory.lean
 DERIVED_FILE ?= AutomatedTheoryConstruction/Derived.lean
@@ -34,7 +36,7 @@ REVIEW_ARGS ?=
 MATERIALIZE_ARGS ?=
 GENERATED_LOCAL_ARGS ?=
 
-.PHONY: help build check check-theory check-derived check-scratch smoke seed loop loop-continue cycle pipeline main-theorem rewrite review refactor-to-generated
+.PHONY: help build check check-theory check-derived check-scratch smoke seed loop loop-continue loop-refactor-to-generated loop-continue-refactor-to-generated cycle pipeline main-theorem rewrite review split-generated-local refactor-to-generated
 
 help:
 	@printf '%s\n' \
@@ -48,17 +50,22 @@ help:
 		'  make seed          - generate seeds.jsonl via scripts/atc_cli.py seed' \
 		'  make loop          - run the default worker loop via scripts/atc_cli.py loop' \
 		'  make loop-continue - same as loop, but keep current runtime state' \
+		'  make loop-refactor-to-generated - run loop -> pass1.5 -> pass2 -> split -> local pass1.2 -> local pass1.3' \
+		'  make loop-continue-refactor-to-generated - run loop-continue -> pass1.5 -> pass2 -> split -> local pass1.2 -> local pass1.3 using $(CONTINUE_CONFIG)' \
 		'  make cycle         - run one cycle: loop -> main theorem -> refactor -> snapshot' \
 		'  make pipeline      - run seed -> loop -> rewrite -> review via scripts/atc_cli.py pipeline' \
 		'  make main-theorem  - run a one-shot main theorem session via scripts/atc_cli.py main-theorem' \
 		'  make rewrite       - run scripts/atc_cli.py rewrite' \
 		'  make review        - run scripts/atc_cli.py review' \
+		'  make split-generated-local - run split -> local pass1.2 -> local pass1.3' \
 		'  make refactor-to-generated - run pass1.5 -> pass2 -> split -> local pass1.2 -> local pass1.3' \
 		'' \
 		'Common overrides:' \
 		'  WORKER_COMMAND="uv run scripts/mock_worker.py"' \
 		'  WORKER_TIMEOUT=600 CODEX_TIMEOUT=540' \
+		'  ATC_COMMON_ARGS="--config configs/atc.continue.json"' \
 		'  THEORY_FILE=... DERIVED_FILE=... SCRATCH_FILE=...' \
+		'  CONTINUE_CONFIG=configs/atc.continue.json' \
 		'  THEORY_FILE should point to the Theory.lean entry module' \
 		'  SEED_ARGS="--context-file path/to/context.tex --seed-count 4"' \
 		'  LOOP_ARGS="--max-iterations 40"' \
@@ -85,6 +92,7 @@ smoke:
 
 seed:
 	$(ATC) seed \
+		$(ATC_COMMON_ARGS) \
 		--theory-file $(THEORY_FILE) \
 		--derived-file $(DERIVED_FILE) \
 		--seeds-file $(SEEDS_FILE) \
@@ -92,6 +100,7 @@ seed:
 
 loop:
 	$(ATC) loop \
+		$(ATC_COMMON_ARGS) \
 		--worker-command "$(WORKER_COMMAND)" \
 		--worker-timeout "$(WORKER_TIMEOUT)" \
 		--codex-timeout "$(CODEX_TIMEOUT)" \
@@ -99,14 +108,21 @@ loop:
 
 loop-continue:
 	$(ATC) loop \
+		$(ATC_COMMON_ARGS) \
 		--worker-command "$(WORKER_COMMAND)" \
 		--worker-timeout "$(WORKER_TIMEOUT)" \
 		--codex-timeout "$(CODEX_TIMEOUT)" \
 		--no-initialize-on-start \
 		$(LOOP_ARGS)
 
+loop-refactor-to-generated: loop refactor-to-generated
+
+loop-continue-refactor-to-generated: ATC_COMMON_ARGS = --config $(CONTINUE_CONFIG)
+loop-continue-refactor-to-generated: loop-continue refactor-to-generated
+
 cycle:
 	$(ATC) cycle \
+		$(ATC_COMMON_ARGS) \
 		--worker-command "$(WORKER_COMMAND)" \
 		--worker-timeout "$(WORKER_TIMEOUT)" \
 		--codex-timeout "$(CODEX_TIMEOUT)" \
@@ -115,6 +131,7 @@ cycle:
 
 pipeline:
 	$(ATC) pipeline \
+		$(ATC_COMMON_ARGS) \
 		--worker-command "$(WORKER_COMMAND)" \
 		--worker-timeout "$(WORKER_TIMEOUT)" \
 		--codex-timeout "$(CODEX_TIMEOUT)" \
@@ -124,6 +141,7 @@ pipeline:
 
 main-theorem:
 	$(ATC) main-theorem \
+		$(ATC_COMMON_ARGS) \
 		--theory-file $(THEORY_FILE) \
 		--derived-file $(DERIVED_FILE) \
 		--scratch-file $(SCRATCH_FILE) \
@@ -131,6 +149,7 @@ main-theorem:
 
 rewrite:
 	$(ATC) rewrite \
+		$(ATC_COMMON_ARGS) \
 		--input-file $(PREVIEW_FILE) \
 		--output-file $(PREVIEW_FILE) \
 		--raw-output-file $(TRY_AT_EACH_STEP_RAW_OUTPUT_FILE) \
@@ -139,24 +158,46 @@ rewrite:
 
 review:
 	$(ATC) review \
+		$(ATC_COMMON_ARGS) \
 		--input-file $(PREVIEW_FILE) \
 		--output-file $(REVIEWED_FILE) \
 		$(REVIEW_ARGS)
 
+split-generated-local:
+	$(ATC) materialize-generated \
+		$(ATC_COMMON_ARGS) \
+		--derived-file $(DERIVED_FILE) \
+		--deps-file $(DEPS_FILE) \
+		--generated-root $(GENERATED_ROOT) \
+		--manifest-file $(GENERATED_MANIFEST_FILE) \
+		--catalog-file $(GENERATED_CATALOG_FILE) \
+		--plan-file $(DERIVED_CHUNK_PLAN_FILE) \
+		$(MATERIALIZE_ARGS)
+	$(PYTHON) scripts/refactor/run_generated_local_passes.py \
+		--generated-root $(GENERATED_ROOT) \
+		--theory-file $(THEORY_FILE) \
+		--worker-command "$(WORKER_COMMAND)" \
+		--worker-timeout $(WORKER_TIMEOUT) \
+		--manifest-verify-timeout $(GENERATED_LOCAL_MANIFEST_VERIFY_TIMEOUT) \
+		$(GENERATED_LOCAL_ARGS)
+
 refactor-to-generated:
 	cp $(DERIVED_FILE) $(PREVIEW_FILE)
 	$(ATC) rewrite \
+		$(ATC_COMMON_ARGS) \
 		--input-file $(PREVIEW_FILE) \
 		--output-file $(PREVIEW_FILE) \
 		--raw-output-file $(TRY_AT_EACH_STEP_RAW_OUTPUT_FILE) \
 		--apply-report-file $(TRY_AT_EACH_STEP_APPLY_REPORT_FILE) \
 		$(REWRITE_ARGS)
 	$(ATC) review \
+		$(ATC_COMMON_ARGS) \
 		--input-file $(PREVIEW_FILE) \
 		--output-file $(REVIEWED_FILE) \
 		$(REVIEW_ARGS)
 	cp $(REVIEWED_FILE) $(DERIVED_FILE)
 	$(ATC) materialize-generated \
+		$(ATC_COMMON_ARGS) \
 		--derived-file $(DERIVED_FILE) \
 		--deps-file $(DEPS_FILE) \
 		--generated-root $(GENERATED_ROOT) \

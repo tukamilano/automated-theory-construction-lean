@@ -1,6 +1,6 @@
 import Mathlib
 import AutomatedTheoryConstruction.Theory
-import AutomatedTheoryConstruction.Generated.C0001_sequent_singleton_false
+import AutomatedTheoryConstruction.Generated.C0001_singleton_sequent_false
 
 set_option autoImplicit false
 
@@ -157,6 +157,13 @@ lemma cand_rdiv_context_eq
   symm
   simpa using (candidates_list_degree (Γ := Γ) (c := Cand.rdiv L B A Δ Λ) hc)
 
+lemma cand_ldiv_context_eq
+    {Γ Γ₁ Δ R : List Tp} {A B : Tp}
+    (hc : Cand.ldiv Γ₁ Δ A B R ∈ candidates Γ) :
+    Γ = Γ₁ ++ Δ ++ [A ⧹ B] ++ R := by
+  symm
+  simpa using (candidates_list_degree (Γ := Γ) (c := Cand.ldiv Γ₁ Δ A B R) hc)
+
 /-- Atomic candidate trees characterize atomic sequents. -/
 theorem thm_atomic_candidate_tree_iff_sequent_000030 : ∀ (Γ : List Tp) (s : String), AtomicCandidateTree Γ s ↔ (Γ ⇒ # s) := by
   intro Γ s
@@ -171,9 +178,8 @@ theorem thm_atomic_candidate_tree_iff_sequent_000030 : ∀ (Γ : List Tp) (s : S
         subst Γ
         exact Sequent.rdiv_l harg ih
     | step_ldiv Γ Γ₁ Δ R A B s hc harg hrec ih =>
-        have hΓ : Γ = Γ₁ ++ Δ ++ [A ⧹ B] ++ R := by
-          symm
-          simpa using (candidates_list_degree (Γ := Γ) (c := Cand.ldiv Γ₁ Δ A B R) hc)
+        have hΓ : Γ = Γ₁ ++ Δ ++ [A ⧹ B] ++ R :=
+          cand_ldiv_context_eq (Γ := Γ) (Γ₁ := Γ₁) (Δ := Δ) (R := R) (A := A) (B := B) hc
         subst Γ
         exact Sequent.ldiv_l harg ih
   · have hcomplete : ∀ (Γ : List Tp) (s : String), (Γ ⇒ # s) → AtomicCandidateTree Γ s := by
@@ -314,9 +320,8 @@ theorem thm_candidate_tree_iff_sequent_000038 : ∀ (Γ : List Tp) (A : Tp), Can
         subst Γ
         exact Sequent.rdiv_l harg ih
     | step_ldiv Γ Γ₁ Δ R A B s hc harg hrec ih =>
-        have hΓ : Γ = Γ₁ ++ Δ ++ [A ⧹ B] ++ R := by
-          symm
-          simpa using (candidates_list_degree (Γ := Γ) (c := Cand.ldiv Γ₁ Δ A B R) hc)
+        have hΓ : Γ = Γ₁ ++ Δ ++ [A ⧹ B] ++ R :=
+          cand_ldiv_context_eq (Γ := Γ) (Γ₁ := Γ₁) (Δ := Δ) (R := R) (A := A) (B := B) hc
         subst Γ
         exact Sequent.ldiv_l harg ih
     | ldiv_r Γ A B hne hrec ih =>
@@ -354,15 +359,17 @@ theorem thm_candidate_tree_iff_sequent_000038 : ∀ (Γ : List Tp) (A : Tp), Can
 theorem thm_support_closure_exact_complete_000041_is_false : ¬(∀ (Γ : List Tp) (A : Tp), SupportClosure Γ A ↔ (Γ ⇒ A)) := by
   intro h
   let bad : Tp := #"p" ⧹ #"p"
-  have hsc : SupportClosure [bad] (#"p") := by
+  have hsupport : support_ok [bad] (#"p") := by
     simpa [bad] using
-      (SupportClosure.replace
+      (support_ok_replace
         (Γ := []) (L := []) (R := []) (Λ := [])
         (B := #"p") (B' := bad) (C := #"p")
         (fun s hs => by
           simp [occurs_atom, bad] at hs ⊢
           exact hs)
-        (SupportClosure.self (#"p")))
+        (support_ok_self_singleton (#"p")))
+  have hsc : SupportClosure [bad] (#"p") :=
+    (thm_support_closure_matches_support_ok_000036 [bad] (#"p")).2 hsupport
   have hseq : [bad] ⇒ #"p" := (h [bad] (#"p")).mp hsc
   have heq : bad = #"p" :=
     (thm_singleton_atomic_sequent_iff_000011 (A := bad) (s := "p")).mp hseq

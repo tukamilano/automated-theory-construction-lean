@@ -10,170 +10,78 @@ namespace AutomatedTheoryConstruction
 open Mathling.Lambek.ProductFree
 open scoped Mathling.Lambek.ProductFree
 
-theorem thm_foldr_reverse_sweep_accepts_000142 : ∀ p : AtomicResidualState, ∀ R : Finset AtomicResidualState,
+theorem thm_accepts_reachable_least_fixpoint_000147 : ∀ p : AtomicResidualState, ∀ R : Finset AtomicResidualState,
   (∀ q : AtomicResidualState, q ∈ R ↔ Relation.ReflTransGen AtomicResidualGraphStep p q) →
-  ∀ L : List AtomicResidualState,
-    L.Nodup →
-    (∀ q : AtomicResidualState, q ∈ L ↔ q ∈ R) →
-    (∀ q r : AtomicResidualState,
-      q ∈ L →
-      r ∈ L →
-      AtomicResidualGraphStep q r →
-      List.idxOf q L < List.idxOf r L) →
-    ∀ q : AtomicResidualState,
-      q ∈ R →
-        (atomicResidualReverseSweep p L q = true ↔ AtomicResidualGraphAccepts q) := by
-  intro p R hR L hLnodup hEnum hTop q hqR
-  classical
-  have hReach :
-      ∀ q : AtomicResidualState,
-        q ∈ L ↔ Relation.ReflTransGen AtomicResidualGraphStep p q
-  · intro q
-    rw [hEnum q, hR q]
+    let A : Set AtomicResidualState := {q : AtomicResidualState | q ∈ R ∧ AtomicResidualGraphAccepts q}
+    let F : Set AtomicResidualState → Set AtomicResidualState := fun S =>
+      (({([# (p.2)], p.2)} : Set AtomicResidualState) ∩ (↑R : Set AtomicResidualState)) ∪
+        {q : AtomicResidualState | q ∈ R ∧ ∃ r : AtomicResidualState, AtomicResidualGraphStep q r ∧ r ∈ S}
+    A = F A ∧
+      ∀ S : Set AtomicResidualState, S ⊆ (↑R : Set AtomicResidualState) → F S = S → A ⊆ S := by
+  intro p R hR
+  dsimp
   have hsame :
       ∀ {q : AtomicResidualState},
-        Relation.ReflTransGen AtomicResidualGraphStep p q → q.2 = p.2
-  · intro q hq
+        Relation.ReflTransGen AtomicResidualGraphStep p q → q.2 = p.2 := by
+    intro q hq
     induction hq with
     | refl =>
         rfl
     | tail hreach hstep ih =>
         cases hstep <;> simpa using ih
-  have hclosed :
-      ∀ q r : AtomicResidualState,
-        q ∈ L →
-        AtomicResidualGraphStep q r →
-        r ∈ L
-  · intro q r hqL hstep
-    exact (hReach r).mpr (Relation.ReflTransGen.tail ((hReach q).mp hqL) hstep)
-  have hscan :
-      ∀ L : List AtomicResidualState,
-        L.Nodup →
-        (∀ q : AtomicResidualState,
-          q ∈ L →
-          Relation.ReflTransGen AtomicResidualGraphStep p q) →
-        (∀ q r : AtomicResidualState,
-          q ∈ L →
-          AtomicResidualGraphStep q r →
-          r ∈ L) →
-        (∀ q r : AtomicResidualState,
-          q ∈ L →
-          r ∈ L →
-          AtomicResidualGraphStep q r →
-          List.idxOf q L < List.idxOf r L) →
+  have hreachLeast := thm_accepts_least_reachable_subset_000143 p R hR
+  dsimp at hreachLeast
+  rcases hreachLeast with ⟨_, hA_base, hA_step, hleast⟩
+  constructor
+  · ext q
+    constructor
+    · intro hqA
+      rcases hqA with ⟨hqR, hqacc⟩
+      rcases (thm_residual_accepts_base_or_step_000097 q).mp hqacc with hbase | ⟨r, hstep, hracc⟩
+      · left
+        constructor
+        · show q ∈ ({([# (p.2)], p.2)} : Set AtomicResidualState)
+          have hs : q.2 = p.2 := hsame ((hR q).mp hqR)
+          simpa [hs] using hbase
+        · exact hqR
+      · right
+        have hreachq : Relation.ReflTransGen AtomicResidualGraphStep p q := (hR q).mp hqR
+        have hrR : r ∈ R := (hR r).mpr (Relation.ReflTransGen.tail hreachq hstep)
+        exact ⟨hqR, r, hstep, ⟨hrR, hracc⟩⟩
+    · intro hqF
+      rcases hqF with hqbase | ⟨hqR, r, hstep, hrA⟩
+      · rcases hqbase with ⟨hqmem, hqR⟩
+        have hqeq : q = ([# (p.2)], p.2) := by
+          simpa using hqmem
+        have hpR : ([# (p.2)], p.2) ∈ R := by
+          simpa [hqeq] using hqR
+        simpa [hqeq] using hA_base hpR
+      · exact hA_step q hqR ⟨r, hstep, hrA⟩
+  · intro S hSR hFS
+    have hSbase : (([# (p.2)], p.2) ∈ R) → ([# (p.2)], p.2) ∈ S := by
+      intro hpR
+      have hpFS :
+          ([# (p.2)], p.2) ∈
+            (({([# (p.2)], p.2)} : Set AtomicResidualState) ∩ (↑R : Set AtomicResidualState)) ∪
+              {q : AtomicResidualState | q ∈ R ∧ ∃ r : AtomicResidualState, AtomicResidualGraphStep q r ∧ r ∈ S} := by
+        left
+        constructor
+        · simp
+        · exact hpR
+      simpa [hFS] using hpFS
+    have hSstep :
         ∀ q : AtomicResidualState,
-          q ∈ L →
-          atomicResidualReverseSweep p L q = true ↔ AtomicResidualGraphAccepts q
-  · intro L
-    induction L with
-    | nil =>
-        intro hnodup hmem hclosed htop q hq
-        cases hq
-    | cons a t ih =>
-        intro hnodup hmem hclosed htop q hq
-        have hcons : (a ∉ t) ∧ t.Nodup := List.nodup_cons.mp hnodup
-        have hnotin : a ∉ t := hcons.1
-        have hnodup_t : t.Nodup := hcons.2
-        have hreacha : Relation.ReflTransGen AtomicResidualGraphStep p a :=
-          hmem a (List.mem_cons_self a t)
-        have hs : a.2 = p.2 := hsame hreacha
-        have hmem_t :
-            ∀ q : AtomicResidualState,
-              q ∈ t → Relation.ReflTransGen AtomicResidualGraphStep p q
-        · intro q hq
-          exact hmem q (List.mem_cons_of_mem a hq)
-        have hclosed_t :
-            ∀ q r : AtomicResidualState,
-              q ∈ t →
-              AtomicResidualGraphStep q r →
-              r ∈ t
-        · intro q r hq hr
-          have hr_mem : r ∈ a :: t := hclosed q r (List.mem_cons_of_mem a hq) hr
-          rcases hr_mem with rfl | hr_mem
-          · have hqa : q ≠ a
-            · intro hqa
-              exact hnotin (hqa ▸ hq)
-            have hlt : List.idxOf q (a :: t) < List.idxOf a (a :: t) :=
-              htop q a (List.mem_cons_of_mem a hq) (List.mem_cons_self a t) hr
-            have : False
-            · rw [List.idxOf_cons_ne _ hqa.symm] at hlt
-              simpa using hlt
-            exact False.elim this
-          · exact hr_mem
-        have htop_t :
-            ∀ q r : AtomicResidualState,
-              q ∈ t →
-              r ∈ t →
-              AtomicResidualGraphStep q r →
-              List.idxOf q t < List.idxOf r t
-        · intro q r hq hr hstep
-          have hqa : q ≠ a
-          · intro hqa
-            exact hnotin (hqa ▸ hq)
-          have hra : r ≠ a
-          · intro hra
-            exact hnotin (hra ▸ hr)
-          have hlt : List.idxOf q (a :: t) < List.idxOf r (a :: t) :=
-            htop q r (List.mem_cons_of_mem a hq) (List.mem_cons_of_mem a hr) hstep
-          rw [List.idxOf_cons_ne _ hqa.symm, List.idxOf_cons_ne _ hra.symm] at hlt
-          omega
-        rcases List.mem_cons.mp hq with rfl | hq
-        · rw [(thm_residual_accepts_base_or_step_000097 a).symm]
-          constructor
-          · intro hscan_a
-            have hscan_a' :
-                a = ([# (p.2)], p.2) ∨
-                  ∃ r : AtomicResidualState,
-                    AtomicResidualGraphStep a r ∧
-                    atomicResidualReverseSweep p t r = true
-            · simpa [atomicResidualReverseSweep] using hscan_a
-            rcases hscan_a' with hbase | ⟨r, hstep, hrscan⟩
-            · left
-              simpa [hs] using hbase
-            · have hr_mem : r ∈ a :: t := hclosed a r (List.mem_cons_self a t) hstep
-              rcases hr_mem with rfl | hr_mem
-              · have hlt : List.idxOf a (a :: t) < List.idxOf a (a :: t) :=
-                  htop a a (List.mem_cons_self a t) (List.mem_cons_self a t) hstep
-                have : False
-                · simpa using hlt
-                exact False.elim this
-              · right
-                exact ⟨r, hstep, (ih hnodup_t hmem_t hclosed_t htop_t r hr_mem).mp hrscan⟩
-          · intro hacc
-            rcases hacc with hbase | ⟨r, hstep, hracc⟩
-            · have hbase' : a = ([# (p.2)], p.2)
-              · simpa [hs] using hbase
-              have hscan_a' :
-                  a = ([# (p.2)], p.2) ∨
-                    ∃ r : AtomicResidualState,
-                      AtomicResidualGraphStep a r ∧
-                      atomicResidualReverseSweep p t r = true :=
-                Or.inl hbase'
-              simpa [atomicResidualReverseSweep] using hscan_a'
-            · have hr_mem : r ∈ a :: t := hclosed a r (List.mem_cons_self a t) hstep
-              rcases hr_mem with rfl | hr_mem
-              · have hlt : List.idxOf a (a :: t) < List.idxOf a (a :: t) :=
-                  htop a a (List.mem_cons_self a t) (List.mem_cons_self a t) hstep
-                have : False
-                · simpa using hlt
-                exact False.elim this
-              · have hscan_a' :
-                  a = ([# (p.2)], p.2) ∨
-                    ∃ r : AtomicResidualState,
-                      AtomicResidualGraphStep a r ∧
-                      atomicResidualReverseSweep p t r = true
-                · right
-                  exact ⟨r, hstep, (ih hnodup_t hmem_t hclosed_t htop_t r hr_mem).mpr hracc⟩
-                simpa [atomicResidualReverseSweep] using hscan_a'
-        · have hqa : q ≠ a
-          · intro hqa
-            exact hnotin (hqa ▸ hq)
-          have htail_eq :
-              atomicResidualReverseSweep p (a :: t) q = atomicResidualReverseSweep p t q
-          · simp [atomicResidualReverseSweep, hqa]
-          rw [htail_eq]
-          exact ih hnodup_t hmem_t hclosed_t htop_t q hq
-  have hqL : q ∈ L := (hEnum q).mpr hqR
-  exact hscan L hLnodup (fun q hq => (hReach q).mp hq) hclosed hTop q hqL
+          q ∈ R →
+            (∃ r : AtomicResidualState, AtomicResidualGraphStep q r ∧ r ∈ S) →
+              q ∈ S := by
+      intro q hqR hsucc
+      have hqFS :
+          q ∈
+            (({([# (p.2)], p.2)} : Set AtomicResidualState) ∩ (↑R : Set AtomicResidualState)) ∪
+              {q : AtomicResidualState | q ∈ R ∧ ∃ r : AtomicResidualState, AtomicResidualGraphStep q r ∧ r ∈ S} := by
+        right
+        exact ⟨hqR, hsucc⟩
+      simpa [hFS] using hqFS
+    exact hleast S hSR hSbase hSstep
 
 end AutomatedTheoryConstruction

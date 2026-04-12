@@ -158,7 +158,7 @@ If `AutomatedTheoryConstruction/Derived.refactored.reviewed.lean` already exists
 uv run python scripts/direct_refactor_derived.py --skip-copy
 ```
 
-If you use `scripts/atc_cli.py` or `atc.json`, the stage toggles are:
+If you use `scripts/atc_cli.py` or `configs/atc.json`, the stage toggles are:
 
 - `runtime.run_refactor_pass_1_5`
 - `runtime.run_refactor_pass_2`
@@ -244,7 +244,7 @@ Useful Codex worker settings:
 - `ATC_PROVER_STATEMENT_CODEX_MODEL`: optional prover-statement-only model override
 - `ATC_PROVER_STATEMENT_CODEX_TIMEOUT`: optional prover-statement-only inner timeout override
 
-The same model settings can be written in `atc.json`. Example:
+The same model settings can be written in `configs/atc.json`. Example:
 
 ```json
 {

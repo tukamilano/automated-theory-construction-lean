@@ -2797,14 +2797,58 @@
       "lean_error_fingerprint": "statement_formalization"
     },
     {
+      "stage": "",
+      "source_statement": "",
+      "formalized_statement": "",
+      "statement_formalization_notes": "",
       "result": "stuck",
       "verify_success": false,
       "proof_sketch": "Use induction on `n` for the recursively defined set `S`. For `n = 0`, if `q ∈ R` then `q ∈ S 0` means exactly `q = ([# (p.2)], p.2)`; this is equivalent to `AtomicBranchLength q.1 q.2 0` once we note that every reachable `q` has `q.2 = p.2`, proved by induction on `(hR q).mp hqR` because each constructor of `AtomicResidualGraphStep` preserves the second component. For the successor step, `q ∈ S (n+1)` means either `q ∈ S n`, which gives some `k ≤ n` by the induction hypothesis and hence `k ≤ n+1`, or `q ∈ R` and there is `r` with `AtomicResidualGraphStep q r` and `r ∈ S n`; from reachability of `q` and this step, `r` is also in `R`, so the induction hypothesis gives `AtomicBranchLength r.1 r.2 k` for some `k ≤ n`, and the corresponding `AtomicBranchLength.step_rdiv` or `step_ldiv` constructor gives branch length `k+1` for `q`. Conversely, assume `∃ k ≤ n+1, AtomicBranchLength q.1 q.2 k`; if `k = 0`, then the only possibility is the base constructor, so `q = ([# (q.2)], q.2) = ([# (p.2)], p.2)` and thus `q ∈ S 0 ⊆ S (n+1)`. If `k = m+1`, inspect the last constructor of `AtomicBranchLength` to obtain some successor `r` with `AtomicResidualGraphStep q r` and `AtomicBranchLength r.1 r.2 m`; again `r ∈ R` by `hR`, so the induction hypothesis gives `r ∈ S n`, and therefore `q ∈ S (n+1)` by the recursive clause defining `S`.",
-      "prelude_code": "",
       "proof_text": "",
       "counterexample_text": "",
       "lean_error_excerpt": "formalize worker timeout: Worker returned error: Command '['codex', 'exec', '-', '--sandbox', 'read-only', '--skip-git-repo-check', '--output-last-message', '/tmp/tmp57zm6xry', '--model', 'gpt-5.4']' timed out after 390 seconds (task_type=formalize)",
       "lean_error_fingerprint": "formalizer_timeout"
+    },
+    {
+      "stage": "statement_formalization",
+      "source_statement": "For every root state `p` and every finite set `R` with `q ∈ R ↔ Relation.ReflTransGen AtomicResidualGraphStep p q`, if `S₀ := {([# (p.2)], p.2)} ∩ R` and `S_{n+1}` is obtained from `Sₙ` by adding every `q ∈ R` having an `AtomicResidualGraphStep`-successor in `Sₙ`, then for every `n` and every `q ∈ R`, `q ∈ Sₙ` if and only if there is a path of length at most `n` from `q` to `([# (p.2)], p.2)`.",
+      "statement_prelude_code": "def atomic_residual_saturation (p : AtomicResidualState) (R : Finset AtomicResidualState) : Nat → Set AtomicResidualState\n  | 0 => {q | q = ([# (p.2)], p.2) ∧ q ∈ R}\n  | n + 1 =>\n      atomic_residual_saturation p R n ∪\n        {q | q ∈ R ∧ ∃ r : AtomicResidualState, AtomicResidualGraphStep q r ∧ r ∈ atomic_residual_saturation p R n}\n\ndef atomic_residual_path_to_base (p q : AtomicResidualState) : Nat → Prop\n  | 0 => q = ([# (p.2)], p.2)\n  | n + 1 =>\n      ∃ r : AtomicResidualState, AtomicResidualGraphStep q r ∧ atomic_residual_path_to_base p r n",
+      "formalized_statement": "∀ p : AtomicResidualState,\n  ∀ R : Finset AtomicResidualState,\n    (∀ q : AtomicResidualState, q ∈ R ↔ Relation.ReflTransGen AtomicResidualGraphStep p q) →\n      ∀ n : Nat,\n        ∀ q : AtomicResidualState,\n          q ∈ R →\n            (q ∈ atomic_residual_saturation p R n ↔\n              ∃ m : Nat, m ≤ n ∧ atomic_residual_path_to_base p q m)",
+      "theorem_name_stem": "saturation_iff_bounded_path",
+      "docstring_summary": "Reachability saturation after n rounds matches paths of length at most n.",
+      "statement_formalization_notes": "Used minimal prelude definitions for the S_n recursion and exact path length, since the current library exposes `ReflTransGen` but not a canonical bounded-length state-path predicate.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization"
+    }
+  ],
+  "op_000147": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "For every root state `p` and every finite set `R` with `q ∈ R ↔ Relation.ReflTransGen AtomicResidualGraphStep p q`, the set `{q ∈ R | AtomicResidualGraphAccepts q}` is the least fixed point of the operator `F(S) := ({([# (p.2)], p.2)} ∩ R) ∪ {q ∈ R | ∃ r, AtomicResidualGraphStep q r ∧ r ∈ S}` on subsets of `R`.",
+      "formalized_statement": "∀ p : AtomicResidualState, ∀ R : Finset AtomicResidualState,\n  (∀ q : AtomicResidualState, q ∈ R ↔ Relation.ReflTransGen AtomicResidualGraphStep p q) →\n    let A : Set AtomicResidualState := {q : AtomicResidualState | q ∈ R ∧ AtomicResidualGraphAccepts q}\n    let F : Set AtomicResidualState → Set AtomicResidualState := fun S =>\n      (({([# (p.2)], p.2)} : Set AtomicResidualState) ∩ (↑R : Set AtomicResidualState)) ∪\n        {q : AtomicResidualState | q ∈ R ∧ ∃ r : AtomicResidualState, AtomicResidualGraphStep q r ∧ r ∈ S}\n    A = F A ∧\n      ∀ S : Set AtomicResidualState, S ⊆ (↑R : Set AtomicResidualState) → F S = S → A ⊆ S",
+      "statement_formalization_notes": "Formalized least fixed point explicitly as fixedness plus minimality among subset-of-R fixed points of the operator.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization"
+    },
+    {
+      "result": "proof",
+      "verify_success": false,
+      "proof_sketch": "Unfold the least-fixed-point statement. For fixedness, use `thm_residual_accepts_base_or_step_000097`; in the base case, a short induction on `Relation.ReflTransGen AtomicResidualGraphStep p q` shows every reachable `q` has `q.2 = p.2`, so the only accepting base reachable from `p` is `([# (p.2)], p.2)`. For minimality, extract from `F S = S` that `S` contains the base state whenever it lies in `R` and is closed under predecessors inside `R`, then apply `thm_accepts_least_reachable_subset_000143`.",
+      "prelude_code": "",
+      "proof_text": "intro p R hR\ndsimp\nhave hsame :\n    ∀ {q : AtomicResidualState},\n      Relation.ReflTransGen AtomicResidualGraphStep p q → q.2 = p.2 := by\n  intro q hq\n  induction hq with\n  | refl =>\n      rfl\n  | tail hreach hstep ih =>\n      cases hstep <;> simpa using ih\nhave hreachLeast := thm_accepts_least_reachable_subset_000143 p R hR\ndsimp at hreachLeast\nrcases hreachLeast with ⟨_, hA_base, hA_step, hleast⟩\nconstructor\n· ext q\n  constructor\n  · intro hqA\n    rcases hqA with ⟨hqR, hqacc⟩\n    rcases (thm_residual_accepts_base_or_step_000097 q).mp hqacc with hbase | ⟨r, hstep, hracc⟩\n    · left\n      constructor\n      · show q ∈ ({([# (p.2)], p.2)} : Set AtomicResidualState)\n        have hs : q.2 = p.2 := hsame ((hR q).mp hqR)\n        simpa [hs] using hbase\n      · exact hqR\n    · right\n      have hreachq : Relation.ReflTransGen AtomicResidualGraphStep p q := (hR q).mp hqR\n      have hrR : r ∈ R := (hR r).mpr (Relation.ReflTransGen.tail hreachq hstep)\n      exact ⟨hqR, r, hstep, ⟨hrR, hracc⟩⟩\n  · intro hqF\n    rcases hqF with hqbase | ⟨hqR, r, hstep, hrA⟩\n    · rcases hqbase with ⟨hqmem, hqR⟩\n      have hqeq : q = ([# (p.2)], p.2) := by\n        simpa using hqmem\n      have hpR : ([# (p.2)], p.2) ∈ R := by\n        simpa [hqeq] using hqR\n      simpa [hqeq] using hA_base hpR\n    · exact hA_step q hqR ⟨r, hstep, hrA⟩\n· intro S hSR hFS\n  have hSbase : (([# (p.2)], p.2) ∈ R) → ([# (p.2)], p.2) ∈ S := by\n    intro hpR\n    have hpFS :\n        ([# (p.2)], p.2) ∈\n          (({([# (p.2)], p.2)} : Set AtomicResidualState) ∩ (↑R : Set AtomicResidualState)) ∪\n            {q : AtomicResidualState | q ∈ R ∧ ∃ r : AtomicResidualState, AtomicResidualGraphStep q r ∧ r ∈ S} := by\n      left\n      constructor\n      · simp\n      · exact hpR\n    simpa [hFS] using hpFS\n  have hSstep :\n      ∀ q : AtomicResidualState,\n        q ∈ R →\n          (∃ r : AtomicResidualState, AtomicResidualGraphStep q r ∧ r ∈ S) →\n            q ∈ S := by\n    intro q hqR hsucc\n    have hqFS :\n        q ∈\n          (({([# (p.2)], p.2)} : Set AtomicResidualState) ∩ (↑R : Set AtomicResidualState)) ∪\n            {q : AtomicResidualState | q ∈ R ∧ ∃ r : AtomicResidualState, AtomicResidualGraphStep q r ∧ r ∈ S} := by\n      right\n      exact ⟨hqR, hsucc⟩\n    simpa [hFS] using hqFS\n  exact hleast S hSR hSbase hSstep",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.loop.002.lean:71:6: error: Type mismatch: After simplification, term",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.loop.002.lean:71:6: error: Type mismatch: After simplification, term | hpFS | has type"
     }
   ]
 }

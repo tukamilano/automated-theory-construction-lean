@@ -406,7 +406,12 @@ def main() -> int:
             generated_root,
             data_dir,
         ]
-        for config_name in ("atc.json", "atc.toml"):
+        for config_name in (
+            "configs/atc.json",
+            "configs/atc.toml",
+            "atc.json",
+            "atc.toml",
+        ):
             config_path = REPO_ROOT / config_name
             if config_path.exists():
                 snapshot_paths.append(config_path)

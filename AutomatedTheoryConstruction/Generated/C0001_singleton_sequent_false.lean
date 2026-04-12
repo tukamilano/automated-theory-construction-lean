@@ -97,6 +97,11 @@ theorem thm_singleton_nonatom_derivation_shape_000013 : ∀ {s : String} {A : Tp
       refine ⟨B, C, rfl, ?_⟩
       simpa using rdiv_invertible hA
 
+theorem prove1_nil_false {A : Tp} : ¬ prove1 [] A := by
+  intro hA
+  have hs : ([] : List Tp) ⇒ A := (prove1_iff_sequent).1 hA
+  exact (nonempty_premises hs) rfl
+
 /-- A singleton context derives an atom iff it is that atom. -/
 theorem thm_singleton_atomic_sequent_iff_000011 : ∀ {A : Tp} {s : String}, ([A] ⇒ # s) ↔ A = # s := by
   intro A s
@@ -115,19 +120,11 @@ theorem thm_singleton_atomic_sequent_iff_000011 : ∀ {A : Tp} {s : String}, ([A
     | ldiv A B =>
         unfold prove1 at hp
         simp [candidates, picks, splits] at hp
-        have hnil : ¬ prove1 [] A := by
-          intro hA
-          have hs : ([] : List Tp) ⇒ A := (prove1_iff_sequent).1 hA
-          exact (nonempty_premises hs) rfl
-        exact False.elim (hnil hp.1)
+        exact False.elim (prove1_nil_false hp.1)
     | rdiv B A =>
         unfold prove1 at hp
         simp [candidates, picks, splits] at hp
-        have hnil : ¬ prove1 [] A := by
-          intro hA
-          have hs : ([] : List Tp) ⇒ A := (prove1_iff_sequent).1 hA
-          exact (nonempty_premises hs) rfl
-        exact False.elim (hnil hp.1)
+        exact False.elim (prove1_nil_false hp.1)
   · rintro rfl
     exact Sequent.ax
 
@@ -136,26 +133,19 @@ theorem thm_singleton_atom_sequent_iff_000018 : ∀ {s : String} {A : Tp}, ([# s
   intro s A
   constructor
   · intro h
-    cases A with
-    | atom name =>
-        left
-        have hctx : ∀ x ∈ [Tp.atom s], is_atom x := by
-          intro x hx
-          simp at hx
-          rcases hx with rfl
-          simp [is_atom]
-        have hsingle : [Tp.atom s] = [Tp.atom name] := atom_generation hctx h
-        simpa using (List.singleton_inj.mp hsingle).symm
-    | ldiv B C =>
-        right
-        left
-        refine ⟨B, C, rfl, ?_⟩
-        simpa using ldiv_invertible h
-    | rdiv C B =>
-        right
-        right
-        refine ⟨B, C, rfl, ?_⟩
-        simpa using rdiv_invertible h
+    by_cases hAtom : is_atom A
+    · left
+      cases A with
+      | atom name =>
+          simpa using (thm_singleton_atomic_sequent_iff_000011.mp h).symm
+      | ldiv B C =>
+          exfalso
+          simpa [is_atom] using hAtom
+      | rdiv C B =>
+          exfalso
+          simpa [is_atom] using hAtom
+    · right
+      exact thm_singleton_nonatom_derivation_shape_000013 (s := s) (A := A) ⟨h, hAtom⟩
   · intro h
     rcases h with rfl | h | h
     · exact thm_singleton_atomic_sequent_iff_000011.mpr rfl

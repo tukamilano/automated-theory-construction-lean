@@ -108,7 +108,12 @@ def _find_config_path(explicit: str | None) -> Path | None:
         candidate = Path(explicit)
         return candidate.resolve() if candidate.is_absolute() else (Path.cwd() / candidate).resolve()
 
-    for candidate in (REPO_ROOT / "atc.json", REPO_ROOT / "atc.toml"):
+    for candidate in (
+        REPO_ROOT / "configs" / "atc.json",
+        REPO_ROOT / "configs" / "atc.toml",
+        REPO_ROOT / "atc.json",
+        REPO_ROOT / "atc.toml",
+    ):
         if candidate.exists():
             return candidate
     return None
@@ -127,7 +132,7 @@ def _load_toml_module() -> Any:
         except ModuleNotFoundError as exc:
             raise RuntimeError(
                 "TOML config requires Python 3.11+ (`tomllib`) or the `tomli` package. "
-                "Use a JSON config file such as `atc.json` if you want zero extra dependencies."
+                "Use a JSON config file such as `configs/atc.json` if you want zero extra dependencies."
             ) from exc
 
 

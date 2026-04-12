@@ -46,7 +46,7 @@ The unified operational entrypoint is:
 uv run python scripts/atc_cli.py --help
 ```
 
-If `atc.json` exists at the repository root, `scripts/atc_cli.py` picks it up automatically.
+If `configs/atc.json` exists, `scripts/atc_cli.py` picks it up automatically.
 You can inspect the resolved config with:
 
 ```bash
