@@ -69,11 +69,31 @@ Evaluate the candidates using the following three dimensions.
 - Strongly prefer candidates that fit a `research_agenda` valued problem type or canonical target.
 - Reject candidates that fit `overexplored_patterns` unless they clearly subsume and reorganize them.
 
+## materials_policy
+- If `materials` are provided, treat them as optional external context for theorem-level positioning, not as internal state.
+- In main-theorem selection, use priorities in roughly this order:
+  1. visible verified theory,
+  2. `materials`,
+  3. `research_agenda`,
+  4. `theory_state`,
+  5. local bundling or generic generalization.
+- Use `materials` to compare candidates on:
+  - structural centrality,
+  - theory readiness,
+  - literature connection,
+  - fertility for later theorem families,
+  - anti-goal risk such as cosmetic reframing or weak rediscovery.
+- Treat novelty only as a coarse positioning judgment in your private reasoning: `rediscovery_like`, `specialization_like`, `generalization_like`, `bridge_like`, `boundary_like`, or `unclear`.
+- If `materials.source_links` are available, use them to estimate the closest known result and the likely delta of each candidate.
+- Prefer the candidate that can be most clearly positioned as a special case, generalization, boundary sharpening, or bridge relative to the available structural-theory context.
+- Use literature-facing materials to refine judgment, not to reward distant aspirational statements that outrun the visible verified theory.
+
 ## selection_policy
 - Compare the candidates head-to-head.
 - Prefer the candidate with the best combination of naturalness, significance, structural compression, and conceptual depth.
 - If one candidate is slightly bolder but much less grounded in visible results, do not select it.
 - If one candidate is safer but merely local or editorial, do not select it over a clearly stronger structural theorem.
+- If `materials` are provided, prefer the candidate whose position relative to the broader structural theory is clearest and least cosmetic.
 - Rejected reasons should explain why the candidate lost relative to the winner, not merely restate its content.
 
 ## output_schema

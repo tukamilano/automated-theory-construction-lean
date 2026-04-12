@@ -26,11 +26,6 @@ __pycache__/
 *.swp
 *.swo
 
-# Keep documentation and context materials tracked
-!docs/
-!docs/**
-/materials/*
-!/materials/.gitkeep
-
 # Runtime-generated ATC state
 data/runs/
+data/material_cache/

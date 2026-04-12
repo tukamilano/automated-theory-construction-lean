@@ -246,6 +246,76 @@ def main() -> None:
                 },
             ],
         }
+    elif task_type == "main_theorem_suggest":
+        tracked_problems = payload.get("tracked_problems", [])
+        source_problem_ids = []
+        if isinstance(tracked_problems, list):
+            for item in tracked_problems:
+                if not isinstance(item, dict):
+                    continue
+                problem_id = str(item.get("problem_id", "")).strip()
+                if problem_id:
+                    source_problem_ids.append(problem_id)
+                if len(source_problem_ids) >= 2:
+                    break
+        result_payload = {
+            "candidate_id": str(payload.get("candidate_id", "")),
+            "result": "ok",
+            "statement": "True -> True",
+            "theorem_name_stem": "smoke_main_theorem_bridge",
+            "docstring_summary": "Smoke bridge theorem.",
+            "rationale": "mock_proof_worker: bridge-style main theorem candidate",
+            "supporting_theorems": [],
+            "missing_lemmas": [],
+            "source_problem_ids": source_problem_ids,
+            "theorem_pattern": "new_theorem",
+            "context_note": "The smoke bridge candidate is positioned as the strongest title-level smoke result.",
+            "conceptual_depth_note": "The smoke bridge candidate is framed around a reusable bridge rather than bookkeeping.",
+        }
+    elif task_type == "main_theorem_retrieve":
+        result_payload = {
+            "candidate_id": str(payload.get("candidate_id", "")),
+            "closest_items": [
+                {
+                    "reference": "smoke source link",
+                    "kind": "source_link",
+                    "relevance": "closest smoke structural anchor",
+                    "confidence": "high",
+                }
+            ],
+            "research_line": "smoke bridge theorem line",
+            "coverage_assessment": "smoke materials are sufficient",
+            "missing_angles": [],
+            "need_supplemental_retrieval": False,
+        }
+    elif task_type == "main_theorem_map":
+        result_payload = {
+            "candidate_id": str(payload.get("candidate_id", "")),
+            "closest_baseline": "smoke baseline",
+            "relations": [
+                {
+                    "reference": "smoke source link",
+                    "overlap": "same smoke bridge family",
+                    "delta": "sharper smoke bridge theorem",
+                    "delta_materiality": "substantial",
+                }
+            ],
+            "overall_novelty_risk": "medium",
+            "variant_objection": "mock_proof_worker: could still look like a nearby smoke bridge variant",
+        }
+    elif task_type == "main_theorem_evaluate":
+        result_payload = {
+            "candidate_id": str(payload.get("candidate_id", "")),
+            "novelty": "medium",
+            "significance": "high",
+            "paper_unit_viability": "yes",
+            "strongest_objection": "mock_proof_worker: could still look close to a smoke baseline",
+            "objection_answerable": "yes",
+            "minimal_publishable_unit": "smoke bridge note",
+            "salvage_plan": "",
+            "verdict": "pass",
+            "reason": "mock_proof_worker: candidate clears the smoke paper-unit bar",
+        }
     else:
         raise ValueError(f"unsupported task_type: {task_type}")
 

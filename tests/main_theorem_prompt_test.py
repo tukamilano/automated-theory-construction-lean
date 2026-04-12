@@ -64,6 +64,43 @@ def test_select_prompt_adds_explicit_ranking_guidance() -> None:
             raise RuntimeError(f"missing selector ranking guidance: {snippet}")
 
 
+def test_suggester_prompt_uses_rejection_memory() -> None:
+    prompt = (REPO_ROOT / "prompts" / "main_theorem" / "suggester.md").read_text(encoding="utf-8")
+    required_snippets = (
+        "Use `rejected_candidates` as explicit anti-targets.",
+        "Treat `rejected_candidates` as hard negative evidence",
+        "Do not recycle a previously rejected statement",
+    )
+    for snippet in required_snippets:
+        if snippet not in prompt:
+            raise RuntimeError(f"missing suggester rejection-memory guidance: {snippet}")
+
+
+def test_evaluator_prompt_is_fail_closed() -> None:
+    prompt = (REPO_ROOT / "prompts" / "main_theorem" / "evaluate.md").read_text(encoding="utf-8")
+    required_snippets = (
+        "Fail-closed evaluator",
+        "Default to `reject` unless the evidence clearly supports `pass`.",
+        "Treat `pass` as exceptional.",
+        "If any pass-gate item is weak, uncertain, or unsupported, do not return `pass`.",
+        "\"verdict\": \"pass|revise|reject\"",
+    )
+    for snippet in required_snippets:
+        if snippet not in prompt:
+            raise RuntimeError(f"missing evaluator strictness guidance: {snippet}")
+
+
+def test_retriever_prompt_uses_prefiltered_paper_excerpt_context() -> None:
+    prompt = (REPO_ROOT / "prompts" / "main_theorem" / "retrieve.md").read_text(encoding="utf-8")
+    required_snippets = (
+        "If `materials.paper_excerpt_context` is available",
+        "`paper_excerpt_context`",
+    )
+    for snippet in required_snippets:
+        if snippet not in prompt:
+            raise RuntimeError(f"missing retriever paper excerpt guidance: {snippet}")
+
+
 def test_planner_prompt_is_removed() -> None:
     planner_prompt = REPO_ROOT / "prompts" / "main_theorem" / "planner.md"
     if planner_prompt.exists():
@@ -74,6 +111,9 @@ def main() -> int:
     test_generate_prompt_preserves_main_theorem_language()
     test_generate_prompt_adds_candidate_set_guidance()
     test_select_prompt_adds_explicit_ranking_guidance()
+    test_suggester_prompt_uses_rejection_memory()
+    test_evaluator_prompt_is_fail_closed()
+    test_retriever_prompt_uses_prefiltered_paper_excerpt_context()
     test_planner_prompt_is_removed()
     print("main theorem prompt test passed")
     return 0

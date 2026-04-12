@@ -17,83 +17,85 @@ from common import write_jsonl_atomic
 
 
 def main() -> int:
-    original_generate = main_theorem_session.request_main_theorem_candidate_set
-    original_select = main_theorem_session.request_main_theorem_selection
+    original_suggest = main_theorem_session.request_main_theorem_suggestion
+    original_retrieve = main_theorem_session.request_main_theorem_retrieval
+    original_map = main_theorem_session.request_main_theorem_mapping
+    original_evaluate = main_theorem_session.request_main_theorem_evaluation
     original_process = main_theorem_session.process_main_theorem
     original_guidance = main_theorem_session.load_current_guidance
     try:
-        def fake_generate(**_kwargs):
+        def fake_suggest(**_kwargs):
             return (
-                [
-                    {
-                        "candidate_rank_seed": 1,
-                        "statement": "True",
-                        "theorem_name_stem": "alpha_summary",
-                        "docstring_summary": "alpha summary",
-                        "rationale": "alpha rationale",
-                        "supporting_theorems": [],
-                        "missing_lemmas": [],
-                        "source_problem_ids": ["op_000001"],
-                        "theorem_pattern": "structure_discovery",
-                        "context_note": "alpha context",
-                        "conceptual_depth_note": "alpha depth",
-                    },
-                    {
-                        "candidate_rank_seed": 2,
-                        "statement": "True -> True",
-                        "theorem_name_stem": "beta_bridge",
-                        "docstring_summary": "beta bridge",
-                        "rationale": "beta rationale",
-                        "supporting_theorems": [],
-                        "missing_lemmas": [],
-                        "source_problem_ids": ["op_000001"],
-                        "theorem_pattern": "new_theorem",
-                        "context_note": "beta context",
-                        "conceptual_depth_note": "beta depth",
-                    },
-                    {
-                        "candidate_rank_seed": 3,
-                        "statement": "True ∧ True",
-                        "theorem_name_stem": "gamma_framework",
-                        "docstring_summary": "gamma framework",
-                        "rationale": "gamma rationale",
-                        "supporting_theorems": [],
-                        "missing_lemmas": [],
-                        "source_problem_ids": ["op_000001"],
-                        "theorem_pattern": "framework_introduction",
-                        "context_note": "gamma context",
-                        "conceptual_depth_note": "gamma depth",
-                    },
-                ],
+                {
+                    "candidate_id": "mt_main_theorem_01",
+                    "candidate_rank_seed": 1,
+                    "statement": "True -> True",
+                    "theorem_name_stem": "beta_bridge",
+                    "docstring_summary": "beta bridge",
+                    "rationale": "beta rationale",
+                    "supporting_theorems": [],
+                    "missing_lemmas": [],
+                    "source_problem_ids": ["op_000001"],
+                    "theorem_pattern": "new_theorem",
+                    "context_note": "beta context",
+                    "conceptual_depth_note": "beta depth",
+                },
                 {"worker": "test"},
             )
 
-        def fake_select(**_kwargs):
+        def fake_retrieve(**_kwargs):
             return (
-                (
-                    2,
-                    "beta wins",
-                    [
+                {
+                    "candidate_id": "mt_main_theorem_01",
+                    "closest_items": [
                         {
-                            "candidate_rank_seed": 2,
-                            "rank": 1,
-                            "decision": "select",
-                            "reason": "best bridge",
-                        },
-                        {
-                            "candidate_rank_seed": 1,
-                            "rank": 2,
-                            "decision": "reject",
-                            "reason": "less decisive",
-                        },
-                        {
-                            "candidate_rank_seed": 3,
-                            "rank": 3,
-                            "decision": "reject",
-                            "reason": "too broad",
-                        },
+                            "reference": "beta paper",
+                            "kind": "source_link",
+                            "relevance": "closest bridge anchor",
+                            "confidence": "high",
+                        }
                     ],
-                ),
+                    "research_line": "beta bridge line",
+                    "coverage_assessment": "sufficient",
+                    "missing_angles": [],
+                    "need_supplemental_retrieval": False,
+                },
+                {"worker": "test"},
+            )
+
+        def fake_map(**_kwargs):
+            return (
+                {
+                    "candidate_id": "mt_main_theorem_01",
+                    "closest_baseline": "beta baseline",
+                    "relations": [
+                        {
+                            "reference": "beta paper",
+                            "overlap": "same bridge family",
+                            "delta": "sharper title-level bridge",
+                            "delta_materiality": "substantial",
+                        }
+                    ],
+                    "overall_novelty_risk": "medium",
+                    "variant_objection": "could still look like a nearby bridge variant",
+                },
+                {"worker": "test"},
+            )
+
+        def fake_evaluate(**_kwargs):
+            return (
+                {
+                    "candidate_id": "mt_main_theorem_01",
+                    "novelty": "medium",
+                    "significance": "high",
+                    "paper_unit_viability": "yes",
+                    "strongest_objection": "could still look too close to baseline",
+                    "objection_answerable": "yes",
+                    "minimal_publishable_unit": "bridge note",
+                    "salvage_plan": "",
+                    "verdict": "pass",
+                    "reason": "beta wins",
+                },
                 {"worker": "test"},
             )
 
@@ -105,8 +107,10 @@ def main() -> int:
                 "status": "ok",
             }
 
-        main_theorem_session.request_main_theorem_candidate_set = fake_generate
-        main_theorem_session.request_main_theorem_selection = fake_select
+        main_theorem_session.request_main_theorem_suggestion = fake_suggest
+        main_theorem_session.request_main_theorem_retrieval = fake_retrieve
+        main_theorem_session.request_main_theorem_mapping = fake_map
+        main_theorem_session.request_main_theorem_evaluation = fake_evaluate
         main_theorem_session.process_main_theorem = fake_process_main_theorem
         main_theorem_session.load_current_guidance = lambda _data_dir: {}
 
@@ -129,8 +133,10 @@ def main() -> int:
                 repair_worker_settings={},
                 formalizer_prompt_file="prompts/formalize/formalizer_proof.md",
                 repair_prompt_file="prompts/formalize/repair_proof.md",
-                generate_prompt_file="prompts/main_theorem/generate.md",
-                select_prompt_file="prompts/main_theorem/select.md",
+                suggester_prompt_file="prompts/main_theorem/suggester.md",
+                retriever_prompt_file="prompts/main_theorem/retrieve.md",
+                mapper_prompt_file="prompts/main_theorem/map.md",
+                evaluator_prompt_file="prompts/main_theorem/evaluate.md",
                 post_expand_prompt_file="prompts/expander/post_theorem.md",
                 prioritize_open_problems_worker_settings={},
                 prioritize_open_problems_prompt_file="prompts/prioritizer/open_problem_prioritizer.md",
@@ -142,6 +148,7 @@ def main() -> int:
                 skip_verify=True,
                 verify_timeout_sec=10,
                 formalization_retry_budget_sec=10,
+                main_theorem_retry_budget_sec=10,
                 max_same_error_streak=2,
                 failure_threshold=2,
                 phase_logs=False,
@@ -162,23 +169,29 @@ def main() -> int:
             if report.get("session_events_file") != str(session_events_path):
                 raise RuntimeError(f"unexpected session_events_file in report: {report}")
             rows = [json.loads(line) for line in session_events_path.read_text(encoding="utf-8").splitlines() if line.strip()]
-            if len(rows) != 2:
-                raise RuntimeError(f"expected 2 session events, got {rows}")
-            if rows[0].get("event") != "main_theorem_generate_result":
+            if len(rows) != 4:
+                raise RuntimeError(f"expected 4 session events, got {rows}")
+            if rows[0].get("event") != "main_theorem_suggest_result":
                 raise RuntimeError(f"unexpected first event: {rows[0]}")
-            if rows[0].get("candidate_count") != 3:
-                raise RuntimeError(f"missing candidate_count in generate event: {rows[0]}")
-            if rows[0].get("candidates", [])[1].get("theorem_name_stem") != "beta_bridge":
-                raise RuntimeError(f"missing candidate summary in generate event: {rows[0]}")
-            if rows[1].get("event") != "main_theorem_select_result":
+            if rows[0].get("candidate", {}).get("theorem_name_stem") != "beta_bridge":
+                raise RuntimeError(f"missing candidate summary in suggest event: {rows[0]}")
+            if rows[1].get("event") != "main_theorem_retrieve_result":
                 raise RuntimeError(f"unexpected second event: {rows[1]}")
-            if rows[1].get("selected_candidate", {}).get("theorem_name_stem") != "beta_bridge":
-                raise RuntimeError(f"missing selected candidate summary in select event: {rows[1]}")
-            if rows[1].get("ranking", [])[0].get("rank") != 1:
-                raise RuntimeError(f"missing ranking summary in select event: {rows[1]}")
+            if rows[1].get("closest_items", [])[0].get("reference") != "beta paper":
+                raise RuntimeError(f"missing retrieval summary in retrieve event: {rows[1]}")
+            if rows[2].get("event") != "main_theorem_map_result":
+                raise RuntimeError(f"unexpected third event: {rows[2]}")
+            if rows[2].get("closest_baseline") != "beta baseline":
+                raise RuntimeError(f"missing mapping summary in map event: {rows[2]}")
+            if rows[3].get("event") != "main_theorem_evaluate_result":
+                raise RuntimeError(f"unexpected fourth event: {rows[3]}")
+            if rows[3].get("verdict") != "pass":
+                raise RuntimeError(f"missing evaluation summary in evaluate event: {rows[3]}")
     finally:
-        main_theorem_session.request_main_theorem_candidate_set = original_generate
-        main_theorem_session.request_main_theorem_selection = original_select
+        main_theorem_session.request_main_theorem_suggestion = original_suggest
+        main_theorem_session.request_main_theorem_retrieval = original_retrieve
+        main_theorem_session.request_main_theorem_mapping = original_map
+        main_theorem_session.request_main_theorem_evaluation = original_evaluate
         main_theorem_session.process_main_theorem = original_process
         main_theorem_session.load_current_guidance = original_guidance
 

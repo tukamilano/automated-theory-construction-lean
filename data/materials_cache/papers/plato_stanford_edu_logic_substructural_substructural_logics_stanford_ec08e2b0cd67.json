@@ -1,0 +1,254 @@
+{
+  "source_id": "plato_stanford_edu_logic_substructural_substructural_logics_stanford_ec08e2b0cd67",
+  "source_url": "https://plato.stanford.edu/archives/spr2025/entries/logic-substructural/",
+  "label": "Substructural Logics (Stanford Encyclopedia of Philosophy/Spring 2025 Edition)",
+  "title": "Substructural Logics (Stanford Encyclopedia of Philosophy/Spring 2025 Edition)",
+  "content_type": "text/html",
+  "extract_confidence": "high",
+  "abstract": "Galatos, N., P. Jipsen, T. Kowalski, and H. Ono, 2007, Residuated Lattices: An Algebraic Glimpse at Substructural Logics (Studies in Logic: Volume 151), Amsterdam: Elsevier, 2007. Mares, Edwin D., 2004, Relevant Logic : a philosophical interpretation Cambridge University Press. Moortgat, Michael, 1988, Categorial Investigations: Logical Aspects of the Lambek Calculus Foris, Dordrecht. Moot, Richard and Retoré Christian (2012) The Logic of Categorical Grammars , Springer, Berlin. Morrill, Glyn, 1994, Type Logical Grammar: Categorial Logic of Signs Kluwer, Dordrecht Ono, Hiroakira, 2019, Proof Theory and Algebra in Logic Springer, Singapore Paoli, Francesco, 2002, Substructural Logics : A Primer Kluwer, Dordrecht Read, S., 1988, Relevant Logic , Oxford: Blackwell. Restall, Greg, 2000, An Introduction to Substructural Logics , Routledge. ( online précis )",
+  "chunks": [
+    {
+      "chunk_id": "chunk_074",
+      "section": "Books on Substructural Logic and Introductions to the Field",
+      "page": null,
+      "text": "Galatos, N., P. Jipsen, T. Kowalski, and H. Ono, 2007, Residuated Lattices: An Algebraic Glimpse at Substructural Logics (Studies in Logic: Volume 151), Amsterdam: Elsevier, 2007. Mares, Edwin D., 2004, Relevant Logic : a philosophical interpretation Cambridge University Press. Moortgat, Michael, 1988, Categorial Investigations: Logical Aspects of the Lambek Calculus Foris, Dordrecht. Moot, Richard and Retoré Christian (2012) The Logic of Categorical Grammars , Springer, Berlin. Morrill, Glyn, 1994, Type Logical Grammar: Categorial Logic of Signs Kluwer, Dordrecht Ono, Hiroakira, 2019, Proof Theory and Algebra in Logic Springer, Singapore Paoli, Francesco, 2002, Substructural Logics : A Primer Kluwer, Dordrecht Read, S., 1988, Relevant Logic , Oxford: Blackwell. Restall, Greg, 2000, An Introduction to Substructural Logics , Routledge. ( online précis )"
+    },
+    {
+      "chunk_id": "chunk_073",
+      "section": "Books on Substructural Logic and Introductions to the Field",
+      "page": null,
+      "text": "Anderson, A.R., and Belnap, N.D., 1975, Entailment: The Logic of Relevance and Necessity , Princeton, Princeton University Press, Volume I. Anderson, A.R., Belnap, N.D. Jr., and Dunn, J.M., 1992, Entailment , Volume II, Princeton, Princeton University Press. Barrio, E. and Égré (2022) “Substructural Logics and Metainferences” Journal of Philosophical Logic , 51: 1215–1231. [A summary of recent work on reflexivity and the Cut rule and characterising different logics in terms of the metainferences they admit.] Bimbó, K. and Dunn, J. M., 2008, Generalised Galois Logics: Relational Semantics of Nonclassical Logical Calculi , CSLI Lecture Notes, v. 188, CSLI, Stanford. Dunn, J. M. and Restall, G., 2000, “Relevance Logic” in F. Guenthner and D. Gabbay (eds.), Handbook of Philosophical Logic second edition; Volume 6, Kluwer, pp 1–136."
+    },
+    {
+      "chunk_id": "chunk_075",
+      "section": "Books on Substructural Logic and Introductions to the Field",
+      "page": null,
+      "text": "Routley, R., Meyer, R.K., Plumwood, V., and Brady, R., 1983, Relevant Logics and their Rivals , Volume I, Atascardero, CA: Ridgeview. Schroeder-Heister, Peter, and Došen, Kosta, (eds), 1993, Substructural Logics , Oxford University Press. Troestra, Anne, 1992, Lectures on Linear Logic , CSLI Publications Zardini, Elia, 2021, “Substructural Approaches to Paradox,” Synthese , 199: 493–525."
+    },
+    {
+      "chunk_id": "chunk_003",
+      "section": "Substructural Logics",
+      "page": null,
+      "text": "Substructural logics are non-classical logics notable for the absence of one or more structural rules present in classical logic. Initial interest in substructural logics developed independently in the second half of the twentieth century, through considerations from philosophy (relevant logics), from linguistics (the Lambek calculus) and from the mathematics of proof theory (linear logic). Since the 1990s, these independent lines of inquiry have been understood to be different aspects of a unified field, and techniques from substructural logics are useful in the study of traditional logics such as classical and intuitionistic logic. This article provides a brief overview of the field of substructural logic. For a more detailed introduction, complete with theorems, proofs and examples, the reader can consult the books and articles in the Bibliography . 1. Structural Rules"
+    },
+    {
+      "chunk_id": "chunk_047",
+      "section": "3. Proof Theory",
+      "page": null,
+      "text": "In certain substructural logics, such as linear logic and the Lambek calculus, and in the fragment of the relevant logic \\(\\mathbf{R}\\) without disjunction, a Gentzen system can be used to show that the logic is decidable , in that an algorithm can be found to determine whether or not an argument \\(X \\vdash A\\) is valid. This is done by searching for proofs of \\(X \\vdash A\\) in a Gentzen system. Since premises of this conclusion must feature no language not in this conclusion, and they have no greater complexity (in these systems), there are only a finite number of possible premises. An algorithm can check if these satisfy the rules of the system, and proceed to look for premises for these, or to quit if we hit an axiom. In this way, decidability of some substructural logics is assured."
+    },
+    {
+      "chunk_id": "chunk_055",
+      "section": "4. Model Theory",
+      "page": null,
+      "text": "It is one thing to use a semantics as a formal device to model a logic. It is another to use a semantics as an interpretive device to apply a logic. The literature on substructural logics provides us with a number of different ways that the ternary relational semantics can be applied to describe the logical structure of some phenomena in which the traditional structural rules do not apply. For logics like the Lambek calculus, the interpretation of the semantics is straightforward. We can take the points to be linguistic items, and the ternary relation to be the relation of concatenation (\\(Rxyz\\) if and only if \\(x\\) concatenated with \\(y\\) results in \\(z)\\). In these models, the structural rules of contraction, weakening and permutation all fail, but premise combination is associative."
+    },
+    {
+      "chunk_id": "chunk_048",
+      "section": "3. Proof Theory",
+      "page": null,
+      "text": "However, not all substructural logics are decidable in this sense. Most famously, the relevant logic \\(\\mathbf{R}\\) is not decidable. This is partly because its proof theory is more complex than that of other substructural logics. \\(\\mathbf{R}\\) differs from linear logic and the Lambek calculus in having a straightforward treatment of conjunction and disjunction. In particular, conjunction and disjunction satisfy the rule of distribution :"
+    },
+    {
+      "chunk_id": "chunk_079",
+      "section": "Other Works Cited",
+      "page": null,
+      "text": "–––, 1987b, Proof Theory and Logical Complexity , Volume 1, Bibliopolis, Naples. Goldblatt, R., and E. Mares, 2006, “An Alternative Semantics for Quantified Relevant Logic,” Journal of Symbolic Logic , 71(1): 163–187. Hösli, Brigitte and Gerhard Jäger, 1994. “About Some Symmetries of Negation,” Journal of Symbolic Logic 59(2):473–485. Jäger, Gerhard, 1993, “Some proof-theoretic aspects of logic programming,” p. 113–142 in Logic and Algebra of Specification , F. Bauer, W. Brauer and H. Schwichtenberg (ed.), Springer. Lambek, Joachim, 1958, “The Mathematics of Sentence Structure,” American Mathematical Monthly , 65: 154–170. –––, 1961, “On the Calculus of Syntactic Types, ” in Structure of Language and its Mathematical Aspects (Proceedings of Symposia in Applied Mathematics, XII), R. Jakobson (ed.), Providence, RI: American Mathematical Society."
+    },
+    {
+      "chunk_id": "chunk_040",
+      "section": "2.3 The Lambek Calculus",
+      "page": null,
+      "text": "Independently of either of these traditions, Joachim Lambek considered mathematical models of language and syntax ( Lambek 1958 , 1961 ). The idea here is that premise combination corresponds to composition of strings or other linguistic units. Here \\(X,X\\) differs in content from \\(X\\), but in addition, \\(X,Y\\) differs from \\(Y,X\\) Not only does the number of premises used count but so does their order . Good introductions to the Lambek calculus (also called categorial grammar ) can be found in books by Moortgat ( 1988 ) Morrill ( 1994 ), and Moot and Retoré ( 2012 )."
+    },
+    {
+      "chunk_id": "chunk_056",
+      "section": "4. Model Theory",
+      "page": null,
+      "text": "The contemporary literature on linguistic classification extends the basic Lambek Calculus with richer forms of combination, in which more syntactic features can be modelled (see Moortgat 1995 )."
+    },
+    {
+      "chunk_id": "chunk_070",
+      "section": "6. Logics without Cut or Identity",
+      "page": null,
+      "text": "These substructural logics: those without cut and identity, raise the question of their nature as logics in a way that the first generation of substructural logics did not. ST has exactly the same provable sequents in the logical vocabulary as classical logic, and TS has none. Is ST identical to classical logic? Is TS identical to any other logic with no derivable sequents? To flatly answer “yes” to these questions would be to miss the distinctive behaviour of these logical systems. ST differs from classical logic not at the level of sequents but at the level of the relations between sequents. The Cut rule, which can be understood as an inference rule relating sequents, is valid under any class of two-valued valuations, but is invalid in ST . Similarly, although at the level of sequents the logic TS is empty, at the level of relationships between sequents, it is rich. From this observation has arisen the recent study of meta-inferences (see Barrio et al 2014 , and Barrio et al 2019 ). Reflection on the natural way to understand meta-inferences between sequents in logics like ST and TS which use two different distinguished values has raised a natural question. If we have two different grades of validity (strict and tolerant) at the level of an individual formula, then why restrict ourselves to a single validity verdict when it comes to a sequent? In fact, two natural grades of validity for (level 2) meta-inferences are available to us. A ST validity is a much more tolerant criterion than TS validity. We can say that a sequent-to-sequent meta-inference is TS/ST valid if whenever the premise sequents are TS valid, then the conclusion sequent is ST valid. It turns out, then, that the meta-inference of Cut is indeed TS/ST meta-valid, and the TS/ST valid meta-inferences are exactly the family of meta-inferences traditionally valid in classical logic, and this result naturally generalises up the hierarchy of n -level meta-inferences for all n ( Barrio et al 2019 )."
+    },
+    {
+      "chunk_id": "chunk_061",
+      "section": "5. Quantifiers",
+      "page": null,
+      "text": "While the proof theory for quantifiers seems well behaved, the generalisation to model theory for substructural logics has proved difficult. Richard Routley ( 1980 ) showed that adding the rules for the quantifiers to a very weak system of substructural logic \\(\\mathbf{B}\\) fits appropriately with the ternary relational semantics, where quantifiers are interpreted as ranging over a domain of objects, constant across all of the points in the model. This fact does not apply for stronger logics, in particular, the relevant logic \\(\\mathbf{R}\\). Kit Fine ( 1989 ) showed that there exists a complex formula which holds in all constant domain frame models for \\(\\mathbf{R}\\) but which is not derivable from the axioms. The details of Fine’s argument are not important for our purposes, but the underlying cause for the mismatch is relatively straightforward to explain. In the constant domain semantics, the universal generalisation \\(\\forall x Fx\\) has exactly the same truth conditions—at every point in the model—as the family of instances \\(Fx_1\\), \\(Fx_2\\), \\(Fx_3,\\ldots\\), \\(Fx_\\lambda,\\ldots\\), where the objects of the domains are enumerated by the values of the terms \\(x_i\\). So, the quantified expression \\(\\forall x Fx\\) is semantically indistinguishable from the (possibly infinite) conjunction \\(Fx_1\\land Fx_2\\land Fx_3\\land\\cdots \\). However, no conjunction of instances (even an infinite one) could be relevantly equivalent to the universally quantified claim \\(\\forall x Fx\\), because the instances could be true in a circumstance (or could be made true by a circumstance) without also making true the generalisation—if there had been more things than those. So, constant domain models seem ill-suited to the project of a relevant theory of quantification."
+    },
+    {
+      "chunk_id": "chunk_060",
+      "section": "5. Quantifiers",
+      "page": null,
+      "text": "The treatment of quantifiers in models for substructural logics has proved to be quite difficult, but advances have been made in the early 2000s. The difficulty came in what seemed to be a mismatch between the proof theory and model theory for quantifiers. Appropriate axioms or rules for the quantifiers are relatively straightforward. The universal quantifier elimination axiom \\[ \\forall xA \\rightarrow A[t/x] \\] states that an instance follows (in the relevant sense) from its universal generalisation. The introduction rule \\[ \\cfrac{\\vdash A\\rightarrow B} {\\vdash A\\rightarrow \\forall xB} \\] (where the proviso that \\(x\\) is not free in \\(A\\) holds) tells us that if we can prove an instance of the generalisation \\(\\forall xB\\), as a matter of logic, from some assumption which makes no particular claim about that instance, we can also prove the generalisation from that assumption. This axiom and rule seems to fit nicely with any interpretation of the first-order quantifiers in a range of substructural logics, from the weakest systems, to strong systems like \\(\\mathbf{R}\\)."
+    },
+    {
+      "chunk_id": "chunk_005",
+      "section": "1. Structural Rules",
+      "page": null,
+      "text": "Substructural logics are a family of logical systems characterised in terms of their structural rules . A structural rule is a logical rule that applies indiscriminately to all propositions without regard to their form. The familiar inference rule of modus ponens (from \\(p\\to q\\) and \\(p\\) to infer \\(q\\)) is not a structural rule because the first premise of the rule must be a conditional. This is a rule not about the inferential behaviour of all propositions, but a rule about conditionals. The syllogism Barbara (from all Fs are G and all Gs are H to infer all Fs are H ) is similarly not a structural rule: it is a rule specifically applying to universal claims. Modus ponens , Barbara and other familiar rules such as the Law of Non-Contradiction are operational rules governing or describing the logical features of particular concepts, such as the conditional, universal generalisation, negation, etc. Not all logical rules are operational rules. Some rules govern the ambient behaviour of logical consequence as such , and these are the structural rules."
+    },
+    {
+      "chunk_id": "chunk_013",
+      "section": "1. Structural Rules",
+      "page": null,
+      "text": "Whether we use the residuation rules or the left/right sequent rules for the conditional, the connections between consequence and the conditional involve a number of distinct concepts. Not only is there the turnstile, for logical validity, and the conditional, encoding consequence inside the language of propositions, there is also the comma , indicating the combination of premises. We have read “\\(X, p \\vdash q\\)” as “\\(q\\) follows from \\(X\\) together with \\(p\\)”. To combine premises is to have a way to take them together . But how can we take them together? It turns out that there are different ways to do so, which have different logical properties, and so, we have different substructural logics with different purely structural rules. The behaviour of premise combination may vary, and as a result, the behaviour of the conditional and other logical connectives vary as a result. In this introduction we will consider some examples of this phenomenon."
+    },
+    {
+      "chunk_id": "chunk_050",
+      "section": "3. Proof Theory",
+      "page": null,
+      "text": "In recent years, a great deal of work has been done on the proof theory of classical logic , inspired and informed by research into substructural logics. Classical logic has the full complement of structural rules, and is historically prior to more recent systems of substructural logics. However, when it comes to attempting to understand the deep structure of classical proof systems (and in particular, when two derivations that differ in some superficial syntactic way are really different ways to represent the one underlying ‘proof’) it is enlightening to think of classical logic as formed by a basic substructural logic, in which extra structural rules are imposed as additions. In particular, it has become clear that what distinguishes classical proof from its siblings is the presence of the structural rules of contraction and weakening in their complete generality (see, for example, Bellin et al. 2006 and the literature cited therein)."
+    },
+    {
+      "chunk_id": "chunk_080",
+      "section": "Other Works Cited",
+      "page": null,
+      "text": "Moh Shaw-Kwei, 1950, “The Deduction Theorems and Two New Logical Systems,” Methodos , 2: 56–75. Moortgat, Michael, 1995, “Multimodal Linguistic Inference,” Logic Journal of the IGPL , 3: 371–401. Ono, Hiroakira, 2003, “Substructural Logics and Residuated Lattices – an Introduction,” in V. Hendricks and J. Malinowski (eds.), Trends in Logic: 50 Years of Studia Logica , Dordrecht: Kluwer, 2003, pp. 193–228. Reiter, Raymond, 1980. “A Logic for Default Reasoning,” Artificial Intelligence , 13:81–132. Ripley, David, 2012, “Conservatively Extending Classical Logic with Transparent Truth’ The Review of Symbolic Logic , 5:354–378. Rooij, Robert van, 2011, “Vagueness, tolerance and non-transitive entailment,’ in P. Cintula, C. Fermüller, L. Godo, and P. Hajek (eds.), Reasoning Under Vagueness: Logical, Philosophical and Linguistic Perspectives , College Publications, pp. 205–222."
+    },
+    {
+      "chunk_id": "chunk_045",
+      "section": "3. Proof Theory",
+      "page": null,
+      "text": "We have already seen a fragment of one way to present substructural logics, in terms of proofs. We have used the residuation condition, which can be understood as including two rules for the conditional, one to introduce a conditional, \\[ \\cfrac{X, A \\vdash B} {X \\vdash A \\rightarrow B} \\] and another to eliminate it. \\[ \\cfrac{X \\vdash A \\rightarrow B \\ \\ \\ Y \\vdash A} {X, Y \\vdash B} \\] Rules like these form the cornerstone of a natural deduction system, and these systems are available for the wide sweep of substructural logics. But proof theory can be done in other ways. Gentzen systems operate not by introducing and eliminating connectives, but by introducing them both on the left and the right of the turnstile of logical consequence. We keep the introduction rule above, and replace the elimination rule by one introducing the conditional on the left:"
+    },
+    {
+      "chunk_id": "chunk_041",
+      "section": "2.4 ST and TS",
+      "page": null,
+      "text": "Each substructural logic considered so far restricts the behaviour of premise combination in some way, by banning weakening, contraction, or exchange. Another family of substructural logics keeps all of those structural rules, but restricts one of the cross-sequent rules: Cut and identity . These substructural logics differ from classical logic either very little, or enormously, depending on which structural rule is rejected. Classical logic without the Cut rule is, at one level, indistinguishable from classical logic, because as Gentzen has shown ( 1935 ), the Cut rule is eliminable: any sequent that can be proved using cut can also be proved without it. So, the substructural variant of classical logic that goes without the cut rule is, as far as valid sequents is concerned, classical logic itself."
+    },
+    {
+      "chunk_id": "chunk_068",
+      "section": "6. Logics without Cut or Identity",
+      "page": null,
+      "text": "It is not too difficult to see how this substructural logic is an attractive site to consider the semantic paradoxes. Given the liar sentence \\(\\lambda\\) the derivation of \\(\\vdash T\\lambda\\) tells us that the liar is at least tolerantly true. The derivation of \\(T\\lambda\\vdash\\bot\\) tells us that the liar cannot be strictly true. It is fixed in the middle, with both it and its negation remaining tolerantly true, but not strictly true. In a similar way, each of the conditional claims in a sorites paradoxical argument of the form \\(p_n\\rightarrow p_{n+1}\\) can be taken to be at least tolerantly true, since with a sufficiently slow variation between cases, there will never be an instance where \\(p_n\\) is strictly true and \\(p_{n+1}\\) is strictly false."
+    },
+    {
+      "chunk_id": "chunk_021",
+      "section": "1.2 Commutativity",
+      "page": null,
+      "text": "\\[ p, q \\vdash r \\text{ if and only if } q \\vdash r \\leftarrow p \\] For the left-to-right arrow we have modus ponens in this direction: \\[ p \\rightarrow q, p \\vdash q \\] For the right-to-left arrow, modus ponens is provable with the premises in the opposite order: \\[ p, q \\leftarrow p \\vdash q \\] This is a characteristic of substructural logics. When we pay attention to what happens when we don’t have the full complement of structural rules, then new possibilities open up. We uncover two conditionals underneath what was previously one (in intuitionistic or classical logic). In the next section we will see another example motivating non-commutative premise combination and these two different conditionals."
+    },
+    {
+      "chunk_id": "chunk_036",
+      "section": "2.1 Relevant Logics",
+      "page": null,
+      "text": "It is natural to think that there is some connection between logical consequence an relevance. If \\(X \\vdash A\\) holds, then one might hope that the premises of our deduction (\\(X\\)) must somehow be relevant to the conclusion \\(A\\). With this understanding of relevance in mind, it is natural to restrict premise combination: We may have \\(X \\vdash A\\) without also having \\(X,Y \\vdash A\\), since the new material \\(Y\\) might not be relevant to the deduction of \\(A\\). Relevant logics, understood in this way, are substructural because relevance is understood as a property of logical consequence itself (and the structural rules governing consequence), rather than a property of any one connective."
+    },
+    {
+      "chunk_id": "chunk_053",
+      "section": "4. Model Theory",
+      "page": null,
+      "text": "The three-place relation \\(R\\) follows closely the behaviour of the mode of premise combination in the proof theory for a substructural logic. For different logics, different conditions can be placed on \\(R\\). For example, if premise combination is commutative, we place a symmetry condition on \\(R\\) like this: \\(Rxyz\\) if and only if \\(Ryxz\\). Ternary relational semantics gives us great facility to model the behaviour of substructural logics. (The extent of the correspondence between the proof theory and algebra of substructural logics and the semantics is charted in Dunn’s work on Gaggle Theory ( 1991 ) and is summarised in Restall’s Introduction to Substructural Logics ( 2000 )."
+    },
+    {
+      "chunk_id": "chunk_071",
+      "section": "6. Logics without Cut or Identity",
+      "page": null,
+      "text": "The connection between the cut-free sequent calculus and three-valued logics has a long history, pre-dating its incorporation into recent work on substructural logics. Schütte ( 1960 ) used a non-deterministic three-valued semantics for the cut-free classical sequent calculus, and this work was extensively used by Girard ( 1987b , Chapter 3), in his analysis of the semantics of the cut-free sequent caclulus. The application of three-valued methods to the classical sequent calculus in the absence of the structural rule of identity was also considered in Hösli and Jäger ( 1994 ). This work has application to understanding phenomena in logic programming ( Jäger, 1993 )."
+    },
+    {
+      "chunk_id": "chunk_063",
+      "section": "6. Logics without Cut or Identity",
+      "page": null,
+      "text": "As we saw in Section 1 , structural rules come in two kinds, those that constrain the behaviour of premise or conclusion combination on one side of a sequent (commutativity, contraction, weakening) and those that essentially involve the connection between one side of the sequent and the other (identity, and cut): our treatment of proofs and models for substructural logics have focussed on substructural logics with distinctive choices of structural rules of the first kind. In this last section, it is time to focus on more recent work on substructural logics that reject either Cut or identity ."
+    },
+    {
+      "chunk_id": "chunk_051",
+      "section": "4. Model Theory",
+      "page": null,
+      "text": "While the relevant logic \\(\\mathbf{R}\\) has a proof system more complex than the substructural logics such as linear logic, which lack distribution of (extensional) conjunction over disjunction, its model theory is altogether more simple. A Routley-Meyer model for the relevant logic \\(\\mathbf{R}\\) is comprised of a set of points \\(P\\) with a three-place relation \\(R\\) on \\(P\\). A conditional \\(A \\rightarrow B\\) is evaluated at a world as follows: \\(A \\rightarrow B\\) is true at \\(x\\) if and only if for each \\(y\\) and \\(z\\) where \\(Rxyz\\), if \\(A\\) is true at \\(y, B\\) is true at \\(z\\)."
+    },
+    {
+      "chunk_id": "chunk_058",
+      "section": "4. Model Theory",
+      "page": null,
+      "text": "\\[ (A \\rightarrow B) \\amp(A \\rightarrow C) \\vdash A \\rightarrow (B \\amp C) \\] tells us that whenever a function takes \\(A\\)s to \\(B\\)s and \\(A\\)s to \\(C\\)s, then it takes \\(A\\)s to things that are both \\(B\\) and \\(C\\). This example gives us a model in which the appropriate substructural logic is extremely weak. None of the usual structural rules (not even associativity) are satisfied in this model. This example of a ternary relational model is discussed in ( Restall 2000 , Chapter 11)."
+    },
+    {
+      "chunk_id": "chunk_083",
+      "section": "Other Internet Resources",
+      "page": null,
+      "text": "Restall, Greg, 1994, On Logics Without Contraction , Ph. D. Thesis, The University of Queensland. Slaney, John, 1995, MaGIC: Matrix Generator for Implication Connectives , a software package for generating finite models for substructural logics."
+    },
+    {
+      "chunk_id": "chunk_035",
+      "section": "2. Different Logics",
+      "page": null,
+      "text": "A range of substructural logics have been developed, independently, in the second half of the 20th Century, and into the 21st. These logics can be motivated in different ways."
+    },
+    {
+      "chunk_id": "chunk_043",
+      "section": "2.4 ST and TS",
+      "page": null,
+      "text": "Since the 2000s, there has been sustained attention on logics in which the rules of cut or identity are jettisoned for the purposes of treatment of the various semantic phenomena, including vagueness and the semantic paradoxes. Zardini ( 2008 )’s “A Model for Tolerance” and van Rooij’s ( 2011 )’s “Vagueness, Tolerance and Non-Transitive Entailment” each utilised a cut-free (non-transitive) consequence relation to model vague predicates satisfying a natural tolerance condition, to the effect that anything sufficiently \\(F\\)-close to something that is \\(F\\) is also \\(F\\). If the conditional expressing this tolerance claim (and the underlying consequence relation) is not transitive, then the sorites paradox is, in some sense, averted. Cobreros, et al . ( 2012 ) showed that this logic has simple models in terms of strict and tolerant semantic evaluation, which will be discussed below in Section 6 , and Ripley ( 2012 ) showed that this logic provides the means to model a truth predicate \\(T\\) for which \\(T\\langle A\\rangle\\) is equivalent to \\(A\\), and for which a liar sentence \\(\\lambda\\) (for which \\(\\lambda=\\neg T\\lambda\\)) gives rise to inconsistency, but not triviality. We can derive \\(\\vdash T\\lambda\\) and \\(\\vdash\\neg T\\lambda\\) (and hence \\(T\\lambda \\vdash \\bot\\)), by the standard liar-paradoxical reasoning, but the failure of the cut rule for \\(T\\)-sentences means that the we cannot proceed from \\(\\vdash T\\lambda\\) and \\(T\\lambda\\vdash \\bot\\) to the expected trivialising consequence \\(\\vdash\\bot\\). (Alan Weir ( 2005 ) earlier also utilised a Cut-free logic in the analysis of the paradoxes arising from a naïve truth predicate, however the resulting logic is not ST , as the usual connective rules for the conditional and negation are modified, along with the rejection of Cut .)"
+    },
+    {
+      "chunk_id": "chunk_012",
+      "section": "1. Structural Rules",
+      "page": null,
+      "text": "The residuation equivalence between \\(X,p\\vdash q\\) and \\(X\\vdash p\\to q\\) is not the only way to characterise the behaviour of the conditional. Sometimes it is helpful to study rules in which the inferential behaviour of a connective is described in terms of the conditions under which you can infer a sentence involving that connective (here, the left-to-right direction from \\(X,p\\vdash q\\) to \\(X\\vdash p\\to q\\) answers that question) and also describes what one can infer from a sentence involving that connective. The residuation condition for \\(p\\to q\\) only answers this question implicitly, by way of an appeal to the Cut rule, and the assumption that \\(p\\to q\\vdash p\\to q\\). For then we can reason as follows: \\[ \\cfrac{ \\cfrac{ \\begin{matrix} \\\\ {Y\\vdash p} \\end{matrix} \\quad \\cfrac{p\\rightarrow q\\vdash p\\rightarrow q}{p\\rightarrow q,p\\vdash q} } {p\\rightarrow q,Y\\vdash q} \\quad \\begin{matrix} \\\\ {X,q\\vdash C} \\end{matrix} } {X,p\\to q,Y\\vdash C} \\] So, from the two premises \\(Y\\vdash p\\) and \\(X,q\\vdash C\\) we can conclude \\(X,p\\to q,Y\\vdash C\\). This is a left sequent rule for the conditional, presenting conditions under which it is appropriate to infer some conclusion \\(C\\) from \\(p\\to q\\) used as a premise. This is sometimes used as an alternative to the right-to-left half of the residuation equivalence (from \\(X\\vdash p\\to q\\) to \\(X,p\\vdash q\\) since it, like the left-to-right half of the residuation eqiuvalence characterises the behaviour of the conditional in terms of the inferential behaviour of its components."
+    },
+    {
+      "chunk_id": "chunk_067",
+      "section": "6. Logics without Cut or Identity",
+      "page": null,
+      "text": "The model theory for ST is remarkably simple. We evaluate formulas with respect to a tripartite evaluation. (This could be understood as a function assigning to each formula one of the values \\(0\\), \\(i\\) and \\(1\\), or equivalently as a partial function assigning to each formula either \\(0\\) or \\(1\\), but perhaps failing to assign a value in soem cases.) We evaluate complex formulas using the standard classical truth-conditions, naturally modified to allow for partial valuations: \\(v(\\neg A)=1\\) iff \\(v(A)=0\\), and \\(v(\\neg A)=0\\) iff \\(v(A)=1\\); \\(v(A\\amp B)=1\\) iff \\(v(A)=1\\) and \\(v(B)=1\\), and \\(v(A\\amp B)=0\\) iff \\(v(A)=0\\) or \\(v(B)=0\\), and so on. (This is one definition of valuations for Kleene’s strong three-valued logic .) We will say that such a valuation counts as an ST -counterexample to a sequent \\(X\\vdash Y\\) if and only if it assigns \\(1\\) to every formula in \\(X\\) and \\(0\\) to every formula in \\(Y\\). If we think of the formulas assigned \\(1\\) as strictly true (or has assertible when we hold ourselves to strict standards) and those that are not assigned \\(0\\) as tolerantly true (or as assertible when we hold ourselves to more tolerant standards), then the valid arguments are those for which whenever the premises are strictly true, the conclusion is at least tolerantly true. Hence then name, ST . Since validity is not preservation of a fixed value (the consequent standards are lower than the antecedent standards), the Cut rule can, in general, fail."
+    },
+    {
+      "chunk_id": "chunk_033",
+      "section": "1.6 Cut and Identity",
+      "page": null,
+      "text": "Each of the structural rules considered here (weakening, commutativity, associativity, contraction) essentially involves the behaviour of premise combination, or in the case of classical sequents, premise and conclusion combination. The structural rule we first saw, the Cut rule, in its simplest form, has nothing to do with combination of premises. In its most stripped-down form, the Cut rule takes this shape: \\[ \\cfrac{A\\vdash B\\qquad B\\vdash C}{A\\vdash C} \\] which involves no taking together of formulas on the left or the right of the sequent at all. The Cut rule, at its heart, is not about the distinctive behaviour of how premises or conclusions are combined, but about the relationship between what is needed to derive a formula (here, the so-called ‘ Cut ’ formula, \\(B\\)) occuring on the right of a sequent and then what one can do with that formula, as it occurs on the left . To use the economic metaphor: if we can ‘pay’ \\(A\\) to receive \\(B\\), and we could pay \\(B\\) to receive \\(C\\), then our initial payment of \\(A\\) should suffice to provide \\(C\\). Speaking more abstractly, the Cut rule states that a \\(B\\) on the right of a sequent is at least as powerful as a \\(B\\) on the left: anything we can prove from a \\(B\\) on the left (here, \\(C\\)) could be proved by anything that entails a \\(B\\) on the right ."
+    },
+    {
+      "chunk_id": "chunk_062",
+      "section": "5. Quantifiers",
+      "page": null,
+      "text": "Robert Goldblatt and Edwin Mares ( 2006 ) have shown that there is a natural alternative semantics for relevant quantification, and this approach turns out to be elegant and relatively straightforward. The crucial idea is to modify the ternary relational semantics just a little, so that not every set of points need count as a ‘proposition’. That is, not every set of points is the possible semantic value for a sentence. So, while there is a set of worlds determined by the infinite conjunction of instances of \\(\\forall xFx\\): \\(Fx_1\\land Fx_2\\land Fx_3\\land\\cdots \\), that precise set of worlds may not count as a proposition. (Perhaps there is no way to single out those particular objects in such a way as to draw them together in the one judgement.) What we can say is the generalisation \\(\\forall xFx\\) and that is a proposition that entails each of the instances (that is the universal quantifier elimination axiom), and if a proposition entails each instance, it entails the generalisation (that is the introduction rule), so the proposition expressed by \\(\\forall xFx\\) is the semantically weakest proposition that entails each instance Fa . This is precisely the modelling condition for the universal quantifier in Goldblatt & Mares’ models, and it matches the axioms exactly."
+    },
+    {
+      "chunk_id": "chunk_008",
+      "section": "1. Structural Rules",
+      "page": null,
+      "text": "Structural rules can also be motivated by characterising logical validity by way of models . If an argument from some premises to a conclusion is understood to be valid when there is no model of the premises that is not also a model of the conclusion (such a model would be a counterexample to the argument), then the Cut rule may likewise be motivated: if every model of every member of \\(X\\) is a model of \\(A\\), and every model of every member \\(Y\\) and of \\(A\\) is also a model of \\(B\\), then every model of each member of \\(X\\) and each member of of \\(Y\\) is (by virtue of being a model of every member of \\(X\\)) a model of \\(A\\), and so (since it is also a model of every member of \\(Y\\)), it is a model of \\(B\\). In this reasoning, we did not have to appeal to the truth conditions for any formulas in models: the rule is not beholden to any particular scheme concerning how formulas are evaluated. Provided that validity is defined in terms of preservation of “holding in a model” (however that is to be understood), the logical consequence relation satisfies the Cut rule."
+    },
+    {
+      "chunk_id": "chunk_065",
+      "section": "6. Logics without Cut or Identity",
+      "page": null,
+      "text": "Another reason to reject transitivity of validity is on grounds of relevance . Neil Tennant has championed a relevant logic that rejects the unrestricted Cut rule on relevance grounds ( 2017 ). In Tennant’s core logic , both \\(\\neg p\\vdash \\neg p\\lor q\\) and \\(p,\\neg p\\lor q\\vdash q\\) hold, but we cannot use Cut to derive \\(p,\\neg p\\vdash q\\), for here, the \\(q\\) is irrelevant and a logical free-rider. In core logic, \\(p,\\neg p\\vdash \\) holds (since \\(p\\) and its negation are jointly inconsistent) but we cannot use weakening to conclude \\(p,\\neg p\\vdash q\\). In this logic, the cut rule does not hold in full generality, but a restriction of it does hold. If \\(X\\vdash A,Y\\) and \\(X',A\\vdash Y'\\), then there are subsets \\(X^*\\subseteq X\\cup X'\\) and \\(Y^*\\subseteq Y\\cup Y'\\) where \\(X^*\\vdash Y^*\\). Restricting Cut on core logic grounds would be of no help to the logician who wants to respond to the semantic paradoxes by admitting \\(\\vdash T\\lambda\\) and \\(\\vdash T\\lambda\\vdash\\bot\\) while rejecting \\(\\vdash\\bot\\)."
+    },
+    {
+      "chunk_id": "chunk_057",
+      "section": "4. Model Theory",
+      "page": null,
+      "text": "Another application of these models is in the treatment of the semantics of function application . We can think of the points in a model structure as both functions and data , and hold that \\(Rxyz\\) if and only if \\(x\\) (considered as a function) applied to \\(y\\) (considered as data) is \\(z\\). Traditional accounts of functions do not encourage this dual use, since functions are taken to be of a ‘higher’ than their inputs or outputs (on the traditional set-theoretic model of functions, a function \\(is\\) the set of its input-output pairs, and so, it can never take itself as an input, since sets cannot contain themselves as members). However, systems of functions modelled by the untyped \\(\\lambda\\)-calculus, for example, allow for self-application. Given this reading of points in a model, a point is of type \\(A \\rightarrow B\\) just if whenever it takes inputs of type \\(A\\), it takes outputs of type \\(B\\). The inference rules of this system are then principles governing types of functions: the sequent"
+    },
+    {
+      "chunk_id": "chunk_032",
+      "section": "1.5 Structure on the right of the turnstile",
+      "page": null,
+      "text": "\\[ \\cfrac{p \\vdash p} { \\cfrac{p \\vdash q, p} {\\vdash p \\rightarrow q, p} } \\] shows that either \\(p \\rightarrow q\\) or \\(p\\) must hold. This is classically valid (if \\(p\\) fails, \\(p\\) is false , and conditionals with false antecedents are true), but invalid in intuitionistic logic. Similarly, the intuitionist derivation of the law of non-contradiction can be naturally ‘dualised’ into a classical proof of the law of the excluded middle, as follows: \\[ \\cfrac{p\\vdash p}{\\cfrac{p,\\neg p\\vdash} {p\\amp\\neg p\\vdash}} \\qquad\\qquad \\cfrac{p\\vdash p}{\\cfrac{\\vdash p,\\neg p}{\\vdash p\\lor\\neg p}} \\] The difference between classical and intuitionistic logic, then, can be understood as a difference arising from the kinds of structural rules permitted, and the kinds of structures appropriate to use in the analysis of logical consequence, rather than a difference due to the behaviour of one or more different logical constants."
+    },
+    {
+      "chunk_id": "chunk_019",
+      "section": "1.2 Commutativity",
+      "page": null,
+      "text": "There are many kinds of conditional for which this inference fails. If a conditional has modal force (if it expresses a kind of entailment, in which \\(p \\rightarrow q\\) is true when in every related circumstance in which \\(p\\) holds, \\(q\\) does too), and if “\\(\\vdash\\)” expresses local consequence \\((p\\vdash q\\) if and only if any model, at any circumstance at which \\(p\\) holds, so does \\(q)\\) it fails. It may be true that Greg is a logician \\((p)\\) and it is true that Greg’s being a logician entails Greg’s being a philosopher \\((p \\rightarrow q\\) – in related circunstances in which Greg is a logician, he is a philosopher) but this does not entail that Greg is a philosopher. (There are many circumstances in which the entailment \\((p \\rightarrow q)\\) is true but \\(q\\) is not.) So we have a circumstance in which \\(p\\) is true but \\((p \\rightarrow q) \\rightarrow q\\) is not. The argument is invalid."
+    },
+    {
+      "chunk_id": "chunk_016",
+      "section": "1.1 Weakening",
+      "page": null,
+      "text": "\\[ \\frac{X \\vdash A} {X, Y \\vdash A} \\] This is the rule of weakening : it steps from a stronger statement, that \\(A\\) follows from \\(X\\) to a possibly weaker one, that \\(A\\) follows from \\(X\\) together with \\(Y\\). In this rule, the members of \\(X\\), and \\(Y\\) and the conclusion \\(A\\) are arbitrary, so it is a purely structural rule. People have offered different reasons for rejecting the rule of weakening, depending on the interpretation of consequence and premise combination. One of the early motivating examples comes from a concern for relevance. If the logic is relevant (if to say that \\(p\\) entails \\(q\\) is true is to say, at least, that \\(q\\) truly depends on \\(p)\\) then weakening need not hold. We may indeed have \\(A\\) following from \\(X\\), without \\(A\\) following from \\(X,Y\\), for it need not be the case that \\(A\\) depends on \\(X\\) and \\(Y\\) together."
+    }
+  ],
+  "source_kind": "encyclopedia",
+  "retrieval_priority": "medium",
+  "direct_reading_access": "direct_fulltext"
+}

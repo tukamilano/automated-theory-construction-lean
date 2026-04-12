@@ -1,0 +1,254 @@
+{
+  "source_id": "plato_stanford_edu_typelogical_grammar_typelogical_grammar_stanford_fb097d589dab",
+  "source_url": "https://plato.stanford.edu/entries/typelogical-grammar/",
+  "label": "Typelogical Grammar \\- Stanford Encyclopedia of Philosophy",
+  "title": "Typelogical Grammar (Stanford Encyclopedia of Philosophy)",
+  "content_type": "text/html",
+  "extract_confidence": "high",
+  "abstract": "At the time of their publication, these ideas did not resonate; their impact on the field of computational linguistics dates from the 1980s. Two factors have played an important role in this belated recognition. The first was the addition of a computational semantics for categorial derivations along the lines of the Curry-Howard proofs-as-programs interpretation in van Benthem 1983, reprinted in Buszkowski et al . 1988. Lambek's typelogical grammars, so viewed, could be seen to realize Montague’s compositionality program in an uncompromising way, with the lambda calculus and type theory providing powerful tools to study derivational and lexical semantics. The second factor was the introduction of linear logic (Girard 1987), and with it, the surge of interest in substructural logics. A key insight from linear logic injected into typelogical grammar is the idea that structural rules can be",
+  "chunks": [
+    {
+      "chunk_id": "chunk_005",
+      "section": "1. A bit of history",
+      "page": null,
+      "text": "At the time of their publication, these ideas did not resonate; their impact on the field of computational linguistics dates from the 1980s. Two factors have played an important role in this belated recognition. The first was the addition of a computational semantics for categorial derivations along the lines of the Curry-Howard proofs-as-programs interpretation in van Benthem 1983, reprinted in Buszkowski et al . 1988. Lambek's typelogical grammars, so viewed, could be seen to realize Montague’s compositionality program in an uncompromising way, with the lambda calculus and type theory providing powerful tools to study derivational and lexical semantics. The second factor was the introduction of linear logic (Girard 1987), and with it, the surge of interest in substructural logics. A key insight from linear logic injected into typelogical grammar is the idea that structural rules can be reintroduced in a controlled form by means of so-called modalities: in moving to more discriminating type logics, no expressivity is lost. From a computational point of view, variants of the proof nets of linear logic have provided the basis for typelogical natural language processing."
+    },
+    {
+      "chunk_id": "chunk_122",
+      "section": "Bibliography",
+      "page": null,
+      "text": "de Groote, P. and C. Retoré (1996). On the semantic readings of proof nets. In G.-J. Kruijff, G. Morrill, and D. Oehrle (Eds.), Proceedings 2nd Formal Grammar Conference , Prague, pp. 57–70. Došen, K. (1992). A brief survey of frames for the Lambek calculus. Mathematical Logic Quarterly , 38(1): 179–187. Galatos, N., P. Jipsen, T. Kowalski, and H. Ono (2007). Residuated Lattices: An Algebraic Glimpse at Substructural Logics, Studies in Logic and the Foundations of Mathematics (Volume 151) , Amsterdam: Elsevier. Girard, J.-Y. (1987). Linear logic. Theoretical Computer Science , 50: 1–102. Grishin, V. (1983). On a generalization of the Ajdukiewicz-Lambek system. In A. Mikhailov (Ed.), Studies in Nonclassical Logics and Formal Systems , Moscow: Nauka, pp. 315–334. [English translation in Abrusci and Casadio (eds.) New Perspectives in Logic and Formal Linguistics. Bulzoni, Rome, 2002]."
+    },
+    {
+      "chunk_id": "chunk_131",
+      "section": "Bibliography",
+      "page": null,
+      "text": "–––. (2006). Lambek calculus is NP-complete. Theoretical Computer Science , 357: 186–201. –––. (1995). Models for the Lambek calculus. Annals of Pure and Applied Logic , 75(1–2), 179–213. Restall, G. (2000). An Introduction to Substructural Logics . London: Routledge. Retoré, C. and S. Salvati (2010). A faithful representation of non-associative Lambek grammars in Abstract Categorial Grammars. Journal of Logic, Language and Information , 19(2). Special issue on New Directions in Type Theoretic Grammars. Roorda, D. (1992). Proof Nets for Lambek calculus. Journal of Logic and Computation , 2(2): 211–231. Savateev, Y. (2009). Product-free Lambek Calculus is NP-complete. In S. Artemov and A. Nerode (Eds.), Proceedings of the 2009 International Symposium on Logical Foundations of Computer Science , Lecture Notes in Computer Science (Volume 5407), Berlin: Springer, pp. 380–394."
+    },
+    {
+      "chunk_id": "chunk_002",
+      "section": "Typelogical Grammar",
+      "page": null,
+      "text": "First published Tue Sep 7, 2010 Typelogical grammars are substructural logics, designed for reasoning about the composition of form and meaning in natural language. At the core of these grammars are residuated families of type-forming operations; a hierarchy of typelogical grammars results from the choices one makes with respect to the structural properties of the type-forming operations, and the means one introduces to control the grammatical resource management. Computational semantics is obtained from the Curry-Howard interpretation of categorial derivations. Parsing and natural language processing is modeled in terms of suitably refined versions of the proof nets of linear logic. 1. A bit of history 2. The Lambek systems 2.1 Modelling grammatical composition 2.2 The syntax-semantics interface 3. Extended typelogical grammars 3.1 Multimodal systems, structural control"
+    },
+    {
+      "chunk_id": "chunk_126",
+      "section": "Bibliography",
+      "page": null,
+      "text": "––– (1997). Structural control. In P. Blackburn and M. de Rijke (Eds.), Specifying Syntactic Structures , Stanford: CSLI Publications, pp. 75–113. Lambek, J. (2008). From word to sentence. A computational algebraic approach to grammar . Polimetrica. –––. (1999). Type grammar revisited. In A. Lecomte, F. Lamarche, and G. Perrier (Eds.), Logical Aspects of Computational Linguistics , Lecture Notes in Artificial Intelligence (Volume 1582), Berlin: Springer, pp. 1–27. –––. (1993). From categorial to bilinear logic. In K. Došen and P. Schröder-Heister (Ed.), Substructural Logics . Oxford University Press. –––. (1961). On the calculus of syntactic types. In R. Jacobson (Ed.), Structure of Language and its Mathematical Aspects , Proceedings of the Symposia in Applied Mathematics (Volume XII), American Mathematical Society, pp. 166–178."
+    },
+    {
+      "chunk_id": "chunk_115",
+      "section": "6. Related approaches",
+      "page": null,
+      "text": "It will be clear from this description that the ACG architecture is closely related to the compositional interpretation for categorial type logics as discussed in this artile. A key difference is the nature of the ‘abstract syntax’, i.e. the source calculus from which interpretations are homomorphically derived. In the case of the standard Lambek systems and the extended systems discussed in §3 above, the abstract syntax is a directional type logic; in the case of ACG, one finds LP and the linear lambda calculus both at the source and at the target end. The debate as to whether structural properties of language have to be accounted for at the level of the abstract syntax has a long history, starting with Curry 1961; see Muskens 2007 for discussion. The typelogical view accounts for word order universals at the level of its logical constants , i.e., the type-forming operations, and the laws that govern them. The ACG view is more liberal in this respect: the derivation of surface form can be specified on a word-by-word basis. Whether this more relaxed connection between abstract syntax and surface realisation is desirable, is a matter of debate. An attractive feature of ACG that has not been investigated systematically within the typelogical setting is the connection between expressivity and order restrictions on the source constants and on the interpretive mapping."
+    },
+    {
+      "chunk_id": "chunk_007",
+      "section": "1. A bit of history",
+      "page": null,
+      "text": "Outline of this article . We start with the standard Lambek systems. We study their model-theoretic and proof-theoretic aspects (frame semantics, sequent calculus), and the relation between the two (soundness, completeness). We characterize compositional interpretation as a homomorphism relating a syntactic source calculus and a target calculus for meaning assembly. The mapping associates syntactic derivations with semantic readings, expressed as terms of the simply typed linear lambda calculus. In §3 we turn to the expressive limitations of the standard Lambek systems, in syntax and semantics, and study how they can be addressed by systematically extending the categorial architecture in a modular way. Generalizations concern the arity of the type-forming operations (binary composition operations versus unary control operators); multimodal extensions where multiple families of type-forming operations co-exist and communicate via structural interaction principles; one-sorted vs multi-sorted logics (discontinuous calculi); single-conclusion vs multiple-conclusion systems (symmetric calculi); and more structured views of the syntax- semantics interface (continuation semantics). To close the panoramic tour, we present proof nets for the various typelogical systems studied in §3, and we compare these systems with respect to expressivity and computational tractability."
+    },
+    {
+      "chunk_id": "chunk_110",
+      "section": "6. Related approaches",
+      "page": null,
+      "text": "Pregroup grammars . Pregroups are an algebraic version of compact bilinear logic (Lambek 1993) obtained by collapsing the tensor and cotensor operations. Pregroup grammars were introduced in Lambek 1999 as a simplification of the original Syntactic Calculus L . They have since been used to build computational fragments for a great variety of languages by Lambek and co-workers. A pregroup is a partially ordered monoid in which each element a has a left and a right adjoint, a l , a r , satisfying a l a → 1 → aa l and aa r → 1 → a r a , respectively. Type assignment takes the form of associating a word with one or more elements from the free pregroup generated by a partially ordered set of basic types. For the connection with categorial type formulas, one can use the translations a / b = ab l and b \\ a = b r a . Parsing, in the pregroup setting, is extremely straightforward. Lambek (1999) proves that one only has to perform the contractions replacing a l a and a l a by the multiplicative unit 1. This is essentially a check for well-bracketing — an operation that can be entrusted to a pushdown automaton. The expansions 1 → aa l and 1 → a r a are needed to prove equations like ( ab ) l = b l a l . We have used the latter to obtain the pregroup version of the higher-order relative pronoun type ( n \\ n )/( s / np ) in the example below."
+    },
+    {
+      "chunk_id": "chunk_004",
+      "section": "1. A bit of history",
+      "page": null,
+      "text": "Typelogical grammar has its roots in two seminal papers written by Jim Lambek half a century ago (Lambek 1958, 1961). In these papers, the author set himself the aim “to obtain an effective rule (or algorithm) for distinguishing sentences from non-sentences, which works not only for the formal languages of interest to the mathematical logician, but also for natural languages […]”. To realize this goal, the familiar parts of speech (nouns, verbs, …) are turned into formulas of a logic — a logic designed to reason about grammatical composition. The judgement whether a phrase is wellformed, under this view, is the outcome of a process of deduction. A decision procedure for such judgements is obtained by casting the grammar logic in the format of a Gentzen-style sequent calculus. The sequent presentation is extremely simple: the logic of grammar is a logic without structural rules. Contraction and Weakening are dropped; their presence would entail that wellformedness is unaffected by arbitrary copying or deletion of grammatical material. To take into account also word order and phrase structure information, Lambek further removes the structural rules of Exchange and (in the 1961 paper) Associativity."
+    },
+    {
+      "chunk_id": "chunk_082",
+      "section": "3.3 Symmetric categorial grammar",
+      "page": null,
+      "text": "Discussion . LG is a weaker logic than CNL , the Classical Non-Associative Lambek Calculus of de Groote and Lamarche 2002. In the latter system, like in classical linear logic, we have an involutive negation and De Morgan dualities turning multiplicative conjunction (times) and disjunction (par) into interexpressible operations. With respect to the linguistic applications, one can compare LG with the Discontinuous Calculus of §3.2. Whereas the latter provides uniform analyses of both the extraction and the infixation type of discontinuities, the distributivity principles of LG are primarily addressing the infixation variety. It may be interesting in this respect to note that Grishin 1983 proposes a second group of distributivity principles — converses of the ones discussed above. Whether these could play a role in the analysis of overt displacement remains to be seen. From a formal point of view, each of the groups of distributivities is a conservative extension of the basic symmetric calculus. But the combination of the two (i.e., the distributivity principles as invertible rules) induces partial associativity/commutativity of the (co)product operations, i.e., structure-preservation is lost."
+    },
+    {
+      "chunk_id": "chunk_078",
+      "section": "3.3 Symmetric categorial grammar",
+      "page": null,
+      "text": "Illustration . The interaction principles of LG provide a particularly direct way of capturing phenomena that depend on infixation rather than concatenation. The derivations below (using monotonicity, and (dual) residuation steps) show how the same pieces of information (the same premises) can be used either to introduce an implication B \\ C on the left of the turnstile, or a coimplication B ⊘ C on the right. The first option leads to a rule of Application — the central composition operation of standard Lambek calculus. The second option leads to a Co-Application variant. Although these two rules are derived from the same premises, there is an important difference between them. When the implication B \\ C composes with its argument, it must stay external to X . In the case of the coimplication, when X is some product of factors A 1 ,…, A n , the conditions for the interaction principles are met. This means that the coimplication B ⊘ C will be able to descend into the phrase X and associate with any of the constituent parts A i into a formula ( B ⊘ C ) ⦸ A i ."
+    },
+    {
+      "chunk_id": "chunk_096",
+      "section": "4. Proof nets and processing",
+      "page": null,
+      "text": "Proof nets for the Lambek calculi . Proof nets for the associative calculus L and the commutative variant LP have been studied initially by Roorda (1991, 1992). To capture the ‘intuitionistic’ nature of these systems, one works with formulas with polarities : input (‘given’) polarity for antecedent occurrences of a formula, versus output (‘to prove’) polarity for succedent occurrences. Correctness criteria identify proof nets among a wider class of graphs: to the criteria of acyclicity and connectedness, applicable for linear logic in general, one adds planarity to capture word order sensitivity: in the proof nets for L , axioms links cannot cross. With respect to the syntax-semantics interface, de Groote and Retoré (1996) show that the lambda terms in Curry-Howard correspondence with LP derivations in the semantic target calculus can be read off from a proof net by specifying a set of ‘travel instructions’ for traversing a net; these instructions then correspond step-by-step with the construction of the associated lambda term."
+    },
+    {
+      "chunk_id": "chunk_060",
+      "section": "3.2 The logic of discontinuity",
+      "page": null,
+      "text": "The discontinuous Lambek calculi that have been developed by Morrill and co-workers (see Morrill et al . 2007, 2009) and Chapter 6 of the forthcoming monograph (Morrill 2010) extend the associative Lambek calculus L . We saw that L is the logic of strings composed by concatenation. The discontinuous calculi enrich the ontology with a notion of split strings: expressions consisting of detached parts, as in the idiom ‘take — to task’. To build the phrase ‘take someone to task’, one wraps the discontinuous expression around its object. In this particular example, there is a single point of discontinuity, but one can also think of cases with more than one split point. This naturally leads to two notions of discontinuous composition: a deterministic view, where wrapping targets a particular split point, and a non-deterministic view where the targeted split point is arbitrary. In the case of expressions with a single split point, these two notions coincide."
+    },
+    {
+      "chunk_id": "chunk_026",
+      "section": "2.1 Modelling grammatical composition",
+      "page": null,
+      "text": "A characteristic property of LP is the collapse of the distinction between left and right division: A \\ B and B / A become interderivable. From a syntactic point of view, the global availability of associativity and/or commutativity in LP would entail that arbitrary changes in constituent structure and/or word order cannot affect the well-formedness of an expression — a position that few linguists will subscribe to. Whether global associativity as we find it in L is a viable option for syntax is open to dispute. Lambek points to cases of overgeneration resulting from free rebracketing in his 1961 paper, but later reverts to the associative view. In the following section, we will see that LP is perfectly legitimate as a calculus of meaning composition. In §3, we discuss controlled forms of structural reasoning, anchored in lexical type assignment, as an alternative to the problematic all-or-nothing options."
+    },
+    {
+      "chunk_id": "chunk_130",
+      "section": "Bibliography",
+      "page": null,
+      "text": "Morrill, G., O. Valentin, and M. Fadda (2009). Dutch grammar and processing: A case study in TLG. In P. Bosch, D. Gabelaia, and J. Lang (eds.), Logic, Language, and Computation: 7th International Tbilisi Symposium on Logic, Language, and Computation , Tbilisi, Georgia, October 1-5, 2007 (Revised Selected Papers), Lecture Notes in Artificial Intelligence (Volume 5422), Berlin: Springer, pp. 272–286. Muskens, R. (2007). Separating syntax and combinatorics in categorial grammar. Research on Language & Computation , 5(3): 267–285. Oehrle, R. T., E. Bach, and D. Wheeler (Eds.) (1988). Categorial Grammars and Natural Language Structures , Studies in Linguistics and Philosophy (Number 32). Dordrecht: Reidel. Pentus, M. (1993b). Lambek grammars are context free. In Proceedings of the 8th Annual IEEE Symposium on Logic in Computer Science}, IEEE Computer Society Press, pp. 429–433."
+    },
+    {
+      "chunk_id": "chunk_109",
+      "section": "6. Related approaches",
+      "page": null,
+      "text": "The development of CCG and Lambek style typelogical grammars in the 1980s initially followed separate courses. More recently, there are signs of convergence. An important factor has been the introduction of the typelogical technique of multimodal control to fine-tune the applicability of the CCG combinatory schemata (Baldridge 2002, Kruijff and Baldridge 2003). Multimodal typelogical grammar, from this perspective, plays the role of the underlying general logic which one uses to establish the validity of the CCG combinatory schemata, whereas the particular choice of primitive combinators is motivated by computational efficiency considerations (Hoyt and Baldridge 2008). In terms of generative capacity, CCG is a member of the mildly context sensitive family of grammar formalisms. Polynomial parsability is obtained by imposing a bound on the functional composition schemata."
+    },
+    {
+      "chunk_id": "chunk_127",
+      "section": "Bibliography",
+      "page": null,
+      "text": "–––. (1958). The mathematics of sentence structure. American Mathematical Monthly , 65: 154–170. Melissen, M. (2009). The generative capacity of the Lambek-Grishin calculus: A new lower bound. In P. de Groote (Ed.), Proceedings 14th Conference on Formal Grammar , Lecture Notes in Computer Science (Volume 5591), Berlin: Springer. Moortgat, M. (2009). Symmetric categorial grammar. Journal of Philosophical Logic , 8(6), 681–710. –––. (1997). Categorial type logics. In J. van Benthem and A. ter Meulen (Eds.), Handbook of Logic and Language (Chapter 2), Amsterdam: Elsevier, pp. 93–177. (Second edition, revised and updated: Elsevier Insights Series, 2010). –––. (1996). Multimodal linguistic inference. Journal of Logic, Language and Information , 5(3–4): 349–385. –––. (1988). Categorial Investigations. Logical and Linguistic Aspects of the Lambek calculus . Berlin: De Gruyter."
+    },
+    {
+      "chunk_id": "chunk_074",
+      "section": "3.3 Symmetric categorial grammar",
+      "page": null,
+      "text": "preorder laws A ⊢ A A ⊢ B B ⊢ C A ⊢ C (dual) residuation laws) A ⊢ C / B A ⊗ B ⊢ C B ⊢ A \\ C B ⦸ C ⊢ A C ⊢ B ⊕ A C ⊘ A ⊢ B interaction principles A ⊗ B ⊢ C ⊕ D C ⦸ A ⊢ D / B A ⊗ B ⊢ C ⊕ D B ⊘ D ⊢ A \\ C A ⊗ B ⊢ C ⊕ D C ⦸ B ⊢ A \\ D A ⊗ B ⊢ C ⊕ D A ⊘ D ⊢ C / B The Lambek-Grishin calculus LG LG consists of a symmetric version of the pure residuation logic NL together with structure-preserving interaction principles relating the conjunctive and disjunctive operations. We discuss these components in turn. For symmetry, the inventory of type-forming operations is doubled: in addition to the NL operations ⊗,\\,/ (product, left and right division), there is a second family ⊕,⊘,⦸: coproduct, right and left difference. The two families are related by an arrow reversal symmetry δ, which translates type formulas according to the table below. δ C / B A ⊗ B A \\ C B ⦸ C B ⊕ A C ⊘ A"
+    },
+    {
+      "chunk_id": "chunk_061",
+      "section": "3.2 The logic of discontinuity",
+      "page": null,
+      "text": "The vocabulary of DL (Discontinuous Lambek Calculus) consists of residuated families of unary and binary type-forming operations. A representative sample is given below. For the binary case, in addition to the concatenation product of L and the residual slash operations, we have a discontinuous (wrapping) product ⊙, with residual infixation ↓ and extraction ↑ operations. For the deterministic interpretation, the discontinuous type-forming operations have an indexed form ↑ k , ⊙ k , ↓ k explicitly referring to the k -th split point of their interpretants. The function of the unary operations is to control the creation and removal of split points. As in the binary case, we have non-deterministic operations (bridge ∧ , split ∨ ) and indexed forms ( ∧ k , ∨ k ) with a deterministic interpretation. A , B ::= … | A ⊙ B | A ↓ B | B ↑ A | ∧ A | ∨ A"
+    },
+    {
+      "chunk_id": "chunk_124",
+      "section": "Bibliography",
+      "page": null,
+      "text": "–––. (2004). Residuation, Structural Rules and Context Freeness. Journal of Logic, Language and Information , 13: 47–59. Johnson, M. (1998). Proof nets and the complexity of processing center-embedded constructions. Journal of Logic, Language and Information , 7(4): 433–447. Joshi, A. K., K. Vijay-Shanker, and D. Weir (1991). The convergence of mildly context-sensitive grammar formalisms. In P. Sells, S. M. Shieber, and T. Wasow (Eds.), Foundational Issues in Natural Language Processing , Cambridge, MA: MIT Press, pp. 31–81. Kanazawa, M. (1998). Learnable classes of categorial grammars . Stanford: CSLI Publications. Kandulski, M. (1988). The equivalence of nonassociative Lambek categorial grammars and context-free grammars. Zeitschrift für mathematische Logik und Grundlagen der Mathematik , 34: 41–52."
+    },
+    {
+      "chunk_id": "chunk_125",
+      "section": "Bibliography",
+      "page": null,
+      "text": "Kanovich, M. (1994). The Complexity of Horn Fragments of Linear Logic. Annals of Pure and Applied Logic , 69(2-3): 195–241. Kruijff, G.-J. and J. Baldridge (2003). Multi-modal combinatory categorial grammar. In Proceedings of the 10th Conference of the European Chapter of the Association for Computational Linguistics , Association for Computational Linguistics, pp. 211–218. Kurtonina, N. (1995). Frames and Labels. A Modal Analysis of Categorial Inference . Ph. D. thesis, OTS Utrecht, ILLC Amsterdam. Kurtonina, N. and M. Moortgat (2010). Relational semantics for the Lambek-Grishin calculus. In C. Ebert, G. Jäger, and J. Michaelis (Eds.), The Mathematics of Language. Proceedings of the 10th and 11th Biennial Conference , Lecture Notes in Computer Science (Volume 6149). Berlin: Springer, pp. 210–222."
+    },
+    {
+      "chunk_id": "chunk_123",
+      "section": "Bibliography",
+      "page": null,
+      "text": "Hendriks, H. (1993). Studied Flexibility. Categories and Types in Syntax and Semantics . Ph. D. thesis, ILLC, University of Amsterdam. Hepple, M. (1999). An Earley-style predictive chart parsing method for Lambek grammars. In Proceedings of the 37th Annual Meeting of the Association for Computational Linguistics , Association for Computational Linguistics, pp. 465–472. –––. (1990). Normal form theorem proving for the Lambek calculus. In Papers presented to the 13th International Conference on Computational Linguistics , Helsinki, pp. 173–178. Hoyt, F. and J. Baldridge (2008). A logical basis for the D combinator and normal form in CCG. In Proceedings of ACL-08: HLT , Association for Computational Linguistics, pp. 326–334. Jäger, G. (2005). Anaphora And Type Logical Grammar . Berlin: Springer."
+    },
+    {
+      "chunk_id": "chunk_128",
+      "section": "Bibliography",
+      "page": null,
+      "text": "Moot, R. (2008). Lambek grammars, tree adjoining grammars and hyperedge replacement grammars. In Proceedings of TAG+9, The 9th International Workshop on Tree Adjoining Grammars and Related Formalisms , Tübingen, pp. 65–72. –––. (2007). Proof nets for display logic. CoRR , abs/0711.2444. –––. (2002). Proof Nets for Linguistic Analysis . Ph. D. thesis, Utrecht Institute of Linguistics OTS, Utrecht University. Moot, R. and M. Piazza (2001). Linguistic Applications of First Order Intuitionistic Linear Logic. Journal of Logic, Language and Information , 10(2): 211–232. Moot, R. and Q. Puite (2002). Proof Nets for the Multimodal Lambek Calculus. Studia Logica , 71(3): 415–442. Morrill, G. (2010). Categorial Grammar: Logical Syntax, Semantics, and Processing . Oxford: Oxford University Press."
+    },
+    {
+      "chunk_id": "chunk_117",
+      "section": "Bibliography",
+      "page": null,
+      "text": "–––. (2002). Continuations and the nature of quantification. Natural language semantics , 10: 211–242. Barker, C. and C. Shan (2006). Types as graphs: Continuations in type logical grammar. Journal of Logic, Language and Information , 15(4): 331–370. –––. (2008). Donkey anaphora is in-scope binding. Semantics and Pragmatics , 1(1): 1–46. Barry, G., M. Hepple, N. Leslie, and G. Morrill (1991). Proof figures and structural operators for categorial grammar. In Proceedings of the 5th conference on European chapter of the Association for Computational Linguistics , Association for Computational Linguistics, pp. 198–203. Bastenhof, A. (2010). Tableaux for the Lambek-Grishin calculus. CoRR abs/1009.3238. To appear in Proceedings ESSLLI 2010 Student Session . Copenhagen."
+    },
+    {
+      "chunk_id": "chunk_121",
+      "section": "Bibliography",
+      "page": null,
+      "text": "–––. (2001b). Type raising, continuations, and classical logic. In M. S. R. van Rooy (Ed.), Proceedings of the Thirteenth Amsterdam Colloquium , Amsterdam: ILLC (Universiteit van Amsterdam), pp. 97–101. –––. (1999). The non-associative Lambek calculus with product in polynomial time. In N. V. Murray (Ed.), Automated Reasoning With Analytic Tableaux and Related Methods , Lecture Notes in Artificial Intelligence (Volume 1617), Berlin: Springer, pp. 128–139. de Groote, P. and F. Lamarche (2002). Classical non-associative Lambek calculus. Studia Logica , 71(3): 355–388. de Groote, P. and S. Pogodalla (2004). On the Expressive Power of Abstract Categorial Grammars: Representing Context-Free Formalisms. Journal of Logic, Language and Information , 13(4): 421–438."
+    },
+    {
+      "chunk_id": "chunk_027",
+      "section": "2.2 The syntax-semantics interface",
+      "page": null,
+      "text": "In order to give equal weight to syntactic and semantic considerations, we can set up a categorial grammar as a pair of calculi linked by a compositional interpretation: a syntactic source calculus, a semantic target calculus, and a homomorphism mapping types and derivations of the source to the corresponding types and derivations of the target. In this section, we work out this architecture for the standard Lambek calculi. In the following section, we will see how the extended categorial type logics reflect different views on the division of labour between syntax and semantics, and hence on the amount of work that has to be done to achieve a compositional mapping between the two. ( N ) L { n , np , s } /,\\ (·)′ LP { e , t } → Syntax homomorphism Semantics"
+    },
+    {
+      "chunk_id": "chunk_023",
+      "section": "2.1 Modelling grammatical composition",
+      "page": null,
+      "text": "For reasons of historical precedence, the system of Lambek 1958, with an associative composition operation, is referred to as L ; the pure residuation logic NL , i.e., the non-associative version of L , was introduced later in Lambek 1961. Addition of commutativity turns L and NL into LP and NLP , respectively. LP , Lambek calculus with Permutation, was introduced in van Benthem 1983; in retrospect, this the implication/fusion fragment of Multiplicative Intuitionistic Linear Logic (MILL). The commutative variant of NL has been studied by Kandulski; it has not found significant linguistic applications. For the four systems in the hierarchy, one writes ( N ) L ( P )* for the (non-conservative) extension which allows empty antecedents."
+    },
+    {
+      "chunk_id": "chunk_118",
+      "section": "Bibliography",
+      "page": null,
+      "text": "Bernardi, R. and M. Moortgat (2010). Continuation semantics for the Lambek-Grishin calculus. Information and Computation , 208(5): 394–416. Bernardi, R. and A. Szabolcsi (2008). Optionality, Scope, and Licensing: An Application of Partially Ordered Categories. Journal of Logic, Language and Information , 17(3): 237–283. Bransen, J. (2010). The Lambek-Grishin calculus is NP-complete. To appear in Proceedings 15th Conference on Formal Grammar , Copenhagen. CoRR abs/1005.4697. Buszkowski, W. (2001). Lambek grammars based on pregroups. In P. de Groote, G. Morrill, and C. Retoré (Eds.), Logical Aspects of Computational Linguistics , Lecture Notes in Artificial Intelligence (Volume 2099), Berlin: Springer, pp. 95–109."
+    },
+    {
+      "chunk_id": "chunk_073",
+      "section": "3.3 Symmetric categorial grammar",
+      "page": null,
+      "text": "In a remarkable paper antedating Linear Logic by five years, Grishin (1983) presents a number of extensions of the Lambek calculus with the common characteristic that derivability holds between hypotheses A 1 ,…, A n , taken together by means of a multiplicative conjunction, and multiple conclusions B 1 ,…, B m , combined by means of a multiplicative disjunction. Linguistic exploration of Grishin's ideas has started in recent years. In this section, we introduce a multiple-conclusion categorial system that is already well-studied: LG (for Lambek-Grishin calculus). We present syntax and relational semantics of the system; in the next section, we turn to its computational interpretation."
+    },
+    {
+      "chunk_id": "chunk_129",
+      "section": "Bibliography",
+      "page": null,
+      "text": "–––. (2000). Incremental processing and acceptability. Computational linguistics , 26(3): 319–338. –––. (1994). Type Logical Grammar: Categorial Logic of Signs . Dordrecht: Kluwer Academic Publishers. –––. (1990). Intensionality and boundedness. Linguistics and Philosophy , 13(6): 699–726. Morrill, G. and M. Fadda (2008). Proof nets for basic discontinuous Lambek calculus. Journal of Logic and Computation , 18(2): 239–256. Morrill, G., M. Fadda, and O. Valentin (2007). Nondeterministic discontinuous Lambek calculus. In Proceedings of the Seventh International Workshop on Computational Semantics (IWCS7) , Tilburg."
+    },
+    {
+      "chunk_id": "chunk_006",
+      "section": "1. A bit of history",
+      "page": null,
+      "text": "Typelogical grammar, in its current incarnations, keeps the general architecture of Lambek's original calculi, but extends this to a more articulate vocabulary of type-forming operations. Of central importance are the multiplicative operations, used to model grammatical composition; these form the focus of this article. Next to the multiplicatives one can consider additive or Boolean operations and first or second order quantification to handle phenomena of lexical ambiguity, type polymorphism and the management of feature information. Morrill 1994 is a good source of examples for such extensions."
+    },
+    {
+      "chunk_id": "chunk_099",
+      "section": "4. Proof nets and processing",
+      "page": null,
+      "text": "Nets and rewriting . The multimodal and symmetric calculi of §3.1 and §3.3 pose a challenge to the proof net methods as originally developed for linear logic. In these systems we typically find one-way structural rules, such as the extraction postulates for overt displacement, or the Grishin distributivity laws in the case of LG : these one-way rules naturally suggest a notion of graph rewriting . A completely general proof net framework for the extended Lambek calculi, with a correctness criterion based on rewriting, has been developed in Moot and Puite 2002 and Moot 2007."
+    },
+    {
+      "chunk_id": "chunk_020",
+      "section": "2.1 Modelling grammatical composition",
+      "page": null,
+      "text": "Sequent calculus, decidability . How can we decide whether a statement A ⊢ B is indeed a theorem of the syntactic calculus? In the presence of expanding rules, such as Lifting, this is not immediately obvious: the transitivity inference from A ⊢ B and B ⊢ C to A ⊢ C involves a ‘lemma’ formula B which disappears from the conclusion, and there is an infinite number of candidate lemma formulas to consider. A key point of Lambek's original papers consists in the reformulation of the syntactic calculus in an equivalent Gentzen-style sequent format, which enjoys cut-elimination."
+    },
+    {
+      "chunk_id": "chunk_112",
+      "section": "6. Related approaches",
+      "page": null,
+      "text": "With respect to generative capacity, Buszkowski (2001) shows that the pregroup grammars are equivalent to context-free grammars. They share, in other words, the expressive limitations of the original categorial grammars. To overcome these limitations different strategies have been pursued, including lexical rules (metarules), derivational constraints, controlled forms of commutativity, and products of pregroups. The Studia Logica special issue (Buszkowski and Preller 2007) and the monograph Lambek 2008 give a good picture of current research."
+    },
+    {
+      "chunk_id": "chunk_039",
+      "section": "3. Extended typelogical grammars",
+      "page": null,
+      "text": "The strategy of combining resource-sensitivity at the level of derivational semantics with non-linear lexical meaning assignments is not a general solution for the expressive limitations of the syntactic calculi originally conceived by Lambek. A type of problem that necessitates extensions of the derivational machinery itself has to do with the inability of ( N ) L to establish discontinuous dependencies between grammatical resources in a satisfactory way. Such dependencies manifest themselves in two situations."
+    },
+    {
+      "chunk_id": "chunk_137",
+      "section": "Related Entries",
+      "page": null,
+      "text": "compositionality | logic: linear | logic: modal | logic: relevance | logic: substructural | type theory Copyright © 2010 by Michael Moortgat < Michael . Moortgat @ phil . uu . nl > Open access to the SEP is made possible by a world-wide funding initiative. The Encyclopedia Now Needs Your Support Please Read How You Can Help Keep the Encyclopedia Free Browse Table of Contents What's New Random Entry Chronological Archives About Editorial Information About the SEP Editorial Board How to Cite the SEP Special Characters Advanced Tools Accessibility Contact Support SEP Support the SEP PDFs for SEP Friends Make a Donation SEPIA for Libraries Mirror Sites View this site from another server: USA (Main Site) Philosophy, Stanford University Info about mirror sites"
+    },
+    {
+      "chunk_id": "chunk_054",
+      "section": "3.1 Multimodal systems, structural control",
+      "page": null,
+      "text": "The two uses of the control operators illustrated here give rise to a general theory of substructural communication relating the different type logics in the categorial landscape. Let Source and Target be neighbouring logics differing in some structural option, for example NL versus L , or L versus LP . Kurtonina and Moortgat (1997) establish a set of embedding theorems of the following form: translation: μ : Source(/,⊗,\\) → Target(◊,□,/,⊗,\\), such that A ⊢ B is derivable in the Source logic iff μ( A ) ⊢ μ( B ) is derivable in the Target logic"
+    },
+    {
+      "chunk_id": "chunk_095",
+      "section": "4. Proof nets and processing",
+      "page": null,
+      "text": "In the previous sections, we have seen how the different categorial calculi can be presented as proof systems with a sequent-based decision procedure. Naive proof search in these systems, however, is inefficient from a computational point of view: in general, there will be multiple ways to construct alternative proofs that differ only in the order of the application of the inference rules, but produce the same interpretation (the LP term associated with a derivation under the interpretation homomorphism). This issue of ‘spurious’ ambiguity can be tackled by the introduction of normal form derivations (as in Hepple 1990, Hendriks 1993), compare focused proof search regimes in linear logic), combined with the use of chart-based parsing methods, as in Hepple 1999, Capelletti 2007. An alternative for categorial ‘parsing-as-deduction’ is to leave the sequent calculus for what it is, and to switch to a proof net approach. Proof nets, originally developed in the context of linear logic, use a representation of derivations that is inherently free of ‘spurious ambiguity’, i.e., the issue of irrelevant rule orderings simply doesn't arise. For a general treatment of proof nets, we refer to the entry on linear Logic . Below we comment on aspects that are specifically addressing issues in categorial grammar."
+    },
+    {
+      "chunk_id": "chunk_098",
+      "section": "4. Proof nets and processing",
+      "page": null,
+      "text": "First-order quantifiers . The planarity condition singles out the non-commutative proof nets for L among the LP nets. To deal with the more structured categorial calculi discussed here, the correctness criteria have to be refined. One strategy of doing this is via a translation into MILL1 (first-order multiplicative intuitionistic linear logic) where one has proof nets with extra links for existential and universal quantification over first order variables. One can then use these variables in a way very similar to the use of position arguments in Definite Clause Grammars as used in logic programming. Moot and Piazza (2001) work out such translations for L and NL . For the concatenation operations of L , one replaces the proposition letters (atomic formulas) by two-place terms, marking beginning and end of a continuous string. For non-associative NL , one adds an extra variable to keep track of the nesting depth of subformulas. For wrapping operations in the simple discontinuous calculus DL (allowing a single split point), Morrill and Fadda (2008) use four-place predicates. In general, we find a correlation here between the syntactic expressivity of the calculi and the number of variables needed to encode their structural resource management."
+    },
+    {
+      "chunk_id": "chunk_069",
+      "section": "3.2 The logic of discontinuity",
+      "page": null,
+      "text": "For an example involving covert discontinuity, consider quantifier scope construal. DL provides a uniform type assignment to generalized quantifier expressions such as ‘everyone’, ‘someone’: ( s ↑ np ) ↓ s . In the syntactic source calculus, this type assignment allows a quantifier phrase QP to occupy any position that could be occupied by a regular non-quantificational noun phrase. Semantically, the image of the ↑ Introduction rule at the level of the semantic target calculus LP binds an np type hypothesis at the position that was occupied by the QP (the a − x : np premise, with a and x structural and semantic variables for the np hypothesis). The image of the ↓ Elimination rule applies the term representing the QP meaning to this abstract. Scope ambiguities arise from derivational ambiguity in the source calculus DL . The derivation below results in a non-local reading ‘there is a particular x such that Mary thinks x left’. Looking upward from the conclusion, the last rule applied is ↓ Elimination, which means the QP takes scope at the main clause level. An alternative derivation, producing the local scope reading, would have the / Elimination rule for ‘thinks’: ( np \\ s )/ s as the last step."
+    }
+  ],
+  "source_kind": "encyclopedia",
+  "retrieval_priority": "medium",
+  "direct_reading_access": "direct_fulltext"
+}

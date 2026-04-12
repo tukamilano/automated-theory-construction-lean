@@ -198,6 +198,88 @@ def _main_theorem_select_result(payload: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _main_theorem_suggest_result(payload: dict[str, Any]) -> dict[str, Any]:
+    candidate_id = str(payload.get("candidate_id", ""))
+    tracked_problems = payload.get("tracked_problems", [])
+    source_problem_ids: list[str] = []
+    if isinstance(tracked_problems, list):
+        for item in tracked_problems:
+            if not isinstance(item, dict):
+                continue
+            problem_id = str(item.get("problem_id", "")).strip()
+            if problem_id:
+                source_problem_ids.append(problem_id)
+            if len(source_problem_ids) >= 2:
+                break
+    return {
+        "candidate_id": candidate_id,
+        "result": "ok",
+        "statement": "True -> True",
+        "theorem_name_stem": "mock_main_theorem_bridge",
+        "docstring_summary": "Mock bridge theorem target.",
+        "rationale": "mock_worker: placeholder bridge-style candidate",
+        "supporting_theorems": [],
+        "missing_lemmas": [],
+        "source_problem_ids": list(source_problem_ids),
+        "theorem_pattern": "new_theorem",
+        "context_note": "mock_worker: candidate is positioned as a title-level structural bridge",
+        "conceptual_depth_note": "mock_worker: candidate is framed around a reusable bridge rather than bookkeeping",
+    }
+
+
+def _main_theorem_retrieve_result(payload: dict[str, Any]) -> dict[str, Any]:
+    candidate_id = str(payload.get("candidate_id", ""))
+    return {
+        "candidate_id": candidate_id,
+        "closest_items": [
+            {
+                "reference": "mock source link",
+                "kind": "source_link",
+                "relevance": "mock_worker: nearest placeholder structural-theory anchor",
+                "confidence": "medium",
+            }
+        ],
+        "research_line": "mock_worker: structural summary and bridge theorems in the visible theory neighborhood",
+        "coverage_assessment": "mock_worker: one placeholder anchor is enough for mock retrieval",
+        "missing_angles": [],
+        "need_supplemental_retrieval": False,
+    }
+
+
+def _main_theorem_map_result(payload: dict[str, Any]) -> dict[str, Any]:
+    candidate_id = str(payload.get("candidate_id", ""))
+    return {
+        "candidate_id": candidate_id,
+        "closest_baseline": "mock baseline theorem",
+        "relations": [
+            {
+                "reference": "mock source link",
+                "overlap": "mock_worker: both concern the same broad structural theme",
+                "delta": "mock_worker: candidate is framed as a stronger structural bridge",
+                "delta_materiality": "unclear",
+            }
+        ],
+        "overall_novelty_risk": "medium",
+        "variant_objection": "mock_worker: this could still look like a nearby variant without stronger evidence",
+    }
+
+
+def _main_theorem_evaluate_result(payload: dict[str, Any]) -> dict[str, Any]:
+    candidate_id = str(payload.get("candidate_id", ""))
+    return {
+        "candidate_id": candidate_id,
+        "novelty": "medium",
+        "significance": "medium",
+        "paper_unit_viability": "yes",
+        "strongest_objection": "mock_worker: the theorem may still look too close to a visible baseline",
+        "objection_answerable": "partial",
+        "minimal_publishable_unit": "mock_worker: a short structural note centered on the bridge theorem and its nearest corollaries",
+        "salvage_plan": "mock_worker: add sharper comparisons if stricter review is needed",
+        "verdict": "pass",
+        "reason": "mock_worker: pass the strongest placeholder candidate in mock mode",
+    }
+
+
 def _post_theorem_expand_result(payload: dict[str, Any]) -> dict[str, Any]:
     problem_id = str(payload.get("problem_id", ""))
     return {
@@ -280,6 +362,14 @@ def main() -> None:
             result_payload = _main_theorem_generate_result(payload)
         elif task_type == "main_theorem_select":
             result_payload = _main_theorem_select_result(payload)
+        elif task_type == "main_theorem_suggest":
+            result_payload = _main_theorem_suggest_result(payload)
+        elif task_type == "main_theorem_retrieve":
+            result_payload = _main_theorem_retrieve_result(payload)
+        elif task_type == "main_theorem_map":
+            result_payload = _main_theorem_map_result(payload)
+        elif task_type == "main_theorem_evaluate":
+            result_payload = _main_theorem_evaluate_result(payload)
         elif task_type == "post_theorem_expand":
             result_payload = _post_theorem_expand_result(payload)
         elif task_type == "refactor_derived":

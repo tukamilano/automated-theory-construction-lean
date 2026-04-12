@@ -10,6 +10,7 @@ For setup and operational workflows, use this together with [`GETTING_STARTED.md
 | `AutomatedTheoryConstruction/Theory.lean` | User | Recommended | Public entry point for the active theory |
 | `AutomatedTheoryConstruction/Theory/*.lean` | User | Recommended | Supporting definitions and lemmas imported by `Theory.lean` |
 | `AutomatedTheoryConstruction/research_agenda.md` | User | Recommended | Persistent value guidance for what kinds of problems the system should prefer |
+| `materials/` | User | Recommended | Organized deep-research outputs, literature summaries, and source-link bundles used as optional external context |
 | `AutomatedTheoryConstruction/seeds.jsonl` | User / AI | Allowed | Initial open problems; may be user-provided or regenerated |
 | `prompts/*.md` | User | Allowed | Worker prompt behavior and output guidance |
 | `configs/atc.json` | User | Allowed | Runtime configuration |
@@ -27,6 +28,9 @@ For setup and operational workflows, use this together with [`GETTING_STARTED.md
 | `data/formalization_memory.json` | AI | Not recommended | Retry/history memory |
 | `data/theory_state.json` | AI | Not recommended | Latest global theory summary, current next-direction bias, and compact research-agenda summary |
 | `data/runs/` | AI | Do not edit | Run artifacts and logs |
+
+`materials/` is intentionally not part of the runtime state schema.
+Use it to store organized deep-research notes and literature context that should remain external to `data/theory_state.json`.
 
 ## Shared Or Advanced
 

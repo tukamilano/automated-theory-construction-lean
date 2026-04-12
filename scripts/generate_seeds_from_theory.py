@@ -25,6 +25,7 @@ from common import (
     write_jsonl_atomic,
 )
 from guidance import build_guidance_context, unpack_guidance_context
+from materials import format_materials_prompt_block
 from generated_library import DEFAULT_GENERATED_CATALOG
 from generated_library import DEFAULT_GENERATED_MANIFEST
 from generated_library import DEFAULT_GENERATED_ROOT
@@ -217,7 +218,7 @@ def build_prompt(
 ) -> str:
     if not theory_files:
         raise ValueError("theory_files must be non-empty")
-    theory_state, research_agenda = unpack_guidance_context(guidance)
+    theory_state, research_agenda, materials = unpack_guidance_context(guidance)
 
     read_lines = [f"- {path.resolve()}" for path in theory_files]
     if derived_file is not None:
@@ -238,6 +239,7 @@ def build_prompt(
     theory_frontier_block = ""
     opportunity_block = ""
     research_agenda_block = format_research_agenda_prompt_block(research_agenda)
+    materials_block = format_materials_prompt_block(materials)
     state = dict(theory_state)
     theory_snapshot = str(state.get("theory_snapshot", "")).strip()
     direction = state.get("next_direction")
@@ -349,7 +351,7 @@ Mathematical scope:
 - Avoid mixed-style statements that partially use notation but still spell out operator definitions by path when notation is already available.
 - Quantify every extra variable or witness explicitly inside the proposition.
 - Keep assumptions minimal but sufficient.
-{theory_summary_block}{counterexample_block}{next_direction_block}{theory_frontier_block}{opportunity_block}{research_agenda_block}
+{theory_summary_block}{counterexample_block}{next_direction_block}{theory_frontier_block}{opportunity_block}{research_agenda_block}{materials_block}
 
 Quality filter:
 {theory_files_rule}{derived_rule}- Do not propose a theorem that is already present in the read files up to cosmetic rewrites, alpha-renaming, trivial reassociation of binders, or other shallow reformulations.

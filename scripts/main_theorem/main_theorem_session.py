@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import sys
 import threading
 import time
@@ -38,6 +39,8 @@ from loop_helpers import validate_theorem_name_stem
 from problem_expansion import request_expand_candidates
 from problem_expansion import store_expand_candidates_and_refresh
 from prompt_loader import load_prompt_file
+from main_theorem_rejection_memory import append_main_theorem_rejection_entry
+from main_theorem_rejection_memory import load_main_theorem_rejection_memory
 from theorem_commit import commit_verified_theorem_and_generation
 from theorem_reuse_memory import append_theorem_reuse_memory_entry
 from worker_client import invoke_worker_json
@@ -47,6 +50,76 @@ SCRATCH_TEMPLATE = render_scratch_template()
 MAX_EXPAND_CANDIDATES_PER_MAIN_THEOREM = 5
 MAIN_THEOREM_CANDIDATE_COUNT = 3
 MAIN_THEOREM_PATTERNS = {"new_theorem", "structure_discovery", "framework_introduction"}
+MAIN_THEOREM_REJECTION_MEMORY_FILENAME = "main_theorem_rejection_memory.json"
+MAX_MAIN_THEOREM_REJECTION_ATTEMPTS = 20
+MAX_VISIBLE_REJECTED_CANDIDATES = 12
+MAX_RETRIEVAL_QUERY_TERMS = 32
+MAX_RETRIEVAL_SOURCE_LINKS = 8
+MAX_RETRIEVAL_DOCUMENTS = 8
+MAX_RETRIEVAL_MAIN_THEOREM_NOTES = 6
+MAX_RETRIEVAL_PAPERS = 4
+MAX_RETRIEVAL_PAPER_CHUNKS = 3
+MAX_RETRIEVAL_CHUNK_CHARS = 500
+RETRIEVAL_TOKEN_RE = re.compile(r"[A-Za-z][A-Za-z0-9_+-]{2,}")
+RETRIEVAL_STOPWORDS = {
+    "about",
+    "against",
+    "among",
+    "and",
+    "candidate",
+    "condition",
+    "context",
+    "does",
+    "from",
+    "have",
+    "into",
+    "lemma",
+    "logic",
+    "main",
+    "mapping",
+    "more",
+    "note",
+    "paper",
+    "problem",
+    "proof",
+    "result",
+    "show",
+    "some",
+    "statement",
+    "such",
+    "than",
+    "that",
+    "theorem",
+    "their",
+    "there",
+    "these",
+    "this",
+    "those",
+    "through",
+    "under",
+    "using",
+    "with",
+}
+RETRIEVAL_SOURCE_KIND_BONUS = {
+    "preprint_pdf": 10,
+    "proceedings_pdf": 10,
+    "publisher_pdf": 10,
+    "repository_pdf": 8,
+    "direct_pdf": 8,
+    "encyclopedia": 5,
+    "preprint_abstract": 3,
+    "proceedings_page": 2,
+    "web_page": 0,
+    "metadata_portal": -8,
+    "portal_redirect": -24,
+    "qna": -24,
+}
+RETRIEVAL_PRIORITY_BONUS = {
+    "high": 6,
+    "medium": 2,
+    "low": -4,
+    "exclude": -20,
+}
 
 
 def load_prompt_text(prompt_file: str) -> str:
@@ -232,6 +305,354 @@ def _build_main_theorem_tracked_problem_payload(
     ]
     known_problem_ids = [str(row.get("problem_id", "")).strip() for row in payload_rows if str(row.get("problem_id", "")).strip()]
     return payload_rows, known_problem_ids
+
+
+def _build_main_theorem_rejected_candidate_payload(entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    visible_entries = entries[-MAX_VISIBLE_REJECTED_CANDIDATES:]
+    return [
+        {
+            "candidate_id": str(entry.get("candidate_id", "")),
+            "statement": str(entry.get("statement", "")),
+            "theorem_name_stem": str(entry.get("theorem_name_stem", "")),
+            "rationale": str(entry.get("rationale", "")),
+            "verdict": str(entry.get("verdict", "")),
+            "reason": str(entry.get("reason", "")),
+            "strongest_objection": str(entry.get("strongest_objection", "")),
+            "salvage_plan": str(entry.get("salvage_plan", "")),
+            "paper_unit_viability": str(entry.get("paper_unit_viability", "")),
+            "novelty": str(entry.get("novelty", "")),
+            "significance": str(entry.get("significance", "")),
+            "iteration": int(entry.get("iteration", 0) or 0),
+        }
+        for entry in visible_entries
+    ]
+
+
+def _tokenize_retrieval_text(text: str) -> list[str]:
+    seen: set[str] = set()
+    tokens: list[str] = []
+    for raw_token in RETRIEVAL_TOKEN_RE.findall(str(text or "").lower()):
+        token = raw_token.strip("_+-")
+        if len(token) < 3 or token in RETRIEVAL_STOPWORDS or token in seen:
+            continue
+        seen.add(token)
+        tokens.append(token)
+    return tokens
+
+
+def _truncate_retrieval_text(text: str, *, limit: int = MAX_RETRIEVAL_CHUNK_CHARS) -> str:
+    compact = " ".join(str(text or "").split())
+    if len(compact) <= limit:
+        return compact
+    return compact[: limit - 3].rstrip() + "..."
+
+
+def _overlap_score(query_terms: set[str], text: str) -> int:
+    if not query_terms:
+        return 0
+    return len(query_terms.intersection(_tokenize_retrieval_text(text)))
+
+
+def _build_retrieval_query_terms(candidate: dict[str, Any]) -> list[str]:
+    text_fields = [
+        candidate.get("statement", ""),
+        candidate.get("docstring_summary", ""),
+        candidate.get("rationale", ""),
+        str(candidate.get("theorem_pattern", "")).replace("_", " "),
+        candidate.get("context_note", ""),
+        candidate.get("conceptual_depth_note", ""),
+        " ".join(str(item) for item in candidate.get("supporting_theorems", [])),
+        " ".join(str(item) for item in candidate.get("missing_lemmas", [])),
+    ]
+    seen: set[str] = set()
+    query_terms: list[str] = []
+    for text in text_fields:
+        for token in _tokenize_retrieval_text(str(text)):
+            if token in seen:
+                continue
+            seen.add(token)
+            query_terms.append(token)
+            if len(query_terms) >= MAX_RETRIEVAL_QUERY_TERMS:
+                return query_terms
+    return query_terms
+
+
+def _score_retrieval_chunk(query_terms: set[str], chunk: dict[str, Any]) -> int:
+    section = str(chunk.get("section", "")).strip()
+    text = str(chunk.get("text", "")).strip()
+    section_score = _overlap_score(query_terms, section)
+    text_score = _overlap_score(query_terms, text)
+    score = section_score * 3 + text_score * 4
+    lowered_section = section.lower()
+    if "abstract" in lowered_section or "introduction" in lowered_section or "main result" in lowered_section:
+        score += 1
+    return score
+
+
+def _select_retrieval_chunks(query_terms: set[str], record: dict[str, Any]) -> list[dict[str, Any]]:
+    chunks_value = record.get("chunks", [])
+    if not isinstance(chunks_value, list):
+        return []
+    scored_chunks: list[tuple[int, dict[str, Any]]] = []
+    for chunk in chunks_value:
+        if not isinstance(chunk, dict):
+            continue
+        text = str(chunk.get("text", "")).strip()
+        if not text:
+            continue
+        scored_chunks.append((_score_retrieval_chunk(query_terms, chunk), chunk))
+    if not scored_chunks:
+        return []
+    scored_chunks.sort(
+        key=lambda item: (
+            int(item[0]),
+            len(str(item[1].get("text", "")).strip()),
+        ),
+        reverse=True,
+    )
+    positive_chunks = [item for item in scored_chunks if item[0] > 0]
+    selected = positive_chunks[:MAX_RETRIEVAL_PAPER_CHUNKS] or scored_chunks[:1]
+    return [
+        {
+            "chunk_id": str(chunk.get("chunk_id", "")).strip(),
+            "section": str(chunk.get("section", "")).strip(),
+            "page": chunk.get("page"),
+            "text": _truncate_retrieval_text(str(chunk.get("text", "")).strip()),
+            "score": int(score),
+        }
+        for score, chunk in selected
+    ]
+
+
+def _score_retrieval_paper(query_terms: set[str], record: dict[str, Any]) -> int:
+    title = str(record.get("title", "")).strip()
+    abstract = str(record.get("abstract", "")).strip()
+    title_overlap = _overlap_score(query_terms, title)
+    abstract_overlap = _overlap_score(query_terms, abstract)
+    score = title_overlap * 8 + abstract_overlap * 4
+    selected_chunks = _select_retrieval_chunks(query_terms, record)
+    score += sum(int(item.get("score", 0) or 0) for item in selected_chunks)
+    extract_confidence = str(record.get("extract_confidence", "")).strip()
+    source_kind = str(record.get("source_kind", "")).strip()
+    retrieval_priority = str(record.get("retrieval_priority", "")).strip()
+    direct_reading_access = str(record.get("direct_reading_access", "")).strip()
+    score += RETRIEVAL_SOURCE_KIND_BONUS.get(source_kind, 0)
+    score += RETRIEVAL_PRIORITY_BONUS.get(retrieval_priority, 0)
+    if extract_confidence == "high":
+        score += 3
+    elif extract_confidence == "medium":
+        score += 1
+    if title_overlap == 0 and abstract_overlap > 0:
+        score -= 12
+    elif title_overlap == 0 and selected_chunks:
+        score -= 8
+    if selected_chunks:
+        score += 2
+    elif direct_reading_access not in {"direct_fulltext", "abstract_page"}:
+        score -= 3
+    return score
+
+
+def _build_retrieval_paper_record(query_terms: set[str], record: dict[str, Any]) -> tuple[int, dict[str, Any]]:
+    selected_chunks = _select_retrieval_chunks(query_terms, record)
+    score = _score_retrieval_paper(query_terms, record)
+    compact_record = {
+        "source_id": str(record.get("source_id", "")).strip(),
+        "title": str(record.get("title", "")).strip(),
+        "source_url": str(record.get("source_url", "")).strip(),
+        "extract_confidence": str(record.get("extract_confidence", "")).strip(),
+        "source_kind": str(record.get("source_kind", "")).strip(),
+        "retrieval_priority": str(record.get("retrieval_priority", "")).strip(),
+        "direct_reading_access": str(record.get("direct_reading_access", "")).strip(),
+        "abstract": _truncate_retrieval_text(str(record.get("abstract", "")).strip()),
+        "chunks": selected_chunks,
+        "paper_relpath": str(record.get("paper_relpath", "")).strip(),
+        "relevance_score": score,
+    }
+    return score, compact_record
+
+
+def _select_retrieval_source_link_entries(
+    query_terms: set[str],
+    entries: list[dict[str, Any]],
+    selected_source_urls: set[str],
+    source_metadata_by_url: dict[str, dict[str, str]],
+) -> list[dict[str, str]]:
+    scored_entries: list[tuple[int, dict[str, str]]] = []
+    for raw_entry in entries:
+        if not isinstance(raw_entry, dict):
+            continue
+        entry_url = str(raw_entry.get("url", "")).strip()
+        cached_source_metadata = source_metadata_by_url.get(entry_url, {})
+        entry = {
+            "label": str(raw_entry.get("label", "")).strip(),
+            "url": entry_url,
+            "note": str(raw_entry.get("note", "")).strip(),
+            "source_kind": str(cached_source_metadata.get("source_kind", "")).strip()
+            or str(raw_entry.get("source_kind", "")).strip(),
+            "retrieval_priority": str(cached_source_metadata.get("retrieval_priority", "")).strip()
+            or str(raw_entry.get("retrieval_priority", "")).strip(),
+            "direct_reading_access": str(cached_source_metadata.get("direct_reading_access", "")).strip()
+            or str(raw_entry.get("direct_reading_access", "")).strip(),
+        }
+        if not entry["url"]:
+            continue
+        score = 0
+        if entry["url"] in selected_source_urls:
+            score += 20
+        score += _overlap_score(query_terms, entry["label"]) * 4
+        score += _overlap_score(query_terms, entry["note"]) * 2
+        score += RETRIEVAL_SOURCE_KIND_BONUS.get(entry["source_kind"], 0)
+        score += RETRIEVAL_PRIORITY_BONUS.get(entry["retrieval_priority"], 0)
+        scored_entries.append((score, entry))
+    scored_entries.sort(key=lambda item: (int(item[0]), len(item[1]["label"])), reverse=True)
+    usable_entries = [entry for score, entry in scored_entries if score > 0 and entry["retrieval_priority"] != "exclude"]
+    selected_entries = usable_entries[:MAX_RETRIEVAL_SOURCE_LINKS]
+    if selected_entries:
+        return selected_entries
+    fallback_entries = [entry for _, entry in scored_entries if entry["retrieval_priority"] != "exclude"]
+    if fallback_entries:
+        return fallback_entries[:MAX_RETRIEVAL_SOURCE_LINKS]
+    return [entry for _, entry in scored_entries[:MAX_RETRIEVAL_SOURCE_LINKS]]
+
+
+def _select_retrieval_documents(query_terms: set[str], documents: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    scored_documents: list[tuple[int, dict[str, Any]]] = []
+    for raw_document in documents:
+        if not isinstance(raw_document, dict):
+            continue
+        document = {
+            "path": str(raw_document.get("path", "")).strip(),
+            "kind": str(raw_document.get("kind", "")).strip(),
+            "title": str(raw_document.get("title", "")).strip(),
+            "confidence": str(raw_document.get("confidence", "")).strip(),
+            "content_available": bool(raw_document.get("content_available", False)),
+        }
+        excerpt = str(raw_document.get("excerpt", "")).strip()
+        if excerpt:
+            document["excerpt"] = _truncate_retrieval_text(excerpt, limit=260)
+        score = _overlap_score(query_terms, " ".join([document["title"], document["path"], excerpt]))
+        if document["kind"] in {"section_map", "report", "index"}:
+            score += 1
+        if document["confidence"] == "high":
+            score += 1
+        scored_documents.append((score, document))
+    scored_documents.sort(key=lambda item: (int(item[0]), len(item[1].get("title", ""))), reverse=True)
+    positive_documents = [document for score, document in scored_documents if score > 0]
+    selected_documents = positive_documents[:MAX_RETRIEVAL_DOCUMENTS] or [
+        document for _, document in scored_documents[:MAX_RETRIEVAL_DOCUMENTS]
+    ]
+    return selected_documents
+
+
+def _build_main_theorem_retrieval_materials(candidate: dict[str, Any], materials: dict[str, Any]) -> dict[str, Any]:
+    payload = dict(materials or {})
+    if not payload:
+        return {}
+
+    query_terms = _build_retrieval_query_terms(candidate)
+    query_term_set = set(query_terms)
+
+    selected_papers: list[dict[str, Any]] = []
+    raw_paper_cache = payload.get("paper_cache", [])
+    if isinstance(raw_paper_cache, list):
+        scored_papers: list[tuple[int, dict[str, Any]]] = []
+        for raw_record in raw_paper_cache:
+            if not isinstance(raw_record, dict):
+                continue
+            score, compact_record = _build_retrieval_paper_record(query_term_set, raw_record)
+            scored_papers.append((score, compact_record))
+        scored_papers.sort(
+            key=lambda item: (
+                int(item[0]),
+                1 if str(item[1].get("extract_confidence", "")).strip() == "high" else 0,
+            ),
+            reverse=True,
+        )
+        usable_papers = [record for _, record in scored_papers if str(record.get("retrieval_priority", "")).strip() != "exclude"]
+        selected_papers = usable_papers[:MAX_RETRIEVAL_PAPERS]
+        if not selected_papers:
+            selected_papers = [record for _, record in scored_papers[:1]]
+
+    selected_source_urls = {
+        str(record.get("source_url", "")).strip()
+        for record in selected_papers
+        if str(record.get("source_url", "")).strip()
+    }
+    source_metadata_by_url: dict[str, dict[str, str]] = {}
+    if isinstance(raw_paper_cache, list):
+        for raw_record in raw_paper_cache:
+            if not isinstance(raw_record, dict):
+                continue
+            source_url = str(raw_record.get("source_url", "")).strip()
+            if not source_url:
+                continue
+            source_metadata_by_url[source_url] = {
+                "source_kind": str(raw_record.get("source_kind", "")).strip(),
+                "retrieval_priority": str(raw_record.get("retrieval_priority", "")).strip(),
+                "direct_reading_access": str(raw_record.get("direct_reading_access", "")).strip(),
+            }
+    source_link_entries = payload.get("source_link_entries", [])
+    compact_source_link_entries = (
+        _select_retrieval_source_link_entries(query_term_set, source_link_entries, selected_source_urls, source_metadata_by_url)
+        if isinstance(source_link_entries, list)
+        else []
+    )
+    compact_source_links = [
+        " - ".join(part for part in (entry["label"], entry["url"]) if part).strip()
+        for entry in compact_source_link_entries
+    ]
+    if not compact_source_links:
+        raw_source_links = payload.get("source_links", [])
+        if isinstance(raw_source_links, list):
+            compact_source_links = [str(item).strip() for item in raw_source_links[:MAX_RETRIEVAL_SOURCE_LINKS] if str(item).strip()]
+
+    compact_materials: dict[str, Any] = {
+        "materials_dir": str(payload.get("materials_dir", "")).strip(),
+        "materials_cache_dir": str(payload.get("materials_cache_dir", "")).strip(),
+        "notes": [str(item).strip() for item in payload.get("notes", []) if str(item).strip()][:4]
+        if isinstance(payload.get("notes", []), list)
+        else [],
+        "problem_generation": [str(item).strip() for item in payload.get("problem_generation", []) if str(item).strip()][:6]
+        if isinstance(payload.get("problem_generation", []), list)
+        else [],
+        "problem_evaluation": [str(item).strip() for item in payload.get("problem_evaluation", []) if str(item).strip()][:6]
+        if isinstance(payload.get("problem_evaluation", []), list)
+        else [],
+        "main_theorem": [str(item).strip() for item in payload.get("main_theorem", []) if str(item).strip()][:MAX_RETRIEVAL_MAIN_THEOREM_NOTES]
+        if isinstance(payload.get("main_theorem", []), list)
+        else [],
+        "source_links": compact_source_links,
+        "source_link_entries": compact_source_link_entries,
+        "documents": _select_retrieval_documents(query_term_set, payload.get("documents", []))
+        if isinstance(payload.get("documents", []), list)
+        else [],
+        "paper_cache": selected_papers,
+        "paper_excerpt_context": [
+            {
+                "reference": str(record.get("title", "")).strip() or str(record.get("source_id", "")).strip(),
+                "source_url": str(record.get("source_url", "")).strip(),
+                "extract_confidence": str(record.get("extract_confidence", "")).strip(),
+                "source_kind": str(record.get("source_kind", "")).strip(),
+                "retrieval_priority": str(record.get("retrieval_priority", "")).strip(),
+                "direct_reading_access": str(record.get("direct_reading_access", "")).strip(),
+                "relevance_score": int(record.get("relevance_score", 0) or 0),
+                "abstract_excerpt": str(record.get("abstract", "")).strip(),
+                "selected_chunks": [
+                    {
+                        "chunk_id": str(chunk.get("chunk_id", "")).strip(),
+                        "section": str(chunk.get("section", "")).strip(),
+                        "text": str(chunk.get("text", "")).strip(),
+                    }
+                    for chunk in record.get("chunks", [])
+                    if isinstance(chunk, dict)
+                ],
+            }
+            for record in selected_papers
+        ],
+        "retrieval_query_terms": query_terms,
+    }
+    return compact_materials
 
 
 def _validate_main_theorem_candidate(
@@ -472,6 +893,399 @@ def validate_main_theorem_selection_output(
     return selected_candidate_rank_seed, selection_summary, sorted(normalized_ranking, key=lambda item: int(item["rank"]))
 
 
+def validate_main_theorem_suggestion_output(
+    payload: dict[str, Any],
+    *,
+    expected_candidate_id: str,
+    known_problem_ids: list[str],
+) -> dict[str, Any]:
+    required_keys = {
+        "candidate_id",
+        "result",
+        "statement",
+        "theorem_name_stem",
+        "docstring_summary",
+        "rationale",
+        "supporting_theorems",
+        "missing_lemmas",
+        "source_problem_ids",
+        "theorem_pattern",
+        "context_note",
+        "conceptual_depth_note",
+    }
+    if set(payload.keys()) != required_keys:
+        raise ValueError("main_theorem_suggest output keys mismatch required contract")
+
+    candidate_id = str(payload.get("candidate_id", "")).strip()
+    if candidate_id != expected_candidate_id:
+        raise ValueError("main_theorem_suggest candidate_id does not match request")
+    if str(payload.get("result", "")).strip() != "ok":
+        raise ValueError("main_theorem_suggest result must be ok")
+
+    candidate = _validate_main_theorem_candidate(
+        {
+            "candidate_rank_seed": 1,
+            "statement": payload.get("statement", ""),
+            "theorem_name_stem": payload.get("theorem_name_stem", ""),
+            "docstring_summary": payload.get("docstring_summary", ""),
+            "rationale": payload.get("rationale", ""),
+            "supporting_theorems": payload.get("supporting_theorems", []),
+            "missing_lemmas": payload.get("missing_lemmas", []),
+            "source_problem_ids": payload.get("source_problem_ids", []),
+            "theorem_pattern": payload.get("theorem_pattern", ""),
+            "context_note": payload.get("context_note", ""),
+            "conceptual_depth_note": payload.get("conceptual_depth_note", ""),
+        },
+        known_problem_id_set={str(item).strip() for item in known_problem_ids if str(item).strip()},
+        candidate_index=1,
+    )
+    candidate["candidate_id"] = candidate_id
+    return candidate
+
+
+def validate_main_theorem_retrieval_output(
+    payload: dict[str, Any],
+    *,
+    expected_candidate_id: str,
+) -> dict[str, Any]:
+    required_keys = {
+        "candidate_id",
+        "closest_items",
+        "research_line",
+        "coverage_assessment",
+        "missing_angles",
+        "need_supplemental_retrieval",
+    }
+    if set(payload.keys()) != required_keys:
+        raise ValueError("main_theorem_retrieve output keys mismatch required contract")
+
+    candidate_id = str(payload.get("candidate_id", "")).strip()
+    if candidate_id != expected_candidate_id:
+        raise ValueError("main_theorem_retrieve candidate_id does not match request")
+
+    closest_items_value = payload.get("closest_items", [])
+    if not isinstance(closest_items_value, list):
+        raise ValueError("main_theorem_retrieve closest_items must be an array")
+    normalized_items: list[dict[str, Any]] = []
+    for item_index, item in enumerate(closest_items_value, start=1):
+        if not isinstance(item, dict):
+            raise ValueError("main_theorem_retrieve closest_items must contain only objects")
+        if set(item.keys()) != {"reference", "kind", "relevance", "confidence"}:
+            raise ValueError(f"main_theorem_retrieve closest_item {item_index} keys mismatch required contract")
+        reference = str(item.get("reference", "")).strip()
+        kind = str(item.get("kind", "")).strip()
+        relevance = str(item.get("relevance", "")).strip()
+        confidence = str(item.get("confidence", "")).strip()
+        if not reference or not kind or not relevance:
+            raise ValueError(f"main_theorem_retrieve closest_item {item_index} fields must be non-empty")
+        if confidence not in {"high", "medium", "low"}:
+            raise ValueError("main_theorem_retrieve closest_item confidence must be high|medium|low")
+        normalized_items.append(
+            {
+                "reference": reference,
+                "kind": kind,
+                "relevance": relevance,
+                "confidence": confidence,
+            }
+        )
+
+    missing_angles_value = payload.get("missing_angles", [])
+    if not isinstance(missing_angles_value, list):
+        raise ValueError("main_theorem_retrieve missing_angles must be an array")
+    missing_angles = [str(item).strip() for item in missing_angles_value if str(item).strip()]
+
+    research_line = str(payload.get("research_line", "")).strip()
+    coverage_assessment = str(payload.get("coverage_assessment", "")).strip()
+    need_supplemental_retrieval = payload.get("need_supplemental_retrieval")
+    if not research_line or not coverage_assessment:
+        raise ValueError("main_theorem_retrieve research_line and coverage_assessment must be non-empty")
+    if not isinstance(need_supplemental_retrieval, bool):
+        raise ValueError("main_theorem_retrieve need_supplemental_retrieval must be a boolean")
+
+    return {
+        "candidate_id": candidate_id,
+        "closest_items": normalized_items,
+        "research_line": research_line,
+        "coverage_assessment": coverage_assessment,
+        "missing_angles": missing_angles,
+        "need_supplemental_retrieval": need_supplemental_retrieval,
+    }
+
+
+def validate_main_theorem_mapping_output(
+    payload: dict[str, Any],
+    *,
+    expected_candidate_id: str,
+) -> dict[str, Any]:
+    required_keys = {
+        "candidate_id",
+        "closest_baseline",
+        "relations",
+        "overall_novelty_risk",
+        "variant_objection",
+    }
+    if set(payload.keys()) != required_keys:
+        raise ValueError("main_theorem_map output keys mismatch required contract")
+
+    candidate_id = str(payload.get("candidate_id", "")).strip()
+    if candidate_id != expected_candidate_id:
+        raise ValueError("main_theorem_map candidate_id does not match request")
+
+    relations_value = payload.get("relations", [])
+    if not isinstance(relations_value, list):
+        raise ValueError("main_theorem_map relations must be an array")
+    relations: list[dict[str, Any]] = []
+    for relation_index, item in enumerate(relations_value, start=1):
+        if not isinstance(item, dict):
+            raise ValueError("main_theorem_map relations must contain only objects")
+        if set(item.keys()) != {"reference", "overlap", "delta", "delta_materiality"}:
+            raise ValueError(f"main_theorem_map relation {relation_index} keys mismatch required contract")
+        reference = str(item.get("reference", "")).strip()
+        overlap = str(item.get("overlap", "")).strip()
+        delta = str(item.get("delta", "")).strip()
+        delta_materiality = str(item.get("delta_materiality", "")).strip()
+        if not reference or not overlap or not delta:
+            raise ValueError(f"main_theorem_map relation {relation_index} fields must be non-empty")
+        if delta_materiality not in {"substantial", "unclear", "minor"}:
+            raise ValueError("main_theorem_map delta_materiality must be substantial|unclear|minor")
+        relations.append(
+            {
+                "reference": reference,
+                "overlap": overlap,
+                "delta": delta,
+                "delta_materiality": delta_materiality,
+            }
+        )
+
+    closest_baseline = str(payload.get("closest_baseline", "")).strip()
+    overall_novelty_risk = str(payload.get("overall_novelty_risk", "")).strip()
+    variant_objection = str(payload.get("variant_objection", "")).strip()
+    if not closest_baseline or not variant_objection:
+        raise ValueError("main_theorem_map closest_baseline and variant_objection must be non-empty")
+    if overall_novelty_risk not in {"high", "medium", "low"}:
+        raise ValueError("main_theorem_map overall_novelty_risk must be high|medium|low")
+
+    return {
+        "candidate_id": candidate_id,
+        "closest_baseline": closest_baseline,
+        "relations": relations,
+        "overall_novelty_risk": overall_novelty_risk,
+        "variant_objection": variant_objection,
+    }
+
+
+def validate_main_theorem_evaluation_output(
+    payload: dict[str, Any],
+    *,
+    expected_candidate_id: str,
+) -> dict[str, Any]:
+    required_keys = {
+        "candidate_id",
+        "novelty",
+        "significance",
+        "paper_unit_viability",
+        "strongest_objection",
+        "objection_answerable",
+        "minimal_publishable_unit",
+        "salvage_plan",
+        "verdict",
+        "reason",
+    }
+    if set(payload.keys()) != required_keys:
+        raise ValueError("main_theorem_evaluate output keys mismatch required contract")
+
+    candidate_id = str(payload.get("candidate_id", "")).strip()
+    if candidate_id != expected_candidate_id:
+        raise ValueError("main_theorem_evaluate candidate_id does not match request")
+
+    novelty = str(payload.get("novelty", "")).strip()
+    significance = str(payload.get("significance", "")).strip()
+    paper_unit_viability = str(payload.get("paper_unit_viability", "")).strip()
+    strongest_objection = str(payload.get("strongest_objection", "")).strip()
+    objection_answerable = str(payload.get("objection_answerable", "")).strip()
+    minimal_publishable_unit = str(payload.get("minimal_publishable_unit", "")).strip()
+    salvage_plan = str(payload.get("salvage_plan", "")).strip()
+    verdict = str(payload.get("verdict", "")).strip()
+    reason = str(payload.get("reason", "")).strip()
+
+    if novelty not in {"high", "medium", "low"}:
+        raise ValueError("main_theorem_evaluate novelty must be high|medium|low")
+    if significance not in {"high", "medium", "low"}:
+        raise ValueError("main_theorem_evaluate significance must be high|medium|low")
+    if paper_unit_viability not in {"yes", "borderline", "no"}:
+        raise ValueError("main_theorem_evaluate paper_unit_viability must be yes|borderline|no")
+    if objection_answerable not in {"yes", "partial", "no"}:
+        raise ValueError("main_theorem_evaluate objection_answerable must be yes|partial|no")
+    if verdict not in {"pass", "revise", "reject"}:
+        raise ValueError("main_theorem_evaluate verdict must be pass|revise|reject")
+    if not strongest_objection or not minimal_publishable_unit or not reason:
+        raise ValueError("main_theorem_evaluate strongest_objection, minimal_publishable_unit, and reason must be non-empty")
+
+    return {
+        "candidate_id": candidate_id,
+        "novelty": novelty,
+        "significance": significance,
+        "paper_unit_viability": paper_unit_viability,
+        "strongest_objection": strongest_objection,
+        "objection_answerable": objection_answerable,
+        "minimal_publishable_unit": minimal_publishable_unit,
+        "salvage_plan": salvage_plan,
+        "verdict": verdict,
+        "reason": reason,
+    }
+
+
+def request_main_theorem_suggestion(
+    *,
+    worker_settings: Any,
+    suggester_prompt: str,
+    candidate_id: str,
+    derived_entries: list[dict[str, str]],
+    theory_context: str,
+    tracked_rows: list[dict[str, Any]],
+    current_iteration: int,
+    guidance: dict[str, Any],
+    rejected_candidates: list[dict[str, Any]],
+    attempt_index: int,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    tracked_problem_payload, known_problem_ids = _build_main_theorem_tracked_problem_payload(tracked_rows)
+    theory_state, research_agenda, materials = unpack_guidance_context(guidance)
+    payload: dict[str, Any] = {
+        "candidate_id": candidate_id,
+        "attempt_index": attempt_index,
+        "current_iteration": current_iteration,
+        "derived_theorems": [
+            {
+                "name": str(entry.get("name", "")),
+                "statement": str(entry.get("statement", "")),
+            }
+            for entry in derived_entries
+        ],
+        "theory_context": theory_context,
+        "tracked_problems": tracked_problem_payload,
+        "rejected_candidates": rejected_candidates,
+        "theory_state": theory_state,
+        "research_agenda": research_agenda,
+        "materials": materials,
+    }
+    response, worker_meta = invoke_worker_json(
+        settings=worker_settings,
+        task_type="main_theorem_suggest",
+        system_prompt=suggester_prompt,
+        payload=payload,
+        metadata={"candidate_id": candidate_id, "derived_theorem_count": len(derived_entries)},
+    )
+    return validate_main_theorem_suggestion_output(
+        response,
+        expected_candidate_id=candidate_id,
+        known_problem_ids=known_problem_ids,
+    ), worker_meta
+
+
+def request_main_theorem_retrieval(
+    *,
+    worker_settings: Any,
+    retriever_prompt: str,
+    candidate: dict[str, Any],
+    derived_entries: list[dict[str, str]],
+    theory_context: str,
+    tracked_rows: list[dict[str, Any]],
+    current_iteration: int,
+    guidance: dict[str, Any],
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    tracked_problem_payload, _ = _build_main_theorem_tracked_problem_payload(tracked_rows)
+    theory_state, research_agenda, materials = unpack_guidance_context(guidance)
+    retrieval_materials = _build_main_theorem_retrieval_materials(candidate, materials)
+    payload: dict[str, Any] = {
+        "candidate_id": str(candidate["candidate_id"]),
+        "current_iteration": current_iteration,
+        "candidate": candidate,
+        "derived_theorems": [
+            {
+                "name": str(entry.get("name", "")),
+                "statement": str(entry.get("statement", "")),
+            }
+            for entry in derived_entries
+        ],
+        "theory_context": theory_context,
+        "tracked_problems": tracked_problem_payload,
+        "theory_state": theory_state,
+        "research_agenda": research_agenda,
+        "materials": retrieval_materials,
+    }
+    response, worker_meta = invoke_worker_json(
+        settings=worker_settings,
+        task_type="main_theorem_retrieve",
+        system_prompt=retriever_prompt,
+        payload=payload,
+        metadata={
+            "candidate_id": str(candidate["candidate_id"]),
+            "paper_excerpt_count": len(retrieval_materials.get("paper_excerpt_context", [])),
+        },
+    )
+    return validate_main_theorem_retrieval_output(response, expected_candidate_id=str(candidate["candidate_id"])), worker_meta
+
+
+def request_main_theorem_mapping(
+    *,
+    worker_settings: Any,
+    mapper_prompt: str,
+    candidate: dict[str, Any],
+    retrieval: dict[str, Any],
+    current_iteration: int,
+    guidance: dict[str, Any],
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    theory_state, research_agenda, materials = unpack_guidance_context(guidance)
+    payload: dict[str, Any] = {
+        "candidate_id": str(candidate["candidate_id"]),
+        "current_iteration": current_iteration,
+        "candidate": candidate,
+        "retrieval": retrieval,
+        "theory_state": theory_state,
+        "research_agenda": research_agenda,
+        "materials": materials,
+    }
+    response, worker_meta = invoke_worker_json(
+        settings=worker_settings,
+        task_type="main_theorem_map",
+        system_prompt=mapper_prompt,
+        payload=payload,
+        metadata={"candidate_id": str(candidate["candidate_id"])},
+    )
+    return validate_main_theorem_mapping_output(response, expected_candidate_id=str(candidate["candidate_id"])), worker_meta
+
+
+def request_main_theorem_evaluation(
+    *,
+    worker_settings: Any,
+    evaluator_prompt: str,
+    candidate: dict[str, Any],
+    retrieval: dict[str, Any],
+    mapping: dict[str, Any],
+    current_iteration: int,
+    guidance: dict[str, Any],
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    theory_state, research_agenda, materials = unpack_guidance_context(guidance)
+    payload: dict[str, Any] = {
+        "candidate_id": str(candidate["candidate_id"]),
+        "current_iteration": current_iteration,
+        "candidate": candidate,
+        "retrieval": retrieval,
+        "mapping": mapping,
+        "theory_state": theory_state,
+        "research_agenda": research_agenda,
+        "materials": materials,
+    }
+    response, worker_meta = invoke_worker_json(
+        settings=worker_settings,
+        task_type="main_theorem_evaluate",
+        system_prompt=evaluator_prompt,
+        payload=payload,
+        metadata={"candidate_id": str(candidate["candidate_id"])},
+    )
+    return validate_main_theorem_evaluation_output(response, expected_candidate_id=str(candidate["candidate_id"])), worker_meta
+
+
 def request_main_theorem_candidate_set(
     *,
     worker_settings: Any,
@@ -484,7 +1298,7 @@ def request_main_theorem_candidate_set(
     guidance: dict[str, Any],
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     tracked_problem_payload, known_problem_ids = _build_main_theorem_tracked_problem_payload(tracked_rows)
-    theory_state, research_agenda = unpack_guidance_context(guidance)
+    theory_state, research_agenda, materials = unpack_guidance_context(guidance)
     payload: dict[str, Any] = {
         "candidate_set_id": candidate_set_id,
         "candidate_count": MAIN_THEOREM_CANDIDATE_COUNT,
@@ -500,6 +1314,7 @@ def request_main_theorem_candidate_set(
         "tracked_problems": tracked_problem_payload,
         "theory_state": theory_state,
         "research_agenda": research_agenda,
+        "materials": materials,
     }
     response, worker_meta = invoke_worker_json(
         settings=worker_settings,
@@ -524,7 +1339,7 @@ def request_main_theorem_selection(
     guidance: dict[str, Any],
 ) -> tuple[tuple[int, str, list[dict[str, Any]]], dict[str, Any]]:
     tracked_problem_payload, _ = _build_main_theorem_tracked_problem_payload(tracked_rows)
-    theory_state, research_agenda = unpack_guidance_context(guidance)
+    theory_state, research_agenda, materials = unpack_guidance_context(guidance)
     payload: dict[str, Any] = {
         "candidate_set_id": candidate_set_id,
         "current_iteration": current_iteration,
@@ -540,6 +1355,7 @@ def request_main_theorem_selection(
         "tracked_problems": tracked_problem_payload,
         "theory_state": theory_state,
         "research_agenda": research_agenda,
+        "materials": materials,
     }
     response, worker_meta = invoke_worker_json(
         settings=worker_settings,
@@ -571,8 +1387,10 @@ def run_main_theorem_session(
     repair_worker_settings: Any,
     formalizer_prompt_file: str,
     repair_prompt_file: str,
-    generate_prompt_file: str,
-    select_prompt_file: str,
+    suggester_prompt_file: str,
+    retriever_prompt_file: str,
+    mapper_prompt_file: str,
+    evaluator_prompt_file: str,
     post_expand_prompt_file: str,
     prioritize_open_problems_worker_settings: Any,
     prioritize_open_problems_prompt_file: str,
@@ -584,6 +1402,7 @@ def run_main_theorem_session(
     skip_verify: bool,
     verify_timeout_sec: int | None,
     formalization_retry_budget_sec: int | None,
+    main_theorem_retry_budget_sec: int | None,
     max_same_error_streak: int,
     failure_threshold: int,
     phase_logs: bool,
@@ -594,231 +1413,468 @@ def run_main_theorem_session(
     state_lock: threading.Lock,
     derived_runtime_state: dict[str, Any],
 ) -> dict[str, Any]:
-    generate_prompt = load_prompt_text(generate_prompt_file)
-    select_prompt = load_prompt_text(select_prompt_file)
+    suggester_prompt = load_prompt_text(suggester_prompt_file)
+    retriever_prompt = load_prompt_text(retriever_prompt_file)
+    mapper_prompt = load_prompt_text(mapper_prompt_file)
+    evaluator_prompt = load_prompt_text(evaluator_prompt_file)
     open_rows = [normalize_open_problem_row(row) for row in read_jsonl(data_dir / "open_problems.jsonl")]
     archived_rows = read_archived_problem_rows(data_dir)
     tracked_rows = [dict(row, queue_status="open") for row in open_rows]
     tracked_rows.extend(dict(row, queue_status="archived") for row in archived_rows)
-    candidate_set_id = "mt_main_theorem"
     guidance = load_current_guidance(data_dir)
-    emit_phase_log(
-        phase_logs,
-        "main_theorem_generate",
-        iteration=current_iteration,
-        candidate_set_id=candidate_set_id,
-        derived_theorem_count=len(derived_entries),
-        open_problem_count=len(open_rows),
-        tracked_problem_count=len(tracked_rows),
-        candidate_count=MAIN_THEOREM_CANDIDATE_COUNT,
-    )
-    generate_started_monotonic = time.monotonic()
-    generate_started_at = iso_timestamp_now()
-    try:
-        candidates, _ = request_main_theorem_candidate_set(
-            worker_settings=worker_settings,
-            generator_prompt=generate_prompt,
-            candidate_set_id=candidate_set_id,
-            derived_entries=derived_entries,
-            theory_context=base_theory_context,
-            tracked_rows=tracked_rows,
-            current_iteration=current_iteration,
-            guidance=guidance,
-        )
-    except (RuntimeError, ValueError) as exc:
-        append_phase_attempt_record(
-            phase_attempts_path,
-            run_id=run_id,
-            session_type="main_theorem_session",
-            iteration=current_iteration,
-            entity_id=candidate_set_id,
-            phase="main_theorem_generate",
-            worker_task="main_theorem_generate",
-            started_at=generate_started_at,
-            finished_at=iso_timestamp_now(),
-            duration_ms=monotonic_duration_ms(generate_started_monotonic),
-            success=False,
-            result="error",
-            error=str(exc),
-        )
-        emit_phase_log(
-            phase_logs,
-            "main_theorem_generate_result",
-            iteration=current_iteration,
-            candidate_set_id=candidate_set_id,
-            status="error",
-            error=str(exc),
-        )
-        _append_main_theorem_session_event(
-            session_events_path,
-            event="main_theorem_generate_result",
-            run_id=run_id,
-            iteration=current_iteration,
-            candidate_set_id=candidate_set_id,
-            payload={"status": "error", "error": str(exc)},
-        )
-        return {
-            "status": "main_theorem_generate_error",
-            "processed": False,
-            "verify_success": False,
-            "error": str(exc),
-        }
-    append_phase_attempt_record(
-        phase_attempts_path,
-        run_id=run_id,
-        session_type="main_theorem_session",
-        iteration=current_iteration,
-        entity_id=candidate_set_id,
-        phase="main_theorem_generate",
-        worker_task="main_theorem_generate",
-        started_at=generate_started_at,
-        finished_at=iso_timestamp_now(),
-        duration_ms=monotonic_duration_ms(generate_started_monotonic),
-        success=True,
-        result="ok",
-    )
-    emit_phase_log(
-        phase_logs,
-        "main_theorem_generate_result",
-        iteration=current_iteration,
-        candidate_set_id=candidate_set_id,
-        status="ok",
-        candidate_count=len(candidates),
-        candidates=_summarize_main_theorem_candidates(candidates),
-    )
-    _append_main_theorem_session_event(
-        session_events_path,
-        event="main_theorem_generate_result",
-        run_id=run_id,
-        iteration=current_iteration,
-        candidate_set_id=candidate_set_id,
-        payload={
-            "status": "ok",
-            "candidate_count": len(candidates),
-            "candidates": _summarize_main_theorem_candidates(candidates),
-        },
-    )
+    rejection_memory_path = data_dir / MAIN_THEOREM_REJECTION_MEMORY_FILENAME
+    rejection_history = load_main_theorem_rejection_memory(rejection_memory_path)
+    visible_rejections = _build_main_theorem_rejected_candidate_payload(rejection_history)
+    search_budget_sec = main_theorem_retry_budget_sec
+    if search_budget_sec is None:
+        search_budget_sec = formalization_retry_budget_sec if formalization_retry_budget_sec is not None else 900
+    search_deadline = time.monotonic() + max(1, int(search_budget_sec))
 
-    emit_phase_log(
-        phase_logs,
-        "main_theorem_select",
-        iteration=current_iteration,
-        candidate_set_id=candidate_set_id,
-        candidate_count=len(candidates),
-    )
-    select_started_monotonic = time.monotonic()
-    select_started_at = iso_timestamp_now()
-    try:
-        (selected_candidate_rank_seed, selection_summary, ranking), _ = request_main_theorem_selection(
-            worker_settings=worker_settings,
-            selector_prompt=select_prompt,
-            candidate_set_id=candidate_set_id,
-            candidates=candidates,
-            derived_entries=derived_entries,
-            theory_context=base_theory_context,
-            tracked_rows=tracked_rows,
-            current_iteration=current_iteration,
-            guidance=guidance,
+    accepted_candidate: dict[str, Any] | None = None
+    accepted_retrieval: dict[str, Any] | None = None
+    accepted_mapping: dict[str, Any] | None = None
+    accepted_evaluation: dict[str, Any] | None = None
+    failed_stage = ""
+    failed_error = ""
+    rejected_this_session: list[dict[str, Any]] = []
+
+    for attempt_index in range(1, MAX_MAIN_THEOREM_REJECTION_ATTEMPTS + 1):
+        if time.monotonic() > search_deadline:
+            break
+
+        candidate_id = f"mt_main_theorem_{attempt_index:02d}"
+        emit_phase_log(
+            phase_logs,
+            "main_theorem_suggest",
+            iteration=current_iteration,
+            candidate_id=candidate_id,
+            attempt_index=attempt_index,
+            derived_theorem_count=len(derived_entries),
+            open_problem_count=len(open_rows),
+            tracked_problem_count=len(tracked_rows),
+            visible_rejected_candidate_count=len(visible_rejections),
         )
-    except (RuntimeError, ValueError) as exc:
+        suggest_started_monotonic = time.monotonic()
+        suggest_started_at = iso_timestamp_now()
+        try:
+            candidate, _ = request_main_theorem_suggestion(
+                worker_settings=worker_settings,
+                suggester_prompt=suggester_prompt,
+                candidate_id=candidate_id,
+                derived_entries=derived_entries,
+                theory_context=base_theory_context,
+                tracked_rows=tracked_rows,
+                current_iteration=current_iteration,
+                guidance=guidance,
+                rejected_candidates=visible_rejections,
+                attempt_index=attempt_index,
+            )
+        except (RuntimeError, ValueError) as exc:
+            failed_stage = "main_theorem_suggest"
+            failed_error = str(exc)
+            append_phase_attempt_record(
+                phase_attempts_path,
+                run_id=run_id,
+                session_type="main_theorem_session",
+                iteration=current_iteration,
+                entity_id=candidate_id,
+                phase="main_theorem_suggest",
+                worker_task="main_theorem_suggest",
+                started_at=suggest_started_at,
+                finished_at=iso_timestamp_now(),
+                duration_ms=monotonic_duration_ms(suggest_started_monotonic),
+                success=False,
+                result="error",
+                error=failed_error,
+            )
+            emit_phase_log(
+                phase_logs,
+                "main_theorem_suggest_result",
+                iteration=current_iteration,
+                candidate_id=candidate_id,
+                status="error",
+                error=failed_error,
+            )
+            _append_main_theorem_session_event(
+                session_events_path,
+                event="main_theorem_suggest_result",
+                run_id=run_id,
+                iteration=current_iteration,
+                candidate_set_id=candidate_id,
+                payload={"status": "error", "error": failed_error},
+            )
+            break
         append_phase_attempt_record(
             phase_attempts_path,
             run_id=run_id,
             session_type="main_theorem_session",
             iteration=current_iteration,
-            entity_id=candidate_set_id,
-            phase="main_theorem_select",
-            worker_task="main_theorem_select",
-            started_at=select_started_at,
+            entity_id=candidate_id,
+            phase="main_theorem_suggest",
+            worker_task="main_theorem_suggest",
+            started_at=suggest_started_at,
             finished_at=iso_timestamp_now(),
-            duration_ms=monotonic_duration_ms(select_started_monotonic),
-            success=False,
-            result="error",
-            error=str(exc),
+            duration_ms=monotonic_duration_ms(suggest_started_monotonic),
+            success=True,
+            result="ok",
         )
         emit_phase_log(
             phase_logs,
-            "main_theorem_select_result",
+            "main_theorem_suggest_result",
             iteration=current_iteration,
-            candidate_set_id=candidate_set_id,
-            status="error",
-            error=str(exc),
+            candidate_id=candidate_id,
+            status="ok",
+            theorem_name_stem=str(candidate["theorem_name_stem"]),
+            statement=str(candidate["statement"]),
+            theorem_pattern=str(candidate["theorem_pattern"]),
         )
         _append_main_theorem_session_event(
             session_events_path,
-            event="main_theorem_select_result",
+            event="main_theorem_suggest_result",
             run_id=run_id,
             iteration=current_iteration,
-            candidate_set_id=candidate_set_id,
-            payload={"status": "error", "error": str(exc)},
+            candidate_set_id=candidate_id,
+            payload={
+                "status": "ok",
+                "candidate": {
+                    "theorem_name_stem": str(candidate["theorem_name_stem"]),
+                    "statement": str(candidate["statement"]),
+                    "theorem_pattern": str(candidate["theorem_pattern"]),
+                },
+            },
         )
+
+        emit_phase_log(
+            phase_logs,
+            "main_theorem_retrieve",
+            iteration=current_iteration,
+            candidate_id=candidate_id,
+            attempt_index=attempt_index,
+        )
+        retrieve_started_monotonic = time.monotonic()
+        retrieve_started_at = iso_timestamp_now()
+        try:
+            retrieval, _ = request_main_theorem_retrieval(
+                worker_settings=worker_settings,
+                retriever_prompt=retriever_prompt,
+                candidate=candidate,
+                derived_entries=derived_entries,
+                theory_context=base_theory_context,
+                tracked_rows=tracked_rows,
+                current_iteration=current_iteration,
+                guidance=guidance,
+            )
+        except (RuntimeError, ValueError) as exc:
+            failed_stage = "main_theorem_retrieve"
+            failed_error = str(exc)
+            append_phase_attempt_record(
+                phase_attempts_path,
+                run_id=run_id,
+                session_type="main_theorem_session",
+                iteration=current_iteration,
+                entity_id=candidate_id,
+                phase="main_theorem_retrieve",
+                worker_task="main_theorem_retrieve",
+                started_at=retrieve_started_at,
+                finished_at=iso_timestamp_now(),
+                duration_ms=monotonic_duration_ms(retrieve_started_monotonic),
+                success=False,
+                result="error",
+                error=failed_error,
+            )
+            emit_phase_log(
+                phase_logs,
+                "main_theorem_retrieve_result",
+                iteration=current_iteration,
+                candidate_id=candidate_id,
+                status="error",
+                error=failed_error,
+            )
+            _append_main_theorem_session_event(
+                session_events_path,
+                event="main_theorem_retrieve_result",
+                run_id=run_id,
+                iteration=current_iteration,
+                candidate_set_id=candidate_id,
+                payload={"status": "error", "error": failed_error},
+            )
+            break
+        append_phase_attempt_record(
+            phase_attempts_path,
+            run_id=run_id,
+            session_type="main_theorem_session",
+            iteration=current_iteration,
+            entity_id=candidate_id,
+            phase="main_theorem_retrieve",
+            worker_task="main_theorem_retrieve",
+            started_at=retrieve_started_at,
+            finished_at=iso_timestamp_now(),
+            duration_ms=monotonic_duration_ms(retrieve_started_monotonic),
+            success=True,
+            result="ok",
+        )
+        emit_phase_log(
+            phase_logs,
+            "main_theorem_retrieve_result",
+            iteration=current_iteration,
+            candidate_id=candidate_id,
+            status="ok",
+            closest_item_count=len(retrieval["closest_items"]),
+            need_supplemental_retrieval=bool(retrieval["need_supplemental_retrieval"]),
+        )
+        _append_main_theorem_session_event(
+            session_events_path,
+            event="main_theorem_retrieve_result",
+            run_id=run_id,
+            iteration=current_iteration,
+            candidate_set_id=candidate_id,
+            payload={
+                "status": "ok",
+                "closest_items": list(retrieval["closest_items"]),
+                "research_line": str(retrieval["research_line"]),
+                "coverage_assessment": str(retrieval["coverage_assessment"]),
+                "need_supplemental_retrieval": bool(retrieval["need_supplemental_retrieval"]),
+            },
+        )
+
+        emit_phase_log(
+            phase_logs,
+            "main_theorem_map",
+            iteration=current_iteration,
+            candidate_id=candidate_id,
+            attempt_index=attempt_index,
+        )
+        map_started_monotonic = time.monotonic()
+        map_started_at = iso_timestamp_now()
+        try:
+            mapping, _ = request_main_theorem_mapping(
+                worker_settings=worker_settings,
+                mapper_prompt=mapper_prompt,
+                candidate=candidate,
+                retrieval=retrieval,
+                current_iteration=current_iteration,
+                guidance=guidance,
+            )
+        except (RuntimeError, ValueError) as exc:
+            failed_stage = "main_theorem_map"
+            failed_error = str(exc)
+            append_phase_attempt_record(
+                phase_attempts_path,
+                run_id=run_id,
+                session_type="main_theorem_session",
+                iteration=current_iteration,
+                entity_id=candidate_id,
+                phase="main_theorem_map",
+                worker_task="main_theorem_map",
+                started_at=map_started_at,
+                finished_at=iso_timestamp_now(),
+                duration_ms=monotonic_duration_ms(map_started_monotonic),
+                success=False,
+                result="error",
+                error=failed_error,
+            )
+            emit_phase_log(
+                phase_logs,
+                "main_theorem_map_result",
+                iteration=current_iteration,
+                candidate_id=candidate_id,
+                status="error",
+                error=failed_error,
+            )
+            _append_main_theorem_session_event(
+                session_events_path,
+                event="main_theorem_map_result",
+                run_id=run_id,
+                iteration=current_iteration,
+                candidate_set_id=candidate_id,
+                payload={"status": "error", "error": failed_error},
+            )
+            break
+        append_phase_attempt_record(
+            phase_attempts_path,
+            run_id=run_id,
+            session_type="main_theorem_session",
+            iteration=current_iteration,
+            entity_id=candidate_id,
+            phase="main_theorem_map",
+            worker_task="main_theorem_map",
+            started_at=map_started_at,
+            finished_at=iso_timestamp_now(),
+            duration_ms=monotonic_duration_ms(map_started_monotonic),
+            success=True,
+            result="ok",
+        )
+        emit_phase_log(
+            phase_logs,
+            "main_theorem_map_result",
+            iteration=current_iteration,
+            candidate_id=candidate_id,
+            status="ok",
+            relation_count=len(mapping["relations"]),
+            overall_novelty_risk=str(mapping["overall_novelty_risk"]),
+        )
+        _append_main_theorem_session_event(
+            session_events_path,
+            event="main_theorem_map_result",
+            run_id=run_id,
+            iteration=current_iteration,
+            candidate_set_id=candidate_id,
+            payload={
+                "status": "ok",
+                "closest_baseline": str(mapping["closest_baseline"]),
+                "relations": list(mapping["relations"]),
+                "overall_novelty_risk": str(mapping["overall_novelty_risk"]),
+                "variant_objection": str(mapping["variant_objection"]),
+            },
+        )
+
+        emit_phase_log(
+            phase_logs,
+            "main_theorem_evaluate",
+            iteration=current_iteration,
+            candidate_id=candidate_id,
+            attempt_index=attempt_index,
+        )
+        evaluate_started_monotonic = time.monotonic()
+        evaluate_started_at = iso_timestamp_now()
+        try:
+            evaluation, _ = request_main_theorem_evaluation(
+                worker_settings=worker_settings,
+                evaluator_prompt=evaluator_prompt,
+                candidate=candidate,
+                retrieval=retrieval,
+                mapping=mapping,
+                current_iteration=current_iteration,
+                guidance=guidance,
+            )
+        except (RuntimeError, ValueError) as exc:
+            failed_stage = "main_theorem_evaluate"
+            failed_error = str(exc)
+            append_phase_attempt_record(
+                phase_attempts_path,
+                run_id=run_id,
+                session_type="main_theorem_session",
+                iteration=current_iteration,
+                entity_id=candidate_id,
+                phase="main_theorem_evaluate",
+                worker_task="main_theorem_evaluate",
+                started_at=evaluate_started_at,
+                finished_at=iso_timestamp_now(),
+                duration_ms=monotonic_duration_ms(evaluate_started_monotonic),
+                success=False,
+                result="error",
+                error=failed_error,
+            )
+            emit_phase_log(
+                phase_logs,
+                "main_theorem_evaluate_result",
+                iteration=current_iteration,
+                candidate_id=candidate_id,
+                status="error",
+                error=failed_error,
+            )
+            _append_main_theorem_session_event(
+                session_events_path,
+                event="main_theorem_evaluate_result",
+                run_id=run_id,
+                iteration=current_iteration,
+                candidate_set_id=candidate_id,
+                payload={"status": "error", "error": failed_error},
+            )
+            break
+        append_phase_attempt_record(
+            phase_attempts_path,
+            run_id=run_id,
+            session_type="main_theorem_session",
+            iteration=current_iteration,
+            entity_id=candidate_id,
+            phase="main_theorem_evaluate",
+            worker_task="main_theorem_evaluate",
+            started_at=evaluate_started_at,
+            finished_at=iso_timestamp_now(),
+            duration_ms=monotonic_duration_ms(evaluate_started_monotonic),
+            success=True,
+            result="ok",
+        )
+        emit_phase_log(
+            phase_logs,
+            "main_theorem_evaluate_result",
+            iteration=current_iteration,
+            candidate_id=candidate_id,
+            status="ok",
+            verdict=str(evaluation["verdict"]),
+            novelty=str(evaluation["novelty"]),
+            significance=str(evaluation["significance"]),
+            paper_unit_viability=str(evaluation["paper_unit_viability"]),
+        )
+        _append_main_theorem_session_event(
+            session_events_path,
+            event="main_theorem_evaluate_result",
+            run_id=run_id,
+            iteration=current_iteration,
+            candidate_set_id=candidate_id,
+            payload={"status": "ok", **evaluation},
+        )
+
+        if str(evaluation["verdict"]) == "pass":
+            accepted_candidate = candidate
+            accepted_retrieval = retrieval
+            accepted_mapping = mapping
+            accepted_evaluation = evaluation
+            break
+
+        rejection_entry = {
+            "candidate_id": candidate_id,
+            "statement": str(candidate["statement"]),
+            "theorem_name_stem": str(candidate["theorem_name_stem"]),
+            "rationale": str(candidate["rationale"]),
+            "verdict": str(evaluation["verdict"]),
+            "reason": str(evaluation["reason"]),
+            "strongest_objection": str(evaluation["strongest_objection"]),
+            "salvage_plan": str(evaluation["salvage_plan"]),
+            "paper_unit_viability": str(evaluation["paper_unit_viability"]),
+            "novelty": str(evaluation["novelty"]),
+            "significance": str(evaluation["significance"]),
+            "iteration": current_iteration,
+        }
+        rejection_history = append_main_theorem_rejection_entry(rejection_memory_path, rejection_entry)
+        visible_rejections = _build_main_theorem_rejected_candidate_payload(rejection_history)
+        rejected_this_session.append(rejection_entry)
+        emit_phase_log(
+            phase_logs,
+            "main_theorem_reject_and_retry",
+            iteration=current_iteration,
+            candidate_id=candidate_id,
+            verdict=str(evaluation["verdict"]),
+            reason=str(evaluation["reason"]),
+            rejection_count=len(rejected_this_session),
+        )
+
+    if accepted_candidate is None or accepted_retrieval is None or accepted_mapping is None or accepted_evaluation is None:
+        status = "main_theorem_rejected_all"
+        if failed_stage:
+            status = f"{failed_stage}_error"
         return {
-            "status": "main_theorem_select_error",
+            "status": status,
             "processed": False,
             "verify_success": False,
-            "error": str(exc),
-            "generated_candidates": candidates,
+            "error": failed_error,
+            "rejected_candidates": rejected_this_session,
+            "rejection_count": len(rejected_this_session),
+            "generated_candidates": [],
+            "selected_candidate_rank_seed": None,
+            "selection_summary": "",
+            "ranking": [],
         }
-    append_phase_attempt_record(
-        phase_attempts_path,
-        run_id=run_id,
-        session_type="main_theorem_session",
-        iteration=current_iteration,
-        entity_id=candidate_set_id,
-        phase="main_theorem_select",
-        worker_task="main_theorem_select",
-        started_at=select_started_at,
-        finished_at=iso_timestamp_now(),
-        duration_ms=monotonic_duration_ms(select_started_monotonic),
-        success=True,
-        result="ok",
-    )
-    candidate_lookup = {int(candidate["candidate_rank_seed"]): candidate for candidate in candidates}
-    selected_candidate = candidate_lookup[selected_candidate_rank_seed]
-    emit_phase_log(
-        phase_logs,
-        "main_theorem_select_result",
-        iteration=current_iteration,
-        candidate_set_id=candidate_set_id,
-        status="ok",
-        selected_candidate_rank_seed=selected_candidate_rank_seed,
-        selection_summary=selection_summary,
-        selected_candidate={
-            "candidate_rank_seed": int(selected_candidate["candidate_rank_seed"]),
-            "theorem_name_stem": str(selected_candidate["theorem_name_stem"]),
-            "statement": str(selected_candidate["statement"]),
-            "theorem_pattern": str(selected_candidate["theorem_pattern"]),
-        },
-        ranking=_summarize_main_theorem_ranking(ranking, candidate_lookup),
-    )
-    _append_main_theorem_session_event(
-        session_events_path,
-        event="main_theorem_select_result",
-        run_id=run_id,
-        iteration=current_iteration,
-        candidate_set_id=candidate_set_id,
-        payload={
-            "status": "ok",
-            "selected_candidate_rank_seed": selected_candidate_rank_seed,
-            "selection_summary": selection_summary,
-            "selected_candidate": {
-                "candidate_rank_seed": int(selected_candidate["candidate_rank_seed"]),
-                "theorem_name_stem": str(selected_candidate["theorem_name_stem"]),
-                "statement": str(selected_candidate["statement"]),
-                "theorem_pattern": str(selected_candidate["theorem_pattern"]),
-            },
-            "ranking": _summarize_main_theorem_ranking(ranking, candidate_lookup),
-        },
-    )
 
     report = process_main_theorem(
-        candidate_id=candidate_set_id,
-        statement=str(selected_candidate["statement"]),
-        theorem_name=f"main_thm_{selected_candidate['theorem_name_stem']}",
-        docstring_summary=str(selected_candidate["docstring_summary"]),
-        rationale=str(selected_candidate["rationale"]),
-        supporting_theorems=list(selected_candidate["supporting_theorems"]),
-        missing_lemmas=list(selected_candidate["missing_lemmas"]),
+        candidate_id=str(accepted_candidate["candidate_id"]),
+        statement=str(accepted_candidate["statement"]),
+        theorem_name=f"main_thm_{accepted_candidate['theorem_name_stem']}",
+        docstring_summary=str(accepted_candidate["docstring_summary"]),
+        rationale=str(accepted_candidate["rationale"]),
+        supporting_theorems=list(accepted_candidate["supporting_theorems"]),
+        missing_lemmas=list(accepted_candidate["missing_lemmas"]),
         scratch_file=scratch_file,
         derived_file=derived_file,
         derived_entries=derived_entries,
@@ -854,13 +1910,25 @@ def run_main_theorem_session(
         state_lock=state_lock,
         derived_runtime_state=derived_runtime_state,
     )
-    report["generated_candidates"] = candidates
-    report["selected_candidate_rank_seed"] = selected_candidate_rank_seed
-    report["selection_summary"] = selection_summary
-    report["ranking"] = ranking
-    report["suggested_statement"] = str(selected_candidate["statement"])
-    report["suggested_rationale"] = str(selected_candidate["rationale"])
-    report["source_problem_ids"] = list(selected_candidate["source_problem_ids"])
+    report["generated_candidates"] = [accepted_candidate]
+    report["selected_candidate_rank_seed"] = 1
+    report["selection_summary"] = str(accepted_evaluation["reason"])
+    report["ranking"] = [
+        {
+            "candidate_rank_seed": 1,
+            "rank": 1,
+            "decision": "select",
+            "reason": str(accepted_evaluation["reason"]),
+        }
+    ]
+    report["suggested_statement"] = str(accepted_candidate["statement"])
+    report["suggested_rationale"] = str(accepted_candidate["rationale"])
+    report["source_problem_ids"] = list(accepted_candidate["source_problem_ids"])
+    report["retrieval"] = accepted_retrieval
+    report["mapping"] = accepted_mapping
+    report["evaluation"] = accepted_evaluation
+    report["rejected_candidates"] = rejected_this_session
+    report["rejection_count"] = len(rejected_this_session)
     if session_events_path is not None:
         report["session_events_file"] = str(session_events_path)
     return report

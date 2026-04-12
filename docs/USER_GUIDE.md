@@ -5,7 +5,7 @@ This page is for normal operation after initial setup. For first-time setup, rea
 ## Operational Mental Model
 
 ```text
-[Theory.lean (+ optional Theory/*.lean)] + [research_agenda.md]
+[Theory.lean (+ optional Theory/*.lean)] + [research_agenda.md] + [optional materials/]
         ↓
 seed generation
         ↓
@@ -34,9 +34,21 @@ For a custom theory, the normal edit set is:
 - `AutomatedTheoryConstruction/Theory.lean`
 - `AutomatedTheoryConstruction/Theory/*.lean`
 - `AutomatedTheoryConstruction/research_agenda.md`
+- `materials/` when you want reusable deep-research context to inform generation and evaluation
 - `AutomatedTheoryConstruction/seeds.jsonl` when you want to hand-curate initial problems
 
 `Theory.lean` stays the public entry point. If the theory grows, keep imports there and move detailed definitions or helper lemmas into `AutomatedTheoryConstruction/Theory/`.
+
+`materials/` is the recommended place to keep organized deep-research output:
+
+- literature summaries
+- direct source-link lists
+- extracted problem families
+- evaluation rubrics or structural-theme notes
+
+The important boundary is that `materials/` is optional external context.
+It can influence prompts, but it should not be treated as core loop state and should not be folded into `theory_state.json`.
+If a summary report inside `materials/` becomes old, keep it as context but treat it as lower-confidence than source links or primary papers.
 
 ## Common Commands
 
@@ -76,6 +88,10 @@ uv run python scripts/atc_cli.py seed \
   --context-file path/to/context.pdf \
   --seed-count 4
 ```
+
+For reusable domain knowledge, prefer curating it under `materials/` instead of repeatedly passing one-off files.
+That keeps deep research available across prioritization, expansion, and main-theorem work.
+When a report may be out of date, keep the report for structure and wording, but use source-link bundles for novelty checks and literature positioning.
 
 ### Run the main loop
 

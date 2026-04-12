@@ -29,6 +29,8 @@ When `verify_success = true` and `result = counterexample`:
 ## shared_policy
 - Favor follow-ups likely to shift future priorities.
 - Use `theory_state` and `research_agenda` as primary value guidance after local plausibility is established.
+- If `materials` are provided, use them as optional external anchors for outward-looking follow-ups, especially when deciding whether a consequence is a genuine bridge, boundary sharpening, or structural interface result.
+- In main-theorem follow-up work, keep the newly resolved theorem and visible verified theory primary; use `materials` to position follow-ups, not to invent distant off-theory targets.
 - Reject weak, duplicate, cosmetic, or merely nearby statements.
 - Return candidates in concise, theorem-sized form: one core claim per candidate, avoiding verbose scaffolding.
 - Prefer the shortest statement that captures the reusable idea.

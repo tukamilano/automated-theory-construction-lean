@@ -72,6 +72,7 @@ from loop_helpers import emit_phase_log
 from loop_helpers import extract_theorem_code_from_scratch
 from loop_helpers import is_verified_resolution
 from loop_helpers import load_current_guidance
+from loop_helpers import load_current_materials
 from loop_helpers import load_current_research_agenda
 from loop_helpers import load_formalization_memory
 from loop_helpers import load_theory_state
@@ -1999,6 +2000,7 @@ def request_expand_candidates(
     current_iteration_full_logs: list[dict[str, Any]],
     same_problem_history_tail: list[dict[str, Any]],
     theory_state: dict[str, Any] | None = None,
+    materials: dict[str, Any] | None = None,
     max_candidates: int = 3,
 ) -> tuple[list[dict[str, str]], dict[str, Any]]:
     expand_payload: dict[str, Any] = {
@@ -2015,6 +2017,7 @@ def request_expand_candidates(
         "same_problem_history_tail": same_problem_history_tail,
         "theory_state": dict(theory_state or {}),
         "research_agenda": load_current_research_agenda(),
+        "materials": dict(load_current_materials() if materials is None else materials),
         "expand_generation_policy": {
             "prefer_subgoals_for_unsolved": True,
             "avoid_generalization_for_unsolved": True,
@@ -2051,7 +2054,7 @@ def request_open_problem_priorities(
     current_iteration: int,
     guidance: dict[str, Any],
 ) -> tuple[list[dict[str, str]], str, dict[str, str], dict[str, list[str]], dict[str, Any]]:
-    previous_theory_state, research_agenda = unpack_guidance_context(guidance)
+    previous_theory_state, research_agenda, materials = unpack_guidance_context(guidance)
     expected_problem_ids = [str(row.get("id", "")) for row in tracked_rows]
     priority_payload: dict[str, Any] = {
         "current_iteration": current_iteration,
@@ -2081,6 +2084,7 @@ def request_open_problem_priorities(
         },
         "previous_theory_state": previous_theory_state,
         "research_agenda": research_agenda,
+        "materials": materials,
     }
     prioritized, worker_meta = invoke_worker_json(
         settings=worker_settings,
@@ -2399,6 +2403,7 @@ def initialize_runtime_state(
     write_jsonl_atomic(data_dir / "solved_problems.jsonl", [])
     write_jsonl_atomic(data_dir / "counterexamples.jsonl", [])
     (data_dir / "theorem_reuse_memory.json").write_text('{"entries": []}\n', encoding="utf-8")
+    (data_dir / "main_theorem_rejection_memory.json").write_text('{"entries": []}\n', encoding="utf-8")
     (data_dir / LEGACY_DEFERRED_PROBLEMS_FILENAME).unlink(missing_ok=True)
     (data_dir / LEGACY_PRUNED_OPEN_PROBLEMS_FILENAME).unlink(missing_ok=True)
     (data_dir / "expand_candidates.jsonl").unlink(missing_ok=True)
@@ -2434,6 +2439,7 @@ def capture_continuation_runtime_snapshot(
         data_dir / "solved_problems.jsonl",
         data_dir / "counterexamples.jsonl",
         data_dir / "theorem_reuse_memory.json",
+        data_dir / "main_theorem_rejection_memory.json",
         theory_state_path(data_dir),
         formalization_memory_file,
         scratch_file,

@@ -297,6 +297,10 @@ def main() -> None:
             "prioritize_open_problems",
             "main_theorem_generate",
             "main_theorem_select",
+            "main_theorem_suggest",
+            "main_theorem_retrieve",
+            "main_theorem_map",
+            "main_theorem_evaluate",
             "post_theorem_expand",
         }:
             raise ValueError(f"unsupported task_type: {task_type}")

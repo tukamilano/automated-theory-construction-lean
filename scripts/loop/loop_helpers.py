@@ -12,11 +12,13 @@ from typing import Callable
 from common import append_jsonl
 from common import normalize_open_problem_priority
 from guidance import build_guidance_context
+from materials import DEFAULT_MATERIALS_DIR
+from materials import load_materials
 from research_agenda import DEFAULT_RESEARCH_AGENDA_PATH
 from research_agenda import load_research_agenda
 
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 THEORY_STATE_FILENAME = "theory_state.json"
 THEOREM_NAME_STEM_PATTERN = re.compile(r"^[a-z][a-z0-9_]*$")
 DERIVED_THEOREM_HEADER_PATTERN = re.compile(r"\btheorem\s+([A-Za-z0-9_']+)\s*:")
@@ -37,6 +39,10 @@ def load_current_research_agenda() -> dict[str, Any]:
     return load_research_agenda(REPO_ROOT / DEFAULT_RESEARCH_AGENDA_PATH)
 
 
+def load_current_materials() -> dict[str, Any]:
+    return load_materials(REPO_ROOT / DEFAULT_MATERIALS_DIR)
+
+
 def load_theory_state(data_dir: Path) -> dict[str, Any]:
     path = theory_state_path(data_dir)
     if not path.exists():
@@ -45,15 +51,14 @@ def load_theory_state(data_dir: Path) -> dict[str, Any]:
         payload = json.loads(path.read_text(encoding="utf-8"))
     except Exception:
         return {}
-    if not isinstance(payload, dict):
-        return {}
-    return payload
+    return payload if isinstance(payload, dict) else {}
 
 
 def load_current_guidance(data_dir: Path) -> dict[str, dict[str, Any]]:
     return build_guidance_context(
         theory_state=load_theory_state(data_dir),
         research_agenda=load_current_research_agenda(),
+        materials=load_current_materials(),
     )
 
 

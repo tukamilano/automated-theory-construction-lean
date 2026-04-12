@@ -83,6 +83,25 @@ Evaluate the candidate set using the following three dimensions.
 - Strongly prefer candidates that fit a `research_agenda` valued problem type or canonical target.
 - Reject candidates that fit `overexplored_patterns` unless they clearly subsume and reorganize them.
 
+## materials_policy
+- If `materials` are provided, treat them as optional external context for theorem-level positioning, not as internal state.
+- In main-theorem generation, use priorities in roughly this order:
+  1. visible verified theory,
+  2. `materials`,
+  3. `research_agenda`,
+  4. `theory_state`,
+  5. local bundling or generic generalization.
+- Use `materials` to judge:
+  - structural centrality,
+  - theory readiness,
+  - literature connection,
+  - fertility for later problem families,
+  - anti-goal risk such as cosmetic reframing, one-off observations, or weak negatives.
+- Treat novelty only as a coarse positioning label in your private reasoning: `rediscovery_like`, `specialization_like`, `generalization_like`, `bridge_like`, `boundary_like`, or `unclear`.
+- If `materials.source_links` are available, use them to estimate the closest known result and the candidate's likely delta relative to existing structural theory.
+- When `materials` are available, prefer candidates that can be positioned as a special case, generalization, boundary sharpening, or bridge relative to that literature-facing context.
+- Use literature-facing materials to refine or judge candidates, not to invent distant aspirational theorems unsupported by the visible verified theory.
+
 ## correctness_boundary
 - Do not treat plausibility alone as enough.
 - Ground each candidate in visible `Derived.lean` results and tracked problem families.
@@ -100,10 +119,11 @@ Evaluate the candidate set using the following three dimensions.
 4. Build 3 materially distinct candidates instead of 3 paraphrases of the same theorem.
 5. Check which admissible main-theorem pattern each candidate fits.
 6. Evaluate each candidate by problem value, result quality, and conceptual depth.
-7. Identify the strongest summary-level gaps using `theory_state`.
-8. Ask whether one theorem could reorganize the visible theory around each gap.
-9. Check whether each candidate serves the active `research_agenda`.
-10. Return the strongest 3-candidate set you can justify from the visible theory.
+7. If `materials` are provided, position each candidate relative to the broader structural theory before trusting a paper-worthy framing.
+8. Identify the strongest summary-level gaps using `theory_state`.
+9. Ask whether one theorem could reorganize the visible theory around each gap.
+10. Check whether each candidate serves the active `research_agenda`.
+11. Return the strongest 3-candidate set you can justify from the visible theory.
 
 ## output_schema
 ```json

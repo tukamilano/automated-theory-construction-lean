@@ -1,0 +1,68 @@
+{
+  "source_id": "math_stackexchange_com_substructural_logic_understanding_the_roles_233a416e05f0",
+  "source_url": "https://math.stackexchange.com/questions/3356302/substructural-logic-understanding-the-roles-of-weakening-and-contraction",
+  "label": "Substructural Logic: Understanding the roles of Weakening and Contraction",
+  "title": "Substructural Logic: Understanding the roles of Weakening and Contraction - Mathematics Stack Exchange",
+  "content_type": "text/html",
+  "extract_confidence": "high",
+  "abstract": "Ask Question Asked 6 years, 7 months ago Modified 6 years, 7 months ago Viewed 396 times 4 $\\begingroup$ I am trying to understand the \"structural\" rules of logic, and how relaxing/adding certain these rules gives rise to different types of logic (linear, affine, etc.) The rules are Exchange : $$\\left(\\Gamma_1, x_1, x_2, \\Gamma_2\\longrightarrow p\\right)\\longrightarrow\\left(\\Gamma_1, x_2, x_1, \\Gamma_2\\longrightarrow p\\right)$$ Weakening : $\\forall x$ , $$\\left(\\Gamma\\longrightarrow p\\right)\\longrightarrow \\left(\\Gamma, x\\longrightarrow p\\right)$$ Contraction $$\\left(\\Gamma, x, x \\longrightarrow p\\right)\\longrightarrow \\left(\\Gamma, x \\longrightarrow p\\right)$$ According to David Walker in Substructural Type Systems (page 5) Linear type systems ensure that every variable is used exactly once by allowing exchange but not weakening or contraction.",
+  "chunks": [
+    {
+      "chunk_id": "chunk_002",
+      "section": "Substructural Logic: Understanding the roles of Weakening and Contraction",
+      "page": null,
+      "text": "Ask Question Asked 6 years, 7 months ago Modified 6 years, 7 months ago Viewed 396 times 4 $\\begingroup$ I am trying to understand the \"structural\" rules of logic, and how relaxing/adding certain these rules gives rise to different types of logic (linear, affine, etc.) The rules are Exchange : $$\\left(\\Gamma_1, x_1, x_2, \\Gamma_2\\longrightarrow p\\right)\\longrightarrow\\left(\\Gamma_1, x_2, x_1, \\Gamma_2\\longrightarrow p\\right)$$ Weakening : $\\forall x$ , $$\\left(\\Gamma\\longrightarrow p\\right)\\longrightarrow \\left(\\Gamma, x\\longrightarrow p\\right)$$ Contraction $$\\left(\\Gamma, x, x \\longrightarrow p\\right)\\longrightarrow \\left(\\Gamma, x \\longrightarrow p\\right)$$ According to David Walker in Substructural Type Systems (page 5) Linear type systems ensure that every variable is used exactly once by allowing exchange but not weakening or contraction."
+    },
+    {
+      "chunk_id": "chunk_008",
+      "section": "You must to answer this question.",
+      "page": null,
+      "text": "What is the effect on the statistics if the sample is almost the whole population? What's your favorite Cantor space? Render xyz layer at zoom level greater than source What is the belief in the correctness of the Bible based upon? Future Perfect vs Future Simple A bricky message Can this grid be 3-colored? Why is my PWM signal taking 1us to charge mosfet gate? Disabled snaps removal shell script How far back in time could human societies support my human sacrifice? Are the new Talgo trains on the Copenhagen-Hamburg route any faster than the old ones in terms of actual travel time? When should former PhD supervisors stop being considered conflicts of interest in conference submissions? VMware VM fails to power on after .vmx file modification Number of wins in a random battle royale Is this a real boarding pass What happens if you cast Light on a rope, string, etc?"
+    },
+    {
+      "chunk_id": "chunk_007",
+      "section": "You must to answer this question.",
+      "page": null,
+      "text": "Start asking to get answers Find the answer to your question by asking. Ask question Explore related questions logic linear-logic See similar questions with these tags. Related 8 Weakening and Contraction 2 Grigori Mints' ADC method of proof search for a natural deduction in \"sequent-style\" calculus 7 Why is coherence important in the LCCC interpretation of substitution in dependent type theory? 4 Natural Deduction: An unusual presentation? 1 Considering $\\Gamma \\vdash \\varphi$, is $\\Gamma$ a set or a list? 1 Can sequents in the sequent calculus contain free variables? Hot Network Questions Should I Re-Tension this Wheel? Why is the Death Star so destructive, when it would be just as useful if it was less powerful? Prove that at least one of the cars can drive around the track by taking gas from other cars on its way."
+    },
+    {
+      "chunk_id": "chunk_005",
+      "section": "1 Answer 1",
+      "page": null,
+      "text": "The first thing to note is that these are rules, not axioms. They show you how given one derivation (e.g. a derivation of $\\Gamma\\vdash p$ ), you can extend it to a longer derivation (e.g. a derivation of $\\Gamma,x\\vdash p$ ). A proof system as a whole will be a collection of such rules. A (conditional) proof of a formula is then a derivation which ends in that formula and which will need to start at some rules that have no premises, e.g. $\\dfrac{}{\\Gamma,p\\vdash p}$ . All that is being said is that we're removing some of these rules as options. That means derivations can't use them. You then consider what derivations you can still make which will give you a (potentially) smaller set of provable formulas. Derivations are tree-like mathematical structures. Removing rules just changes what trees you can make."
+    },
+    {
+      "chunk_id": "chunk_003",
+      "section": "Substructural Logic: Understanding the roles of Weakening and Contraction",
+      "page": null,
+      "text": "Affine type systems ensure that every variable is used at most once by allowing exchange and weakening, but not contraction I'm confused by the phrasing \"not allowing\" certain rules. I've given it some thought, and it seems to me that to achieve the listed properties, it has to mean we explicitly take their negations $p\\rightarrow \\overline{q}$ , not just give up the axiom $p\\rightarrow q$ Am I correct here, or is it simply that we just have to give up the \" $p\\rightarrow q$ \" form of these statements? logic linear-logic Share Cite Follow asked Sep 14, 2019 at 15:10 bumbling-tadpole 43 2 2 bronze badges $\\endgroup$ Add a comment |"
+    },
+    {
+      "chunk_id": "chunk_006",
+      "section": "1 Answer 1",
+      "page": null,
+      "text": "As an analogy, if you don't have flour, this (potentially) limits what you can cook. It doesn't mean that it is now impossible to cook anything for which you have a recipe that involves flour. Maybe you have an alternate recipe that doesn't use flour. Maybe you can produce your own flour. Maybe you couldn't follow any of the recipes using flour even if you did have flour. Share Cite Follow answered Sep 14, 2019 at 20:29 Derek Elkins left SE 26.1k 1 1 gold badge 34 34 silver badges 58 58 bronze badges $\\endgroup$ Add a comment |"
+    },
+    {
+      "chunk_id": "chunk_004",
+      "section": "1 Answer 1",
+      "page": null,
+      "text": "Sorted by: Reset to default Highest score (default) Date modified (newest first) Date created (oldest first) 5 $\\begingroup$ You are using confusing notation. You are using $\\longrightarrow$ for two different things and then, arguably, conflating it with $\\to$ which is a third thing. A more common notation, using weakening as an example, would be $$\\dfrac{\\Gamma\\vdash p}{\\Gamma,x\\vdash p}$$ or $$\\dfrac{\\Gamma\\implies p}{\\Gamma,x\\implies p}$$"
+    },
+    {
+      "chunk_id": "chunk_009",
+      "section": "You must to answer this question.",
+      "page": null,
+      "text": "Triggered abilities and priority pass Tree split in Elements of Statistical Learning, Figure 9.5 Help identifying these 3 connectors What immediate physiological symptoms occur during instantaneous, anomalous synaptic formation in the hippocampus? Why am I getting a “(standard_in) 1: illegal character: ^M” with 'bc' in Cygwin on Windows? more hot questions Question feed"
+    },
+    {
+      "chunk_id": "chunk_001",
+      "section": "",
+      "page": null,
+      "text": "Stack Overflow , the largest, most trusted online community for developers to learn, share their knowledge, and build their careers. Visit Stack Exchange Bring the best of human thought and AI automation together at your work. Explore Stack Internal"
+    }
+  ],
+  "source_kind": "qna",
+  "retrieval_priority": "exclude",
+  "direct_reading_access": "discussion"
+}

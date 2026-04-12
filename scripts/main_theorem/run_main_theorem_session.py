@@ -48,6 +48,7 @@ def main() -> None:
     parser.add_argument("--skip-verify", action="store_true")
     parser.add_argument("--verify-timeout", type=int, default=600, help=verify_timeout_help)
     parser.add_argument("--formalization-retry-budget-sec", type=int, default=3600, help=retry_budget_help)
+    parser.add_argument("--main-theorem-retry-budget-sec", type=int, default=900, help=retry_budget_help)
     parser.add_argument("--max-same-error-streak", type=int, default=5)
     parser.add_argument("--open-problem-failure-threshold", type=int, default=2)
     parser.add_argument("--batch-generator-seed-count", type=int, default=4)
@@ -62,6 +63,8 @@ def main() -> None:
         raise ValueError("--verify-timeout must be >= 0")
     if args.formalization_retry_budget_sec < 0:
         raise ValueError("--formalization-retry-budget-sec must be >= 0")
+    if args.main_theorem_retry_budget_sec < 0:
+        raise ValueError("--main-theorem-retry-budget-sec must be >= 0")
     if args.max_same_error_streak < 1:
         raise ValueError("--max-same-error-streak must be >= 1")
     if args.batch_generator_seed_count < 0:
@@ -72,6 +75,9 @@ def main() -> None:
     verify_timeout_sec = None if args.verify_timeout == 0 else args.verify_timeout
     formalization_retry_budget_sec = (
         None if args.formalization_retry_budget_sec == 0 else args.formalization_retry_budget_sec
+    )
+    main_theorem_retry_budget_sec = (
+        None if args.main_theorem_retry_budget_sec == 0 else args.main_theorem_retry_budget_sec
     )
 
     data_dir = Path(args.data_dir)
@@ -134,8 +140,10 @@ def main() -> None:
         repair_worker_settings=repair_worker_settings,
         formalizer_prompt_file="prompts/formalize/formalizer_proof.md",
         repair_prompt_file="prompts/formalize/repair_proof.md",
-        generate_prompt_file="prompts/main_theorem/generate.md",
-        select_prompt_file="prompts/main_theorem/select.md",
+        suggester_prompt_file="prompts/main_theorem/suggester.md",
+        retriever_prompt_file="prompts/main_theorem/retrieve.md",
+        mapper_prompt_file="prompts/main_theorem/map.md",
+        evaluator_prompt_file="prompts/main_theorem/evaluate.md",
         post_expand_prompt_file="prompts/expander/post_theorem.md",
         prioritize_open_problems_worker_settings=prioritize_open_problems_worker_settings,
         prioritize_open_problems_prompt_file="prompts/prioritizer/open_problem_prioritizer.md",
@@ -147,6 +155,7 @@ def main() -> None:
         skip_verify=args.skip_verify,
         verify_timeout_sec=verify_timeout_sec,
         formalization_retry_budget_sec=formalization_retry_budget_sec,
+        main_theorem_retry_budget_sec=main_theorem_retry_budget_sec,
         max_same_error_streak=args.max_same_error_streak,
         failure_threshold=args.open_problem_failure_threshold,
         phase_logs=args.phase_logs,

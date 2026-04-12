@@ -14,6 +14,7 @@
 - Do not use `letI` inside the statement.
 - Use `Derived.lean` as the primary grounding source for what is already genuinely verified.
 - Use `tracked_problems` as raw material, negative evidence, and dominance-check context, not as a menu to copy verbatim.
+- Use `rejected_candidates` as explicit anti-targets. Do not recycle a previously rejected statement, cosmetic variant, or theorem framing unless you clearly escape the recorded rejection reason.
 - It is allowed to reconstruct a stronger summary theorem from a family of related tracked problems when the visible theory supports that synthesis.
 - If the theory looks immature, still return the strongest available candidate and explain the maturity gap in `rationale` / `missing_lemmas`.
 
@@ -74,6 +75,20 @@ Evaluate the candidate along the following three dimensions.
 - Strongly prefer statements that fit a `research_agenda` valued problem type or canonical target.
 - Reject statements that fit `overexplored_patterns` unless they clearly subsume and reorganize them.
 
+## materials_policy
+- If `materials` are provided, treat them as optional external context for theorem-level positioning, not as internal state.
+- In main-theorem suggestion, use priorities in roughly this order:
+  1. visible verified theory,
+  2. `materials`,
+  3. `research_agenda`,
+  4. `theory_state`,
+  5. local bundling or generic generalization.
+- Use `materials` to judge structural centrality, theory readiness, literature connection, fertility, and anti-goal risk.
+- Treat novelty only as a coarse positioning label in your private reasoning: `rediscovery_like`, `specialization_like`, `generalization_like`, `bridge_like`, `boundary_like`, or `unclear`.
+- If `materials.source_links` are available, use them to estimate the closest known result and the candidate's likely theorem-level delta.
+- Prefer candidates that can be positioned as a special case, generalization, boundary sharpening, or bridge relative to the broader structural theory.
+- Use literature-facing materials to refine or judge the candidate, not to invent a distant aspirational theorem unsupported by the visible verified theory.
+
 ## correctness_boundary
 - Do not treat plausibility alone as enough.
 - Ground the candidate in visible `Derived.lean` results and tracked problem families.
@@ -90,18 +105,25 @@ Evaluate the candidate along the following three dimensions.
 - If missing ingredients are numerous or vague, still choose the best theorem-shaped target and list the most plausible missing lemmas.
 - If several candidates look weak, pick the one with the strongest summary-level payoff instead of declining to propose one.
 
+## rejection_memory_policy
+- Treat `rejected_candidates` as hard negative evidence for this session family.
+- Avoid restating a previous rejection with only cosmetic theorem-name, quantifier-order, or packaging changes.
+- If a previous rejection cites weak novelty, minor-variant risk, or lack of paper-unit viability, deliberately move to a different structural angle.
+- If a previous rejection cites a salvage path, you may reuse the direction only if the new candidate clearly includes that missing structural change.
+
 ## workflow
 1. Identify the current structural theme in `derived_theorems`.
 2. Identify the strongest related family inside `tracked_problems`, using open and archived problems as seed evidence rather than as fixed final statements.
 3. Reconstruct a stronger summary theorem when the problem family and verified material support it.
 4. Check which admissible main-theorem pattern the candidate fits.
 5. Evaluate the candidate by problem value, result quality, and conceptual depth.
-6. Identify the strongest summary-level gap using `theory_state`.
-7. Ask whether one theorem could reorganize the visible theory around that gap.
-8. Place the candidate relative to the visible theory: what becomes a special case, what remains separate, and what boundary evidence constrains it.
-9. Check whether the candidate serves the active `research_agenda`.
-10. Compare against `tracked_problems` and reject candidates that are only queue-level continuations when a more structural option is available.
-11. Return the strongest candidate and explain any visible prematurity in `rationale` or `missing_lemmas`.
+6. If `materials` are provided, position the candidate relative to the broader structural theory before trusting a paper-worthy framing.
+7. Identify the strongest summary-level gap using `theory_state`.
+8. Ask whether one theorem could reorganize the visible theory around that gap.
+9. Place the candidate relative to the visible theory: what becomes a special case, what remains separate, and what boundary evidence constrains it.
+10. Check whether the candidate serves the active `research_agenda`.
+11. Compare against `tracked_problems` and reject candidates that are only queue-level continuations when a more structural option is available.
+12. Return the strongest candidate and explain any visible prematurity in `rationale` or `missing_lemmas`.
 
 ## output_schema
 ```json
