@@ -32,16 +32,16 @@
       "text": "abstract = \"Substructural logics are non-classical logics notable for the absence of one or more structural rules present in classical logic. Initial interest in substructural logics developed independently in the second half of the twentieth century, through considerations from philosophy (relevant logics), from linguistics (the Lambek calculus) and from the mathematics of proof theory (linear logic). Since the 1990s, these independent lines of inquiry have been understood to be different aspects of a unified field, and techniques from substructural logics are useful in the study of traditional logics such as classical and intuitionistic logic. This article provides a brief overview of the field of substructural logic.\", author = \"Greg Restall\", year = \"2024\", month = aug, day = \"15\", language = \"English\", series = \"Stanford encyclopedia of philosophy\","
     },
     {
-      "chunk_id": "chunk_014",
-      "section": "Cite this",
-      "page": null,
-      "text": "N2 - Substructural logics are non-classical logics notable for the absence of one or more structural rules present in classical logic. Initial interest in substructural logics developed independently in the second half of the twentieth century, through considerations from philosophy (relevant logics), from linguistics (the Lambek calculus) and from the mathematics of proof theory (linear logic). Since the 1990s, these independent lines of inquiry have been understood to be different aspects of a unified field, and techniques from substructural logics are useful in the study of traditional logics such as classical and intuitionistic logic. This article provides a brief overview of the field of substructural logic."
-    },
-    {
       "chunk_id": "chunk_013",
       "section": "Cite this",
       "page": null,
       "text": "publisher = \"Metaphysics Research Lab Stanford University\", editor = \"Zalta, \\{Edward N.\\} and Uri Nodelman\", booktitle = \"Stanford encyclopedia of philosophy\", } Restall, G 2024, Substructural logics . in EN Zalta & U Nodelman (eds), Stanford encyclopedia of philosophy. Stanford encyclopedia of philosophy, Metaphysics Research Lab Stanford University, Stanford, CA. < https://plato.stanford.edu/entries/logic-substructural/ > Substructural logics. / Restall, Greg . Stanford encyclopedia of philosophy. ed. / Edward N. Zalta; Uri Nodelman. Stanford, CA: Metaphysics Research Lab Stanford University, 2024. (Stanford encyclopedia of philosophy). Research output : Chapter in Book/Report/Conference proceeding › Entry for encyclopedia/dictionary TY - CHAP T1 - Substructural logics AU - Restall, Greg PY - 2024/8/15 Y1 - 2024/8/15"
+    },
+    {
+      "chunk_id": "chunk_014",
+      "section": "Cite this",
+      "page": null,
+      "text": "N2 - Substructural logics are non-classical logics notable for the absence of one or more structural rules present in classical logic. Initial interest in substructural logics developed independently in the second half of the twentieth century, through considerations from philosophy (relevant logics), from linguistics (the Lambek calculus) and from the mathematics of proof theory (linear logic). Since the 1990s, these independent lines of inquiry have been understood to be different aspects of a unified field, and techniques from substructural logics are useful in the study of traditional logics such as classical and intuitionistic logic. This article provides a brief overview of the field of substructural logic."
     },
     {
       "chunk_id": "chunk_011",
@@ -56,22 +56,16 @@
       "text": "T3 - Stanford encyclopedia of philosophy BT - Stanford encyclopedia of philosophy A2 - Zalta, Edward N. A2 - Nodelman, Uri PB - Metaphysics Research Lab Stanford University CY - Stanford, CA ER - Restall G . Substructural logics . In Zalta EN, Nodelman U, editors, Stanford encyclopedia of philosophy. Stanford, CA: Metaphysics Research Lab Stanford University. 2024. (Stanford encyclopedia of philosophy)."
     },
     {
-      "chunk_id": "chunk_008",
-      "section": "Fingerprint",
-      "page": null,
-      "text": "Dive into the research topics of 'Substructural logics'. Together they form a unique fingerprint. Classical Logic Mathematics 100% Mathematics Mathematics 33% Calculus Mathematics 33% Linear Logic Mathematics 33% Intuitionistic Logic Mathematics 33% View full fingerprint"
-    },
-    {
-      "chunk_id": "chunk_006",
-      "section": "Access to Document",
-      "page": null,
-      "text": "https://plato.stanford.edu/entries/logic-substructural/ Licence: Unspecified"
-    },
-    {
       "chunk_id": "chunk_010",
       "section": "Logical consequence",
       "page": null,
       "text": "Restall, G. , Beall, J. & Sagi, G., 17 May 2024 , Stanford encylopedia of philosophy. Zalta, E. N. & Nodelman, U. (eds.). Stanford, CA: Metaphysics Research Lab Stanford University , (Stanford encyclopedia of philosophy). Research output : Chapter in Book/Report/Conference proceeding › Chapter Open Access"
+    },
+    {
+      "chunk_id": "chunk_008",
+      "section": "Fingerprint",
+      "page": null,
+      "text": "Dive into the research topics of 'Substructural logics'. Together they form a unique fingerprint. Classical Logic Mathematics 100% Mathematics Mathematics 33% Calculus Mathematics 33% Linear Logic Mathematics 33% Intuitionistic Logic Mathematics 33% View full fingerprint"
     },
     {
       "chunk_id": "chunk_002",
@@ -90,6 +84,12 @@
       "section": "Other files and links",
       "page": null,
       "text": "Online reference work on publisher's website Online reference work in national catalogue"
+    },
+    {
+      "chunk_id": "chunk_006",
+      "section": "Access to Document",
+      "page": null,
+      "text": "https://plato.stanford.edu/entries/logic-substructural/ Licence: Unspecified"
     },
     {
       "chunk_id": "chunk_005",

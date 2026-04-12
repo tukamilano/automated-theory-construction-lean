@@ -21,11 +21,6 @@ KIND_SECTION_TARGETS = {
         ("problem evaluation", "problem_evaluation"),
         ("main theorem deep access", "main_theorem"),
     ),
-    "problem_seeds": (
-        ("generation anchors", "problem_generation"),
-        ("evaluation checks", "problem_evaluation"),
-        ("main theorem triggers", "main_theorem"),
-    ),
     "source_links": (("source links", "source_links"),),
 }
 
@@ -45,8 +40,6 @@ def _classify_material_kind(path: Path) -> str:
         return "section_map"
     if "source_links" in stem or "sources" in stem:
         return "source_links"
-    if "problem_seeds" in stem or stem.endswith("_seeds"):
-        return "problem_seeds"
     if "research" in stem or "report" in stem or "survey" in stem:
         return "report"
     if name.endswith(".md"):

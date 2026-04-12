@@ -1,14 +1,14 @@
 {
   "Lambek_Calculus_Structural_Theory_Research.md": {
     "content_hash": "2399d68c9078dd68f8b4c56d2d4777813228159a5ddfdec2de0343597add7380",
+    "generator_version": 2,
     "slug": "lambek",
     "report_title": "Structural Foundations and Research Trajectories in the Lambek Calculus: Toward a Unified Theory of Substructural Grammars",
     "generated_dir": "lambek",
     "generated_files": [
       "00_index.md",
       "02_section_map.md",
-      "03_source_links.md",
-      "04_problem_seeds.md"
+      "03_source_links.md"
     ]
   }
 }

@@ -595,20 +595,6 @@ This is a reusable summary that may become out of date.
 """,
             encoding="utf-8",
         )
-        (materials_dir / "04_problem_seeds.md").write_text(
-            """# Problem Seeds
-
-## Generation Anchors
-- separation statements
-
-## Evaluation Checks
-- does this candidate change the summary?
-
-## Main Theorem Triggers
-- boundary sharpening
-""",
-            encoding="utf-8",
-        )
         (materials_dir / "03_source_links.md").write_text(
             """# Source Links
 
@@ -621,18 +607,16 @@ This is a reusable summary that may become out of date.
 
         payload = load_materials(materials_dir)
 
-    if payload.get("problem_generation") != ["Use problem seeds first.", "boundary problems", "separation statements"]:
+    if payload.get("problem_generation") != ["Use problem seeds first.", "boundary problems"]:
         raise RuntimeError(f"unexpected problem_generation: {payload}")
     if payload.get("problem_evaluation") != [
         "Use structural checks first.",
         "prefer structural bridge claims",
-        "does this candidate change the summary?",
     ]:
         raise RuntimeError(f"unexpected problem_evaluation: {payload}")
     if payload.get("main_theorem") != [
         "Use source links when novelty pressure matters.",
         "read source links for closest known result",
-        "boundary sharpening",
     ]:
         raise RuntimeError(f"unexpected main_theorem: {payload}")
     if payload.get("source_links") != [
@@ -664,6 +648,10 @@ def test_ensure_materials_derived_current_generates_files_from_root_report() -> 
 
 Some discussion of structural correspondences and language hierarchies.
 
+### Table 1: Summary Grid
+
+Table-like heading that should not become a section-map target.
+
 ## 2. Invertibility and Focusing
 
 Some discussion of invertibility in proof search.
@@ -687,9 +675,14 @@ Some discussion of invertibility in proof search.
         if not isinstance(reports, list) or reports[0].get("generated_dir") != "sample":
             raise RuntimeError(f"unexpected materials sync report: {report}")
         generated_dir = materials_dir / "sample"
-        for filename in ("00_index.md", "02_section_map.md", "03_source_links.md", "04_problem_seeds.md"):
+        for filename in ("00_index.md", "02_section_map.md", "03_source_links.md"):
             if not (generated_dir / filename).exists():
                 raise RuntimeError(f"missing generated file {(generated_dir / filename)}")
+        if (generated_dir / "04_problem_seeds.md").exists():
+            raise RuntimeError(f"obsolete generated file should be removed: {generated_dir / '04_problem_seeds.md'}")
+        section_map_text = (generated_dir / "02_section_map.md").read_text(encoding="utf-8")
+        if "Table 1: Summary Grid" in section_map_text or "Works Cited" in section_map_text:
+            raise RuntimeError(f"section map should ignore auxiliary headings: {section_map_text}")
         source_link_entries = payload.get("source_link_entries", [])
         if not isinstance(source_link_entries, list) or source_link_entries[0].get("url") != "https://example.com/paper.pdf":
             raise RuntimeError(f"generated source links not loaded as expected: {payload}")

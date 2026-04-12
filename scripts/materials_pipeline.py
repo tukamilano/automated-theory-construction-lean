@@ -698,15 +698,10 @@ def _chunk_paragraphs(paragraphs: list[tuple[str, str]]) -> list[dict[str, Any]]
 def _score_chunk(chunk: dict[str, Any]) -> tuple[int, int]:
     section = str(chunk.get("section", "")).strip().lower()
     text = str(chunk.get("text", "")).strip()
-    lowered = text.lower()
     score = 0
     for index, preferred in enumerate(PREFERRED_SECTIONS):
         if preferred in section:
             score += 100 - index
-    if "lambek" in lowered:
-        score += 20
-    if "substructural" in lowered:
-        score += 15
     if "abstract" in section:
         score += 20
     if len(text) >= 120:

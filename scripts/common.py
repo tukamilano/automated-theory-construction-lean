@@ -244,6 +244,22 @@ def _iter_repo_local_import_paths(file_path: Path, repo_root: Path) -> list[Path
     return import_paths
 
 
+def _iter_adjacent_module_family_paths(file_path: Path, repo_root: Path) -> list[Path]:
+    family_paths: list[Path] = []
+    seen_paths: set[Path] = set()
+    for imported_path in _iter_repo_local_import_paths(file_path, repo_root):
+        family_dir = imported_path.with_suffix("")
+        if not family_dir.exists() or not family_dir.is_dir():
+            continue
+        for path in sorted(family_dir.rglob("*.lean")):
+            resolved = path.resolve()
+            if resolved == file_path.resolve() or resolved in seen_paths:
+                continue
+            seen_paths.add(resolved)
+            family_paths.append(resolved)
+    return family_paths
+
+
 def collect_repo_local_lean_context_files(
     entry_file: Path,
     *,
@@ -272,22 +288,11 @@ def collect_repo_local_lean_context_files(
     visit(resolved_entry)
 
     # `Theory.lean` is the Lean import boundary used by Derived/Scratch, but for
-    # prompt-facing context we also want nearby Lambek developments that are not
-    # imported directly because some aggregate imports currently trigger notation
-    # ambiguities or heavy rebuild failures in Lean.
+    # prompt-facing context we also want nearby modules that live under directly
+    # imported aggregate modules, even when those files are not imported one by one.
     theory_path = (resolved_repo_root / "AutomatedTheoryConstruction" / "Theory.lean").resolve()
     if resolved_entry == theory_path:
-        lambek_files = sorted(
-            {
-                path.resolve()
-                for path in (resolved_repo_root / "AutomatedTheoryConstruction").glob("Lambek*.lean")
-            }
-            | {
-                path.resolve()
-                for path in (resolved_repo_root / "AutomatedTheoryConstruction" / "Lambek").rglob("*.lean")
-            }
-        )
-        for path in lambek_files:
+        for path in _iter_adjacent_module_family_paths(resolved_entry, resolved_repo_root):
             if path not in visited and path not in visiting:
                 ordered_files.append(path)
                 visited.add(path)
