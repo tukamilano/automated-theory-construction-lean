@@ -1,6 +1,8 @@
 import Mathlib
 import AutomatedTheoryConstruction.Theory
 
+import AutomatedTheoryConstruction.Generated.Manifest
+
 set_option autoImplicit false
 
 namespace AutomatedTheoryConstruction

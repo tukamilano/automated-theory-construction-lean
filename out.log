@@ -8,22 +8,11 @@ uv run python scripts/atc_cli.py loop \
 	
 [atc] env: ATC_CODEX_MODEL=gpt-5.4 ATC_CODEX_TIMEOUT=390 ATC_FORMALIZE_WORKER_TIMEOUT=600 ATC_REFACTOR_DERIVED_CODEX_TIMEOUT=390 ATC_REFACTOR_DERIVED_WORKER_TIMEOUT=960 ATC_REPAIR_WORKER_TIMEOUT=600 ATC_WORKER_COMMAND='uv run scripts/codex_worker.py' ATC_WORKER_TIMEOUT=420
 [atc] exec: /usr/bin/python3 /home/kei.tsukamoto/ATC_private/scripts/loop/run_loop.py --no-initialize-on-start --phase-logs --max-iterations 50 --parallel-sessions 2 --seed-count 5 --open-problem-failure-threshold 2 --prover-retry-budget-sec 120 --formalization-retry-budget-sec 300 --max-same-error-streak 5
-[09:06:40] === Iteration 1 START ===
-[09:06:40] Session picked problem op_000146
-{'event': 'phase', 'phase': 'problem_selected', 'ts': 1775952400, 'iteration': 1, 'problem_id': 'op_000146'}
-[09:06:40] === Iteration 2 START ===
-[09:06:40] Session picked problem op_000147
-{'event': 'phase', 'phase': 'problem_selected', 'ts': 1775952400, 'iteration': 2, 'problem_id': 'op_000147'}
-{'event': 'phase', 'phase': 'prover_statement', 'ts': 1775952400, 'iteration': 1, 'problem_id': 'op_000146', 'mode': 'worker', 'repair_round': 0}
-{'event': 'phase', 'phase': 'prover_statement', 'ts': 1775952400, 'iteration': 2, 'problem_id': 'op_000147', 'mode': 'worker', 'repair_round': 0}
-{'event': 'phase', 'phase': 'prover_statement_result', 'ts': 1775952518, 'iteration': 2, 'problem_id': 'op_000147', 'formalized': True, 'theorem_name_stem': 'accepts_reachable_least_fixpoint', 'notes': 'Formalized least fixed point explicitly as fixedness plus minimality among subset-of-R fixed points of the operator.', 'repair_round': 0}
-{'event': 'phase', 'phase': 'prover', 'ts': 1775952518, 'iteration': 2, 'problem_id': 'op_000147', 'mode': 'worker'}
-[09:08:38] Calling prover for problem op_000147, attempt 1
-{'event': 'phase', 'phase': 'prover_statement_result', 'ts': 1775952586, 'iteration': 1, 'problem_id': 'op_000146', 'formalized': True, 'theorem_name_stem': 'saturation_iff_bounded_path', 'notes': 'Used minimal prelude definitions for the S_n recursion and exact path length, since the current library exposes `ReflTransGen` but not a canonical bounded-length state-path predicate.', 'repair_round': 0}
-{'event': 'phase', 'phase': 'prover', 'ts': 1775952586, 'iteration': 1, 'problem_id': 'op_000146', 'mode': 'worker'}
-[09:09:46] Calling prover for problem op_000146, attempt 1
-[09:09:46] Prover returned for op_000147: proof (took 68.0s)
-[09:10:40] Prover returned for op_000146: proof (took 54.2s)
-{'event': 'phase', 'phase': 'formalize_and_verify', 'ts': 1775952764, 'iteration': 2, 'status': 'begin', 'problem_id': 'op_000147', 'result': 'proof', 'repair_round': 0}
-{'event': 'phase', 'phase': 'formalize_and_verify_result', 'ts': 1775952769, 'iteration': 2, 'problem_id': 'op_000147', 'result': 'proof', 'repair_round': 0, 'verify_success': False, 'error_fingerprint': 'AutomatedTheoryConstruction/Scratch.loop.002.lean:71:6: error: Type mismatch: After simplification, term | hpFS | has type'}
-{'event': 'phase', 'phase': 'repair', 'ts': 1775952769, 'iteration': 2, 'problem_id': 'op_000147', 'repair_round': 1, 'error_fingerprint': 'AutomatedTheoryConstruction/Scratch.loop.002.lean:71:6: error: Type mismatch: After simplification, term | hpFS | has type'}
+[09:21:42] === Iteration 1 START ===
+[09:21:42] === Iteration 2 START ===
+[09:21:42] Session picked problem op_000146
+{'event': 'phase', 'phase': 'problem_selected', 'ts': 1775953302, 'iteration': 1, 'problem_id': 'op_000146'}
+[09:21:42] Session picked problem op_000147
+{'event': 'phase', 'phase': 'problem_selected', 'ts': 1775953303, 'iteration': 2, 'problem_id': 'op_000147'}
+{'event': 'phase', 'phase': 'prover_statement', 'ts': 1775953303, 'iteration': 1, 'problem_id': 'op_000146', 'mode': 'worker', 'repair_round': 0}
+{'event': 'phase', 'phase': 'prover_statement', 'ts': 1775953303, 'iteration': 2, 'problem_id': 'op_000147', 'mode': 'worker', 'repair_round': 0}

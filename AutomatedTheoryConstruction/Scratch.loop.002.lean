@@ -68,7 +68,8 @@ theorem thm_accepts_reachable_least_fixpoint_000147 : ∀ p : AtomicResidualStat
         constructor
         · simp
         · exact hpR
-      simpa [hFS] using hpFS
+      rw [← hFS]
+      exact hpFS
     have hSstep :
         ∀ q : AtomicResidualState,
           q ∈ R →
@@ -81,7 +82,8 @@ theorem thm_accepts_reachable_least_fixpoint_000147 : ∀ p : AtomicResidualStat
               {q : AtomicResidualState | q ∈ R ∧ ∃ r : AtomicResidualState, AtomicResidualGraphStep q r ∧ r ∈ S} := by
         right
         exact ⟨hqR, hsucc⟩
-      simpa [hFS] using hqFS
+      rw [← hFS]
+      exact hqFS
     exact hleast S hSR hSbase hSstep
 
 end AutomatedTheoryConstruction

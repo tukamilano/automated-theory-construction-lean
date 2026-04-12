@@ -43,6 +43,6 @@
   },
   "theory_snapshot": "The theory now has a stable exact-reachable-region core: from any residual root, the reachable region is finite, degree-descending, and acceptance is exactly reachability of the distinguished singleton base state. On that exact region, acceptance already has canonical Boolean-label, least predecessor-closed subset, and topological-order characterizations, so the main structural gap is no longer semantic correctness but explicit computation. The remaining frontier is to turn those abstract descriptions into a concrete arbitrary reverse-topological fold and, in parallel, to extract exact saturation-round and path-length control from the same descent structure. Verified failures of ambient same-atom finiteness and verified mixed-terminal behavior continue to rule out ambient overapproximation and universal-sink summaries as high-value directions.",
   "updated_at_iteration": 0,
-  "updated_at_run_id": "20260412-090639-loop",
+  "updated_at_run_id": "20260412-092142-loop",
   "version": 1
 }

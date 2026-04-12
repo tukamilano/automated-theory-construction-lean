@@ -104,6 +104,7 @@ SCRATCH_OPEN_DECLS = (
 DERIVED_TEMPLATE = (
     "import Mathlib\n"
     "import AutomatedTheoryConstruction.Theory\n\n"
+    "import AutomatedTheoryConstruction.Generated.Manifest\n\n"
     "set_option autoImplicit false\n\n"
     "namespace AutomatedTheoryConstruction\n\n"
     "open Mathling.Lambek.ProductFree\n"
