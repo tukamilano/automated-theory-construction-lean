@@ -1,0 +1,176 @@
+{
+  "source_id": "archive_illc_uva_nl_ramanayake_2021_decidability_and_3a2f75afa687",
+  "source_url": "https://archive.illc.uva.nl/alg-coalg/slides/ramanayake-2021.pdf",
+  "label": "Decidability and complexity for substructural logics with weakening or contraction",
+  "title": "Decidability and complexity for substructural logics with weakening or contraction",
+  "content_type": "application/pdf",
+  "extract_confidence": "high",
+  "abstract": "Extensions of HFLew: contraction replaced by weakening X⇒ A weakeningX , Y⇒ A 1. Prominent logic: monoidal t-norm based fuzzy logic MTL = FLew + (p→ q)∨ (q→ p) prelinearity axiom Describes the common behaviours of all fuzzy logics based on left-continuous t-norms 2. Previous argument insuﬃcient when c replaced by w If we encounter (4 , 4) we can prohibit smaller elements like (4 , 3). . . (4, 3)⇒ F height-preserving weakening(4, 4)⇒ F But how to prohibit inﬁnitely many larger elements? (inﬁnite branch) (4, 4), (4, 5), (4, 6), . . . ,(4, 100), . . . 3. Time to go down the Lambek calculus forward proof search ↪→ forward proof search 18",
+  "chunks": [
+    {
+      "chunk_id": "chunk_023",
+      "section": "",
+      "page": null,
+      "text": "Extensions of HFLew: contraction replaced by weakening X⇒ A weakeningX , Y⇒ A 1. Prominent logic: monoidal t-norm based fuzzy logic MTL = FLew + (p→ q)∨ (q→ p) prelinearity axiom Describes the common behaviours of all fuzzy logics based on left-continuous t-norms 2. Previous argument insuﬃcient when c replaced by w If we encounter (4 , 4) we can prohibit smaller elements like (4 , 3). . . (4, 3)⇒ F height-preserving weakening(4, 4)⇒ F But how to prohibit inﬁnitely many larger elements? (inﬁnite branch) (4, 4), (4, 5), (4, 6), . . . ,(4, 100), . . . 3. Time to go down the Lambek calculus forward proof search ↪→ forward proof search 18"
+    },
+    {
+      "chunk_id": "chunk_002",
+      "section": "",
+      "page": null,
+      "text": "▶ This talk is about decidability & complexity results for substructural logics ▶ Substructural logics are obtained by omitting some of the structural properties of intuitionistic/classical logic. . . X , Y , Y⇒ Π contractionX , Y⇒ Π X⇒ Π weakeningX , Y⇒ Π X , A, B, Y⇒ Π exchangeX , B, A, Y⇒ Π ▶ . . . and then adding proper axioms (many, many, many possibilities) (p→ q)∨ (q→ p) ¬(p· q)∨ ((p∧ q)→ p· q) pn−1→ pn ¬p∨¬¬ p ¬(p· q)n∨ ((p∧ q)n−1→ (p· q)n) . . . more connectives! some connectives (that can be conﬂated in presence of structural rules) separate in their absence. E.g. omit w or c: ∧ separates as∧ and·. Omit e: implication → separates as left and right implication. ▶ resource-consciousness (lots more expressivity, greater complexity) ▶ Many applications software program veriﬁcation static analysis of run-time memory allocation fuzzy systems modelling formal reasoning about vagueness computational linguistics syntax and syntactic types of natural language 1"
+    },
+    {
+      "chunk_id": "chunk_007",
+      "section": "",
+      "page": null,
+      "text": "This talk is joint work and based on the following. 1. Extended Kripke lemma and decidability for hypersequent substructural logics. RR. LICS 2020. 2. Decidability and Complexity in Weakening and Contraction Hypersequent Substructural Logics. A. R. Balasubramanian, Timo Lang, RR. LICS 2021. A. R. Balasubramanian TU Munich Timo Lang UCL ↪→ starting point Kripke and Urquhart 3 Kripke’s proof of decidability applied to FLec (1959) Multiplicative fragment p⇒ p X , Y , Y⇒ C contractionX , Y⇒ C A, B, X⇒ C A· B, X⇒ C X⇒ A Y ⇒ B X , Y⇒ A· B A, X⇒ B X⇒ A→ B X⇒ A B , Y⇒ C A→ B, X , Y⇒ C ⇒ 1 X⇒ C 1, X⇒ C X⇒ X⇒ 0 0⇒ Additive rules Ai , X⇒ C A1∧ A2, X⇒ C X⇒ A X ⇒ B X⇒ A∧ B A, X⇒ C B , X⇒ C A∨ B, X⇒ C X⇒ A1 X⇒ A1∨ A2 No cut-rule! ↪→ backward proof search tree 4"
+    },
+    {
+      "chunk_id": "chunk_019",
+      "section": "",
+      "page": null,
+      "text": "Hypersequent calculus - a calculus on multisets of sequents E.g. of a hypersequent p, q⇒ r| p∧ q⇒| r⇒ r∨ p Example of a hypersequent rule ···|···|···| X1, X2⇒ B ···|···|···| Y1, Y2⇒ C com···|···|···| X1, Y1⇒ B| Y2, Y2⇒ C Hypersequent calculi invented independently (Mints, Pottinger, Avron) Let HFLe denote hypersequent calculus for FLe 1. lots of extensions of FLe have cut-free hypersequent calculi (Ciabattoni Galatos Terui 2008) 2. above paper: lots of extensions of FLec and FLew have cut-free hypersequent calculi. Our results will apply to all these calculi 3. Independent characterisation of extensions via substructural hierarchy ↪→ representing hypersequents 14"
+    },
+    {
+      "chunk_id": "chunk_004",
+      "section": "",
+      "page": null,
+      "text": "Theorem ( R, 2020) Every extension of FLec that has a cut-free hypersequent calculus is decidable Theorem ( Balasubramanian, Lang, R, 2020) Every extension of FLew that has a cut-free hypersequent calculus is decidable Theorem ( Balasubramanian, Lang, R, 2020) The above logics are in Fωω (hyper-Ackermannian upper bound) ▶ FLec≈ intuitionistic sequent calculus omitting weakening FLew≈ intuitionistic sequent calculus omitting contraction ▶ decidability problem: F provable in FLec + Ax? ( F∈ FLec + Ax?) ▶ Hypersequent calculi extend sequent calculi (multisets of sequents) and support cut-free proof systems for many substructural logics 2"
+    },
+    {
+      "chunk_id": "chunk_001",
+      "section": "",
+      "page": null,
+      "text": "Decidability and complexity for substructural logics with weakening or contraction Revantha Ramanayake Bernoulli Institute for Mathematics, Computer Science and Artiﬁcial Intelligence University of Groningen Algebra|Coalgebra Seminar (ILLC) - November 3, 2021 1"
+    },
+    {
+      "chunk_id": "chunk_027",
+      "section": "",
+      "page": null,
+      "text": "[1] A. R. Balasubramanian. Complexity of controlled bad sequences over ﬁnite sets of Nd. LICS 2020. [2] A. Ciabattoni, N. Galatos, K. Terui. From axioms to analytic rules in nonclassical logics. LICS 2008. [3] D. Figueira, S. Figueira, S. Schmitz, P. Schnoebelen. Ackermannian and primitive-recursive bounds with dickson’s lemma. LICS 2011. [4] N. Galatos, G. St. John. Most simple extensions of FLe are undecidable. JSL 2021. [5] S. Kripke. The problem of entailment (abstract). J. Symbolic Logic. 1959. [6] D. Larchey-Wendling. Constructive Decision via Redundancy-Free Proof-Search. IJCAR 2018. [7] J. Riche, R. Meyer. Kripke, Belnap, Urquhart and Relevant Decidability & Complexity. CSL 1998. [8] S. Schmitz. Implicational relevance logic is 2-EXPTIME-COMPLETE. J. Symbolic Logic. 2016. [9] S. Schmitz, P. Schnoebelen. Multiply-recursive upper bounds with Higman’s lemma. ICALP 2011. [10] A.Urquhart. The complexity of decision procedures in relevance logic. II. J. Symbolic Logic. 1999. 22"
+    },
+    {
+      "chunk_id": "chunk_018",
+      "section": "",
+      "page": null,
+      "text": "Extending Kripke’s argument to more logics 1. “Meyer had a bit of a problem at this point. He knew that the conclusion was true. . . but he did not believe it. Visions of [inﬁnite irredundant sequences] ﬂuttered through his dreams. . . he wanted an argument that he did believe” (Riche and Meyer, 1998). . . Dickson’s lemma 2. Kripke’s decidability argument is not too sensitive to the form of the proof rules 3. subformula property, contraction absorption, and suitable wqo to get ﬁniteness of irredundant proof trees 4. How can we extend to other logics? Some isolated results since 1959 5. sequent calculus meta-language too restrictive for cut-elimination/subformula property Solution: extend meta-language to get cut-freeness In other words: use a diﬀerent type of proof system where cut-elimination holds ↪→ hypersequents 13"
+    },
+    {
+      "chunk_id": "chunk_017",
+      "section": "",
+      "page": null,
+      "text": "Controlled bad sequences (Figueira, Figueira, Schmitz, Schnoebelen, 2011) (Schmitz, Schnoebelen, 2011) 1. bad sequence a0, a1, . . . is (g , n)-controlled over a normed wqo ( A,∥∥ ,≤A) if there is a primitive recursive g s.t. ∥a0∥≤ n ∥a1∥≤ g(n) ∥a2∥≤ g(g(n)) ∥ak∥≤ g k(n) and{a∈ A s.t.∥a∥≤ n} ﬁnite for every n∈ N 2. dominant term in complexity: max length of bad sequence 3. The length function theorem expresses this length. Since 4. ∃ control function g bounding premise size in terms of conclusion 5. FLec decision problem is in Fω i.e. primitive recursive functions composed with a single application of an Ackermannian function 6. Urquhart showed that this is tight by giving matching lower bounds. 7. Also: implicational fragment is 2 EXPTIME-complete (Schmitz, 2016). ↪→ questions? extending to other logics 12"
+    },
+    {
+      "chunk_id": "chunk_014",
+      "section": "",
+      "page": null,
+      "text": "Terminating proof search tree via redundancy ver 1 (repetition check). A repetition of a sequent on the branch is detected u0 . . . u3 = (2, 2)⇒C uN uN+1 = (2, 2)⇒C using 2-tuples just for this example in general it is |subf(F )|-tuples; 10 Terminating proof search tree via redundancy ver 1 (repetition check). uN+1 = u3 hence uN+1 is redundant: any proof above it can be planted at u3 u0 . . . u3 = (2, 2)⇒C uN uN+1 = (2, 2)⇒C what if uN+1 = (3, 2)? 10 Terminating proof search tree via redundancy ver 2 (order check). uN+1≥ u3 hence uN+1 is redundant: any proof above it can be made into a proof of u3 of no greater height via Curry’s lemma u0 . . . u3 = (2,2)⇒C uN uN+1= (3,2)⇒C (a1,a2)≤(b1,b2)≡a1≤b1 anda2≤b2 ↪→ enough to get ﬁnite proof search tree 10"
+    },
+    {
+      "chunk_id": "chunk_013",
+      "section": "",
+      "page": null,
+      "text": "We obtain a new calculus by adding the ﬁnitely many variant rules. Lemma (Curry’s lemma: hp contraction in new calculus) If X , Y , Y⇒ C provable then X , Y⇒ C provable with no greater height We are not yet home since variant rules incorporate some amount of contraction. . . . . . so sequents can get bigger upwards A→ B⇒ A A → B, B⇒ →L2 A→ B⇒ If|A|≫| B| then the left premise is much bigger than the conclusion ↪→ representing sequents 8 Aside. Simplifying the notation: LHS as sequent as n-tuple Represent the LHS of sequent in a proof of F as element in N|subf(F )|: Fix an ordering of the subformulas of F Suppose subf( F ) ={p, q, r , r→ q} q, r→ q, q, p⇒ r written as ( p 1, q 2, r 0, r→q 1 ) ⇒ r ↪→ deﬁne a branch termination condition 9"
+    },
+    {
+      "chunk_id": "chunk_005",
+      "section": "",
+      "page": null,
+      "text": "Theorem ( R, 2020) Every extension of FLec that has a cut-free hypersequent calculus is decidable Theorem ( Balasubramanian, Lang, R, 2020) Every extension of FLew that has a cut-free hypersequent calculus is decidable Theorem ( Balasubramanian, Lang, R, 2020) The above logics are in Fωω (hyper-Ackermannian upper bound) ▶ Algebraic semantics as subvarieties of FL-algebras A =⟨A,∨,∧,·,\\, /, 1, 0⟩ is FL-algebra if⟨A,∨,∧,·,\\, /, 1⟩ is a residuated lattice and 0∈ A ▶ A FL-algebra satisfying x· y≤ y· x (∀x, y∈ A) is called commutative 0≤ x≤ 1 (∀x∈ A) is called weakenable (integral & zero-bounded) x≤ x· x (∀x∈ A) is called contractive ▶ FLec = logic of commutative contractive FL-algebras FLew = logic of commutative weakenable FL-algebras 2"
+    },
+    {
+      "chunk_id": "chunk_021",
+      "section": "",
+      "page": null,
+      "text": "HFLec extensions: what do we need to extend? 1. absorb contraction by adding variant rules h1 hN rh0 original h1 hN r (k,l) with h0 ⇝k c h′ ⇝l EC gg variants k≤ K , l≤ L 2. need to show that these variants suﬃce to eliminate all contractions 3. For ( X1, . . . ,Xn+1), (Y1, . . . ,Yn+1)∈ (Pf (Nn))n+1 deﬁne (X1, . . . ,Xn+1)≤min (Y1, . . . ,Yn+1) iﬀ∀y∈ Yi∃x∈ Xi(x≤ y) for every i 4. X≤min Y means we can go from Y to X by hypersequent Curry’s lemma 5. Using length function theorem for controlled bad sequences for this wqo (Balasubramanian, 2020): decision problem for each of the FLec extensions under consideration is in Fωω 6. single application hyper-Ackermannian & multiply-recursive functions ↪→ summary 16"
+    },
+    {
+      "chunk_id": "chunk_020",
+      "section": "",
+      "page": null,
+      "text": "Representing hypersequents in (Pf (Nn))n+1 1. Let F0 be empty formula 2. A hypersequent built from formulas F1, . . . ,Fn is written sequent also called component    X1⇒ F0 | X2⇒ F0| . . .| Xk0⇒ F0| Y1⇒ F1| Y2⇒ F1| . . .| Yk1⇒ F1| . . . Z1⇒ Fn| Z2⇒ Fn| . . .| Zkn⇒ Fn ↪→ hypersequent is an element of 15 Representing hypersequents in (Pf (Nn))n+1 1. Let F0 be empty formula 2. A hypersequent built from formulas F1, . . . ,Fn is written {X1,...,Xk0}∈Pf (Nn)    X1⇒ F0| X2⇒ F0| . . .| Xk0⇒ F0| Y1⇒ F1| Y2⇒ F1| . . .| Yk1⇒ F1| . . . Z1⇒ Fn| Z2⇒ Fn| . . .| Zkn⇒ Fn 3. So a hypersequent is an element of Pf (Nn)×P f (Nn)× . . .×P f (Nn)   n+1 ↪→ what else to get FLec extensions 15"
+    },
+    {
+      "chunk_id": "chunk_011",
+      "section": "",
+      "page": null,
+      "text": "Checking provability in FLec via backward proof search 1. INPUT: formula OUTPUT: YES (it is provable) / NO 2. Backward proof search all possible premises as children of conclusion Only subformulas of input occur: cut-elimination ↪→subformula property 3. if it terminates then we obtain decision procedure F is provable iﬀ subtree of proof search tree is a proof 4. No termination since contraction can be applied backwards indeﬁnitely A⇒B A,A⇒B A,A,A⇒B ↪→ how to solve contraction/get termination? 5 Structural proof theory: if there’s a problematic rule. . . ↪→ absorbing contraction 6 Structural proof theory: if there’s a problematic rule. . . eliminate it! ↪→ absorbing contraction 6"
+    },
+    {
+      "chunk_id": "chunk_026",
+      "section": "",
+      "page": null,
+      "text": "Further questions 1. Can we ﬁnd a logic in Fωω− Fω ? cut-freeness seems to need hypersequents naturally lead to Fωω 2. lower bound and sharper upper bounds for MTL This was ﬁrst syntactic proof and ﬁrst complexity bound for MTL (many would suspect that more modest bounds should hold) 3. Simpler lower bound problem? lower bounds for FLec / FLew + X , X , Z⇒ F Y , Y , Z⇒ F scomX , Y , Z⇒ F ‘double antecedent, share between premises’ For example p, q4⇒ p3, q2⇒ p2, q3⇒ What type of (counter?) machine could we embed here? 4. Is uninorm logic HFLe + com decidable ? Some extensions of HFLe are undecidable: Galatos and St. John, 2021. 21"
+    },
+    {
+      "chunk_id": "chunk_006",
+      "section": "",
+      "page": null,
+      "text": "Theorem ( R, 2020) Every extension of FLec that has a cut-free hypersequent calculus is decidable Theorem ( Balasubramanian, Lang, R, 2020) Every extension of FLew that has a cut-free hypersequent calculus is decidable Theorem ( Balasubramanian, Lang, R, 2020) The above logics are in Fωω (hyper-Ackermannian upper bound) ▶ Fω = decision problems whose running time is primitive recursive functions composed with single Ackermannian function Fωω = decision problems whose running time is multiply-recursive functions composed with single hyper-Ackermannian function ▶ Urquhart 1999 showed that FLec is in Fω with matching lower bound 2"
+    },
+    {
+      "chunk_id": "chunk_022",
+      "section": "",
+      "page": null,
+      "text": "What we have seen so far INPUT: formula of size n (so at most n subformulas) branch of naive proof search tree ↭ sequence in (Pf (Nn))n+1 branch with no hypersequent hp-contractible to an earlier hypersequent (order check) ↭ bad sequence in (Pf (Nn))n+1 no inﬁnite bad sequence (wqo) ↭ proof search terminates proof search with order check & premise size is ﬁxed polynomial in conclusion ↭ a branch is a controlled bad sequence in (Pf (Nn))n+1 if there is length function theorem: max length for controlled bad sequences ↭ there is a max length for a branch ↪→ upper bound ↪→ case of weakening 17"
+    },
+    {
+      "chunk_id": "chunk_024",
+      "section": "",
+      "page": null,
+      "text": "Forward proof search from input F S0 is the (ﬁnite) set of initial sequents built from subformulas in F Def of S1 u∈ S0 ... weakening (how much?) ... v rw ?w∈ S1? u∈ S0 ... essential weakening ... surplus weakening v rw ⇝ u∈ S0 ... essential weakening ... ∃v′ r w′∈ S1 surplus weakening w̸∈ S1 1. surplus weakening: weakening that is permutable from before r to after r 2. Obtain ( S0, S1, . . .) s.t. Si+1 ﬁnite and computable from Si 3. what ‘essential” means depends on the rules in the calculus 4. aim: show there exists N s.t. SN+1 = SN ↪→ what else to get FLew extensions 19"
+    },
+    {
+      "chunk_id": "chunk_015",
+      "section": "",
+      "page": null,
+      "text": "Terminating proof search tree via redundancy u0 . . . u3 = (2,2)⇒C uN uN+1= (3,2)⇒C (a1,a2)≤(b1,b2)≡a1≤b1 anda2≤b2 1. every branch ( u0, u1, . . . ,uN) is a bad sequence i.e. i < j implies ui̸≤ uj bad sequences example 1: 5 , 2, 1, 0 example 2: (2 , 2), (1, 1), (0, 3), (0, 2), (0, 1), (0, 0) 2. ( Nk ,≤) is a well-quasi-ordering i.e. every inﬁnite sequence has an increasing pair ui≤ uj with i < j i.e. an inﬁnite sequence cannot be a bad sequence 3. ﬁnitely branching tree & no inﬁnite branch = proof search tree ﬁnite ↪→ complexity 10"
+    },
+    {
+      "chunk_id": "chunk_010",
+      "section": "",
+      "page": null,
+      "text": "Checking provability in FLec via backward proof search 1. INPUT: formula OUTPUT: YES (it is provable) / NO 2. Backward proof search all possible premises as children of conclusion r∨s⇒p q⇒t ⇒p q,r∨s⇒t p→q,r⇒t p→q,s⇒t p→q,r∨s⇒t Only subformulas of input occur: cut-elimination ↪→subformula property 3. if it terminates then we obtain decision procedure F is provable iﬀ subtree of proof search tree is a proof 4. No termination since contraction can be applied backwards indeﬁnitely ↪→ no termination since contraction 5"
+    },
+    {
+      "chunk_id": "chunk_025",
+      "section": "",
+      "page": null,
+      "text": "What do we need to extend? 1. a hypersequent is an element of ( Pf (Nn))n+1 2. For ( X1, . . . ,Xd), (Y1, . . . ,Yd)∈ (Pf (Nn))n+1 deﬁne (X1, . . . ,Xn+1)≤maj (Y1, . . . ,Yn+1) iﬀ∀x∈ Xi∃y∈ Yi(x≤ y) for every i 3. X≤maj Y means that we can go from X to Y by hypersequent Curry lemma analogue 4. majoring ordering is a wqo so there exists N such that SN+1 = SN 5. Using length function theorem (Balasubramanian 2020) to get max value for N: each FLew extensions under consideration is in Fωω ↪→ Further questions 20"
+    },
+    {
+      "chunk_id": "chunk_012",
+      "section": "",
+      "page": null,
+      "text": "IDEA: permute contraction rules upwards as much as possible p, r , r⇒ q →Rr , r⇒ p→ q cr⇒ p→ q ⇝ p, r , r⇒ q cp, r⇒ q →Rr⇒ p→ q When permutation is impossible. . . p → q ⇒ p p → q, q ⇒ →Lp → q, p → q, p → q   3 ⇒ e.g. no way to permute c above this →L Absorb c instead of permuting it (i.e. add following variant rules to calculus) p → q ⇒ p p → q, q ⇒ →L1 p → q, p → q   2 ⇒ variant: one implicit contraction p → q ⇒ p p → q, q ⇒ →L2 p → q ⇒ variant: two implicit contractions Curry’s lemma 7"
+    },
+    {
+      "chunk_id": "chunk_016",
+      "section": "",
+      "page": null,
+      "text": "Urquhart’s tight complexity bounds (1999) 1. upper bound: what is the height of the proof-search tree under redundancy check? This is the dominant term for complexity 2. No bound in general for bad sequences. After all: 3. (1 , 0), (0, 100) or even (1 , 0), (0, 1000) . . . i.e. arbitrarily large jumps 4. However no rule in FLec witnesses such a great jump from conclusion to premise (for ﬁxed calculus: every premise is some ﬁxed polynomial in size of conclusion) ↪→ controlled bad sequences 11"
+    },
+    {
+      "chunk_id": "chunk_008",
+      "section": "",
+      "page": null,
+      "text": "Checking provability in FLec via backward proof search 1. INPUT: formula OUTPUT: YES (it is provable) / NO 2. Backward proof search all possible premises as children of conclusion r∨s⇒p q⇒t ⇒p q,r∨s⇒t p→q,r⇒t p→q,s⇒t p→q,r∨s⇒t Only subformulas of input occur: cut-elimination ↪→subformula property 3. if it terminates then we obtain decision procedure F is provable iﬀ subtree of proof search tree is a proof 4. No termination since contraction can be applied backwards indeﬁnitely 5"
+    },
+    {
+      "chunk_id": "chunk_009",
+      "section": "",
+      "page": null,
+      "text": "Checking provability in FLec via backward proof search 1. INPUT: formula OUTPUT: YES (it is provable) / NO 2. Backward proof search all possible premises as children of conclusion r∨s⇒p q⇒t ⇒p q,r∨s⇒t p→q,r⇒t p→q,s⇒t p→q,r∨s⇒t Only subformulas of input occur: cut-elimination ↪→subformula property 3. if it terminates then we obtain decision procedure F is provable iﬀ subtree of proof search tree is a proof 4. No termination since contraction can be applied backwards indeﬁnitely 5"
+    },
+    {
+      "chunk_id": "chunk_003",
+      "section": "",
+      "page": null,
+      "text": "Theorem ( R, 2020) Every extension of FLec that has a cut-free hypersequent calculus is decidable Theorem ( Balasubramanian, Lang, R, 2020) Every extension of FLew that has a cut-free hypersequent calculus is decidable Theorem ( Balasubramanian, Lang, R, 2020) The above logics are in Fωω (hyper-Ackermannian upper bound) An immediate consequence: Corollary The fuzzy logic MTL = FLew + (p→ q)∨ (q→ p) is in Fωω 2"
+    }
+  ],
+  "source_kind": "repository_pdf",
+  "retrieval_priority": "high",
+  "direct_reading_access": "direct_fulltext"
+}

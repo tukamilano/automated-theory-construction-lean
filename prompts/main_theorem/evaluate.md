@@ -15,6 +15,10 @@
 - A result that looks like a lemma, corollary, or minor variant should not pass.
 - Treat `pass` as exceptional.
 - `revise` is allowed only when there is a concrete salvage path that could plausibly turn the candidate into a paper unit; otherwise use `reject`.
+- If the literature comparison rests only on title-level or report-level evidence, do not upgrade uncertainty into novelty.
+- Prefer direct-reading paper chunks in `materials.paper_excerpt_context` over high-level summaries when deciding whether the delta is theorem-level.
+- If `download_path` or `paper_record_path` is present for a dangerous baseline, treat the locally cached source as the preferred reading path.
+- Treat `qna`, `portal_redirect`, `metadata_portal`, and `image_only_pdf` materials as insufficient for a strong novelty claim.
 
 ## evaluation_axes
 - `novelty`: is the delta from the closest baseline actually nontrivial?
@@ -24,10 +28,12 @@
 ## pass_gate
 Only return `pass` if all of the following are credibly satisfied.
 - The closest prior-work baseline is identified clearly enough.
+- The baseline comparison is supported by direct-reading evidence when such evidence is available in the materials bundle.
 - The delta from prior work is not plausibly minor or cosmetic.
 - The candidate is not merely a lemma, corollary, or local continuation.
 - A minimal publishable unit can be described concretely.
 - The strongest reviewer objection looks answerable.
+- No directly read anchor appears to already state the same theorem-level boundary in near-equivalent form.
 
 If any pass-gate item is weak, uncertain, or unsupported, do not return `pass`.
 
@@ -42,6 +48,7 @@ If any pass-gate item is weak, uncertain, or unsupported, do not return `pass`.
 - `minimal_publishable_unit` should describe the smallest plausible paper-shaped package around the candidate.
 - `salvage_plan` may be empty only when rejection is terminal and no credible salvage path is visible.
 - `reason` should be the decisive final rationale, not a generic compliment.
+- If direct-reading evidence is still missing for the most dangerous baseline, the reason should say that explicitly.
 
 ## output_schema
 ```json

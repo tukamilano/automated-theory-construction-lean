@@ -1,6 +1,6 @@
 # Lambek Materials Index
 
-This directory organizes the Lambek structural-theory materials for ATC use without rewriting the main report.
+This directory organizes the materials derived from `Lambek_Calculus_Structural_Theory_Research.md` without rewriting the main report.
 
 ## Files
 

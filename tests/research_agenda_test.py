@@ -23,10 +23,13 @@ from main_theorem.main_theorem_session import request_main_theorem_mapping
 from main_theorem.main_theorem_session import request_main_theorem_retrieval
 from main_theorem.main_theorem_session import request_main_theorem_suggestion
 from materials import load_materials
+from materials_pipeline import build_download_metadata
+from materials_pipeline import save_download_index
 from materials_pipeline import extract_paper_record
 from materials_pipeline import classify_source_reference
 from materials_pipeline import parse_source_link_entries
 from materials_pipeline import save_paper_record
+from materials_sync import ensure_materials_derived_current
 from research_agenda import DEFAULT_RESEARCH_AGENDA_PATH
 from research_agenda import LEGACY_RESEARCH_AGENDA_PATH
 from research_agenda import empty_research_agenda
@@ -529,10 +532,10 @@ def test_worker_payloads_include_research_agenda() -> None:
             raise RuntimeError(f"missing captured payload for {task_type}")
         if payload.get("research_agenda") != agenda:
             raise RuntimeError(f"missing research_agenda in {task_type} payload: {payload}")
-        if task_type == "main_theorem_retrieve":
+        if task_type in {"main_theorem_retrieve", "main_theorem_map", "main_theorem_evaluate"}:
             retrieval_materials = payload.get("materials")
             if not isinstance(retrieval_materials, dict):
-                raise RuntimeError(f"missing retrieval materials payload: {payload}")
+                raise RuntimeError(f"missing compact review materials payload: {payload}")
             if retrieval_materials.get("materials_dir") != "":
                 raise RuntimeError(f"unexpected retrieval materials_dir: {retrieval_materials}")
             paper_excerpt_context = retrieval_materials.get("paper_excerpt_context", [])
@@ -649,6 +652,51 @@ This is a reusable summary that may become out of date.
         raise RuntimeError(f"unexpected report confidence in materials payload: {payload}")
 
 
+def test_ensure_materials_derived_current_generates_files_from_root_report() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        materials_dir = Path(tmpdir) / "materials"
+        materials_dir.mkdir(parents=True, exist_ok=True)
+        report_path = materials_dir / "Sample_Structural_Theory_Research.md"
+        report_path.write_text(
+            """# Sample Structural Theory Research
+
+## 1. Structural Correspondences
+
+Some discussion of structural correspondences and language hierarchies.
+
+## 2. Invertibility and Focusing
+
+Some discussion of invertibility in proof search.
+
+## 10. Canonical Objectives and Future Directions
+
+1. **Mapping the Decidability Frontier**: explain the boundary precisely.
+2. **Formalizing Structural Preservation**: keep the syntax-semantics interface sharp.
+
+## Works Cited
+
+1. Example Paper, accessed on April 11, 2026, [https://example.com/paper.pdf](https://example.com/paper.pdf)
+2. Another Paper, accessed on April 11, 2026, [https://example.com/other](https://example.com/other)
+""",
+            encoding="utf-8",
+        )
+
+        report = ensure_materials_derived_current(materials_dir)
+        payload = load_materials(materials_dir)
+        reports = report.get("reports", [])
+        if not isinstance(reports, list) or reports[0].get("generated_dir") != "sample":
+            raise RuntimeError(f"unexpected materials sync report: {report}")
+        generated_dir = materials_dir / "sample"
+        for filename in ("00_index.md", "02_section_map.md", "03_source_links.md", "04_problem_seeds.md"):
+            if not (generated_dir / filename).exists():
+                raise RuntimeError(f"missing generated file {(generated_dir / filename)}")
+        source_link_entries = payload.get("source_link_entries", [])
+        if not isinstance(source_link_entries, list) or source_link_entries[0].get("url") != "https://example.com/paper.pdf":
+            raise RuntimeError(f"generated source links not loaded as expected: {payload}")
+        if payload.get("main_theorem") == []:
+            raise RuntimeError(f"generated main_theorem guidance should not be empty: {payload}")
+
+
 def test_parse_source_link_entries_extracts_labels_and_urls() -> None:
     entries = parse_source_link_entries(
         [
@@ -739,6 +787,17 @@ def test_load_materials_includes_cached_paper_records() -> None:
             label="Example paper",
             content_type="text/html",
         )
+        save_download_index(
+            cache_dir,
+            [
+                build_download_metadata(
+                    label="Example paper",
+                    url="https://example.com/paper.html",
+                    content_type="text/html",
+                    local_relpath="downloads/example.html",
+                )
+            ],
+        )
         save_paper_record(cache_dir, record)
 
         payload = load_materials(materials_dir)
@@ -748,6 +807,13 @@ def test_load_materials_includes_cached_paper_records() -> None:
         raise RuntimeError(f"expected one paper_cache record, got: {payload}")
     if paper_cache[0].get("title") != "Example Paper":
         raise RuntimeError(f"unexpected paper_cache title: {payload}")
+    if paper_cache[0].get("download_relpath") != "downloads/example.html":
+        raise RuntimeError(f"missing cached download relpath on paper record: {payload}")
+    if not str(paper_cache[0].get("download_path", "")).endswith("/downloads/example.html"):
+        raise RuntimeError(f"missing cached download path on paper record: {payload}")
+    source_link_entries = payload.get("source_link_entries", [])
+    if not isinstance(source_link_entries, list) or source_link_entries[0].get("download_relpath") != "downloads/example.html":
+        raise RuntimeError(f"expected source link entry to be enriched with cache paths: {payload}")
 
 
 def test_extract_paper_record_discards_portal_redirect_boilerplate() -> None:
@@ -768,6 +834,52 @@ def test_extract_paper_record_discards_portal_redirect_boilerplate() -> None:
         raise RuntimeError(f"unexpected redirect source kind: {record}")
     if record.get("extract_confidence") != "low" or record.get("chunks") != [] or record.get("abstract") != "":
         raise RuntimeError(f"portal redirect should not survive as readable paper content: {record}")
+
+
+def test_extract_paper_record_marks_scanned_pdf_as_image_only() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        pdf_path = Path(tmpdir) / "scan.pdf"
+        pdf_path.write_bytes(
+            b"%PDF-1.5\n1 0 obj<</Subtype/Image/Filter/CCITTFaxDecode>>endobj\n2 0 obj<</ProcSet[/PDF/ImageB/ImageI]>>endobj\n"
+        )
+        record = extract_paper_record(
+            pdf_path,
+            source_id="scan_source",
+            source_url="https://example.com/scan.pdf",
+            label="Scanned PDF",
+            content_type="application/pdf",
+        )
+    if record.get("source_kind") != "scanned_pdf":
+        raise RuntimeError(f"expected scanned pdf classification: {record}")
+    if record.get("direct_reading_access") != "image_only_pdf":
+        raise RuntimeError(f"expected image-only direct_reading_access: {record}")
+
+
+def test_extract_paper_record_marks_scanned_pdf_ocr_when_text_recovered() -> None:
+    original_extract_pdf_text = materials_pipeline._extract_pdf_text
+    original_is_probably_image_only_pdf = materials_pipeline._is_probably_image_only_pdf
+    try:
+        materials_pipeline._extract_pdf_text = lambda _path: ("The Lambek Calculus enriched with Additional Connectives Abstract ...", "medium")
+        materials_pipeline._is_probably_image_only_pdf = lambda _path: True
+        with tempfile.TemporaryDirectory() as tmpdir:
+            pdf_path = Path(tmpdir) / "scan.pdf"
+            pdf_path.write_bytes(b"%PDF-1.5\n")
+            record = extract_paper_record(
+                pdf_path,
+                source_id="scan_source",
+                source_url="https://example.com/scan.pdf",
+                label="Scanned PDF",
+                content_type="application/pdf",
+            )
+    finally:
+        materials_pipeline._extract_pdf_text = original_extract_pdf_text
+        materials_pipeline._is_probably_image_only_pdf = original_is_probably_image_only_pdf
+    if record.get("source_kind") != "scanned_pdf_ocr":
+        raise RuntimeError(f"expected scanned_pdf_ocr classification: {record}")
+    if record.get("direct_reading_access") != "ocr_partial":
+        raise RuntimeError(f"expected ocr_partial direct_reading_access: {record}")
+    if record.get("extract_confidence") != "medium":
+        raise RuntimeError(f"unexpected OCR recovery confidence: {record}")
 
 
 def test_build_main_theorem_retrieval_materials_prefilters_paper_cache() -> None:
@@ -849,6 +961,10 @@ def test_build_main_theorem_retrieval_materials_prefilters_paper_cache() -> None
                     },
                 ],
                 "paper_relpath": "papers/substructural.json",
+                "paper_record_relpath": "papers/substructural.json",
+                "paper_record_path": "/tmp/materials_cache/papers/substructural.json",
+                "download_relpath": "downloads/substructural.pdf",
+                "download_path": "/tmp/materials_cache/downloads/substructural.pdf",
             },
             {
                 "source_id": "unrelated",
@@ -868,6 +984,10 @@ def test_build_main_theorem_retrieval_materials_prefilters_paper_cache() -> None
                     }
                 ],
                 "paper_relpath": "papers/unrelated.json",
+                "paper_record_relpath": "papers/unrelated.json",
+                "paper_record_path": "/tmp/materials_cache/papers/unrelated.json",
+                "download_relpath": "downloads/unrelated.html",
+                "download_path": "/tmp/materials_cache/downloads/unrelated.html",
             },
             {
                 "source_id": "qna_source",
@@ -887,6 +1007,10 @@ def test_build_main_theorem_retrieval_materials_prefilters_paper_cache() -> None
                     }
                 ],
                 "paper_relpath": "papers/qna.json",
+                "paper_record_relpath": "papers/qna.json",
+                "paper_record_path": "/tmp/materials_cache/papers/qna.json",
+                "download_relpath": "downloads/qna.html",
+                "download_path": "/tmp/materials_cache/downloads/qna.html",
             },
         ],
     }
@@ -907,10 +1031,17 @@ def test_build_main_theorem_retrieval_materials_prefilters_paper_cache() -> None
     excerpt_context = payload.get("paper_excerpt_context", [])
     if not isinstance(excerpt_context, list) or excerpt_context[0].get("reference") != "Substructural logics":
         raise RuntimeError(f"unexpected paper excerpt context: {payload}")
+    if excerpt_context[0].get("download_relpath") != "downloads/substructural.pdf":
+        raise RuntimeError(f"expected local download path in paper excerpt context: {payload}")
+    if excerpt_context[0].get("paper_record_relpath") != "papers/substructural.json":
+        raise RuntimeError(f"expected paper record path in paper excerpt context: {payload}")
     if payload.get("source_links", [None])[0] != "Substructural logics - https://example.com/substructural":
         raise RuntimeError(f"expected relevant source link first: {payload}")
     if any("StackExchange" in item for item in payload.get("source_links", [])):
         raise RuntimeError(f"qna source link should be filtered from compact retrieval source links: {payload}")
+    source_link_entries = payload.get("source_link_entries", [])
+    if not isinstance(source_link_entries, list) or source_link_entries[0].get("download_relpath") != "downloads/substructural.pdf":
+        raise RuntimeError(f"expected source link entries to retain local access paths: {payload}")
 
 
 def test_retrieval_scoring_penalizes_incidental_body_overlap_without_title_match() -> None:
@@ -1142,6 +1273,7 @@ def main() -> int:
     test_parse_research_agenda_markdown_handles_numbered_headings_and_ignores_paragraphs()
     test_load_research_agenda_missing_file_is_empty()
     test_load_research_agenda_falls_back_to_legacy_root_file()
+    test_ensure_materials_derived_current_generates_files_from_root_report()
     test_seed_prompt_includes_research_agenda_guidance()
     test_runtime_initialization_clears_generation_sidecar_files()
     test_worker_payloads_include_research_agenda()

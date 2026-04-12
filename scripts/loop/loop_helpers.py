@@ -14,6 +14,7 @@ from common import normalize_open_problem_priority
 from guidance import build_guidance_context
 from materials import DEFAULT_MATERIALS_DIR
 from materials import load_materials
+from materials_sync import ensure_materials_derived_current
 from research_agenda import DEFAULT_RESEARCH_AGENDA_PATH
 from research_agenda import load_research_agenda
 
@@ -40,6 +41,7 @@ def load_current_research_agenda() -> dict[str, Any]:
 
 
 def load_current_materials() -> dict[str, Any]:
+    ensure_materials_derived_current(REPO_ROOT / DEFAULT_MATERIALS_DIR)
     return load_materials(REPO_ROOT / DEFAULT_MATERIALS_DIR)
 
 

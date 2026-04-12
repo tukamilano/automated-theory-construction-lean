@@ -14,6 +14,7 @@ sys.path.insert(0, str(REPO_ROOT / "scripts" / "loop"))
 
 import main_theorem.main_theorem_session as main_theorem_session
 from common import write_jsonl_atomic
+from guidance import build_guidance_context
 
 
 def main() -> int:
@@ -23,7 +24,10 @@ def main() -> int:
     original_evaluate = main_theorem_session.request_main_theorem_evaluation
     original_process = main_theorem_session.process_main_theorem
     original_guidance = main_theorem_session.load_current_guidance
+    original_materials_sync = main_theorem_session.ensure_materials_cache_current
     try:
+        materials_sync_calls: list[str] = []
+
         def fake_suggest(**_kwargs):
             return (
                 {
@@ -112,7 +116,52 @@ def main() -> int:
         main_theorem_session.request_main_theorem_mapping = fake_map
         main_theorem_session.request_main_theorem_evaluation = fake_evaluate
         main_theorem_session.process_main_theorem = fake_process_main_theorem
-        main_theorem_session.load_current_guidance = lambda _data_dir: {}
+        main_theorem_session.ensure_materials_cache_current = lambda materials_dir, **_kwargs: (
+            materials_sync_calls.append(str(materials_dir)),
+            {"materials_dir": str(materials_dir), "derived": {"reports": []}, "fetch": {"entries": []}, "extract": {"entries": []}},
+        )[1]
+        main_theorem_session.load_current_guidance = lambda _data_dir: build_guidance_context(
+            theory_state={},
+            research_agenda={},
+            materials={
+                "source_link_entries": [
+                    {
+                        "label": "beta paper",
+                        "url": "https://example.com/beta.pdf",
+                        "note": "",
+                        "source_kind": "repository_pdf",
+                        "retrieval_priority": "high",
+                        "direct_reading_access": "direct_fulltext",
+                        "download_path": "/tmp/materials_cache/downloads/beta.pdf",
+                        "paper_record_path": "/tmp/materials_cache/papers/beta.json",
+                    }
+                ],
+                "paper_cache": [
+                    {
+                        "source_id": "beta_source",
+                        "title": "beta paper",
+                        "source_url": "https://example.com/beta.pdf",
+                        "extract_confidence": "high",
+                        "source_kind": "repository_pdf",
+                        "retrieval_priority": "high",
+                        "direct_reading_access": "direct_fulltext",
+                        "abstract": "beta bridge result",
+                        "chunks": [
+                            {
+                                "chunk_id": "chunk_001",
+                                "section": "Abstract",
+                                "page": None,
+                                "text": "beta bridge theorem",
+                            }
+                        ],
+                        "paper_record_relpath": "papers/beta.json",
+                        "paper_record_path": "/tmp/materials_cache/papers/beta.json",
+                        "download_relpath": "downloads/beta.pdf",
+                        "download_path": "/tmp/materials_cache/downloads/beta.pdf",
+                    }
+                ],
+            },
+        )
 
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
@@ -168,6 +217,8 @@ def main() -> int:
 
             if report.get("session_events_file") != str(session_events_path):
                 raise RuntimeError(f"unexpected session_events_file in report: {report}")
+            if not materials_sync_calls:
+                raise RuntimeError("main theorem session should trigger materials sync before loading guidance")
             rows = [json.loads(line) for line in session_events_path.read_text(encoding="utf-8").splitlines() if line.strip()]
             if len(rows) != 4:
                 raise RuntimeError(f"expected 4 session events, got {rows}")
@@ -179,6 +230,11 @@ def main() -> int:
                 raise RuntimeError(f"unexpected second event: {rows[1]}")
             if rows[1].get("closest_items", [])[0].get("reference") != "beta paper":
                 raise RuntimeError(f"missing retrieval summary in retrieve event: {rows[1]}")
+            source_access = rows[1].get("source_access", {})
+            if source_access.get("paper_access", [])[0].get("download_path") != "/tmp/materials_cache/downloads/beta.pdf":
+                raise RuntimeError(f"missing local paper access in retrieve event: {rows[1]}")
+            if source_access.get("source_link_access", [])[0].get("paper_record_path") != "/tmp/materials_cache/papers/beta.json":
+                raise RuntimeError(f"missing local source-link access in retrieve event: {rows[1]}")
             if rows[2].get("event") != "main_theorem_map_result":
                 raise RuntimeError(f"unexpected third event: {rows[2]}")
             if rows[2].get("closest_baseline") != "beta baseline":
@@ -194,6 +250,7 @@ def main() -> int:
         main_theorem_session.request_main_theorem_evaluation = original_evaluate
         main_theorem_session.process_main_theorem = original_process
         main_theorem_session.load_current_guidance = original_guidance
+        main_theorem_session.ensure_materials_cache_current = original_materials_sync
 
     print("main theorem session event log test passed")
     return 0

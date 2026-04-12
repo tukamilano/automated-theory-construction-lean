@@ -41,6 +41,7 @@ from problem_expansion import store_expand_candidates_and_refresh
 from prompt_loader import load_prompt_file
 from main_theorem_rejection_memory import append_main_theorem_rejection_entry
 from main_theorem_rejection_memory import load_main_theorem_rejection_memory
+from materials_sync import ensure_materials_cache_current
 from theorem_commit import commit_verified_theorem_and_generation
 from theorem_reuse_memory import append_theorem_reuse_memory_entry
 from worker_client import invoke_worker_json
@@ -106,6 +107,8 @@ RETRIEVAL_SOURCE_KIND_BONUS = {
     "publisher_pdf": 10,
     "repository_pdf": 8,
     "direct_pdf": 8,
+    "scanned_pdf_ocr": 4,
+    "scanned_pdf": -6,
     "encyclopedia": 5,
     "preprint_abstract": 3,
     "proceedings_page": 2,
@@ -198,6 +201,57 @@ def _summarize_main_theorem_ranking(
             }
         )
     return ranking_summary
+
+
+def _summarize_retrieval_source_access(materials: dict[str, Any]) -> dict[str, list[dict[str, str]]]:
+    payload = dict(materials or {})
+
+    paper_access: list[dict[str, str]] = []
+    raw_papers = payload.get("paper_excerpt_context", [])
+    if isinstance(raw_papers, list):
+        for raw_item in raw_papers[:MAX_RETRIEVAL_PAPERS]:
+            if not isinstance(raw_item, dict):
+                continue
+            download_path = str(raw_item.get("download_path", "")).strip()
+            paper_record_path = str(raw_item.get("paper_record_path", "")).strip()
+            if not download_path and not paper_record_path:
+                continue
+            paper_access.append(
+                {
+                    "reference": str(raw_item.get("reference", "")).strip(),
+                    "source_url": str(raw_item.get("source_url", "")).strip(),
+                    "direct_reading_access": str(raw_item.get("direct_reading_access", "")).strip(),
+                    "extract_confidence": str(raw_item.get("extract_confidence", "")).strip(),
+                    "download_path": download_path,
+                    "paper_record_path": paper_record_path,
+                }
+            )
+
+    source_link_access: list[dict[str, str]] = []
+    raw_links = payload.get("source_link_entries", [])
+    if isinstance(raw_links, list):
+        for raw_item in raw_links[:MAX_RETRIEVAL_SOURCE_LINKS]:
+            if not isinstance(raw_item, dict):
+                continue
+            download_path = str(raw_item.get("download_path", "")).strip()
+            paper_record_path = str(raw_item.get("paper_record_path", "")).strip()
+            if not download_path and not paper_record_path:
+                continue
+            source_link_access.append(
+                {
+                    "label": str(raw_item.get("label", "")).strip(),
+                    "url": str(raw_item.get("url", "")).strip(),
+                    "source_kind": str(raw_item.get("source_kind", "")).strip(),
+                    "direct_reading_access": str(raw_item.get("direct_reading_access", "")).strip(),
+                    "download_path": download_path,
+                    "paper_record_path": paper_record_path,
+                }
+            )
+
+    return {
+        "paper_access": paper_access,
+        "source_link_access": source_link_access,
+    }
 
 
 def _append_main_theorem_session_event(
@@ -467,6 +521,10 @@ def _build_retrieval_paper_record(query_terms: set[str], record: dict[str, Any])
         "abstract": _truncate_retrieval_text(str(record.get("abstract", "")).strip()),
         "chunks": selected_chunks,
         "paper_relpath": str(record.get("paper_relpath", "")).strip(),
+        "paper_record_relpath": str(record.get("paper_record_relpath", "")).strip(),
+        "paper_record_path": str(record.get("paper_record_path", "")).strip(),
+        "download_relpath": str(record.get("download_relpath", "")).strip(),
+        "download_path": str(record.get("download_path", "")).strip(),
         "relevance_score": score,
     }
     return score, compact_record
@@ -476,9 +534,9 @@ def _select_retrieval_source_link_entries(
     query_terms: set[str],
     entries: list[dict[str, Any]],
     selected_source_urls: set[str],
-    source_metadata_by_url: dict[str, dict[str, str]],
-) -> list[dict[str, str]]:
-    scored_entries: list[tuple[int, dict[str, str]]] = []
+    source_metadata_by_url: dict[str, dict[str, Any]],
+) -> list[dict[str, Any]]:
+    scored_entries: list[tuple[int, dict[str, Any]]] = []
     for raw_entry in entries:
         if not isinstance(raw_entry, dict):
             continue
@@ -494,6 +552,14 @@ def _select_retrieval_source_link_entries(
             or str(raw_entry.get("retrieval_priority", "")).strip(),
             "direct_reading_access": str(cached_source_metadata.get("direct_reading_access", "")).strip()
             or str(raw_entry.get("direct_reading_access", "")).strip(),
+            "download_relpath": str(cached_source_metadata.get("download_relpath", "")).strip()
+            or str(raw_entry.get("download_relpath", "")).strip(),
+            "download_path": str(cached_source_metadata.get("download_path", "")).strip()
+            or str(raw_entry.get("download_path", "")).strip(),
+            "paper_record_relpath": str(cached_source_metadata.get("paper_record_relpath", "")).strip()
+            or str(raw_entry.get("paper_record_relpath", "")).strip(),
+            "paper_record_path": str(cached_source_metadata.get("paper_record_path", "")).strip()
+            or str(raw_entry.get("paper_record_path", "")).strip(),
         }
         if not entry["url"]:
             continue
@@ -579,7 +645,7 @@ def _build_main_theorem_retrieval_materials(candidate: dict[str, Any], materials
         for record in selected_papers
         if str(record.get("source_url", "")).strip()
     }
-    source_metadata_by_url: dict[str, dict[str, str]] = {}
+    source_metadata_by_url: dict[str, dict[str, Any]] = {}
     if isinstance(raw_paper_cache, list):
         for raw_record in raw_paper_cache:
             if not isinstance(raw_record, dict):
@@ -591,6 +657,10 @@ def _build_main_theorem_retrieval_materials(candidate: dict[str, Any], materials
                 "source_kind": str(raw_record.get("source_kind", "")).strip(),
                 "retrieval_priority": str(raw_record.get("retrieval_priority", "")).strip(),
                 "direct_reading_access": str(raw_record.get("direct_reading_access", "")).strip(),
+                "download_relpath": str(raw_record.get("download_relpath", "")).strip(),
+                "download_path": str(raw_record.get("download_path", "")).strip(),
+                "paper_record_relpath": str(raw_record.get("paper_record_relpath", "")).strip(),
+                "paper_record_path": str(raw_record.get("paper_record_path", "")).strip(),
             }
     source_link_entries = payload.get("source_link_entries", [])
     compact_source_link_entries = (
@@ -637,6 +707,10 @@ def _build_main_theorem_retrieval_materials(candidate: dict[str, Any], materials
                 "retrieval_priority": str(record.get("retrieval_priority", "")).strip(),
                 "direct_reading_access": str(record.get("direct_reading_access", "")).strip(),
                 "relevance_score": int(record.get("relevance_score", 0) or 0),
+                "paper_record_relpath": str(record.get("paper_record_relpath", "")).strip(),
+                "paper_record_path": str(record.get("paper_record_path", "")).strip(),
+                "download_relpath": str(record.get("download_relpath", "")).strip(),
+                "download_path": str(record.get("download_path", "")).strip(),
                 "abstract_excerpt": str(record.get("abstract", "")).strip(),
                 "selected_chunks": [
                     {
@@ -1236,6 +1310,7 @@ def request_main_theorem_mapping(
     guidance: dict[str, Any],
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     theory_state, research_agenda, materials = unpack_guidance_context(guidance)
+    review_materials = _build_main_theorem_retrieval_materials(candidate, materials)
     payload: dict[str, Any] = {
         "candidate_id": str(candidate["candidate_id"]),
         "current_iteration": current_iteration,
@@ -1243,14 +1318,17 @@ def request_main_theorem_mapping(
         "retrieval": retrieval,
         "theory_state": theory_state,
         "research_agenda": research_agenda,
-        "materials": materials,
+        "materials": review_materials,
     }
     response, worker_meta = invoke_worker_json(
         settings=worker_settings,
         task_type="main_theorem_map",
         system_prompt=mapper_prompt,
         payload=payload,
-        metadata={"candidate_id": str(candidate["candidate_id"])},
+        metadata={
+            "candidate_id": str(candidate["candidate_id"]),
+            "paper_excerpt_count": len(review_materials.get("paper_excerpt_context", [])),
+        },
     )
     return validate_main_theorem_mapping_output(response, expected_candidate_id=str(candidate["candidate_id"])), worker_meta
 
@@ -1266,6 +1344,7 @@ def request_main_theorem_evaluation(
     guidance: dict[str, Any],
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     theory_state, research_agenda, materials = unpack_guidance_context(guidance)
+    review_materials = _build_main_theorem_retrieval_materials(candidate, materials)
     payload: dict[str, Any] = {
         "candidate_id": str(candidate["candidate_id"]),
         "current_iteration": current_iteration,
@@ -1274,14 +1353,17 @@ def request_main_theorem_evaluation(
         "mapping": mapping,
         "theory_state": theory_state,
         "research_agenda": research_agenda,
-        "materials": materials,
+        "materials": review_materials,
     }
     response, worker_meta = invoke_worker_json(
         settings=worker_settings,
         task_type="main_theorem_evaluate",
         system_prompt=evaluator_prompt,
         payload=payload,
-        metadata={"candidate_id": str(candidate["candidate_id"])},
+        metadata={
+            "candidate_id": str(candidate["candidate_id"]),
+            "paper_excerpt_count": len(review_materials.get("paper_excerpt_context", [])),
+        },
     )
     return validate_main_theorem_evaluation_output(response, expected_candidate_id=str(candidate["candidate_id"])), worker_meta
 
@@ -1417,6 +1499,15 @@ def run_main_theorem_session(
     retriever_prompt = load_prompt_text(retriever_prompt_file)
     mapper_prompt = load_prompt_text(mapper_prompt_file)
     evaluator_prompt = load_prompt_text(evaluator_prompt_file)
+    materials_sync_report: dict[str, Any] | None = None
+    try:
+        materials_sync_report = ensure_materials_cache_current(
+            repo_root / "materials",
+            fetch_missing=True,
+            extract_downloads=True,
+        )
+    except Exception:
+        materials_sync_report = None
     open_rows = [normalize_open_problem_row(row) for row in read_jsonl(data_dir / "open_problems.jsonl")]
     archived_rows = read_archived_problem_rows(data_dir)
     tracked_rows = [dict(row, queue_status="open") for row in open_rows]
@@ -1551,6 +1642,10 @@ def run_main_theorem_session(
             candidate_id=candidate_id,
             attempt_index=attempt_index,
         )
+        _, _, retrieval_source_materials = unpack_guidance_context(guidance)
+        retrieval_access_summary = _summarize_retrieval_source_access(
+            _build_main_theorem_retrieval_materials(candidate, retrieval_source_materials)
+        )
         retrieve_started_monotonic = time.monotonic()
         retrieve_started_at = iso_timestamp_now()
         try:
@@ -1621,6 +1716,8 @@ def run_main_theorem_session(
             status="ok",
             closest_item_count=len(retrieval["closest_items"]),
             need_supplemental_retrieval=bool(retrieval["need_supplemental_retrieval"]),
+            local_paper_access_count=len(retrieval_access_summary["paper_access"]),
+            local_source_link_access_count=len(retrieval_access_summary["source_link_access"]),
         )
         _append_main_theorem_session_event(
             session_events_path,
@@ -1634,6 +1731,7 @@ def run_main_theorem_session(
                 "research_line": str(retrieval["research_line"]),
                 "coverage_assessment": str(retrieval["coverage_assessment"]),
                 "need_supplemental_retrieval": bool(retrieval["need_supplemental_retrieval"]),
+                "source_access": retrieval_access_summary,
             },
         )
 
@@ -1929,6 +2027,8 @@ def run_main_theorem_session(
     report["evaluation"] = accepted_evaluation
     report["rejected_candidates"] = rejected_this_session
     report["rejection_count"] = len(rejected_this_session)
+    if materials_sync_report is not None:
+        report["materials_sync"] = materials_sync_report
     if session_events_path is not None:
         report["session_events_file"] = str(session_events_path)
     return report

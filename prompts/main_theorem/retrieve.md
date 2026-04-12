@@ -14,6 +14,7 @@
 - Treat `materials` as optional external context, not internal theory state.
 - If `materials.paper_excerpt_context` is available, treat it as the primary prefiltered direct-reading bundle for this candidate.
 - If `materials.paper_cache` is available, use cached paper chunks as the strongest direct-reading evidence.
+- If a source entry includes `download_path` or `paper_record_path`, treat that as the preferred local access route to the source rather than relying only on labels or URLs.
 - Prefer `materials.source_links` and readable primary-paper anchors over stale summary prose when novelty pressure matters.
 - If `materials` are thin, say so explicitly in `coverage_assessment` / `missing_angles`.
 

@@ -36,6 +36,8 @@ CONTENT_TAGS = {"article", "main", "section", "div", "p", "li", "blockquote"}
 HEADING_TAGS = {"h1", "h2", "h3"}
 PREFERRED_SECTIONS = ("abstract", "introduction", "overview", "summary", "main results", "results", "conclusion")
 DEFAULT_EXTRA_PDF_SITE_DIRS = ("/tmp/atc_pdfdeps",)
+OCR_SCAN_PAGE_LIMIT = 3
+OCR_RENDER_SCALE = 2.0
 PORTAL_REDIRECT_RE = re.compile(
     r"(redirecting to sso login|dspace software copyright|privacy policy|end user agreement|send feedback)",
     re.IGNORECASE,
@@ -83,6 +85,129 @@ def _load_pdf_reader_class() -> tuple[type[Any] | None, str]:
                 continue
 
     return None, ""
+
+
+def _load_pdfminer_extract_text() -> tuple[Any | None, str]:
+    candidate_site_dirs: list[str] = []
+    env_text = os.getenv("ATC_MATERIALS_EXTRA_SITE_DIRS", "").strip()
+    if env_text:
+        candidate_site_dirs.extend(item.strip() for item in env_text.split(os.pathsep) if item.strip())
+    candidate_site_dirs.extend(DEFAULT_EXTRA_PDF_SITE_DIRS)
+
+    try:
+        module = importlib.import_module("pdfminer.high_level")
+        extract_text = getattr(module, "extract_text", None)
+        if extract_text is not None:
+            return extract_text, "pdfminer.high_level"
+    except Exception:
+        pass
+
+    for site_dir in candidate_site_dirs:
+        if not site_dir or not Path(site_dir).exists() or site_dir in sys.path:
+            continue
+        sys.path.insert(0, site_dir)
+        try:
+            module = importlib.import_module("pdfminer.high_level")
+            extract_text = getattr(module, "extract_text", None)
+            if extract_text is not None:
+                return extract_text, "pdfminer.high_level"
+        except Exception:
+            continue
+
+    return None, ""
+
+
+def _load_module_attribute(module_name: str, attribute_name: str) -> tuple[Any | None, str]:
+    candidate_site_dirs: list[str] = []
+    env_text = os.getenv("ATC_MATERIALS_EXTRA_SITE_DIRS", "").strip()
+    if env_text:
+        candidate_site_dirs.extend(item.strip() for item in env_text.split(os.pathsep) if item.strip())
+    candidate_site_dirs.extend(DEFAULT_EXTRA_PDF_SITE_DIRS)
+
+    try:
+        module = importlib.import_module(module_name)
+        attribute = getattr(module, attribute_name, None)
+        if attribute is not None:
+            return attribute, module_name
+    except Exception:
+        pass
+
+    for site_dir in candidate_site_dirs:
+        if not site_dir or not Path(site_dir).exists() or site_dir in sys.path:
+            continue
+        sys.path.insert(0, site_dir)
+        try:
+            module = importlib.import_module(module_name)
+            attribute = getattr(module, attribute_name, None)
+            if attribute is not None:
+                return attribute, module_name
+        except Exception:
+            continue
+
+    return None, ""
+
+
+_OCR_ENGINE: Any | None = None
+_OCR_ENGINE_READY = False
+
+
+def _load_scanned_pdf_ocr_engine() -> Any | None:
+    global _OCR_ENGINE, _OCR_ENGINE_READY
+    if _OCR_ENGINE_READY:
+        return _OCR_ENGINE
+    rapid_ocr_class, _ = _load_module_attribute("rapidocr_onnxruntime", "RapidOCR")
+    if rapid_ocr_class is None:
+        _OCR_ENGINE_READY = True
+        _OCR_ENGINE = None
+        return None
+    try:
+        _OCR_ENGINE = rapid_ocr_class()
+    except Exception:
+        _OCR_ENGINE = None
+    _OCR_ENGINE_READY = True
+    return _OCR_ENGINE
+
+
+def _extract_scanned_pdf_ocr_text(download_path: Path) -> tuple[str, str]:
+    fitz_module, _ = _load_module_attribute("fitz", "open")
+    if fitz_module is None:
+        return "", "low"
+    ocr_engine = _load_scanned_pdf_ocr_engine()
+    if ocr_engine is None:
+        return "", "low"
+    try:
+        import numpy as np  # type: ignore
+        import fitz  # type: ignore
+    except Exception:
+        return "", "low"
+
+    try:
+        doc = fitz.open(str(download_path))
+    except Exception:
+        return "", "low"
+
+    page_texts: list[str] = []
+    try:
+        for page_index in range(min(OCR_SCAN_PAGE_LIMIT, len(doc))):
+            page = doc.load_page(page_index)
+            pix = page.get_pixmap(matrix=fitz.Matrix(OCR_RENDER_SCALE, OCR_RENDER_SCALE), alpha=False)
+            image = np.frombuffer(pix.samples, dtype=np.uint8).reshape(pix.height, pix.width, pix.n)
+            result, _ = ocr_engine(image)
+            lines: list[str] = []
+            for item in result or []:
+                if isinstance(item, (list, tuple)) and len(item) >= 2:
+                    text = str(item[1]).strip()
+                    if text:
+                        lines.append(text)
+            if lines:
+                page_texts.append("\n".join(lines))
+    finally:
+        doc.close()
+
+    text = "\n\n".join(page_texts).strip()
+    if not text:
+        return "", "low"
+    return text, "medium"
 
 
 def parse_source_link_entry(raw: str) -> dict[str, str] | None:
@@ -222,6 +347,17 @@ def classify_source_reference(
     }
 
 
+def _is_probably_image_only_pdf(download_path: Path) -> bool:
+    try:
+        blob = download_path.read_bytes()
+    except Exception:
+        return False
+    image_count = blob.count(b"/Subtype/Image")
+    has_ccitt = b"/CCITTFaxDecode" in blob
+    has_text_procset = b"/Text" in blob
+    return (has_ccitt or image_count >= 3) and not has_text_procset
+
+
 def build_source_id(*, label: str, url: str) -> str:
     parsed = urlparse(url)
     stem_parts = [part for part in re.split(r"[^A-Za-z0-9]+", f"{parsed.netloc}_{Path(parsed.path).stem}_{label}") if part]
@@ -277,6 +413,78 @@ def load_download_index(cache_dir: Path) -> list[dict[str, Any]]:
     return safe_rows
 
 
+def _build_download_lookup(cache_dir: Path) -> tuple[dict[str, dict[str, str]], dict[str, dict[str, str]]]:
+    by_source_id: dict[str, dict[str, str]] = {}
+    by_url: dict[str, dict[str, str]] = {}
+    for item in load_download_index(cache_dir):
+        source_id = str(item.get("source_id", "")).strip()
+        url = str(item.get("url", "")).strip()
+        local_relpath = str(item.get("local_relpath", "")).strip()
+        if not source_id or not url or not local_relpath:
+            continue
+        local_path = (cache_dir / local_relpath).resolve()
+        payload = {
+            "source_id": source_id,
+            "url": url,
+            "download_relpath": local_relpath,
+            "download_path": str(local_path),
+        }
+        by_source_id[source_id] = payload
+        by_url[url] = payload
+    return by_source_id, by_url
+
+
+def _build_paper_record_lookup(cache_dir: Path) -> tuple[dict[str, dict[str, str]], dict[str, dict[str, str]]]:
+    papers_dir = cache_dir / PAPERS_DIRNAME
+    if not papers_dir.exists():
+        return {}, {}
+
+    by_source_id: dict[str, dict[str, str]] = {}
+    by_url: dict[str, dict[str, str]] = {}
+    for path in sorted(papers_dir.glob("*.json")):
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        if not isinstance(payload, dict):
+            continue
+        source_id = str(payload.get("source_id", "")).strip()
+        source_url = str(payload.get("source_url", "")).strip()
+        if not source_id or not source_url:
+            continue
+        record_payload = {
+            "source_id": source_id,
+            "url": source_url,
+            "paper_record_relpath": str(path.relative_to(cache_dir)),
+            "paper_record_path": str(path.resolve()),
+        }
+        by_source_id[source_id] = record_payload
+        by_url[source_url] = record_payload
+    return by_source_id, by_url
+
+
+def enrich_source_link_entries_with_cache(entries: list[dict[str, str]], cache_dir: Path) -> list[dict[str, str]]:
+    download_by_source_id, download_by_url = _build_download_lookup(cache_dir)
+    paper_by_source_id, paper_by_url = _build_paper_record_lookup(cache_dir)
+    enriched_entries: list[dict[str, str]] = []
+    for raw_entry in entries:
+        if not isinstance(raw_entry, dict):
+            continue
+        entry = {str(key): str(value).strip() for key, value in raw_entry.items()}
+        source_id = str(entry.get("source_id", "")).strip()
+        url = str(entry.get("url", "")).strip()
+        download_meta = download_by_source_id.get(source_id) or download_by_url.get(url) or {}
+        paper_meta = paper_by_source_id.get(source_id) or paper_by_url.get(url) or {}
+        if download_meta:
+            entry["download_relpath"] = str(download_meta.get("download_relpath", "")).strip()
+            entry["download_path"] = str(download_meta.get("download_path", "")).strip()
+        if paper_meta:
+            entry["paper_record_relpath"] = str(paper_meta.get("paper_record_relpath", "")).strip()
+            entry["paper_record_path"] = str(paper_meta.get("paper_record_path", "")).strip()
+        enriched_entries.append(entry)
+    return enriched_entries
+
+
 def save_download_index(cache_dir: Path, entries: list[dict[str, Any]]) -> None:
     cache_dir.mkdir(parents=True, exist_ok=True)
     payload = {"entries": entries}
@@ -290,6 +498,7 @@ def load_cached_paper_records(cache_dir: Path, *, max_entries: int = MAX_PAPER_C
     papers_dir = cache_dir / PAPERS_DIRNAME
     if not papers_dir.exists():
         return []
+    download_by_source_id, download_by_url = _build_download_lookup(cache_dir)
     records: list[dict[str, Any]] = []
     for path in sorted(papers_dir.glob("*.json")):
         try:
@@ -329,9 +538,19 @@ def load_cached_paper_records(cache_dir: Path, *, max_entries: int = MAX_PAPER_C
             title=title_text,
             abstract=abstract,
         )
+        stored_source_kind = str(payload.get("source_kind", "")).strip()
+        stored_retrieval_priority = str(payload.get("retrieval_priority", "")).strip()
+        stored_direct_reading_access = str(payload.get("direct_reading_access", "")).strip()
+        if stored_source_kind:
+            source_metadata["source_kind"] = stored_source_kind
+        if stored_retrieval_priority:
+            source_metadata["retrieval_priority"] = stored_retrieval_priority
+        if stored_direct_reading_access:
+            source_metadata["direct_reading_access"] = stored_direct_reading_access
         if source_metadata["source_kind"] == "portal_redirect":
             chunks = []
             abstract = ""
+        download_meta = download_by_source_id.get(source_id) or download_by_url.get(source_url) or {}
         records.append(
             {
                 "source_id": source_id,
@@ -342,6 +561,10 @@ def load_cached_paper_records(cache_dir: Path, *, max_entries: int = MAX_PAPER_C
                 "abstract": abstract,
                 "chunks": chunks,
                 "paper_relpath": str(path.relative_to(cache_dir)),
+                "paper_record_relpath": str(path.relative_to(cache_dir)),
+                "paper_record_path": str(path.resolve()),
+                "download_relpath": str(download_meta.get("download_relpath", "")).strip(),
+                "download_path": str(download_meta.get("download_path", "")).strip(),
                 "source_kind": source_metadata["source_kind"],
                 "retrieval_priority": source_metadata["retrieval_priority"],
                 "direct_reading_access": source_metadata["direct_reading_access"],
@@ -559,6 +782,15 @@ def _extract_pdf_text(download_path: Path) -> tuple[str, str]:
         except Exception:
             pass
 
+    pdfminer_extract_text, _ = _load_pdfminer_extract_text()
+    if pdfminer_extract_text is not None:
+        try:
+            text = str(pdfminer_extract_text(str(download_path)) or "").strip()
+            if text:
+                return text, "medium"
+        except Exception:
+            pass
+
     pdftotext = shutil_which("pdftotext")
     if pdftotext:
         completed = subprocess.run(
@@ -569,6 +801,8 @@ def _extract_pdf_text(download_path: Path) -> tuple[str, str]:
         )
         if completed.returncode == 0 and completed.stdout.strip():
             return completed.stdout, "medium"
+    if _is_probably_image_only_pdf(download_path):
+        return _extract_scanned_pdf_ocr_text(download_path)
     return "", "low"
 
 
@@ -594,6 +828,14 @@ def _extract_pdf_record(download_path: Path, *, source_id: str, source_url: str,
         title=label,
         abstract=abstract,
     )
+    if chunks and _is_probably_image_only_pdf(download_path) and confidence == "medium":
+        source_metadata["source_kind"] = "scanned_pdf_ocr"
+        source_metadata["retrieval_priority"] = "medium"
+        source_metadata["direct_reading_access"] = "ocr_partial"
+    elif not chunks and _is_probably_image_only_pdf(download_path):
+        source_metadata["source_kind"] = "scanned_pdf"
+        source_metadata["retrieval_priority"] = "low"
+        source_metadata["direct_reading_access"] = "image_only_pdf"
     return {
         "source_id": source_id,
         "source_url": source_url,

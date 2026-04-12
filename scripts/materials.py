@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from materials_pipeline import default_materials_cache_dir
+from materials_pipeline import enrich_source_link_entries_with_cache
 from materials_pipeline import load_cached_paper_records
 from materials_pipeline import parse_source_link_entries
 
@@ -82,6 +83,12 @@ def _strip_list_marker(line: str) -> str:
 def _parse_markdown_sections(text: str) -> dict[str, list[str]]:
     sections: dict[str, list[str]] = {}
     current_section = ""
+
+    def current_limit() -> int:
+        if current_section == "source links":
+            return MAX_SOURCE_LINKS
+        return MAX_LIST_ITEMS_PER_SECTION
+
     for raw_line in text.splitlines():
         line = raw_line.rstrip()
         stripped = line.strip()
@@ -97,7 +104,7 @@ def _parse_markdown_sections(text: str) -> dict[str, list[str]]:
             if not item or not current_section:
                 continue
             items = sections.setdefault(current_section, [])
-            if item not in items and len(items) < MAX_LIST_ITEMS_PER_SECTION:
+            if item not in items and len(items) < current_limit():
                 items.append(item)
             continue
         if current_section and sections.get(current_section) and re.match(r"^\s{2,}\S", line):
@@ -248,8 +255,8 @@ def load_materials(materials_dir: Path) -> dict[str, Any]:
     if not documents:
         return empty_materials()
 
-    source_link_entries = parse_source_link_entries(source_links)
     cache_dir = default_materials_cache_dir(root)
+    source_link_entries = enrich_source_link_entries_with_cache(parse_source_link_entries(source_links), cache_dir)
     paper_cache = load_cached_paper_records(cache_dir)
 
     return {

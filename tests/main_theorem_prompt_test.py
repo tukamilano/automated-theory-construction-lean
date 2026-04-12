@@ -83,6 +83,9 @@ def test_evaluator_prompt_is_fail_closed() -> None:
         "Default to `reject` unless the evidence clearly supports `pass`.",
         "Treat `pass` as exceptional.",
         "If any pass-gate item is weak, uncertain, or unsupported, do not return `pass`.",
+        "If the literature comparison rests only on title-level or report-level evidence",
+        "If `download_path` or `paper_record_path` is present",
+        "No directly read anchor appears to already state the same theorem-level boundary",
         "\"verdict\": \"pass|revise|reject\"",
     )
     for snippet in required_snippets:
@@ -95,10 +98,23 @@ def test_retriever_prompt_uses_prefiltered_paper_excerpt_context() -> None:
     required_snippets = (
         "If `materials.paper_excerpt_context` is available",
         "`paper_excerpt_context`",
+        "`download_path` or `paper_record_path`",
     )
     for snippet in required_snippets:
         if snippet not in prompt:
             raise RuntimeError(f"missing retriever paper excerpt guidance: {snippet}")
+
+
+def test_mapper_prompt_uses_direct_reading_evidence() -> None:
+    prompt = (REPO_ROOT / "prompts" / "main_theorem" / "map.md").read_text(encoding="utf-8")
+    required_snippets = (
+        "If `materials.paper_excerpt_context` is available",
+        "If `download_path` or `paper_record_path` is present",
+        "If the closest dangerous anchor is only title-level or summary-level",
+    )
+    for snippet in required_snippets:
+        if snippet not in prompt:
+            raise RuntimeError(f"missing mapper direct-reading guidance: {snippet}")
 
 
 def test_planner_prompt_is_removed() -> None:
@@ -114,6 +130,7 @@ def main() -> int:
     test_suggester_prompt_uses_rejection_memory()
     test_evaluator_prompt_is_fail_closed()
     test_retriever_prompt_uses_prefiltered_paper_excerpt_context()
+    test_mapper_prompt_uses_direct_reading_evidence()
     test_planner_prompt_is_removed()
     print("main theorem prompt test passed")
     return 0
