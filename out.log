@@ -6,27 +6,3 @@ uv run python scripts/atc_cli.py seed \
 	--seeds-file AutomatedTheoryConstruction/seeds.jsonl \
 	
 [atc] exec: /usr/bin/python3 /home/kei.tsukamoto/ATC_private/scripts/generate_seeds_from_theory.py --theory-file /home/kei.tsukamoto/ATC_private/AutomatedTheoryConstruction/Theory.lean --derived-file /home/kei.tsukamoto/ATC_private/AutomatedTheoryConstruction/Derived.lean --output-file /home/kei.tsukamoto/ATC_private/AutomatedTheoryConstruction/seeds.jsonl --seed-count 7 --seed-src seed --sandbox read-only
-make: *** [Makefile:110: seed] Error 143
-make: *** [Makefile:120: loop] Killed
-Traceback (most recent call last):
-  File "/home/kei.tsukamoto/ATC_private/scripts/loop/run_loop.py", line 3595, in <module>
-    main()
-  File "/home/kei.tsukamoto/ATC_private/scripts/loop/run_loop.py", line 3557, in main
-    run_parallel_loop(
-  File "/home/kei.tsukamoto/ATC_private/scripts/loop/run_loop.py", line 3047, in run_parallel_loop
-    session_result = future.result()
-  File "/usr/lib/python3.10/concurrent/futures/_base.py", line 439, in result
-    return self.__get_result()
-  File "/usr/lib/python3.10/concurrent/futures/_base.py", line 391, in __get_result
-    raise self._exception
-  File "/usr/lib/python3.10/concurrent/futures/thread.py", line 58, in run
-    result = self.fn(*self.args, **self.kwargs)
-  File "/home/kei.tsukamoto/ATC_private/scripts/loop/run_loop.py", line 2670, in run_problem_session
-    result, proof_sketch, counterexample_text, prover_attempts_used, prover_worker_meta = query_prover_with_retries(
-  File "/home/kei.tsukamoto/ATC_private/scripts/loop/run_loop.py", line 1503, in query_prover_with_retries
-    prover_payload, worker_meta = invoke_worker_json(
-  File "/home/kei.tsukamoto/ATC_private/scripts/worker_client.py", line 291, in invoke_worker_json
-    raise RuntimeError(f"Worker exited with code {completed.returncode}: {stderr}")
-RuntimeError: Worker exited with code -9: 
-Wrote 7 batch-generated problems to /home/kei.tsukamoto/ATC_private/AutomatedTheoryConstruction/seeds.jsonl
-Reset runtime state before seed generation and loaded the regenerated seeds into open problems.
