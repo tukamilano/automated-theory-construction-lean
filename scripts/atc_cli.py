@@ -443,6 +443,29 @@ def _extract_derived_deps_command(args: argparse.Namespace, config: AppConfig) -
     return cmd, {}
 
 
+def _research_agenda_command(args: argparse.Namespace, config: AppConfig) -> tuple[list[str], dict[str, str]]:
+    cmd = _python_command("generate_research_agenda_from_report.py")
+    _append_flag(cmd, "--report-file", args.report_file)
+    _append_flag(cmd, "--output-file", args.output_file or REPO_ROOT / "AutomatedTheoryConstruction" / "research_agenda.md")
+    _append_flag(cmd, "--system-prompt-file", args.system_prompt_file)
+    _append_flag(cmd, "--user-prompt-file", args.user_prompt_file)
+    _append_flag(cmd, "--title", args.title)
+    _append_flag(cmd, "--field", args.field)
+    _append_flag(cmd, "--style-anchor-file", args.style_anchor_file)
+    for item in args.local_preference:
+        cmd.extend(["--local-preference", item])
+    _append_flag(cmd, "--provider", args.provider)
+    _append_flag(cmd, "--model", args.model)
+    _append_flag(cmd, "--sandbox", args.sandbox)
+    _append_flag(cmd, "--timeout-sec", args.timeout_sec)
+    _append_flag(cmd, "--prompt-output-file", args.prompt_output_file)
+    if args.preview_prompt:
+        cmd.append("--preview-prompt")
+    if args.print_output:
+        cmd.append("--print-output")
+    return cmd, {}
+
+
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Unified CLI for the ATC runtime scripts.")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -604,6 +627,27 @@ def _build_parser() -> argparse.ArgumentParser:
     extract_deps.add_argument("--build-target", default="AutomatedTheoryConstruction.Derived")
     extract_deps.add_argument("--depth", type=int, default=1)
 
+    research_agenda = subparsers.add_parser(
+        "research-agenda",
+        help="Generate AutomatedTheoryConstruction/research_agenda.md from a deep-research report.",
+    )
+    _add_common_flags(research_agenda)
+    research_agenda.add_argument("--report-file", required=True)
+    research_agenda.add_argument("--output-file")
+    research_agenda.add_argument("--system-prompt-file")
+    research_agenda.add_argument("--user-prompt-file")
+    research_agenda.add_argument("--title")
+    research_agenda.add_argument("--field")
+    research_agenda.add_argument("--style-anchor-file")
+    research_agenda.add_argument("--local-preference", action="append", default=[])
+    research_agenda.add_argument("--provider")
+    research_agenda.add_argument("--model")
+    research_agenda.add_argument("--sandbox", default="read-only")
+    research_agenda.add_argument("--timeout-sec", type=int)
+    research_agenda.add_argument("--prompt-output-file")
+    research_agenda.add_argument("--preview-prompt", action="store_true")
+    research_agenda.add_argument("--print-output", action="store_true")
+
     config_cmd = subparsers.add_parser("config", help="Inspect resolved configuration.")
     config_subparsers = config_cmd.add_subparsers(dest="config_command", required=True)
     config_show = config_subparsers.add_parser("show", help="Print resolved config as JSON.")
@@ -646,6 +690,7 @@ def main() -> int:
         "review": _review_command,
         "materialize-generated": _materialize_generated_command,
         "extract-derived-deps": _extract_derived_deps_command,
+        "research-agenda": _research_agenda_command,
     }
     builder = builders[args.command]
 

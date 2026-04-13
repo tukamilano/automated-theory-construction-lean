@@ -95,6 +95,22 @@ For reusable domain knowledge, prefer curating it under `materials/` instead of 
 That keeps deep research available across prioritization, expansion, and paper-claim work.
 When a report may be out of date, keep the report for structure and wording, but use source-link bundles for novelty checks and literature positioning.
 
+### Regenerate `research_agenda.md` from a deep-research report
+
+```bash
+uv run python scripts/atc_cli.py research-agenda \
+  --report-file materials/your_report.md
+```
+
+This writes directly to `AutomatedTheoryConstruction/research_agenda.md` by default.
+If you want to inspect the composed prompt first, add:
+
+```bash
+uv run python scripts/atc_cli.py research-agenda \
+  --report-file materials/your_report.md \
+  --preview-prompt
+```
+
 ### Run the main loop
 
 ```bash

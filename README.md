@@ -62,11 +62,19 @@ Start with the doc hub: [`docs/README.md`](docs/README.md)
 - `AutomatedTheoryConstruction/Scratch.lean`: temporary verification target
 - `AutomatedTheoryConstruction/research_agenda.md`: persistent guidance for problem selection
 - `materials/`: recommended place to keep organized deep-research outputs, literature summaries, source-link lists, and problem-seed notes used as optional external context
+- `prompts/research_agenda/`: templates for turning deep-research reports into strict `research_agenda.md` drafts
 - `scripts/atc_cli.py`: unified operational CLI
 
 `materials/` is the recommended home for deep research that you want the system to reuse later.
 Treat it as external research context, not as part of the core runtime state: the loop may consult it for seed generation, prioritization, expansion, and paper-claim positioning, but it should not be folded into `theory_state.json`.
 Also treat summary reports in `materials/` as potentially time-sensitive: they are useful for context, but source-link lists or primary papers should win when novelty or closest-known-result judgment matters.
+
+To regenerate `AutomatedTheoryConstruction/research_agenda.md` from a deep-research report, use:
+
+```bash
+uv run python scripts/atc_cli.py research-agenda \
+  --report-file materials/your_report.md
+```
 
 ## Refactor Pipeline
 

@@ -14,6 +14,7 @@ sys.path.insert(0, str(REPO_ROOT / "scripts" / "loop"))
 
 
 import generate_seeds_from_theory
+import generate_research_agenda_from_report
 import materials_pipeline
 import run_loop
 from guidance import build_guidance_context
@@ -153,6 +154,62 @@ def test_seed_prompt_includes_research_agenda_guidance() -> None:
     for snippet in required_snippets:
         if snippet not in prompt:
             raise RuntimeError(f"missing agenda snippet in seed prompt: {snippet}\n{prompt}")
+
+
+def test_render_research_agenda_user_prompt_substitutes_placeholders() -> None:
+    rendered = generate_research_agenda_from_report.render_user_prompt(
+        template_text="Title:\n<TITLE>\nField:\n<FIELD>\nStyle:\n<STYLE_ANCHOR_BLOCK>\nPrefs:\n<LOCAL_PREFERENCES_BLOCK>\nReport:\n<REPORT>\n",
+        title="Agenda Title",
+        field="Agenda Field",
+        report_text="Line A\nLine B",
+        style_anchor_text="Strict anchor",
+        local_preferences=["Prefer exact boundaries."],
+    )
+    required_snippets = (
+        "Title:\nAgenda Title",
+        "Field:\nAgenda Field",
+        "Style:\nStrict anchor",
+        "Prefs:\n- Prefer exact boundaries.",
+        "Report:\nLine A\nLine B",
+    )
+    for snippet in required_snippets:
+        if snippet not in rendered:
+            raise RuntimeError(f"missing rendered snippet: {snippet}\n{rendered}")
+
+
+def test_validate_generated_agenda_requires_all_sections() -> None:
+    good = """# Research Agenda for Test
+
+## 1. Themes
+- theme
+
+## 2. Valued Problem Types
+- problem type
+
+## 3. Anti-Goals
+- anti-goal
+
+## 4. Canonical Targets
+1. target
+
+## 5. Soft Constraints
+- soft constraint
+"""
+    generate_research_agenda_from_report.validate_generated_agenda(good)
+
+    bad = """# Research Agenda for Test
+
+## 1. Themes
+- theme
+"""
+    try:
+        generate_research_agenda_from_report.validate_generated_agenda(bad)
+    except ValueError as exc:
+        message = str(exc)
+    else:
+        raise RuntimeError("expected validate_generated_agenda to reject missing sections")
+    if "missing required section items" not in message:
+        raise RuntimeError(f"unexpected validation message: {message}")
 
 
 def test_seed_prompt_includes_materials_guidance() -> None:
@@ -1483,6 +1540,8 @@ def main() -> int:
     test_parse_research_agenda_markdown_handles_numbered_headings_and_ignores_paragraphs()
     test_load_research_agenda_missing_file_is_empty()
     test_load_research_agenda_falls_back_to_legacy_root_file()
+    test_render_research_agenda_user_prompt_substitutes_placeholders()
+    test_validate_generated_agenda_requires_all_sections()
     test_ensure_materials_derived_current_generates_files_from_root_report()
     test_seed_prompt_includes_research_agenda_guidance()
     test_runtime_initialization_clears_generation_sidecar_files()
