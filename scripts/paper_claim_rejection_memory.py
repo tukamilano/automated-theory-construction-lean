@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any
 
 
-def load_main_theorem_rejection_memory(memory_path: Path) -> list[dict[str, Any]]:
+def load_paper_claim_rejection_memory(memory_path: Path) -> list[dict[str, Any]]:
     if not memory_path.exists():
         return []
     try:
@@ -37,32 +37,40 @@ def load_main_theorem_rejection_memory(memory_path: Path) -> list[dict[str, Any]
                 "rationale": str(item.get("rationale", "")).strip(),
                 "verdict": verdict,
                 "reason": reason,
+                "strongest_positive_signal": str(item.get("strongest_positive_signal", "")).strip(),
                 "strongest_objection": str(item.get("strongest_objection", "")).strip(),
                 "salvage_plan": str(item.get("salvage_plan", "")).strip(),
                 "paper_unit_viability": str(item.get("paper_unit_viability", "")).strip(),
                 "novelty": str(item.get("novelty", "")).strip(),
                 "significance": str(item.get("significance", "")).strip(),
+                "rejection_tags": [
+                    str(tag).strip()
+                    for tag in item.get("rejection_tags", [])
+                    if str(tag).strip()
+                ]
+                if isinstance(item.get("rejection_tags", []), list)
+                else [],
                 "iteration": int(item.get("iteration", 0) or 0),
             }
         )
     return safe_rows
 
 
-def save_main_theorem_rejection_memory(memory_path: Path, entries: list[dict[str, Any]]) -> None:
+def save_paper_claim_rejection_memory(memory_path: Path, entries: list[dict[str, Any]]) -> None:
     memory_path.parent.mkdir(parents=True, exist_ok=True)
     payload = {"entries": entries[-80:]}
     memory_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
-def append_main_theorem_rejection_entry(memory_path: Path, entry: dict[str, Any]) -> list[dict[str, Any]]:
+def append_paper_claim_rejection_entry(memory_path: Path, entry: dict[str, Any]) -> list[dict[str, Any]]:
     theorem_name_stem = str(entry.get("theorem_name_stem", "")).strip()
     statement = str(entry.get("statement", "")).strip()
     verdict = str(entry.get("verdict", "")).strip()
     reason = str(entry.get("reason", "")).strip()
     if not theorem_name_stem or not statement or not verdict or not reason:
-        return load_main_theorem_rejection_memory(memory_path)
+        return load_paper_claim_rejection_memory(memory_path)
 
-    history = load_main_theorem_rejection_memory(memory_path)
+    history = load_paper_claim_rejection_memory(memory_path)
     statement_norm = " ".join(statement.lower().split())
     history = [
         row
@@ -78,13 +86,21 @@ def append_main_theorem_rejection_entry(memory_path: Path, entry: dict[str, Any]
             "rationale": str(entry.get("rationale", "")).strip(),
             "verdict": verdict,
             "reason": reason,
+            "strongest_positive_signal": str(entry.get("strongest_positive_signal", "")).strip(),
             "strongest_objection": str(entry.get("strongest_objection", "")).strip(),
             "salvage_plan": str(entry.get("salvage_plan", "")).strip(),
             "paper_unit_viability": str(entry.get("paper_unit_viability", "")).strip(),
             "novelty": str(entry.get("novelty", "")).strip(),
             "significance": str(entry.get("significance", "")).strip(),
+            "rejection_tags": [
+                str(tag).strip()
+                for tag in entry.get("rejection_tags", [])
+                if str(tag).strip()
+            ]
+            if isinstance(entry.get("rejection_tags", []), list)
+            else [],
             "iteration": int(entry.get("iteration", 0) or 0),
         }
     )
-    save_main_theorem_rejection_memory(memory_path, history)
+    save_paper_claim_rejection_memory(memory_path, history)
     return history

@@ -65,6 +65,7 @@ from loop_common import prover_response_fingerprint
 from loop_common import remaining_retry_budget_sec
 from loop_common import update_same_fingerprint_streak
 from loop_helpers import append_derived_entry_cache
+from loop_helpers import analyze_lean_statement_compactness
 from loop_helpers import append_formalization_memory_entry
 from loop_helpers import append_phase_attempt_record
 from loop_helpers import build_problem_theory_context
@@ -80,6 +81,7 @@ from loop_helpers import normalize_stmt_text
 from loop_helpers import open_problem_priority_label
 from loop_helpers import save_formalization_memory
 from loop_helpers import shortlist_relevant_derived_entries
+from loop_helpers import statement_within_char_budget
 from loop_helpers import validate_theorem_name_stem
 from research_agenda import summarize_research_agenda_for_state
 from state_update import apply_state_update
@@ -461,7 +463,7 @@ def collect_important_verified_counterexamples(
         if not stmt or stmt in seen_stmt_norms:
             continue
         seen_stmt_norms.add(stmt)
-        summary = f"Verified counterexample to: {stmt}"
+        summary = stmt
         if len(summary) > max_chars:
             summary = summary[: max_chars - 3] + "..."
         summaries.append(summary)
@@ -627,7 +629,11 @@ def validate_prover_output(
         result=result,
         proof_sketch=proof_sketch,
         counterexample_text=counterexample_text,
-        new_problems=[item.strip() for item in new_problems if item.strip()][:2],
+        new_problems=[
+            item.strip()
+            for item in new_problems
+            if item.strip() and statement_within_char_budget(item.strip())
+        ][:2],
         raw_payload=dict(payload),
     )
 
@@ -796,6 +802,8 @@ def validate_problem_candidates_output(
             raise ValueError("candidate statement and rationale must be strings")
         normalized_statement = statement.strip()
         if not normalized_statement:
+            continue
+        if not statement_within_char_budget(normalized_statement):
             continue
         norm = normalize_stmt_text(normalized_statement)
         if norm in seen_norms:
@@ -1845,7 +1853,36 @@ def resolve_solver_statement(
         theorem_name = build_theorem_name(problem_id, theorem_name_stem)
         verify_started_monotonic = time.monotonic()
         verify_started_at = iso_timestamp_now()
-        if skip_verify:
+        compactness_issue = analyze_lean_statement_compactness(
+            formalized_stmt,
+            statement_prelude_code=statement_prelude_code,
+        )
+        if compactness_issue is not None:
+            verify_success = False
+            verify_result = {
+                "success": False,
+                "stdout": compactness_issue["message"],
+                "stderr": "",
+                "duration_ms": 0,
+                "error_category": ["statement_compactness"],
+                "diagnostics": compactness_issue["diagnostics"],
+            }
+            append_phase_attempt_record(
+                phase_attempts_path,
+                run_id=run_id,
+                session_type="loop",
+                iteration=iteration,
+                entity_id=problem_id,
+                phase="verify",
+                worker_task="stmt_compactness",
+                started_at=verify_started_at,
+                finished_at=iso_timestamp_now(),
+                duration_ms=0,
+                success=False,
+                result="failed",
+                error=compactness_issue["message"],
+            )
+        elif skip_verify:
             verify_success = True
             append_phase_attempt_record(
                 phase_attempts_path,
@@ -1904,7 +1941,10 @@ def resolve_solver_statement(
             current_streak=same_failure_streak,
         )
 
-        lean_failure_note = f"Lean statement validation failed before proof search: {lean_excerpt}"
+        if compactness_issue is not None:
+            lean_failure_note = compactness_issue["message"]
+        else:
+            lean_failure_note = f"Lean statement validation failed before proof search: {lean_excerpt}"
         notes = "\n".join(part for part in (notes, lean_failure_note) if part).strip()
         repair_history.append(
             {
@@ -1943,12 +1983,15 @@ def resolve_solver_statement(
             )
             break
 
-        retry_instruction = (
-            "Previous statement_prelude_code and lean_statement failed Lean statement validation before proof search. "
-            "Keep the mathematical meaning of `stmt`, but repair the Lean declarations and proposition minimally. "
-            "Prioritize parser, binder, notation, and namespace fixes. "
-            "Return only statement_prelude_code plus one proposition statement, not a theorem or proof."
-        )
+        if compactness_issue is not None:
+            retry_instruction = compactness_issue["retry_instruction"]
+        else:
+            retry_instruction = (
+                "Previous statement_prelude_code and lean_statement failed Lean statement validation before proof search. "
+                "Keep the mathematical meaning of `stmt`, but repair the Lean declarations and proposition minimally. "
+                "Prioritize parser, binder, notation, and namespace fixes. "
+                "Return only statement_prelude_code plus one proposition statement, not a theorem or proof."
+            )
         previous_statement_prelude_code = statement_prelude_code
         previous_lean_statement = formalized_stmt
         previous_theorem_name_stem = theorem_name_stem
@@ -2403,7 +2446,7 @@ def initialize_runtime_state(
     write_jsonl_atomic(data_dir / "solved_problems.jsonl", [])
     write_jsonl_atomic(data_dir / "counterexamples.jsonl", [])
     (data_dir / "theorem_reuse_memory.json").write_text('{"entries": []}\n', encoding="utf-8")
-    (data_dir / "main_theorem_rejection_memory.json").write_text('{"entries": []}\n', encoding="utf-8")
+    (data_dir / "paper_claim_rejection_memory.json").write_text('{"entries": []}\n', encoding="utf-8")
     (data_dir / LEGACY_DEFERRED_PROBLEMS_FILENAME).unlink(missing_ok=True)
     (data_dir / LEGACY_PRUNED_OPEN_PROBLEMS_FILENAME).unlink(missing_ok=True)
     (data_dir / "expand_candidates.jsonl").unlink(missing_ok=True)
@@ -2439,7 +2482,7 @@ def capture_continuation_runtime_snapshot(
         data_dir / "solved_problems.jsonl",
         data_dir / "counterexamples.jsonl",
         data_dir / "theorem_reuse_memory.json",
-        data_dir / "main_theorem_rejection_memory.json",
+        data_dir / "paper_claim_rejection_memory.json",
         theory_state_path(data_dir),
         formalization_memory_file,
         scratch_file,

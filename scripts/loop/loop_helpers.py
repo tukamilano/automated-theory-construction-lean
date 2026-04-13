@@ -22,9 +22,11 @@ from research_agenda import load_research_agenda
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 THEORY_STATE_FILENAME = "theory_state.json"
 THEOREM_NAME_STEM_PATTERN = re.compile(r"^[a-z][a-z0-9_]*$")
-DERIVED_THEOREM_HEADER_PATTERN = re.compile(r"\btheorem\s+([A-Za-z0-9_']+)\s*:")
+DERIVED_THEOREM_HEADER_PATTERN = re.compile(r"\btheorem\s+([A-Za-z0-9_']+)\b")
+LOCAL_STATEMENT_ALIAS_PATTERN = re.compile(r"(?m)^\s*(?:local\s+)?(?:def|abbrev)\b")
 PHASE_ATTEMPT_LOCK = threading.Lock()
 FORMALIZATION_MEMORY_LOCK = threading.RLock()
+NORMALIZED_STATEMENT_MAX_CHARS = 299
 
 
 def debug_log(msg: str) -> None:
@@ -106,6 +108,57 @@ def append_phase_attempt_record(
 
 def normalize_stmt_text(stmt: str) -> str:
     return " ".join(stmt.split())
+
+
+def statement_within_char_budget(stmt: str, *, max_chars: int = NORMALIZED_STATEMENT_MAX_CHARS) -> bool:
+    return len(normalize_stmt_text(stmt)) <= max_chars
+
+
+def analyze_lean_statement_compactness(
+    lean_statement: str,
+    *,
+    statement_prelude_code: str = "",
+    max_chars: int = NORMALIZED_STATEMENT_MAX_CHARS,
+) -> dict[str, Any] | None:
+    normalized_statement = normalize_stmt_text(lean_statement)
+    if not normalized_statement:
+        return None
+
+    reasons: list[str] = []
+
+    if len(normalized_statement) > max_chars:
+        reasons.append(
+            "theorem face is too long"
+            f" ({len(normalized_statement)} normalized chars; must be fewer than 300)"
+        )
+
+    if not reasons:
+        return None
+
+    message = "Statement compactness check failed: " + "; ".join(reasons) + "."
+    retry_instruction = (
+        "Previous statement_prelude_code and lean_statement failed a local compactness check before proof search. "
+        "Keep the mathematical meaning of `stmt`, but shorten the theorem face. "
+        "If a long hypothesis bundle or predicate repeats, introduce a small local `def` or `abbrev` in statement_prelude_code "
+        "and rewrite lean_statement using that name. "
+        "Target fewer than 300 normalized characters in lean_statement. "
+        "Return only statement_prelude_code plus one proposition statement, not a theorem or proof."
+    )
+    diagnostics = "\n".join(
+        [
+            message,
+            f"normalized_chars: {len(normalized_statement)}",
+            f"normalized_char_limit: {max_chars}",
+            f"has_local_alias: {'yes' if bool(LOCAL_STATEMENT_ALIAS_PATTERN.search(statement_prelude_code or '')) else 'no'}",
+        ]
+    )
+    return {
+        "message": message,
+        "diagnostics": diagnostics,
+        "retry_instruction": retry_instruction,
+        "normalized_chars": len(normalized_statement),
+        "has_local_alias": bool(LOCAL_STATEMENT_ALIAS_PATTERN.search(statement_prelude_code or "")),
+    }
 
 
 def open_problem_priority_label(row: dict[str, Any]) -> str:

@@ -19,7 +19,7 @@ KIND_SECTION_TARGETS = {
     "section_map": (
         ("problem generation", "problem_generation"),
         ("problem evaluation", "problem_evaluation"),
-        ("main theorem deep access", "main_theorem"),
+        ("paper claim deep access", "paper_claim"),
     ),
     "source_links": (("source links", "source_links"),),
 }
@@ -118,7 +118,7 @@ def _append_unique(target: list[str], values: list[str], *, max_items: int) -> N
 
 def _strip_usage_prefix(item: str) -> str:
     return re.sub(
-        r"^(problem generation|problem evaluation|main theorem(?: session)?|main theorem deep access):?\s*",
+        r"^(problem generation|problem evaluation|paper claim(?: session)?|paper claim deep access):?\s*",
         "",
         item,
         flags=re.IGNORECASE,
@@ -136,7 +136,7 @@ def _append_usage_item(
     *,
     problem_generation: list[str],
     problem_evaluation: list[str],
-    main_theorem: list[str],
+    paper_claim: list[str],
 ) -> None:
     lowered = item.lower()
     stripped_item = _strip_usage_prefix(item)
@@ -144,8 +144,8 @@ def _append_usage_item(
         _append_unique(problem_generation, [stripped_item], max_items=MAX_LIST_ITEMS_PER_SECTION)
     elif lowered.startswith("problem evaluation"):
         _append_unique(problem_evaluation, [stripped_item], max_items=MAX_LIST_ITEMS_PER_SECTION)
-    elif lowered.startswith("main theorem"):
-        _append_unique(main_theorem, [stripped_item], max_items=MAX_LIST_ITEMS_PER_SECTION)
+    elif lowered.startswith("paper claim"):
+        _append_unique(paper_claim, [stripped_item], max_items=MAX_LIST_ITEMS_PER_SECTION)
 
 
 def _merge_kind_sections(
@@ -154,7 +154,7 @@ def _merge_kind_sections(
     sections: dict[str, list[str]],
     problem_generation: list[str],
     problem_evaluation: list[str],
-    main_theorem: list[str],
+    paper_claim: list[str],
     source_links: list[str],
 ) -> None:
     if kind == "index":
@@ -163,14 +163,14 @@ def _merge_kind_sections(
                 item,
                 problem_generation=problem_generation,
                 problem_evaluation=problem_evaluation,
-                main_theorem=main_theorem,
+                paper_claim=paper_claim,
             )
         return
 
     target_lists = {
         "problem_generation": problem_generation,
         "problem_evaluation": problem_evaluation,
-        "main_theorem": main_theorem,
+        "paper_claim": paper_claim,
         "source_links": source_links,
     }
     for section_name, target_name in KIND_SECTION_TARGETS.get(kind, ()):
@@ -199,7 +199,7 @@ def load_materials(materials_dir: Path) -> dict[str, Any]:
     documents: list[dict[str, Any]] = []
     problem_generation: list[str] = []
     problem_evaluation: list[str] = []
-    main_theorem: list[str] = []
+    paper_claim: list[str] = []
     source_links: list[str] = []
 
     for path in sorted(item for item in root.rglob("*") if item.is_file() and not item.name.startswith(".")):
@@ -241,7 +241,7 @@ def load_materials(materials_dir: Path) -> dict[str, Any]:
             sections=sections,
             problem_generation=problem_generation,
             problem_evaluation=problem_evaluation,
-            main_theorem=main_theorem,
+            paper_claim=paper_claim,
             source_links=source_links,
         )
 
@@ -258,7 +258,7 @@ def load_materials(materials_dir: Path) -> dict[str, Any]:
         "documents": documents,
         "problem_generation": problem_generation,
         "problem_evaluation": problem_evaluation,
-        "main_theorem": main_theorem,
+        "paper_claim": paper_claim,
         "source_links": source_links,
         "source_link_entries": source_link_entries,
         "paper_cache": paper_cache,

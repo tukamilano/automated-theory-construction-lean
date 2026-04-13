@@ -46,6 +46,7 @@ Rules:
 - If the attempt is unresolved, prefer concrete subgoals or intermediate lemmas over broader generalizations.
 - Avoid one-step axiom restatements and other shallow variants.
 - At least one suggested problem should have a meaningfully different shape from the current target.
+- Prefer concise new-problem statements; if a statement needs a long repeated assumption bundle, suggest it around a reusable named condition/definition instead of spelling the whole bundle every time.
 - Do not exceed two new problems.
 
 ## Dedup and state boundary

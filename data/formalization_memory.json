@@ -2867,5 +2867,69 @@
       "lean_error_excerpt": "",
       "lean_error_fingerprint": "no_diagnostics | toolchain=leanprover/lean4:v4.29.0-rc6"
     }
+  ],
+  "paper_claim_plan_01": [
+    {
+      "stage": "",
+      "source_statement": "",
+      "formalized_statement": "",
+      "statement_formalization_notes": "",
+      "result": "stuck",
+      "verify_success": false,
+      "proof_sketch": "Existing results cover the full reachable topological sweep (`thm_topological_terminal_sweep_accepts_000137`), least backward-closed reachable subsets (`thm_reachable_accepts_least_set_000103`, `thm_accepts_least_reachable_subset_000143`), and bounded saturation/path length (`thm_saturation_iff_bounded_path_000146`). I could not identify a confirmed theorem in the current library that bridges those facts to the stated arbitrary-suffix reverse-fold update with the exact 'all vertices lie in S' path characterization. Without the concrete fold/update definitions behind `stmt`, any Lean proof script here would be too speculative.",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "formalizer_returned_stuck"
+    },
+    {
+      "stage": "",
+      "source_statement": "",
+      "formalized_statement": "",
+      "statement_formalization_notes": "",
+      "result": "stuck",
+      "verify_success": false,
+      "proof_sketch": "I found a different plausible route than the previous attempt: use `thm_topological_terminal_sweep_accepts_000137` for the full list `L`, observe that any suffix of a reverse-topological list is successor-closed, and combine that with the operator characterization in `thm_accepts_reachable_least_fixpoint_000147` to show the restricted sweep on the suffix computes the least backward-closed subset of that suffix, hence the within-suffix path predicate. However, the current library search did not reveal any formal declaration for the suffix backward-update/fold itself, nor a theorem packaging the 'suffix of a reverse-topological list is closed under successors' step in the exact API needed by `stmt`. Since `stmt` is only given here in natural language, writing Lean tactics would require inventing the concrete fold/update definitions and the exact formal target shape, which would be speculative.",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "formalizer returned stuck before Lean verification",
+      "lean_error_fingerprint": "formalizer_returned_stuck"
+    },
+    {
+      "stage": "",
+      "source_statement": "",
+      "formalized_statement": "",
+      "statement_formalization_notes": "",
+      "result": "stuck",
+      "verify_success": false,
+      "proof_sketch": "I checked a different route using the local theorems `thm_saturation_iff_bounded_path_000146` and `thm_accepts_reachable_least_fixpoint_000147` together with `thm_topological_terminal_sweep_accepts_000137`. That does show the library already has the full-list sweep theorem, the exact reachable least-fixpoint theorem, and the bounded-path saturation theorem. However, the repository still does not expose a concrete formal definition for the suffix-restricted reverse update / intermediate fold state, nor a packaged theorem turning an arbitrary suffix of a reverse-topological list into the successor-closed subregion needed by the statement. Because `stmt` is only given here in natural language, producing Lean tactics would require guessing the exact formal target and API for the suffix sweep, which would be speculative rather than defensible.",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "formalizer returned stuck before Lean verification",
+      "lean_error_fingerprint": "formalizer_returned_stuck"
+    },
+    {
+      "stage": "",
+      "source_statement": "",
+      "formalized_statement": "",
+      "statement_formalization_notes": "",
+      "result": "stuck",
+      "verify_success": false,
+      "proof_sketch": "I tried a different route by checking the archived suffix-invariant work (`op_000145`) together with the verified local theorems `thm_saturation_iff_bounded_path_000146`, `thm_accepts_reachable_least_fixpoint_000147`, and `thm_topological_terminal_sweep_accepts_000137`. This confirmed that the semantic content is plausible: for a successor-closed suffix, the within-suffix path predicate should match the least predecessor-closed subset of that suffix. However, the only concrete formalization of the suffix sweep in the repository history uses extra helper definitions such as `atomicResidualReverseSweep` and `atomicResidualBase`, and that route was never verified; those helpers are not present in the current checked library. The current repository still exposes no verified formal definition of the suffix-restricted reverse update / intermediate fold state, and `stmt` here is only natural language, not a fixed Lean theorem signature. Any `proof_text` would therefore have to guess the missing formal target and API, which is not defensible.",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "formalizer returned stuck before Lean verification",
+      "lean_error_fingerprint": "formalizer_returned_stuck"
+    },
+    {
+      "result": "proof",
+      "verify_success": false,
+      "proof_sketch": "Reuse the existing derived theorem that already states `SupportClosure Γ A ↔ support_ok Γ A` for all contexts and goals.",
+      "prelude_code": "",
+      "proof_text": "simpa using thm_support_closure_matches_support_ok_000036",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.lean:1:0: error: import AutomatedTheoryConstruction.Derived failed, environment already contains 'AutomatedTheoryConstruction.residualAtomicState.match_1' from AutomatedTheoryConstruction.Generated.C0005_support_handed_closure",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.lean:1:0: error: import AutomatedTheoryConstruction.Derived failed, environment already contains 'AutomatedTheoryConstruction.residualAtomicState.match_1' from AutomatedTheoryConstruction.Generated.C0005_support_handed_closure | toolchain=leanprover/lean4:v4.29.0-rc6"
+    }
   ]
 }

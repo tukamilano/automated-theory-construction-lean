@@ -37,6 +37,14 @@ def _resolve_timeout_seconds(timeout_text: str | None, default: int | None) -> i
     return parsed
 
 
+def _task_timeout_env_key(task_type: str) -> str:
+    return f"ATC_{task_type.upper()}_WORKER_TIMEOUT"
+
+
+def _task_codex_timeout_env_key(task_type: str) -> str:
+    return f"ATC_{task_type.upper()}_CODEX_TIMEOUT"
+
+
 def load_worker_settings(
     command_override: str | None,
     timeout_override: int | None,
@@ -224,14 +232,23 @@ def invoke_worker_json(
     if not cmd:
         raise ValueError("Worker command could not be parsed")
 
+    effective_timeout_sec = _resolve_timeout_seconds(
+        os.getenv(_task_timeout_env_key(task_type)),
+        settings.timeout_sec,
+    )
+    effective_codex_timeout_sec = _resolve_timeout_seconds(
+        os.getenv(_task_codex_timeout_env_key(task_type)),
+        settings.codex_timeout_sec,
+    )
+
     worker_env = os.environ.copy()
     if settings.propagate_timeout:
-        worker_env[f"ATC_{task_type.upper()}_WORKER_TIMEOUT"] = (
-            "0" if settings.timeout_sec is None else str(settings.timeout_sec)
+        worker_env[_task_timeout_env_key(task_type)] = (
+            "0" if effective_timeout_sec is None else str(effective_timeout_sec)
         )
     if settings.propagate_codex_timeout:
-        worker_env[f"ATC_{task_type.upper()}_CODEX_TIMEOUT"] = (
-            "0" if settings.codex_timeout_sec is None else str(settings.codex_timeout_sec)
+        worker_env[_task_codex_timeout_env_key(task_type)] = (
+            "0" if effective_codex_timeout_sec is None else str(effective_codex_timeout_sec)
         )
 
     try:
@@ -240,12 +257,16 @@ def invoke_worker_json(
             input=json.dumps(request_body, ensure_ascii=False),
             capture_output=True,
             text=True,
-            timeout=settings.timeout_sec,
+            timeout=effective_timeout_sec,
             env=worker_env,
             check=False,
         )
     except subprocess.TimeoutExpired as exc:
-        timeout_label = f"{settings.timeout_sec}s" if settings.timeout_sec is not None else "without a limit"
+        timeout_label = (
+            f"{effective_timeout_sec}s"
+            if effective_timeout_sec is not None
+            else "without a limit"
+        )
         stderr_excerpt = _single_line_excerpt(
             (exc.stderr.decode() if isinstance(exc.stderr, bytes) else exc.stderr) or ""
         )

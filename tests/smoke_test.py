@@ -164,117 +164,25 @@ def main() -> None:
             "missing_bridges": [],
             "agenda_pressure": [],
         }
-    elif task_type == "main_theorem_generate":
-        tracked_problems = payload.get("tracked_problems", [])
-        source_problem_ids = []
-        if isinstance(tracked_problems, list):
-            for item in tracked_problems:
-                if not isinstance(item, dict):
-                    continue
-                problem_id = str(item.get("problem_id", "")).strip()
-                if problem_id:
-                    source_problem_ids.append(problem_id)
-                if len(source_problem_ids) >= 2:
-                    break
+    elif task_type == "paper_claim_select":
         result_payload = {
-            "candidate_set_id": str(payload.get("candidate_set_id", "")),
-            "candidates": [
+            "selection_id": str(payload.get("selection_id", "")),
+            "selected_problem_id": "pd_paper_claim_01",
+            "selection_note": "mock_proof_worker: the first smoke dossier is currently the closest to a paper-publishable unit",
+            "planning_focus": "mock_proof_worker: plan this as a short bridge package",
+            "assessments": [
                 {
-                    "candidate_rank_seed": 1,
-                    "statement": "True",
-                    "theorem_name_stem": "smoke_main_theorem_summary",
-                    "docstring_summary": "Smoke summary theorem.",
-                    "rationale": "mock_proof_worker: summary-style main theorem candidate",
-                    "supporting_theorems": [],
-                    "missing_lemmas": [],
-                    "source_problem_ids": source_problem_ids,
-                    "theorem_pattern": "structure_discovery",
-                    "context_note": "The smoke summary candidate is positioned as a structural compression of the visible smoke fixture problems.",
-                    "conceptual_depth_note": "The smoke summary candidate is framed as a structural summary rather than a merely technical extension.",
-                },
-                {
-                    "candidate_rank_seed": 2,
-                    "statement": "True -> True",
-                    "theorem_name_stem": "smoke_main_theorem_bridge",
-                    "docstring_summary": "Smoke bridge theorem.",
-                    "rationale": "mock_proof_worker: bridge-style main theorem candidate",
-                    "supporting_theorems": [],
-                    "missing_lemmas": [],
-                    "source_problem_ids": source_problem_ids,
-                    "theorem_pattern": "new_theorem",
-                    "context_note": "The smoke bridge candidate is positioned as the strongest title-level smoke result.",
-                    "conceptual_depth_note": "The smoke bridge candidate is framed around a reusable bridge rather than bookkeeping.",
-                },
-                {
-                    "candidate_rank_seed": 3,
-                    "statement": "True ∧ True",
-                    "theorem_name_stem": "smoke_main_theorem_framework",
-                    "docstring_summary": "Smoke framework theorem.",
-                    "rationale": "mock_proof_worker: framework-style main theorem candidate",
-                    "supporting_theorems": [],
-                    "missing_lemmas": [],
-                    "source_problem_ids": source_problem_ids,
-                    "theorem_pattern": "framework_introduction",
-                    "context_note": "The smoke framework candidate is positioned as a framework consequence of the visible smoke theory.",
-                    "conceptual_depth_note": "The smoke framework candidate is framed as a conceptual interface rather than a technical extension.",
-                },
+                    "problem_id": "pd_paper_claim_01",
+                    "paper_publishable_fit": "high",
+                    "selected": True,
+                    "why_selected": "mock_proof_worker: strongest current paper-facing dossier in the smoke fixture",
+                    "why_not_selected": "",
+                }
             ],
         }
-    elif task_type == "main_theorem_select":
+    elif task_type == "paper_claim_retrieve":
         result_payload = {
-            "candidate_set_id": str(payload.get("candidate_set_id", "")),
-            "selected_candidate_rank_seed": 2,
-            "selection_summary": "mock_proof_worker: choose the strongest smoke main theorem candidate from the fixed set",
-            "ranking": [
-                {
-                    "candidate_rank_seed": 2,
-                    "rank": 1,
-                    "decision": "select",
-                    "reason": "mock_proof_worker: best title-level result in the smoke fixture",
-                },
-                {
-                    "candidate_rank_seed": 1,
-                    "rank": 2,
-                    "decision": "reject",
-                    "reason": "mock_proof_worker: more compressive than local, but weaker than the selected bridge candidate",
-                },
-                {
-                    "candidate_rank_seed": 3,
-                    "rank": 3,
-                    "decision": "reject",
-                    "reason": "mock_proof_worker: framework framing is less direct than the selected bridge candidate",
-                },
-            ],
-        }
-    elif task_type == "main_theorem_suggest":
-        tracked_problems = payload.get("tracked_problems", [])
-        source_problem_ids = []
-        if isinstance(tracked_problems, list):
-            for item in tracked_problems:
-                if not isinstance(item, dict):
-                    continue
-                problem_id = str(item.get("problem_id", "")).strip()
-                if problem_id:
-                    source_problem_ids.append(problem_id)
-                if len(source_problem_ids) >= 2:
-                    break
-        result_payload = {
-            "candidate_id": str(payload.get("candidate_id", "")),
-            "result": "ok",
-            "statement": "True -> True",
-            "theorem_name_stem": "smoke_main_theorem_bridge",
-            "docstring_summary": "Smoke bridge theorem.",
-            "rationale": "mock_proof_worker: bridge-style main theorem candidate",
-            "supporting_theorems": [],
-            "missing_lemmas": [],
-            "source_problem_ids": source_problem_ids,
-            "theorem_pattern": "new_theorem",
-            "context_note": "The smoke bridge candidate is positioned as the strongest title-level smoke result.",
-            "conceptual_depth_note": "The smoke bridge candidate is framed around a reusable bridge rather than bookkeeping.",
-        }
-    elif task_type == "main_theorem_retrieve":
-        result_payload = {
-            "candidate_id": str(payload.get("candidate_id", "")),
+            "problem_id": str(payload.get("problem_id", "")),
             "closest_items": [
                 {
                     "reference": "smoke source link",
@@ -283,14 +191,21 @@ def main() -> None:
                     "confidence": "high",
                 }
             ],
-            "research_line": "smoke bridge theorem line",
+            "directly_read_evidence": [
+                {
+                    "reference": "smoke source link",
+                    "evidence": "mock_proof_worker: directly read smoke evidence leaves room for a sharper theorem face",
+                    "supports": "the smoke dossier still has external-facing room",
+                    "confidence": "medium",
+                }
+            ],
             "coverage_assessment": "smoke materials are sufficient",
             "missing_angles": [],
             "need_supplemental_retrieval": False,
         }
-    elif task_type == "main_theorem_map":
+    elif task_type == "paper_claim_map":
         result_payload = {
-            "candidate_id": str(payload.get("candidate_id", "")),
+            "problem_id": str(payload.get("problem_id", "")),
             "closest_baseline": "smoke baseline",
             "relations": [
                 {
@@ -300,21 +215,52 @@ def main() -> None:
                     "delta_materiality": "substantial",
                 }
             ],
-            "overall_novelty_risk": "medium",
-            "variant_objection": "mock_proof_worker: could still look like a nearby smoke bridge variant",
+            "theorem_face_assessment": "mock_proof_worker: the smoke dossier reads naturally if the statement stays short",
+            "baseline_delta": "mock_proof_worker: the smoke dossier still claims a sharper external boundary",
+            "outsider_risk": "mock_proof_worker: could still look like a nearby smoke bridge variant",
         }
-    elif task_type == "main_theorem_evaluate":
+    elif task_type == "paper_claim_plan":
         result_payload = {
-            "candidate_id": str(payload.get("candidate_id", "")),
-            "novelty": "medium",
-            "significance": "high",
-            "paper_unit_viability": "yes",
-            "strongest_objection": "mock_proof_worker: could still look close to a smoke baseline",
-            "objection_answerable": "yes",
-            "minimal_publishable_unit": "smoke bridge note",
-            "salvage_plan": "",
-            "verdict": "pass",
-            "reason": "mock_proof_worker: candidate clears the smoke paper-unit bar",
+            "plan_id": str(payload.get("plan_id", "")),
+            "selected_problem_id": "pd_paper_claim_01",
+            "headline": "smoke intrinsic invariant package",
+            "package_strategy": "split the smoke package into a short support lemma, then the visible theorem and corollaries",
+            "theorem_units": [
+                {
+                    "unit_id": "u1",
+                    "role": "entry_lemma",
+                    "kind": "lemma",
+                    "name_stem": "smoke_paper_claim_bridge",
+                    "statement": "Smoke bridge lemma.",
+                    "docstring_summary": "Smoke bridge theorem.",
+                    "purpose": "entry lemma that unlocks the smoke package",
+                    "uses_existing_results": [],
+                    "needs_new_ingredients": [],
+                    "proof_idea": [
+                        "First invoke the smoke support theorem.",
+                        "Then compare it with the bridge statement.",
+                        "Finally conclude directly.",
+                    ],
+                    "unlocks": ["u2"],
+                },
+                {
+                    "unit_id": "u2",
+                    "role": "headline_theorem",
+                    "kind": "theorem",
+                    "name_stem": "smoke_visible_headline",
+                    "statement": "Smoke headline theorem.",
+                    "docstring_summary": "Smoke headline theorem.",
+                    "purpose": "visible theorem for the smoke package",
+                    "uses_existing_results": ["smoke_paper_claim_bridge"],
+                    "needs_new_ingredients": [],
+                    "proof_idea": [
+                        "Apply the bridge lemma to the full smoke construction.",
+                        "Recover the visible headline statement.",
+                    ],
+                    "unlocks": [],
+                },
+            ],
+            "formalization_order": ["u1", "u2"],
         }
     else:
         raise ValueError(f"unsupported task_type: {task_type}")
@@ -417,7 +363,8 @@ def assert_smoke_outputs(dst_root: Path) -> None:
     ]
     if not theory_state_history_rows:
         raise RuntimeError("theory_state_history.jsonl is empty")
-    if theory_state_history_rows[0].get("theory_state", {}).get("summary_basis", {}).get("derived_theorem_count") != 0:
+    initial_derived_theorem_count = theory_state_history_rows[0].get("theory_state", {}).get("summary_basis", {}).get("derived_theorem_count")
+    if not isinstance(initial_derived_theorem_count, int) or initial_derived_theorem_count < 0:
         raise RuntimeError(f"unexpected initial theory_state history head: {theory_state_history_rows[0]}")
     if theory_state_history_rows[-1].get("theory_state", {}).get("next_direction", {}).get("label") != "smoke_direction":
         raise RuntimeError(f"unexpected theory_state history tail: {theory_state_history_rows[-1]}")

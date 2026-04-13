@@ -236,11 +236,6 @@ def _cycle_command(args: argparse.Namespace, config: AppConfig) -> tuple[list[st
     _append_flag(cmd, "--data-dir", args.data_dir or config.paths.data_dir)
     _append_flag(
         cmd,
-        "--formalization-memory-file",
-        args.formalization_memory_file or (config.paths.data_dir / "formalization_memory.json"),
-    )
-    _append_flag(
-        cmd,
         "--phase-attempts-file",
         args.phase_attempts_file,
     )
@@ -294,15 +289,15 @@ def _cycle_command(args: argparse.Namespace, config: AppConfig) -> tuple[list[st
     )
     if args.skip_verify:
         cmd.append("--skip-verify")
-    if args.skip_main_theorem:
-        cmd.append("--skip-main-theorem")
+    if args.skip_paper_claim:
+        cmd.append("--skip-paper-claim")
     if args.skip_refactor:
         cmd.append("--skip-refactor")
     _append_flag(cmd, "--parallel-sessions", config.runtime.parallel_sessions)
     _append_flag(cmd, "--seed-count", config.runtime.seed_count)
     _append_flag(cmd, "--open-problem-failure-threshold", config.runtime.open_problem_failure_threshold)
     _append_flag(cmd, "--prover-retry-budget-sec", config.runtime.prover_retry_budget_sec)
-    _append_flag(cmd, "--formalization-retry-budget-sec", config.runtime.formalization_retry_budget_sec)
+    _append_flag(cmd, "--paper-claim-retry-budget-sec", config.runtime.formalization_retry_budget_sec)
     _append_flag(cmd, "--max-same-error-streak", config.runtime.max_same_error_streak)
     _append_flag(
         cmd,
@@ -316,17 +311,9 @@ def _cycle_command(args: argparse.Namespace, config: AppConfig) -> tuple[list[st
     return cmd, build_worker_env(config)
 
 
-def _main_theorem_command(args: argparse.Namespace, config: AppConfig) -> tuple[list[str], dict[str, str]]:
-    cmd = _python_command("main_theorem/run_main_theorem_session.py")
+def _paper_claim_command(args: argparse.Namespace, config: AppConfig) -> tuple[list[str], dict[str, str]]:
+    cmd = _python_command("paper_claim/run_paper_claim_session.py")
     cmd.append("--enable-worker")
-    formalization_retry_budget_sec = (
-        args.formalization_retry_budget_sec
-        if args.formalization_retry_budget_sec is not None
-        else config.runtime.formalization_retry_budget_sec
-    )
-    max_same_error_streak = (
-        args.max_same_error_streak if args.max_same_error_streak is not None else config.runtime.max_same_error_streak
-    )
     open_problem_failure_threshold = (
         args.open_problem_failure_threshold
         if args.open_problem_failure_threshold is not None
@@ -341,15 +328,12 @@ def _main_theorem_command(args: argparse.Namespace, config: AppConfig) -> tuple[
     _append_flag(cmd, "--data-dir", args.data_dir or config.paths.data_dir)
     _append_flag(
         cmd,
-        "--formalization-memory-file",
-        args.formalization_memory_file or (config.paths.data_dir / "formalization_memory.json"),
-    )
-    _append_flag(
-        cmd,
         "--phase-attempts-file",
         args.phase_attempts_file,
     )
     _append_flag(cmd, "--session-events-file", getattr(args, "session_events_file", None))
+    _append_flag(cmd, "--resume-from-session-events-file", getattr(args, "resume_from_session_events_file", None))
+    _append_flag(cmd, "--resume-plan-id", getattr(args, "resume_plan_id", None))
     _append_flag(cmd, "--run-id", args.run_id)
     _append_flag(cmd, "--current-iteration", args.current_iteration)
     _append_bool_flag(
@@ -360,9 +344,11 @@ def _main_theorem_command(args: argparse.Namespace, config: AppConfig) -> tuple[
     if args.skip_verify:
         cmd.append("--skip-verify")
     _append_flag(cmd, "--verify-timeout", args.verify_timeout)
-    _append_flag(cmd, "--formalization-retry-budget-sec", formalization_retry_budget_sec)
-    _append_flag(cmd, "--main-theorem-retry-budget-sec", args.main_theorem_retry_budget_sec)
-    _append_flag(cmd, "--max-same-error-streak", max_same_error_streak)
+    _append_flag(
+        cmd,
+        "--paper-claim-retry-budget-sec",
+        args.paper_claim_retry_budget_sec if args.paper_claim_retry_budget_sec is not None else config.runtime.formalization_retry_budget_sec,
+    )
     _append_flag(cmd, "--open-problem-failure-threshold", open_problem_failure_threshold)
     _append_flag(cmd, "--batch-generator-seed-count", batch_generator_seed_count)
     _append_flag(cmd, "--batch-generator-open-target-min", args.batch_generator_open_target_min)
@@ -483,7 +469,7 @@ def _build_parser() -> argparse.ArgumentParser:
     _add_initialize_phase_flags(loop, default=None)
     _add_loop_tuning_flags(loop)
 
-    cycle = subparsers.add_parser("cycle", help="Run one cycle: loop -> main theorem -> refactor -> snapshot.")
+    cycle = subparsers.add_parser("cycle", help="Run one cycle: loop -> paper claim -> refactor -> snapshot.")
     _add_common_flags(cycle)
     _add_worker_flags(cycle, include_refactor_task=True)
     _add_loop_task_worker_flags(cycle)
@@ -491,7 +477,6 @@ def _build_parser() -> argparse.ArgumentParser:
     cycle.add_argument("--derived-file")
     cycle.add_argument("--scratch-file")
     cycle.add_argument("--data-dir")
-    cycle.add_argument("--formalization-memory-file")
     cycle.add_argument("--phase-attempts-file")
     cycle.add_argument("--preview-file")
     cycle.add_argument("--review-output-file")
@@ -508,7 +493,7 @@ def _build_parser() -> argparse.ArgumentParser:
     cycle.add_argument("--snapshot-root")
     cycle.add_argument("--cycle-iterations", type=int)
     cycle.add_argument("--skip-verify", action="store_true")
-    cycle.add_argument("--skip-main-theorem", action="store_true")
+    cycle.add_argument("--skip-paper-claim", action="store_true")
     cycle.add_argument("--skip-refactor", action="store_true")
     cycle.add_argument("--initialize-on-start", action=argparse.BooleanOptionalAction, default=None)
     cycle.add_argument("--phase-logs", action=argparse.BooleanOptionalAction, default=None)
@@ -536,28 +521,30 @@ def _build_parser() -> argparse.ArgumentParser:
     _add_review_flags(pipeline)
     _add_pipeline_refactor_toggles(pipeline, default=None)
 
-    main_theorem = subparsers.add_parser("main-theorem", help="Run a one-shot main theorem session.")
-    _add_common_flags(main_theorem)
-    _add_worker_flags(main_theorem)
-    _add_loop_task_worker_flags(main_theorem)
-    main_theorem.add_argument("--theory-file")
-    main_theorem.add_argument("--derived-file")
-    main_theorem.add_argument("--scratch-file")
-    main_theorem.add_argument("--data-dir")
-    main_theorem.add_argument("--formalization-memory-file")
-    main_theorem.add_argument("--phase-attempts-file")
-    main_theorem.add_argument("--session-events-file")
-    main_theorem.add_argument("--run-id")
-    main_theorem.add_argument("--current-iteration", type=int)
-    main_theorem.add_argument("--phase-logs", action=argparse.BooleanOptionalAction, default=None)
-    main_theorem.add_argument("--skip-verify", action="store_true")
-    main_theorem.add_argument("--verify-timeout", type=int)
-    main_theorem.add_argument("--formalization-retry-budget-sec", type=int)
-    main_theorem.add_argument("--main-theorem-retry-budget-sec", type=int)
-    main_theorem.add_argument("--max-same-error-streak", type=int)
-    main_theorem.add_argument("--open-problem-failure-threshold", type=int)
-    main_theorem.add_argument("--batch-generator-seed-count", type=int)
-    main_theorem.add_argument("--batch-generator-open-target-min", type=int)
+    def _add_paper_claim_parser(name: str, help_text: str) -> None:
+        parser = subparsers.add_parser(name, help=help_text)
+        _add_common_flags(parser)
+        _add_worker_flags(parser)
+        _add_loop_task_worker_flags(parser)
+        parser.add_argument("--theory-file")
+        parser.add_argument("--derived-file")
+        parser.add_argument("--scratch-file")
+        parser.add_argument("--data-dir")
+        parser.add_argument("--phase-attempts-file")
+        parser.add_argument("--session-events-file")
+        parser.add_argument("--resume-from-session-events-file")
+        parser.add_argument("--resume-plan-id")
+        parser.add_argument("--run-id")
+        parser.add_argument("--current-iteration", type=int)
+        parser.add_argument("--phase-logs", action=argparse.BooleanOptionalAction, default=None)
+        parser.add_argument("--skip-verify", action="store_true")
+        parser.add_argument("--verify-timeout", type=int)
+        parser.add_argument("--paper-claim-retry-budget-sec", type=int)
+        parser.add_argument("--open-problem-failure-threshold", type=int)
+        parser.add_argument("--batch-generator-seed-count", type=int)
+        parser.add_argument("--batch-generator-open-target-min", type=int)
+
+    _add_paper_claim_parser("paper-claim", "Run a one-shot paper claim session.")
 
     review = subparsers.add_parser("review", help="Run the second review-polish pass.")
     _add_common_flags(review)
@@ -608,7 +595,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
     extract_deps = subparsers.add_parser(
         "extract-derived-deps",
-        help="Refresh data/derived-deps.json from DependencyExtractor.lean and Derived.lean.",
+        help="Refresh data/pipeline_artifacts/derived-deps.json from DependencyExtractor.lean and Derived.lean.",
     )
     _add_common_flags(extract_deps)
     extract_deps.add_argument("--derived-file")
@@ -654,7 +641,7 @@ def main() -> int:
         "loop": _loop_command,
         "cycle": _cycle_command,
         "pipeline": _pipeline_command,
-        "main-theorem": _main_theorem_command,
+        "paper-claim": _paper_claim_command,
         "rewrite": _rewrite_command,
         "review": _review_command,
         "materialize-generated": _materialize_generated_command,

@@ -21,7 +21,7 @@ DEFAULT_REVIEW_OUTPUT_FILE = "AutomatedTheoryConstruction/Derived.refactored.rev
 DEFAULT_REVIEW_REPORT_FILE = "AutomatedTheoryConstruction/Derived.refactored.reviewed.report.json"
 DEFAULT_TRY_AT_EACH_STEP_RAW_OUTPUT_FILE = "AutomatedTheoryConstruction/Derived.tryAtEachStep.json"
 DEFAULT_TRY_AT_EACH_STEP_APPLY_REPORT_FILE = "AutomatedTheoryConstruction/Derived.tryAtEachStep.apply_report.json"
-DEFAULT_PLAN_FILE = "data/derived-chunk-plan.json"
+DEFAULT_PLAN_FILE = "data/pipeline_artifacts/derived-chunk-plan.json"
 
 
 def iso_timestamp_now() -> str:
@@ -107,7 +107,7 @@ def _write_cycle_manifest(snapshot_dir: Path, payload: dict[str, Any]) -> None:
     )
 
 
-def _summarize_main_theorem_report(report: dict[str, Any]) -> dict[str, Any]:
+def _summarize_paper_claim_report(report: dict[str, Any]) -> dict[str, Any]:
     return {
         "status": str(report.get("status", "")),
         "processed": bool(report.get("processed", False)),
@@ -121,14 +121,13 @@ def _summarize_main_theorem_report(report: dict[str, Any]) -> dict[str, Any]:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Run one ATC cycle: loop -> main theorem -> refactor -> snapshot.")
+    parser = argparse.ArgumentParser(description="Run one ATC cycle: loop -> paper claim -> refactor -> snapshot.")
     parser.add_argument("--theory-file", default="AutomatedTheoryConstruction/Theory.lean")
     parser.add_argument("--derived-file", default="AutomatedTheoryConstruction/Derived.lean")
     parser.add_argument("--scratch-file", default="AutomatedTheoryConstruction/Scratch.lean")
     parser.add_argument("--worker-command")
     parser.add_argument("--worker-timeout", type=int)
     parser.add_argument("--data-dir", default="data")
-    parser.add_argument("--formalization-memory-file", default="data/formalization_memory.json")
     parser.add_argument("--phase-attempts-file")
     parser.add_argument("--preview-file", default=DEFAULT_PREVIEW_FILE)
     parser.add_argument("--review-output-file", default=DEFAULT_REVIEW_OUTPUT_FILE)
@@ -137,7 +136,7 @@ def main() -> int:
     parser.add_argument("--try-at-each-step-apply-report-file", default=DEFAULT_TRY_AT_EACH_STEP_APPLY_REPORT_FILE)
     parser.add_argument("--try-at-each-step-tactic", default="with_reducible exact?")
     parser.add_argument("--theorem-reuse-memory-file", default="data/theorem_reuse_memory.json")
-    parser.add_argument("--deps-file", default="data/derived-deps.json")
+    parser.add_argument("--deps-file", default="data/pipeline_artifacts/derived-deps.json")
     parser.add_argument("--generated-root", default="AutomatedTheoryConstruction/Generated")
     parser.add_argument("--manifest-file", default="AutomatedTheoryConstruction/Generated/Manifest.lean")
     parser.add_argument("--catalog-file", default="AutomatedTheoryConstruction/Generated/catalog.json")
@@ -159,7 +158,7 @@ def main() -> int:
     parser.add_argument("--initialize-on-start", action=argparse.BooleanOptionalAction, default=False)
     parser.add_argument("--phase-logs", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--skip-verify", action="store_true")
-    parser.add_argument("--skip-main-theorem", action="store_true")
+    parser.add_argument("--skip-paper-claim", action="store_true")
     parser.add_argument("--skip-refactor", action="store_true")
     args = parser.parse_args()
 
@@ -208,18 +207,14 @@ def main() -> int:
         default_path=DEFAULT_TRY_AT_EACH_STEP_APPLY_REPORT_FILE,
         artifact_dir=refactor_artifact_dir,
     )
-    plan_file = _resolve_refactor_artifact_path(
-        raw_path=args.plan_file,
-        default_path=DEFAULT_PLAN_FILE,
-        artifact_dir=refactor_artifact_dir,
-    )
+    plan_file = Path(args.plan_file)
     started_at = iso_timestamp_now()
     env = os.environ.copy()
     loop_status = "pending"
-    main_theorem_status = "skipped" if args.skip_main_theorem else "pending"
+    paper_claim_status = "skipped" if args.skip_paper_claim else "pending"
     refactor_status = "skipped" if args.skip_refactor else "pending"
     fatal_stage = ""
-    main_theorem_report: dict[str, Any] = {}
+    paper_claim_report: dict[str, Any] = {}
     current_iteration = start_iteration
 
     try:
@@ -245,13 +240,13 @@ def main() -> int:
             fatal_stage = "loop"
             return 1
 
-        if not args.skip_main_theorem:
+        if not args.skip_paper_claim:
             with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as tmp:
                 report_file = Path(tmp.name)
             try:
-                main_theorem_cmd = [
+                paper_claim_cmd = [
                     sys.executable,
-                    _script_path("main_theorem/run_main_theorem_session.py"),
+                    _script_path("paper_claim/run_paper_claim_session.py"),
                     "--enable-worker",
                     "--theory-file",
                     str(theory_file),
@@ -261,8 +256,6 @@ def main() -> int:
                     str(scratch_file),
                     "--data-dir",
                     str(data_dir),
-                    "--formalization-memory-file",
-                    str(args.formalization_memory_file),
                     "--run-id",
                     cycle_id,
                     "--current-iteration",
@@ -275,27 +268,25 @@ def main() -> int:
                     str(args.batch_generator_open_target_min),
                     "--open-problem-failure-threshold",
                     str(args.open_problem_failure_threshold),
-                    "--formalization-retry-budget-sec",
+                    "--paper-claim-retry-budget-sec",
                     str(args.formalization_retry_budget_sec),
-                    "--max-same-error-streak",
-                    str(args.max_same_error_streak),
                 ]
-                _append_flag(main_theorem_cmd, "--phase-attempts-file", phase_attempts_file)
-                _append_flag(main_theorem_cmd, "--worker-command", args.worker_command)
-                _append_flag(main_theorem_cmd, "--worker-timeout", args.worker_timeout)
-                _append_bool_flag(main_theorem_cmd, "--phase-logs", bool(args.phase_logs))
+                _append_flag(paper_claim_cmd, "--phase-attempts-file", phase_attempts_file)
+                _append_flag(paper_claim_cmd, "--worker-command", args.worker_command)
+                _append_flag(paper_claim_cmd, "--worker-timeout", args.worker_timeout)
+                _append_bool_flag(paper_claim_cmd, "--phase-logs", bool(args.phase_logs))
                 if args.skip_verify:
-                    main_theorem_cmd.append("--skip-verify")
-                main_theorem_returncode = _run_stage("main-theorem", main_theorem_cmd, env=env)
+                    paper_claim_cmd.append("--skip-verify")
+                paper_claim_returncode = _run_stage("paper-claim", paper_claim_cmd, env=env)
                 if report_file.exists():
-                    main_theorem_report = json.loads(report_file.read_text(encoding="utf-8"))
-                if main_theorem_returncode != 0 and not main_theorem_report:
-                    main_theorem_report = {
-                        "status": "main_theorem_error",
+                    paper_claim_report = json.loads(report_file.read_text(encoding="utf-8"))
+                if paper_claim_returncode != 0 and not paper_claim_report:
+                    paper_claim_report = {
+                        "status": "paper_claim_error",
                         "processed": False,
                         "verify_success": False,
                     }
-                main_theorem_status = str(main_theorem_report.get("status", "ok" if main_theorem_returncode == 0 else "error"))
+                paper_claim_status = str(paper_claim_report.get("status", "ok" if paper_claim_returncode == 0 else "error"))
             finally:
                 report_file.unlink(missing_ok=True)
 
@@ -429,9 +420,9 @@ def main() -> int:
                 "target_iteration": target_iteration,
                 "end_iteration": current_iteration,
                 "loop_status": loop_status,
-                "main_theorem_status": main_theorem_status,
+                "paper_claim_status": paper_claim_status,
                 "refactor_status": refactor_status,
-                "main_theorem_report": _summarize_main_theorem_report(main_theorem_report),
+                "paper_claim_report": _summarize_paper_claim_report(paper_claim_report),
                 "paths": {
                     "theory_file": str(theory_file),
                     "derived_file": str(derived_file),

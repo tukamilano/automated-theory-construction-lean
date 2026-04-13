@@ -1,1 +1,20 @@
-{"entries": []}
+{
+  "entries": [
+    {
+      "candidate_id": "paper_claim_plan_for_pd_paper_claim_02",
+      "theorem_name": "paper_claim_one_sided_handed_boundary_persists",
+      "statement": "((∀ (Γ : List Tp) (A : Tp), (∀ x ∈ Γ, isLeftOnly x) → isLeftOnly A → (HandedSupportClosure Γ A ↔ leftTranslatedHandedSupportClosure Γ A)) ∧ (∀ (Γ : List Tp) (A : Tp), (∀ x ∈ Γ, isRightOnly x) → isRightOnly A → (HandedSupportClosure Γ A ↔ rightTranslatedHandedSupportClosure Γ A))) ∧ ¬((∀ (Γ : List Tp) (A : Tp), (∀ x ∈ Γ, isLeftOnly x) → isLeftOnly A → (SupportClosure Γ A ↔ HandedSupportClosure Γ A)) ∧ (∀ (Γ : List Tp) (A : Tp), (∀ x ∈ Γ, isRightOnly x) → isRightOnly A → (SupportClosure Γ A ↔ HandedSupportClosure Γ A)))",
+      "docstring_summary": "The exact handed invariant survives directional reductions, while the coarse/handed gap remains structural.",
+      "rationale": "First restrict to left-only or right-only sequents and apply the one-sided conservativity theorem for the translated presentation.\nThen replace derivability by handed support using the handed exactness theorem, obtaining preservation of the exact handed invariant across translation.\nNext invoke the same-handed failure theorem to show that coarse support still does not become exact merely by restricting to one directional side.\nFinally conclude that the coarse/handed separation is structural and survives standard directional reductions.\nAdded the u6 corollary to Scratch.lean as a packaged boundary statement: the first conjunct is exactly one-sided handed conservativity, and the second conjunct reuses the verified same-handed failure theorem to show coarse support still does not collapse to handed support on same-handed fragments. Verified with `lake env lean AutomatedTheoryConstruction/Scratch.lean`; no relevant sorry remains.",
+      "plan_summary": "",
+      "supporting_theorems": [
+        "thm_one_sided_handed_conservativity_000051",
+        "thm_full_one_sided_conservativity_000042",
+        "thm_same_handed_support_exactness_000059_is_false"
+      ],
+      "intermediate_lemmas": [],
+      "iteration": 0,
+      "appended_to_derived": true
+    }
+  ]
+}

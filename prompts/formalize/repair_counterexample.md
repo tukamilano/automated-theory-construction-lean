@@ -34,5 +34,6 @@
 - Use new local declarations only when unavoidable.
 
 ## prelude_rules
-- By default avoid fresh `def`/`abbrev`/`structure`/`class`/`inductive` in prelude unless essential.
+- By default avoid fresh `def`/`abbrev`/`structure`/`class`/`inductive`/short helper lemmas in prelude unless essential.
+- Introduce them only when needed to repair an essential contradiction or witness step; keep them small and local.
 - No `import`, `namespace`, `section`, `axiom`, or `theorem`.

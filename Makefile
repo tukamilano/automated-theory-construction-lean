@@ -14,8 +14,8 @@ PREVIEW_FILE ?= AutomatedTheoryConstruction/Derived.refactored.preview.lean
 REVIEWED_FILE ?= AutomatedTheoryConstruction/Derived.refactored.reviewed.lean
 TRY_AT_EACH_STEP_RAW_OUTPUT_FILE ?= AutomatedTheoryConstruction/Derived.tryAtEachStep.json
 TRY_AT_EACH_STEP_APPLY_REPORT_FILE ?= AutomatedTheoryConstruction/Derived.tryAtEachStep.apply_report.json
-DEPS_FILE ?= data/derived-deps.json
-DERIVED_CHUNK_PLAN_FILE ?= data/derived-chunk-plan.json
+DEPS_FILE ?= data/pipeline_artifacts/derived-deps.json
+DERIVED_CHUNK_PLAN_FILE ?= data/pipeline_artifacts/derived-chunk-plan.json
 GENERATED_ROOT ?= AutomatedTheoryConstruction/Generated
 GENERATED_MANIFEST_FILE ?= $(GENERATED_ROOT)/Manifest.lean
 GENERATED_CATALOG_FILE ?= $(GENERATED_ROOT)/catalog.json
@@ -30,13 +30,13 @@ SEED_ARGS ?=
 LOOP_ARGS ?=
 CYCLE_ARGS ?=
 PIPELINE_ARGS ?=
-MAIN_THEOREM_ARGS ?=
+PAPER_CLAIM_ARGS ?=
 REWRITE_ARGS ?=
 REVIEW_ARGS ?=
 MATERIALIZE_ARGS ?=
 GENERATED_LOCAL_ARGS ?=
 
-.PHONY: help build check check-theory check-derived check-scratch smoke seed loop loop-continue loop-refactor-to-generated loop-continue-refactor-to-generated cycle pipeline main-theorem rewrite review split-generated-local refactor-to-generated
+.PHONY: help build check check-theory check-derived check-scratch smoke seed loop loop-continue loop-refactor-to-generated loop-continue-refactor-to-generated cycle pipeline paper-claim rewrite review split-generated-local refactor-to-generated
 
 help:
 	@printf '%s\n' \
@@ -52,9 +52,9 @@ help:
 		'  make loop-continue - same as loop, but keep current runtime state' \
 		'  make loop-refactor-to-generated - run loop -> pass1.5 -> pass2 -> split -> local pass1.2 -> local pass1.3' \
 		'  make loop-continue-refactor-to-generated - run loop-continue -> pass1.5 -> pass2 -> split -> local pass1.2 -> local pass1.3 using $(CONTINUE_CONFIG)' \
-		'  make cycle         - run one cycle: loop -> main theorem -> refactor -> snapshot' \
+		'  make cycle         - run one cycle: loop -> paper claim -> refactor -> snapshot' \
 		'  make pipeline      - run seed -> loop -> rewrite -> review via scripts/atc_cli.py pipeline' \
-		'  make main-theorem  - run a one-shot main theorem session via scripts/atc_cli.py main-theorem' \
+		'  make paper-claim   - run a one-shot paper claim session via scripts/atc_cli.py paper-claim' \
 		'  make rewrite       - run scripts/atc_cli.py rewrite' \
 		'  make review        - run scripts/atc_cli.py review' \
 		'  make split-generated-local - run split -> local pass1.2 -> local pass1.3' \
@@ -70,7 +70,7 @@ help:
 		'  SEED_ARGS="--context-file path/to/context.tex --seed-count 4"' \
 		'  LOOP_ARGS="--max-iterations 40"' \
 		'  CYCLE_ARGS="--cycle-iterations 20 --snapshot-root snapshots"' \
-		'  MAIN_THEOREM_ARGS="--skip-verify --current-iteration 0"' \
+		'  PAPER_CLAIM_ARGS="--skip-verify --current-iteration 0"' \
 		'  PIPELINE_ARGS="--context-file path/to/context.tex --max-iterations 40"'
 
 build:
@@ -139,13 +139,13 @@ pipeline:
 		--review-output-file $(REVIEWED_FILE) \
 		$(PIPELINE_ARGS)
 
-main-theorem:
-	$(ATC) main-theorem \
+paper-claim:
+	$(ATC) paper-claim \
 		$(ATC_COMMON_ARGS) \
 		--theory-file $(THEORY_FILE) \
 		--derived-file $(DERIVED_FILE) \
 		--scratch-file $(SCRATCH_FILE) \
-		$(MAIN_THEOREM_ARGS)
+		$(PAPER_CLAIM_ARGS)
 
 rewrite:
 	$(ATC) rewrite \

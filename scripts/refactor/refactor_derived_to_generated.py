@@ -43,7 +43,7 @@ DERIVED_TEMPLATE = (
 
 REPO_ROOT = SCRIPTS_ROOT.parent
 DEFAULT_DERIVED_FILE = Path("AutomatedTheoryConstruction/Derived.lean")
-DEFAULT_PLAN_FILE = Path("data/derived-chunk-plan.json")
+DEFAULT_PLAN_FILE = Path("data/pipeline_artifacts/derived-chunk-plan.json")
 SLUG_TOKEN_PATTERN = re.compile(r"[A-Za-z][A-Za-z0-9']*")
 SLUG_STOPWORDS = {
     "thm",

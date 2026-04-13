@@ -38,4 +38,5 @@
 ## output_rules
 - Return JSON only.
 - `new_problems` must be an array of strings with length 0-2.
+- Prefer concise follow-up statements; if a candidate would repeat a long bundle of assumptions, phrase it around one reusable named condition or auxiliary definition rather than restating the whole bundle verbatim.
 - Do not add extra top-level keys.

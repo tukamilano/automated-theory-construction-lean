@@ -39,7 +39,7 @@ def main() -> int:
 
             verify_success, theorem_name, result, prelude_code, proof_text, counterexample_text, verify_error_excerpt, stmt = (
                 run_loop.attempt_formalization_until_timeout(
-                    problem_id="mt_main_theorem",
+                    problem_id="pc_paper_claim",
                     theorem_name="main_thm_example",
                     stmt="False -> False",
                     result="proof",
@@ -63,7 +63,7 @@ def main() -> int:
                     max_same_error_streak=1,
                     retry_initial_formalization_until_budget=True,
                     run_id="test-run",
-                    session_type="main_theorem_session",
+                    session_type="paper_claim_session",
                     iteration=1,
                     phase_attempts_path=phase_attempts_path,
                     compile_metrics={
@@ -86,7 +86,7 @@ def main() -> int:
     if not attempts[1]["retry_instruction"]:
         raise RuntimeError(f"expected retry_instruction on second attempt, got {attempts[1]}")
     if not verify_success:
-        raise RuntimeError("main theorem initial formalize retry should eventually verify")
+        raise RuntimeError("paper claim initial formalize retry should eventually verify")
     if theorem_name != "main_thm_example":
         raise RuntimeError(f"unexpected theorem name: {theorem_name}")
     if result != "proof":
@@ -102,7 +102,7 @@ def main() -> int:
     if stmt != "False -> False":
         raise RuntimeError(f"unexpected stmt: {stmt}")
 
-    print("run loop main theorem initial formalize retry test passed")
+    print("run loop paper claim initial formalize retry test passed")
     return 0
 
 

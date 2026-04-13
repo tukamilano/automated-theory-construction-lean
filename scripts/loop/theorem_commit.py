@@ -152,7 +152,7 @@ def commit_verified_theorem_and_generation(
     return committed_theorem_code
 
 
-DERIVED_THEOREM_HEADER_PATTERN = re.compile(r"\btheorem\s+([A-Za-z0-9_']+)\s*:")
+DERIVED_THEOREM_HEADER_PATTERN = re.compile(r"\btheorem\s+([A-Za-z0-9_']+)\b")
 
 
 def extract_derived_entry_from_theorem_code(theorem_code: str) -> dict[str, str] | None:

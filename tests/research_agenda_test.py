@@ -17,11 +17,11 @@ import generate_seeds_from_theory
 import materials_pipeline
 import run_loop
 from guidance import build_guidance_context
-from main_theorem import main_theorem_session
-from main_theorem.main_theorem_session import request_main_theorem_evaluation
-from main_theorem.main_theorem_session import request_main_theorem_mapping
-from main_theorem.main_theorem_session import request_main_theorem_retrieval
-from main_theorem.main_theorem_session import request_main_theorem_suggestion
+from paper_claim import paper_claim_session
+from paper_claim.paper_claim_session import request_paper_claim_mapping
+from paper_claim.paper_claim_session import request_paper_claim_plan
+from paper_claim.paper_claim_session import request_paper_claim_retrieval
+from paper_claim.paper_claim_session import request_paper_claim_select
 from materials import load_materials
 from materials_pipeline import build_download_metadata
 from materials_pipeline import save_download_index
@@ -211,7 +211,7 @@ def test_runtime_initialization_clears_generation_sidecar_files() -> None:
         formalization_memory_file = data_dir / "formalization_memory.json"
         archived_problems_file = data_dir / "archived_problems.jsonl"
         theorem_reuse_memory_file = data_dir / "theorem_reuse_memory.json"
-        main_theorem_rejection_memory_file = data_dir / "main_theorem_rejection_memory.json"
+        paper_claim_rejection_memory_file = data_dir / "paper_claim_rejection_memory.json"
 
         write_jsonl_atomic(
             seeds_file,
@@ -241,7 +241,7 @@ def test_runtime_initialization_clears_generation_sidecar_files() -> None:
             + "\n",
             encoding="utf-8",
         )
-        main_theorem_rejection_memory_file.write_text(
+        paper_claim_rejection_memory_file.write_text(
             json.dumps(
                 {
                     "entries": [
@@ -277,9 +277,9 @@ def test_runtime_initialization_clears_generation_sidecar_files() -> None:
         theorem_reuse_payload = json.loads(theorem_reuse_memory_file.read_text(encoding="utf-8"))
         if theorem_reuse_payload != {"entries": []}:
             raise RuntimeError("theorem_reuse_memory.json was not cleared on initialization")
-        rejection_payload = json.loads(main_theorem_rejection_memory_file.read_text(encoding="utf-8"))
+        rejection_payload = json.loads(paper_claim_rejection_memory_file.read_text(encoding="utf-8"))
         if rejection_payload != {"entries": []}:
-            raise RuntimeError("main_theorem_rejection_memory.json was not cleared on initialization")
+            raise RuntimeError("paper_claim_rejection_memory.json was not cleared on initialization")
 
 
 def test_worker_payloads_include_research_agenda() -> None:
@@ -302,7 +302,7 @@ def test_worker_payloads_include_research_agenda() -> None:
         ],
         "problem_generation": ["provability relations among structural rules"],
         "problem_evaluation": ["Down-rank candidates that only produce narrow local continuation."],
-        "main_theorem": ["Read `03_source_links.md` when novelty pressure depends on a cited paper."],
+        "paper_claim": ["Read `03_source_links.md` when novelty pressure depends on a cited paper."],
         "source_links": ["Substructural logics - https://research-portal.st-andrews.ac.uk/en/publications/substructural-logics/"],
         "source_link_entries": [
             {
@@ -332,7 +332,7 @@ def test_worker_payloads_include_research_agenda() -> None:
     }
     captured_payloads: dict[str, dict[str, object]] = {}
     original_invoke_worker_json = run_loop.invoke_worker_json
-    original_main_theorem_invoke_worker_json = main_theorem_session.invoke_worker_json
+    original_paper_claim_invoke_worker_json = paper_claim_session.invoke_worker_json
     original_load_current_research_agenda = run_loop.load_current_research_agenda
 
     try:
@@ -372,28 +372,29 @@ def test_worker_payloads_include_research_agenda() -> None:
                     },
                     {"worker": "research_agenda_test"},
                 )
-            if task_type == "main_theorem_suggest":
+            if task_type == "paper_claim_select":
                 return (
                     {
-                        "candidate_id": "mt_main_theorem_01",
-                        "result": "ok",
-                        "statement": "True -> True",
-                        "theorem_name_stem": "agenda_main_theorem_bridge",
-                        "docstring_summary": "Agenda bridge placeholder theorem.",
-                        "rationale": "agenda-aligned bridge candidate",
-                        "supporting_theorems": [],
-                        "missing_lemmas": [],
-                        "source_problem_ids": ["op_000001"],
-                        "theorem_pattern": "new_theorem",
-                        "context_note": "The bridge candidate is positioned as the strongest title-level summary theorem in the placeholder fixture.",
-                        "conceptual_depth_note": "The bridge candidate is treated as a reusable structural bridge.",
+                        "selection_id": "paper_claim_select_01",
+                        "selected_problem_id": "pd_paper_claim_01",
+                        "selection_note": "The dossier best matches the active agenda in the fixture.",
+                        "planning_focus": "Plan this as a short bridge package centered on the clean theorem face.",
+                        "assessments": [
+                            {
+                                "problem_id": "pd_paper_claim_01",
+                                "paper_publishable_fit": "high",
+                                "selected": True,
+                                "why_selected": "cleanest current theorem face in the fixture",
+                                "why_not_selected": "",
+                            }
+                        ],
                     },
                     {"worker": "research_agenda_test"},
                 )
-            if task_type == "main_theorem_retrieve":
+            if task_type == "paper_claim_retrieve":
                 return (
                     {
-                        "candidate_id": "mt_main_theorem_01",
+                        "problem_id": "pd_paper_claim_01",
                         "closest_items": [
                             {
                                 "reference": "placeholder source link",
@@ -402,17 +403,24 @@ def test_worker_payloads_include_research_agenda() -> None:
                                 "confidence": "high",
                             }
                         ],
-                        "research_line": "placeholder bridge theorem line",
+                        "directly_read_evidence": [
+                            {
+                                "reference": "placeholder source link",
+                                "evidence": "placeholder directly read evidence",
+                                "supports": "placeholder support",
+                                "confidence": "medium",
+                            }
+                        ],
                         "coverage_assessment": "materials are sufficient for mapping in the fixture",
                         "missing_angles": [],
                         "need_supplemental_retrieval": False,
                     },
                     {"worker": "research_agenda_test"},
                 )
-            if task_type == "main_theorem_map":
+            if task_type == "paper_claim_map":
                 return (
                     {
-                        "candidate_id": "mt_main_theorem_01",
+                        "problem_id": "pd_paper_claim_01",
                         "closest_baseline": "placeholder baseline",
                         "relations": [
                             {
@@ -422,31 +430,80 @@ def test_worker_payloads_include_research_agenda() -> None:
                                 "delta_materiality": "substantial",
                             }
                         ],
-                        "overall_novelty_risk": "medium",
-                        "variant_objection": "A reviewer may still ask whether this is just a nearby bridge reformulation.",
+                        "theorem_face_assessment": "the dossier reads naturally as a theorem unit in the fixture",
+                        "baseline_delta": "the dossier still exposes an external delta in the fixture",
+                        "outsider_risk": "A reviewer may still ask whether this is just a nearby bridge reformulation.",
                     },
                     {"worker": "research_agenda_test"},
                 )
-            if task_type == "main_theorem_evaluate":
+            if task_type == "paper_claim_plan":
                 return (
                     {
-                        "candidate_id": "mt_main_theorem_01",
-                        "novelty": "medium",
-                        "significance": "high",
-                        "paper_unit_viability": "yes",
-                        "strongest_objection": "The theorem could still look too close to a known bridge criterion.",
-                        "objection_answerable": "yes",
-                        "minimal_publishable_unit": "A short note organized around the bridge theorem and its derived corollaries.",
-                        "salvage_plan": "",
-                        "verdict": "pass",
-                        "reason": "The candidate best matches the active agenda and clears the paper-unit bar in the fixture.",
+                        "plan_id": "paper_claim_plan_for_pd_paper_claim_01",
+                        "selected_problem_id": "pd_paper_claim_01",
+                        "headline": "fixture headline",
+                        "package_strategy": "split the fixture package into a bridge lemma and the visible theorem",
+                        "theorem_units": [
+                            {
+                                "unit_id": "u1",
+                                "role": "entry_lemma",
+                                "kind": "lemma",
+                                "name_stem": "agenda_paper_claim_bridge",
+                                "statement": "Fixture bridge lemma.",
+                                "docstring_summary": "Agenda bridge placeholder theorem.",
+                                "purpose": "entry lemma for the selected fixture package",
+                                "uses_existing_results": [],
+                                "needs_new_ingredients": [],
+                                "proof_idea": [
+                                    "First reduce to the available fixture theorem.",
+                                    "Then rewrite the target.",
+                                ],
+                                "unlocks": ["u2"],
+                            },
+                            {
+                                "unit_id": "u2",
+                                "role": "headline_theorem",
+                                "kind": "theorem",
+                                "name_stem": "agenda_fixture_headline",
+                                "statement": "Fixture headline theorem.",
+                                "docstring_summary": "Fixture headline.",
+                                "purpose": "visible theorem for the fixture package",
+                                "uses_existing_results": ["agenda_paper_claim_bridge"],
+                                "needs_new_ingredients": [],
+                                "proof_idea": [
+                                    "Apply the bridge lemma to the full fixture statement.",
+                                    "Conclude the visible theorem.",
+                                ],
+                                "unlocks": [],
+                            },
+                        ],
+                        "formalization_order": ["u1", "u2"],
+                    },
+                    {"worker": "research_agenda_test"},
+                )
+            if task_type == "problem_design_core_extract":
+                return (
+                    {
+                        "problem_id": "pd_paper_claim_01",
+                        "cluster_id": "cluster_001",
+                        "headline_claim": "fixture headline",
+                        "core_mathematical_content": "fixture mathematical core",
+                        "literature_context": {
+                            "closest_baseline": "fixture baseline",
+                            "routine_reading_risk": "fixture routine reading risk",
+                            "possible_opening": "fixture possible opening",
+                        },
+                        "supporting_claims": [],
+                        "no_go_faces": [],
+                        "proof_assets": ["fixture asset"],
+                        "why_this_face": "fixture why this face",
                     },
                     {"worker": "research_agenda_test"},
                 )
             raise RuntimeError(f"unexpected task_type: {task_type}")
 
         run_loop.invoke_worker_json = fake_invoke_worker_json
-        main_theorem_session.invoke_worker_json = fake_invoke_worker_json
+        paper_claim_session.invoke_worker_json = fake_invoke_worker_json
 
         run_loop.request_open_problem_priorities(
             worker_settings={},
@@ -475,64 +532,100 @@ def test_worker_payloads_include_research_agenda() -> None:
             materials=materials,
             max_candidates=2,
         )
-        candidate, _ = request_main_theorem_suggestion(
-            worker_settings={},
-            suggester_prompt="unused",
-            candidate_id="mt_main_theorem_01",
-            derived_entries=[],
-            theory_context="",
-            tracked_rows=[{"id": "op_000001", "stmt": "True", "src": "seed"}],
-            current_iteration=1,
-            guidance=build_guidance_context(theory_state={}, research_agenda=agenda, materials=materials),
-            rejected_candidates=[],
-            attempt_index=1,
-        )
-        retrieval, _ = request_main_theorem_retrieval(
+        dossier = {
+            "problem_id": "pd_paper_claim_01",
+            "cluster_id": "cluster_001",
+            "headline_claim": "fixture headline",
+            "core_mathematical_content": "fixture mathematical core",
+            "literature_context": {
+                "closest_baseline": "fixture baseline",
+                "routine_reading_risk": "fixture routine reading risk",
+                "possible_opening": "fixture possible opening",
+            },
+            "supporting_claims": [],
+            "no_go_faces": [],
+            "proof_assets": ["fixture asset"],
+            "why_this_face": "fixture why this face",
+        }
+        retrieval, _ = request_paper_claim_retrieval(
             worker_settings={},
             retriever_prompt="unused",
-            candidate=candidate,
-            derived_entries=[],
-            theory_context="",
-            tracked_rows=[{"id": "op_000001", "stmt": "True", "src": "seed"}],
+            dossier=dossier,
             current_iteration=1,
             guidance=build_guidance_context(theory_state={}, research_agenda=agenda, materials=materials),
         )
-        mapping, _ = request_main_theorem_mapping(
+        mapping, _ = request_paper_claim_mapping(
             worker_settings={},
             mapper_prompt="unused",
-            candidate=candidate,
+            dossier=dossier,
             retrieval=retrieval,
             current_iteration=1,
             guidance=build_guidance_context(theory_state={}, research_agenda=agenda, materials=materials),
         )
-        request_main_theorem_evaluation(
+        selection, _ = request_paper_claim_select(
             worker_settings={},
-            evaluator_prompt="unused",
-            candidate=candidate,
-            retrieval=retrieval,
-            mapping=mapping,
+            selector_prompt="unused",
+            selection_id="paper_claim_select_01",
+            dossier_packages=[
+                {
+                    "problem_id": "pd_paper_claim_01",
+                    "dossier": dossier,
+                    "retrieval": retrieval,
+                    "mapping": mapping,
+                }
+            ],
             current_iteration=1,
+        )
+        request_paper_claim_plan(
+            worker_settings={},
+            planner_prompt="unused",
+            plan_id="paper_claim_plan_for_pd_paper_claim_01",
+            selected_dossier_package={
+                "problem_id": "pd_paper_claim_01",
+                "dossier": dossier,
+                "retrieval": retrieval,
+                "mapping": mapping,
+            },
+            selection=selection,
+            derived_entries=[],
+            current_iteration=1,
+            guidance=build_guidance_context(theory_state={}, research_agenda=agenda, materials=materials),
+        )
+        paper_claim_session.request_problem_design_core_extract(
+            worker_settings={},
+            prompt="unused",
+            problem_id="pd_paper_claim_01",
+            current_iteration=1,
+            cluster_context={
+                "cluster_id": "cluster_001",
+                "cluster_theme": "fixture cluster",
+                "cluster_summary": "fixture summary",
+                "member_theorems": [{"name": "fixture", "statement": "True"}],
+                "objects": [],
+                "invariants": [],
+                "algorithms": [],
+                "suspected_support_layer": [],
+                "retained_positive_signal": "should be scrubbed",
+            },
             guidance=build_guidance_context(theory_state={}, research_agenda=agenda, materials=materials),
         )
     finally:
         run_loop.invoke_worker_json = original_invoke_worker_json
-        main_theorem_session.invoke_worker_json = original_main_theorem_invoke_worker_json
+        paper_claim_session.invoke_worker_json = original_paper_claim_invoke_worker_json
         run_loop.load_current_research_agenda = original_load_current_research_agenda
 
     for task_type in (
         "prioritize_open_problems",
         "expand",
-        "main_theorem_suggest",
-        "main_theorem_retrieve",
-        "main_theorem_map",
-        "main_theorem_evaluate",
+        "paper_claim_select",
+        "paper_claim_retrieve",
+        "paper_claim_map",
+        "paper_claim_plan",
     ):
         payload = captured_payloads.get(task_type)
         if payload is None:
             raise RuntimeError(f"missing captured payload for {task_type}")
-        if payload.get("research_agenda") != agenda:
-            raise RuntimeError(f"missing research_agenda in {task_type} payload: {payload}")
-        if task_type in {"main_theorem_retrieve", "main_theorem_map", "main_theorem_evaluate"}:
+        if task_type in {"paper_claim_retrieve", "paper_claim_map"}:
             retrieval_materials = payload.get("materials")
             if not isinstance(retrieval_materials, dict):
                 raise RuntimeError(f"missing compact review materials payload: {payload}")
@@ -548,13 +641,35 @@ def test_worker_payloads_include_research_agenda() -> None:
                 raise RuntimeError(f"expected one compact retrieval paper entry: {retrieval_materials}")
             if paper_cache[0].get("title") != "Substructural logics":
                 raise RuntimeError(f"unexpected compact retrieval paper title: {retrieval_materials}")
-        elif payload.get("materials") != materials:
+        elif task_type not in {"paper_claim_plan", "paper_claim_select"} and payload.get("materials") != materials:
             raise RuntimeError(f"missing materials in {task_type} payload: {payload}")
-        if payload.get("theory_state") != {} and task_type != "prioritize_open_problems":
+        if task_type in {"paper_claim_select", "paper_claim_retrieve", "paper_claim_map", "paper_claim_plan"}:
+            if "tracked_problems" in payload:
+                raise RuntimeError(f"paper claim payload should not include tracked_problems: {payload}")
+        if (
+            task_type not in {"paper_claim_select", "paper_claim_plan", "problem_design_core_extract", "paper_claim_retrieve", "paper_claim_map"}
+            and payload.get("theory_state") != {}
+            and task_type != "prioritize_open_problems"
+        ):
             raise RuntimeError(f"unexpected theory_state in {task_type} payload: {payload}")
+    select_payload = captured_payloads.get("paper_claim_select", {})
+    dossier_packages = select_payload.get("dossier_packages", [])
+    if not isinstance(dossier_packages, list) or not dossier_packages:
+        raise RuntimeError(f"selector payload should include dossier_packages: {select_payload}")
     priority_payload = captured_payloads.get("prioritize_open_problems", {})
     if priority_payload.get("previous_theory_state") != {}:
         raise RuntimeError(f"unexpected previous_theory_state in prioritize_open_problems payload: {priority_payload}")
+    planner_payload = captured_payloads.get("paper_claim_plan", {})
+    if planner_payload.get("theory_state") != {}:
+        raise RuntimeError(f"unexpected theory_state in planner payload: {planner_payload}")
+    selected_dossier_package = planner_payload.get("selected_dossier_package", {})
+    if not isinstance(selected_dossier_package, dict) or selected_dossier_package.get("problem_id") != "pd_paper_claim_01":
+        raise RuntimeError(f"planner payload should include the selected dossier package: {planner_payload}")
+    core_extract_payload = captured_payloads.get("problem_design_core_extract", {})
+    if core_extract_payload.get("theory_state") != {}:
+        raise RuntimeError(f"core_extract should receive only conceptual theory_state in this fixture: {core_extract_payload}")
+    if "cluster_context" not in core_extract_payload:
+        raise RuntimeError(f"core_extract should receive a single cluster_context: {core_extract_payload}")
 
 
 def test_load_materials_extracts_sections_and_degrades_pdf_confidence() -> None:
@@ -614,11 +729,11 @@ This is a reusable summary that may become out of date.
         "prefer structural bridge claims",
     ]:
         raise RuntimeError(f"unexpected problem_evaluation: {payload}")
-    if payload.get("main_theorem") != [
+    if payload.get("paper_claim") != [
         "Use source links when novelty pressure matters.",
         "read source links for closest known result",
     ]:
-        raise RuntimeError(f"unexpected main_theorem: {payload}")
+        raise RuntimeError(f"unexpected paper_claim: {payload}")
     if payload.get("source_links") != [
         "Example Paper - https://example.com/paper",
         "Another Paper - https://example.com/other",
@@ -686,8 +801,8 @@ Some discussion of invertibility in proof search.
         source_link_entries = payload.get("source_link_entries", [])
         if not isinstance(source_link_entries, list) or source_link_entries[0].get("url") != "https://example.com/paper.pdf":
             raise RuntimeError(f"generated source links not loaded as expected: {payload}")
-        if payload.get("main_theorem") == []:
-            raise RuntimeError(f"generated main_theorem guidance should not be empty: {payload}")
+        if payload.get("paper_claim") == []:
+            raise RuntimeError(f"generated paper_claim guidance should not be empty: {payload}")
 
 
 def test_parse_source_link_entries_extracts_labels_and_urls() -> None:
@@ -875,7 +990,7 @@ def test_extract_paper_record_marks_scanned_pdf_ocr_when_text_recovered() -> Non
         raise RuntimeError(f"unexpected OCR recovery confidence: {record}")
 
 
-def test_build_main_theorem_retrieval_materials_prefilters_paper_cache() -> None:
+def test_build_paper_claim_retrieval_materials_prefilters_paper_cache() -> None:
     candidate = {
         "candidate_id": "mt_candidate",
         "statement": "weakening and contraction characterize an affine bridge",
@@ -1008,7 +1123,7 @@ def test_build_main_theorem_retrieval_materials_prefilters_paper_cache() -> None
         ],
     }
 
-    payload = main_theorem_session._build_main_theorem_retrieval_materials(candidate, materials)
+    payload = paper_claim_session._build_paper_claim_retrieval_materials(candidate, materials)
     paper_cache = payload.get("paper_cache", [])
     if not isinstance(paper_cache, list) or len(paper_cache) != 2:
         raise RuntimeError(f"unexpected compact retrieval paper_cache: {payload}")
@@ -1024,6 +1139,14 @@ def test_build_main_theorem_retrieval_materials_prefilters_paper_cache() -> None
     excerpt_context = payload.get("paper_excerpt_context", [])
     if not isinstance(excerpt_context, list) or excerpt_context[0].get("reference") != "Substructural logics":
         raise RuntimeError(f"unexpected paper excerpt context: {payload}")
+    paper_reading_context = payload.get("paper_reading_context", [])
+    if not isinstance(paper_reading_context, list) or paper_reading_context[0].get("reference") != "Substructural logics":
+        raise RuntimeError(f"unexpected paper reading context: {payload}")
+    if "Abstract:" not in str(paper_reading_context[0].get("reading_excerpt", "")):
+        raise RuntimeError(f"expected flattened reading excerpt in paper_reading_context: {payload}")
+    reading_chunks = paper_reading_context[0].get("reading_chunks", [])
+    if not isinstance(reading_chunks, list) or not reading_chunks:
+        raise RuntimeError(f"expected reading_chunks in paper_reading_context: {payload}")
     if excerpt_context[0].get("download_relpath") != "downloads/substructural.pdf":
         raise RuntimeError(f"expected local download path in paper excerpt context: {payload}")
     if excerpt_context[0].get("paper_record_relpath") != "papers/substructural.json":
@@ -1035,6 +1158,100 @@ def test_build_main_theorem_retrieval_materials_prefilters_paper_cache() -> None
     source_link_entries = payload.get("source_link_entries", [])
     if not isinstance(source_link_entries, list) or source_link_entries[0].get("download_relpath") != "downloads/substructural.pdf":
         raise RuntimeError(f"expected source link entries to retain local access paths: {payload}")
+
+
+def test_build_paper_claim_retrieval_materials_separates_unreadable_baselines() -> None:
+    candidate = {
+        "candidate_id": "mt_candidate",
+        "statement": "reverse-topological folds characterize exact residual acceptance",
+        "docstring_summary": "Canonical computation theorem for reachable residual states.",
+        "rationale": "Compare exact residual evaluation against focused proof-search baselines.",
+        "supporting_theorems": ["reachable_acceptance_exact"],
+        "missing_lemmas": [],
+        "theorem_pattern": "framework_introduction",
+        "context_note": "Novelty pressure sits near Lambek parsing and focused proof search.",
+        "conceptual_depth_note": "Need a theorem-level comparison, not just source-link names.",
+    }
+    materials = {
+        "paper_claim": ["Use source links when novelty pressure matters."],
+        "source_link_entries": [
+            {
+                "label": "Readable baseline",
+                "url": "https://example.com/readable.pdf",
+                "note": "",
+                "source_kind": "repository_pdf",
+                "retrieval_priority": "high",
+                "direct_reading_access": "direct_fulltext",
+            },
+            {
+                "label": "Unreadable baseline",
+                "url": "https://example.com/unreadable.pdf",
+                "note": "",
+                "source_kind": "scanned_pdf",
+                "retrieval_priority": "high",
+                "direct_reading_access": "image_only_pdf",
+            },
+        ],
+        "paper_cache": [
+            {
+                "source_id": "readable",
+                "title": "Readable baseline",
+                "source_url": "https://example.com/readable.pdf",
+                "extract_confidence": "high",
+                "source_kind": "repository_pdf",
+                "retrieval_priority": "high",
+                "direct_reading_access": "direct_fulltext",
+                "abstract": "A readable baseline about focused proof search.",
+                "chunks": [
+                    {
+                        "chunk_id": "chunk_001",
+                        "section": "Abstract",
+                        "page": None,
+                        "text": "Focused proof search yields canonical derivations.",
+                    }
+                ],
+                "paper_record_relpath": "papers/readable.json",
+                "paper_record_path": "/tmp/materials_cache/papers/readable.json",
+                "download_relpath": "downloads/readable.pdf",
+                "download_path": "/tmp/materials_cache/downloads/readable.pdf",
+            },
+            {
+                "source_id": "unreadable",
+                "title": "Unreadable baseline",
+                "source_url": "https://example.com/unreadable.pdf",
+                "extract_confidence": "low",
+                "source_kind": "scanned_pdf",
+                "retrieval_priority": "high",
+                "direct_reading_access": "image_only_pdf",
+                "abstract": "",
+                "chunks": [],
+                "paper_record_relpath": "papers/unreadable.json",
+                "paper_record_path": "/tmp/materials_cache/papers/unreadable.json",
+                "download_relpath": "downloads/unreadable.pdf",
+                "download_path": "/tmp/materials_cache/downloads/unreadable.pdf",
+            },
+        ],
+    }
+
+    payload = paper_claim_session._build_paper_claim_retrieval_materials(candidate, materials)
+    paper_cache = payload.get("paper_cache", [])
+    if not isinstance(paper_cache, list) or len(paper_cache) != 1:
+        raise RuntimeError(f"expected only readable paper_cache entries: {payload}")
+    if paper_cache[0].get("title") != "Readable baseline":
+        raise RuntimeError(f"unexpected readable paper retained: {payload}")
+    excerpt_context = payload.get("paper_excerpt_context", [])
+    if not isinstance(excerpt_context, list) or len(excerpt_context) != 1:
+        raise RuntimeError(f"expected only readable excerpt context entries: {payload}")
+    limitations = payload.get("literature_limitations", [])
+    if not isinstance(limitations, list) or len(limitations) != 1:
+        raise RuntimeError(f"expected one literature limitation entry: {payload}")
+    if limitations[0].get("reference") != "Unreadable baseline":
+        raise RuntimeError(f"unexpected literature limitation reference: {payload}")
+    if limitations[0].get("direct_reading_access") != "image_only_pdf":
+        raise RuntimeError(f"expected image-only limitation metadata: {payload}")
+    paper_claim_notes = payload.get("paper_claim", [])
+    if not any("unresolved novelty risk" in str(item) for item in paper_claim_notes):
+        raise RuntimeError(f"expected paper_claim note about unresolved novelty risk: {payload}")
 
 
 def test_retrieval_scoring_penalizes_incidental_body_overlap_without_title_match() -> None:
@@ -1061,8 +1278,8 @@ def test_retrieval_scoring_penalizes_incidental_body_overlap_without_title_match
             {"chunk_id": "c1", "section": "Background", "page": None, "text": "Lambek and substructural traditions are mentioned in passing."}
         ],
     }
-    relevant_score = main_theorem_session._score_retrieval_paper(query_terms, relevant_record)
-    incidental_score = main_theorem_session._score_retrieval_paper(query_terms, incidental_record)
+    relevant_score = paper_claim_session._score_retrieval_paper(query_terms, relevant_record)
+    incidental_score = paper_claim_session._score_retrieval_paper(query_terms, incidental_record)
     if relevant_score <= incidental_score:
         raise RuntimeError(
             f"title-matched paper should outrank incidental overlap: relevant={relevant_score}, incidental={incidental_score}"
@@ -1270,6 +1487,8 @@ def main() -> int:
     test_seed_prompt_includes_research_agenda_guidance()
     test_runtime_initialization_clears_generation_sidecar_files()
     test_worker_payloads_include_research_agenda()
+    test_build_paper_claim_retrieval_materials_prefilters_paper_cache()
+    test_build_paper_claim_retrieval_materials_separates_unreadable_baselines()
     test_force_refresh_writes_research_agenda_to_theory_state()
     test_run_llm_uses_env_model_and_retries_without_model_on_capacity()
     test_run_llm_includes_stderr_when_final_message_missing()

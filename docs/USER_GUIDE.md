@@ -38,6 +38,8 @@ For a custom theory, the normal edit set is:
 - `AutomatedTheoryConstruction/seeds.jsonl` when you want to hand-curate initial problems
 
 `Theory.lean` stays the public entry point. If the theory grows, keep imports there and move detailed definitions or helper lemmas into `AutomatedTheoryConstruction/Theory/`.
+If a file starts importing multiple local modules, treat that as a dependency change: avoid cycles, do not rely on another file's transitive imports implicitly, and confirm `Theory.lean` still checks cleanly.
+If theorem statements start getting long because the same assumption bundle is repeated, prefer introducing a small reusable `def`/`abbrev` in the theory layer before letting the loop accumulate longer theorem faces in `Derived.lean`.
 
 `materials/` is the recommended place to keep organized deep-research output:
 
@@ -90,7 +92,7 @@ uv run python scripts/atc_cli.py seed \
 ```
 
 For reusable domain knowledge, prefer curating it under `materials/` instead of repeatedly passing one-off files.
-That keeps deep research available across prioritization, expansion, and main-theorem work.
+That keeps deep research available across prioritization, expansion, and paper-claim work.
 When a report may be out of date, keep the report for structure and wording, but use source-link bundles for novelty checks and literature positioning.
 
 ### Run the main loop
@@ -165,9 +167,8 @@ uv run python scripts/atc_cli.py loop \
   --worker-command "uv run scripts/codex_worker.py" \
   --worker-timeout 420 \
   --codex-timeout 390 \
-  --main-theorem-interval 10 \
-  --main-theorem-formalize-worker-timeout 900 \
-  --main-theorem-repair-worker-timeout 600
+  --formalization-retry-budget-sec 900 \
+  --max-same-error-streak 5
 ```
 
 ## Custom Proof Engine

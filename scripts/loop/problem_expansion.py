@@ -32,6 +32,7 @@ from loop_helpers import load_current_research_agenda
 from loop_helpers import load_theory_state
 from loop_helpers import normalize_stmt_text
 from loop_helpers import open_problem_priority_label
+from loop_helpers import statement_within_char_budget
 from loop_helpers import theory_state_path
 from prompt_loader import load_prompt_file
 from research_agenda import summarize_research_agenda_for_state
@@ -96,6 +97,8 @@ def validate_problem_candidates_output(
             raise ValueError("candidate statement and rationale must be strings")
         normalized_statement = statement.strip()
         if not normalized_statement:
+            continue
+        if not statement_within_char_budget(normalized_statement):
             continue
         norm = normalize_stmt_text(normalized_statement)
         if norm in seen_norms:
@@ -363,7 +366,7 @@ def collect_important_verified_counterexamples(data_dir: Path, *, max_items: int
         if not stmt or stmt in seen_stmt_norms:
             continue
         seen_stmt_norms.add(stmt)
-        summary = f"Verified counterexample to: {stmt}"
+        summary = stmt
         if len(summary) > max_chars:
             summary = summary[: max_chars - 3] + "..."
         summaries.append(summary)

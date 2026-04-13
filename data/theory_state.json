@@ -1,48 +1,74 @@
 {
   "agenda_pressure": [
-    "Prefer exact reachable-region computation over ambient finite-slice packaging.",
-    "Favor reusable order-independent sweep invariants over one-off list encodings.",
-    "Use ambient-slice and mixed-terminal counterexamples to keep boundary-only follow-ups low unless they unlock exact computation."
+    "Prefer executable recognizers over cosmetic repackaging of already verified semantics.",
+    "Favor order-independent exact reachable-region statements over ambient overapproximation machinery.",
+    "Keep decidability and grammar-facing relevance in view by prioritizing finite algorithms over one-off negatives."
   ],
   "current_bottlenecks": [
-    "Canonical labeling is still packaged abstractly rather than as an explicit arbitrary-order fold.",
-    "The theory lacks a stable semantic invariant for intermediate reverse-sweep states.",
-    "Strict degree descent has not yet been converted into exact path-length or saturation-round bounds."
+    "No concrete arbitrary-order fold theorem yet computes the canonical reachable-region labeling.",
+    "Intermediate reverse-sweep states still lack a stable semantic invariant.",
+    "Strict degree descent has not yet been converted into exact path-length or iteration bounds."
   ],
-  "derived_generation": 32,
+  "derived_generation": 1,
   "desired_summary_changes": [
-    "A concrete `List.foldr` theorem for any reverse-topological enumeration of the exact reachable finset.",
-    "A reusable suffix or partial-sweep invariant identifying each intermediate fold state with the least predecessor-closed subset of the unprocessed region.",
-    "An exact distance-to-base criterion on reachable states that yields finite saturation-round convergence as a corollary."
+    "An explicit fold theorem for any reverse-topological enumeration of the exact reachable region.",
+    "A reusable suffix or partial-sweep invariant identifying each intermediate state of the fold.",
+    "An exact distance-to-base characterization yielding sharp saturation-round convergence."
   ],
   "important_verified_counterexamples": [
-    "Verified counterexample to: For every Γ : List Tp and s : String, (¬ ∃ q, AtomicResidualGraphStep (Γ, s) q) ↔ ∀ B ∈ Γ, is_atom B.",
-    "Verified counterexample to: For every finite list src and atom s, the class of states p such that p.2 = s and every formula B in p.1 is a subformula of some formula C in src is finite.",
-    "Verified counterexample to: Prove a one-sided exactness theorem for ordinary support closure: if every formula in `Γ` and `A` is left-only, then `SupportClosure Γ A ↔ HandedSupportClosure Γ A`; dually, if every formula in `Γ` and `A` is ..."
+    "For every Γ : List Tp and s : String, (¬ ∃ q, AtomicResidualGraphStep (Γ, s) q) ↔ ∀ B ∈ Γ, is_atom B.",
+    "For every finite list src and atom s, the class of states p such that p.2 = s and every formula B in p.1 is a subformula of some formula C in src is finite.",
+    "Prove a one-sided exactness theorem for ordinary support closure: if every formula in `Γ` and `A` is left-only, then `SupportClosure Γ A ↔ HandedSupportClosure Γ A`; dually, if every formula in `Γ` and `A` is ..."
   ],
   "missing_bridges": [
-    "A bridge from canonical or least-subset descriptions to an explicit `List.foldr` computation on arbitrary reverse-topological lists.",
-    "A bridge from predecessor closure to operator-style least-fixed-point and iterative saturation on the exact reachable region.",
-    "A bridge from degree descent to exact path distance and convergence time."
+    "A bridge from canonical labeling and least subsets to an explicit List.foldr computation.",
+    "A bridge from predecessor closure to operator-level fixed-point and iterative saturation formulations.",
+    "A bridge from strict degree descent to exact path metrics and convergence time."
   ],
   "next_direction": {
-    "guidance": "Prioritize problems that make the exact reachable finset computationally explicit, either by proving arbitrary reverse-topological fold correctness with a reusable partial-sweep invariant or by deriving exact distance and saturation-round bounds on that same region.",
-    "label": "explicit_fold_and_distance_control",
-    "rationale": "The semantic characterization of acceptance is already complete on the exact reachable DAG, while counterexamples have shown that ambient slices and universal-terminal viewpoints are not the right abstraction; the remaining summary-changing work is executable fold semantics and quantitative convergence."
+    "guidance": "Prioritize arbitrary reverse-topological fold correctness with a reusable suffix invariant, and secondarily the exact distance and saturation theorems that turn descent into quantitative control.",
+    "label": "arbitrary_fold_and_distance_bounds",
+    "rationale": "The exact reachable DAG already has canonical labels and least-subset semantics, while verified ambient-slice and mixed-terminal counterexamples show that more boundary examples are lower value than executable computation and convergence bounds."
   },
   "overexplored_patterns": [
-    "Ambient same-atom or bounded-slice exactness and separation questions outside the exact reachable region.",
+    "Ambient bounded-slice exactness or separation questions outside the exact reachable region.",
     "Universal-terminal or all-sinks summaries already weakened by mixed-terminal evidence.",
-    "Presentation-specific restatements of labeling or least-subset results that do not yield an explicit algorithm or quantitative bound."
+    "Presentation-only restatements of existing least-set or labeling theorems without explicit computation."
   ],
-  "research_agenda": {},
-  "summary_basis": {
-    "archived_problem_count": 66,
-    "derived_theorem_count": 56,
-    "open_problem_count": 3
+  "research_agenda": {
+    "anti_goals": [
+      "Cosmetic rewrites",
+      "Unprincipled proliferation of structural rules",
+      "One-off examples",
+      "Unproductive negative statements"
+    ],
+    "canonical_targets": [
+      "A deeper understanding of completeness for $L$",
+      "The boundary between cut elimination and decidability in extensions",
+      "The interface with categorial grammar"
+    ],
+    "soft_constraints": [
+      "Closeness to established notation and theory",
+      "Temporal durability"
+    ],
+    "themes": [
+      "Structural correspondences between language hierarchies and logical systems",
+      "Extraction of logical rules and complexity"
+    ],
+    "valued_problem_types": [
+      "Provability relations among structural rules (reducibility)",
+      "Discovery of invertibility",
+      "Separability",
+      "Proofs of metatheorems"
+    ]
   },
-  "theory_snapshot": "The theory now has a stable exact-reachable-region core: from any residual root, the reachable region is finite, degree-descending, and acceptance is exactly reachability of the distinguished singleton base state. On that exact region, acceptance already has canonical Boolean-label, least predecessor-closed subset, and topological-order characterizations, so the main structural gap is no longer semantic correctness but explicit computation. The remaining frontier is to turn those abstract descriptions into a concrete arbitrary reverse-topological fold and, in parallel, to extract exact saturation-round and path-length control from the same descent structure. Verified failures of ambient same-atom finiteness and verified mixed-terminal behavior continue to rule out ambient overapproximation and universal-sink summaries as high-value directions.",
+  "summary_basis": {
+    "archived_problem_count": 71,
+    "derived_theorem_count": 56,
+    "open_problem_count": 5
+  },
+  "theory_snapshot": "The residual theory now has an exact reachable-region core: from any residual root, the reachable region is finite, degree-descending, and acceptance is exactly reachability of the distinguished singleton base state. On that exact DAG, acceptance already has canonical Boolean-label, least predecessor-closed subset, topological-order, and terminal-state characterizations. The frontier is to convert those abstract exact-region semantics into an explicit reverse-topological fold with a stable suffix invariant, and to extract exact distance and saturation-round bounds from the same descent structure. Verified ambient-slice infinitude and mixed-terminal counterexamples still block ambient overapproximation and universal-sink summaries as primary directions.",
   "updated_at_iteration": 0,
-  "updated_at_run_id": "20260412-092142-loop",
+  "updated_at_run_id": "paper-claim-resume-001",
   "version": 1
 }

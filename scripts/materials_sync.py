@@ -24,7 +24,7 @@ REPORT_SUFFIXES = {".md", ".markdown"}
 IGNORED_REPORT_STEMS = {"00_index", "02_section_map", "03_source_links"}
 SECTION_HEADING_RE = re.compile(r"^\s*##+\s*(.+?)\s*$")
 URL_LINE_RE = re.compile(r"https?://")
-DEFAULT_MAIN_THEOREM_USAGE = (
+DEFAULT_PAPER_CLAIM_USAGE = (
     "Start from the main report when candidate construction depends on the report's main claims, scope, or future-direction framing.",
     "Read `03_source_links.md` when closest-known-result checks or literature positioning depend on cited sources rather than only the report summary.",
 )
@@ -170,7 +170,7 @@ def _render_index(report_path: Path, report_title: str, slug: str) -> str:
         f"- `../{report_path.name}`\n"
         "  The main report. Use this when wording, context, or references matter.\n"
         "- `02_section_map.md`\n"
-        "  Section-to-task map for problem generation, problem evaluation, and main theorem work.\n"
+        "  Section-to-task map for problem generation, problem evaluation, and paper claim work.\n"
         "- `03_source_links.md`\n"
         "  Reference list extracted from the report for direct paper access.\n"
         "\n"
@@ -179,7 +179,7 @@ def _render_index(report_path: Path, report_title: str, slug: str) -> str:
         "  Read `02_section_map.md` first. Use the main report when a section needs more context.\n"
         "- Problem evaluation:\n"
         "  Read `02_section_map.md` first. Use the main report when deciding whether a candidate is central, duplicative, or merely local.\n"
-        "- Main theorem session:\n"
+        "- Paper claim session:\n"
         "  Start from the main report and `03_source_links.md` when candidate construction or novelty pressure depends on the literature.\n"
     )
 
@@ -195,10 +195,10 @@ def _render_section_map(section_targets: list[str]) -> str:
             "- Prefer candidates that align with the report's main themes, scope, and stated research pressure.\n",
             "- Down-rank candidates that only tweak one local example, derivation path, or implementation detail without changing the report-level picture.\n",
             "- Use the report to distinguish broad contribution vs. local continuation, central claim vs. side observation, and real extension vs. rediscovery.\n",
-            "\n## Main Theorem Deep Access\n\n",
+            "\n## Paper Claim Deep Access\n\n",
         ]
     )
-    for line in DEFAULT_MAIN_THEOREM_USAGE:
+    for line in DEFAULT_PAPER_CLAIM_USAGE:
         blocks.append(f"- {line}\n")
     return "".join(blocks)
 

@@ -10,7 +10,7 @@ sys.path.insert(0, str(REPO_ROOT / "scripts" / "loop"))
 
 
 import run_loop
-from main_theorem import main_theorem_session
+from paper_claim import paper_claim_session
 
 
 def main() -> int:
@@ -25,8 +25,8 @@ def main() -> int:
         raise RuntimeError("run_loop SCRATCH_TEMPLATE is missing Generated.Manifest import")
     if expected_import not in run_loop.DERIVED_TEMPLATE:
         raise RuntimeError("run_loop DERIVED_TEMPLATE is missing Generated.Manifest import")
-    if expected_import not in main_theorem_session.SCRATCH_TEMPLATE:
-        raise RuntimeError("main_theorem_session SCRATCH_TEMPLATE is missing Generated.Manifest import")
+    if expected_import not in paper_claim_session.SCRATCH_TEMPLATE:
+        raise RuntimeError("paper_claim_session SCRATCH_TEMPLATE is missing Generated.Manifest import")
     _, scratch = run_loop.formalize_to_scratch(
         theorem_name="thm_test_generated_manifest_000001",
         stmt="True",

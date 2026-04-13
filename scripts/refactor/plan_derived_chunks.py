@@ -18,8 +18,8 @@ from common import write_json_atomic
 
 
 DEFAULT_DERIVED_FILE = Path("AutomatedTheoryConstruction/Derived.lean")
-DEFAULT_DEPS_FILE = Path("data/derived-deps.json")
-DEFAULT_OUTPUT_FILE = Path("data/derived-chunk-plan.json")
+DEFAULT_DEPS_FILE = Path("data/pipeline_artifacts/derived-deps.json")
+DEFAULT_OUTPUT_FILE = Path("data/pipeline_artifacts/derived-chunk-plan.json")
 
 DECL_PATTERN = re.compile(r"^(theorem|lemma|def|abbrev|inductive|structure)\s+([^\s:({]+)", re.MULTILINE)
 THEOREM_KINDS = {"theorem", "lemma"}

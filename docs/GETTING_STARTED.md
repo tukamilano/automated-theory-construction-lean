@@ -32,6 +32,8 @@ Start with these paths:
 
 Keep `AutomatedTheoryConstruction/Theory.lean` as the public entry point for your active theory.
 If you split the theory across multiple files under `AutomatedTheoryConstruction/Theory/`, add the corresponding `import` lines there.
+When one file imports multiple local theory files, be careful not to create circular dependencies or to rely on transitive imports accidentally.
+Keep the dependency direction intentional, and re-check both the edited file and `AutomatedTheoryConstruction/Theory.lean` after changing imports.
 
 ## 3. Make Your First Edits
 

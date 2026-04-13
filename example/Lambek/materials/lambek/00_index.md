@@ -7,7 +7,7 @@ This directory organizes the Lambek structural-theory materials for ATC use with
 - `../Lambek_Calculus_Structural_Theory_Research.md`
   The main report. Use this when wording, context, or references matter, but treat it as a secondary summary that may become out of date.
 - `02_section_map.md`
-  Section-to-task map for problem generation, problem evaluation, and main theorem work.
+  Section-to-task map for problem generation, problem evaluation, and paper claim work.
 - `03_source_links.md`
   Reference list extracted from the report for direct paper access.
 
