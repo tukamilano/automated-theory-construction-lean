@@ -16,6 +16,7 @@ scripts_root_str = str(SCRIPTS_ROOT)
 if scripts_root_str not in sys.path:
     sys.path.insert(0, scripts_root_str)
 
+from atc_paths import loop_theorem_reuse_memory_path
 from append_derived import build_derived_entries_from_file
 from common import load_theory_context
 from derived_refactor_utils import build_report
@@ -39,7 +40,7 @@ from worker_client import invoke_worker_json
 
 REPO_ROOT = SCRIPTS_ROOT.parent
 DEFAULT_THEORY = Path("AutomatedTheoryConstruction/Theory.lean")
-DEFAULT_THEOREM_REUSE_MEMORY = Path("data/theorem_reuse_memory.json")
+DEFAULT_THEOREM_REUSE_MEMORY = loop_theorem_reuse_memory_path(Path("data"))
 DEFAULT_EXECUTOR_PROMPT = Path("prompts/derived/compression_executor.md")
 
 PASS_SPECS = (

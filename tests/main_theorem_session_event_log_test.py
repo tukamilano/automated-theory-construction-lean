@@ -285,9 +285,9 @@ def main() -> int:
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
             data_dir = root / "data"
-            write_jsonl_atomic(data_dir / "open_problems.jsonl", [{"id": "op_000001", "stmt": "True", "src": "seed"}])
-            write_jsonl_atomic(data_dir / "archived_problems.jsonl", [])
-            session_events_path = data_dir / "runs" / "test-run" / "paper_claim.events.jsonl"
+            write_jsonl_atomic(data_dir / "loop" / "open_problems.jsonl", [{"id": "op_000001", "stmt": "True", "src": "seed"}])
+            write_jsonl_atomic(data_dir / "loop" / "archived_problems.jsonl", [])
+            session_events_path = data_dir / "paper_claim" / "test-run" / "paper_claim.events.jsonl"
 
             report = paper_claim_session.run_paper_claim_session(
                 worker_settings={},

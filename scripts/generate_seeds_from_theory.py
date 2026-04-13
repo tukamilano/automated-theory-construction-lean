@@ -4,9 +4,9 @@ import argparse
 import os
 import sys
 import tempfile
+import json
 from pathlib import Path
 from typing import Any
-import json
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 LOOP_DIR = SCRIPT_DIR / "loop"
@@ -15,27 +15,28 @@ for path in (SCRIPT_DIR, LOOP_DIR):
     if path_str not in sys.path:
         sys.path.insert(0, path_str)
 
+from atc_paths import loop_archived_problems_path
+from atc_paths import loop_formalization_memory_path
+from atc_paths import loop_open_problems_path
 from common import (
-    ARCHIVED_PROBLEMS_FILENAME,
-    LEGACY_DEFERRED_PROBLEMS_FILENAME,
-    LEGACY_PRUNED_OPEN_PROBLEMS_FILENAME,
     dedupe_problem_rows_by_stmt,
     load_theory_context,
     read_jsonl,
     write_jsonl_atomic,
 )
 from guidance import build_guidance_context, unpack_guidance_context
+from materials import DEFAULT_MATERIALS_DIR
 from materials import format_materials_prompt_block
-from generated_library import DEFAULT_GENERATED_CATALOG
-from generated_library import DEFAULT_GENERATED_MANIFEST
-from generated_library import DEFAULT_GENERATED_ROOT
-from generated_library import ensure_generated_scaffold
+from materials import load_materials
+from materials_sync import ensure_materials_derived_current
 from llm_exec import build_exec_command
 from llm_exec import resolve_provider
 from llm_exec import run_llm_exec
 from research_agenda import DEFAULT_RESEARCH_AGENDA_PATH
 from research_agenda import format_research_agenda_prompt_block
 from research_agenda import load_research_agenda
+from runtime_reset import reset_loop_runtime_data
+from runtime_reset import reset_loop_work_files
 from run_loop import (
     DERIVED_TEMPLATE,
     SCRATCH_TEMPLATE,
@@ -52,8 +53,8 @@ DEFAULT_OUTPUT = Path("AutomatedTheoryConstruction/seeds.jsonl")
 DEFAULT_REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_DATA_DIR = Path("data")
 DEFAULT_SCRATCH = Path("AutomatedTheoryConstruction/Scratch.lean")
-DEFAULT_FORMALIZATION_MEMORY = Path("data/formalization_memory.json")
-DEFAULT_ARCHIVED = Path("data/archived_problems.jsonl")
+DEFAULT_FORMALIZATION_MEMORY = loop_formalization_memory_path(DEFAULT_DATA_DIR)
+DEFAULT_ARCHIVED = loop_archived_problems_path(DEFAULT_DATA_DIR)
 DEFAULT_RESEARCH_AGENDA = DEFAULT_REPO_ROOT / DEFAULT_RESEARCH_AGENDA_PATH
 
 
@@ -98,6 +99,16 @@ def _try_at_each_step_apply_report_file_for(derived_file: Path) -> Path:
     return derived_file.with_name(f"{derived_file.stem}.tryAtEachStep.apply_report.json")
 
 
+def load_seed_generation_guidance(*, repo_root: Path, data_dir: Path) -> dict[str, dict[str, Any]]:
+    materials_dir = (repo_root / DEFAULT_MATERIALS_DIR).resolve()
+    ensure_materials_derived_current(materials_dir)
+    return build_guidance_context(
+        theory_state=load_theory_state(data_dir),
+        research_agenda=load_research_agenda((repo_root / DEFAULT_RESEARCH_AGENDA_PATH).resolve()),
+        materials=load_materials(materials_dir),
+    )
+
+
 def reset_runtime_before_seed_generation(
     *,
     data_dir: Path,
@@ -108,39 +119,30 @@ def reset_runtime_before_seed_generation(
     formalization_memory_file: Path,
     archived_problems_file: Path,
 ) -> None:
-    data_dir.mkdir(parents=True, exist_ok=True)
-    generated_root = derived_file.parent / DEFAULT_GENERATED_ROOT.name
-    ensure_generated_scaffold(
-        generated_root=generated_root,
-        manifest_file=generated_root / DEFAULT_GENERATED_MANIFEST.name,
-        catalog_file=generated_root / DEFAULT_GENERATED_CATALOG.name,
-    )
     seeds_file.unlink(missing_ok=True)
-    write_jsonl_atomic(data_dir / "open_problems.jsonl", [])
-    write_jsonl_atomic(archived_problems_file, [])
-    write_jsonl_atomic(data_dir / "solved_problems.jsonl", [])
-    write_jsonl_atomic(data_dir / "counterexamples.jsonl", [])
-    (data_dir / "theorem_reuse_memory.json").write_text('{"entries": []}\n', encoding="utf-8")
-    (data_dir / "expand_candidates.jsonl").unlink(missing_ok=True)
-    (data_dir / LEGACY_DEFERRED_PROBLEMS_FILENAME).unlink(missing_ok=True)
-    (data_dir / LEGACY_PRUNED_OPEN_PROBLEMS_FILENAME).unlink(missing_ok=True)
-    theory_state_path(data_dir).unlink(missing_ok=True)
-    cleanup_parallel_scratch_files(scratch_file)
-
-    scratch_file.parent.mkdir(parents=True, exist_ok=True)
-    scratch_file.write_text(SCRATCH_TEMPLATE, encoding="utf-8")
-
-    derived_file.parent.mkdir(parents=True, exist_ok=True)
-    derived_file.write_text(DERIVED_TEMPLATE, encoding="utf-8")
-    for cleanup_file in derived_cleanup_files:
-        cleanup_file.unlink(missing_ok=True)
-
-    formalization_memory_file.parent.mkdir(parents=True, exist_ok=True)
-    formalization_memory_file.write_text("{}\n", encoding="utf-8")
+    reset_loop_runtime_data(
+        data_dir=data_dir,
+        derived_file=derived_file,
+        open_problem_rows=[],
+        archived_problems_file=archived_problems_file,
+        clear_paper_claim_rejection_memory=False,
+    )
+    reset_loop_work_files(
+        scratch_file=scratch_file,
+        cleanup_parallel_scratch_files=cleanup_parallel_scratch_files,
+        reset_scratch=True,
+        scratch_template=SCRATCH_TEMPLATE,
+        derived_file=derived_file,
+        derived_cleanup_files=derived_cleanup_files,
+        reset_derived=True,
+        derived_template=DERIVED_TEMPLATE,
+        formalization_memory_file=formalization_memory_file,
+        reset_formalization_memory=True,
+    )
 
 
 def sync_open_problems_from_seed_rows(*, data_dir: Path, rows: list[dict[str, Any]]) -> None:
-    write_jsonl_atomic(data_dir / "open_problems.jsonl", dedupe_problem_rows_by_stmt(rows))
+    write_jsonl_atomic(loop_open_problems_path(data_dir), dedupe_problem_rows_by_stmt(rows))
 
 
 def _normalize_stmt(stmt: str) -> str:
@@ -339,7 +341,12 @@ Task:
 - Each candidate must be one standalone Lean proposition string suitable for the `stmt` field in `seeds.jsonl`.
 
 Mathematical scope:
+- Keep the visible theory files and `Derived.lean` primary as binding grounding and non-duplication constraints.
+- Favor seeds likely to shift future priorities.
 - Treat `theory_state` and `research_agenda` as primary guidance for what counts as meaningful progress.
+- Use `theory_state` and `research_agenda` as primary value guidance after local plausibility is established.
+- If `materials` are provided, use them as optional external anchors for outward-looking seeds, especially when deciding whether a candidate is a genuine bridge, boundary sharpening, or structural interface result.
+- Use recent open-problem signals only as optional weak hints, not as mandatory targets.
 - Prefer statements that materially sharpen or extend the visible theory: structural consequences, converses or separations, existence or uniqueness claims, impossibility claims, fixpoint consequences, or useful intermediate lemmas.
 - Prefer problems that would change the theory summary, address a bottleneck, or connect currently separate parts of the theory.
 - Also allow locally scoped but sharp lemmas when they isolate a real obstruction, threshold, criterion, normal form, or reusable reduction step that would materially simplify a blocked proof path.
@@ -351,6 +358,7 @@ Mathematical scope:
 - Avoid mixed-style statements that partially use notation but still spell out operator definitions by path when notation is already available.
 - Quantify every extra variable or witness explicitly inside the proposition.
 - Keep assumptions minimal but sufficient.
+- Do not let `research_agenda`, `materials`, or recent-opportunity language justify weak, duplicate, or off-theory seeds.
 {theory_summary_block}{counterexample_block}{next_direction_block}{theory_frontier_block}{opportunity_block}{research_agenda_block}{materials_block}
 
 Quality filter:
@@ -552,11 +560,12 @@ def main() -> int:
         effective_derived: Path | None = derived_file
     else:
         effective_derived = None
-    effective_guidance = build_guidance_context(
-        theory_state=load_theory_state((repo_root / DEFAULT_DATA_DIR).resolve()),
-        research_agenda=load_research_agenda(DEFAULT_RESEARCH_AGENDA),
+    data_dir = (repo_root / DEFAULT_DATA_DIR).resolve()
+    effective_guidance = load_seed_generation_guidance(
+        repo_root=repo_root,
+        data_dir=data_dir,
     )
-    recent_opportunities = read_jsonl((repo_root / DEFAULT_DATA_DIR / "open_problems.jsonl").resolve())[-12:]
+    recent_opportunities = read_jsonl(loop_open_problems_path(data_dir).resolve())[-12:]
 
     prompt = build_prompt(
         theory_files=theory_files,
@@ -601,7 +610,7 @@ def main() -> int:
     write_jsonl_atomic(output_file, rows)
     if args.initialize_runtime_state:
         sync_open_problems_from_seed_rows(
-            data_dir=(repo_root / DEFAULT_DATA_DIR).resolve(),
+            data_dir=data_dir,
             rows=rows,
         )
     sys.stdout.write(f"Wrote {len(rows)} batch-generated problems to {output_file}\n")

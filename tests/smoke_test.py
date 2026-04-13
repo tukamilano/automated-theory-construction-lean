@@ -330,10 +330,11 @@ def run_smoke_loop(
 
 def assert_smoke_outputs(dst_root: Path) -> None:
     data_dir = dst_root / "data"
-    if not (data_dir / "open_problems.jsonl").exists():
-        raise RuntimeError("smoke loop did not create data/open_problems.jsonl")
-    if not (data_dir / "theory_state.json").exists():
-        raise RuntimeError("smoke loop did not create data/theory_state.json")
+    loop_dir = data_dir / "loop"
+    if not (loop_dir / "open_problems.jsonl").exists():
+        raise RuntimeError("smoke loop did not create data/loop/open_problems.jsonl")
+    if not (loop_dir / "theory_state.json").exists():
+        raise RuntimeError("smoke loop did not create data/loop/theory_state.json")
     if not (dst_root / "AutomatedTheoryConstruction" / "Scratch.lean").exists():
         raise RuntimeError("smoke loop did not create Scratch.lean")
     if not (dst_root / "AutomatedTheoryConstruction" / "Scratch.loop.lean").exists():
@@ -353,7 +354,7 @@ def assert_smoke_outputs(dst_root: Path) -> None:
     theory_state_history_path = summary_paths[-1].with_name("theory_state_history.jsonl")
     if not theory_state_history_path.exists():
         raise RuntimeError("smoke loop did not create runs/<run_id>/theory_state_history.jsonl")
-    theory_state = json.loads((data_dir / "theory_state.json").read_text(encoding="utf-8"))
+    theory_state = json.loads((loop_dir / "theory_state.json").read_text(encoding="utf-8"))
     if theory_state.get("next_direction", {}).get("label") != "smoke_direction":
         raise RuntimeError(f"unexpected theory_state next_direction: {theory_state}")
     theory_state_history_rows = [
@@ -371,12 +372,12 @@ def assert_smoke_outputs(dst_root: Path) -> None:
 
     open_rows = [
         json.loads(line)
-        for line in (data_dir / "open_problems.jsonl").read_text(encoding="utf-8").splitlines()
+        for line in (loop_dir / "open_problems.jsonl").read_text(encoding="utf-8").splitlines()
         if line.strip()
     ]
     solved_rows = [
         json.loads(line)
-        for line in (data_dir / "solved_problems.jsonl").read_text(encoding="utf-8").splitlines()
+        for line in (loop_dir / "solved_problems.jsonl").read_text(encoding="utf-8").splitlines()
         if line.strip()
     ]
     if open_rows:

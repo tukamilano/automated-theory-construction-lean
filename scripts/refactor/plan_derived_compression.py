@@ -11,6 +11,7 @@ scripts_root_str = str(SCRIPTS_ROOT)
 if scripts_root_str not in sys.path:
     sys.path.insert(0, scripts_root_str)
 
+from atc_paths import loop_theorem_reuse_memory_path
 from append_derived import build_derived_entries_from_file
 from common import load_theory_context
 from common import write_json_atomic
@@ -31,7 +32,7 @@ DEFAULT_INPUT = Path("AutomatedTheoryConstruction/Derived.refactored.preview.lea
 DEFAULT_PLAN = Path("AutomatedTheoryConstruction/Derived.compression.plan.json")
 DEFAULT_PROMPT = Path("prompts/derived/compression_planner.md")
 DEFAULT_THEORY = Path("AutomatedTheoryConstruction/Theory.lean")
-DEFAULT_THEOREM_REUSE_MEMORY = Path("data/theorem_reuse_memory.json")
+DEFAULT_THEOREM_REUSE_MEMORY = loop_theorem_reuse_memory_path(Path("data"))
 
 VALID_ITEM_KINDS = {
     "exact_duplicate_collapse",

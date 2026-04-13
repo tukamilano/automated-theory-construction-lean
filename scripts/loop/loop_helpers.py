@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 from typing import Callable
 
+from atc_paths import loop_theory_state_path
 from common import append_jsonl
 from common import normalize_open_problem_priority
 from guidance import build_guidance_context
@@ -20,7 +21,6 @@ from research_agenda import load_research_agenda
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
-THEORY_STATE_FILENAME = "theory_state.json"
 THEOREM_NAME_STEM_PATTERN = re.compile(r"^[a-z][a-z0-9_]*$")
 DERIVED_THEOREM_HEADER_PATTERN = re.compile(r"\btheorem\s+([A-Za-z0-9_']+)\b")
 LOCAL_STATEMENT_ALIAS_PATTERN = re.compile(r"(?m)^\s*(?:local\s+)?(?:def|abbrev)\b")
@@ -35,7 +35,7 @@ def debug_log(msg: str) -> None:
 
 
 def theory_state_path(data_dir: Path) -> Path:
-    return data_dir / THEORY_STATE_FILENAME
+    return loop_theory_state_path(data_dir)
 
 
 def load_current_research_agenda() -> dict[str, Any]:

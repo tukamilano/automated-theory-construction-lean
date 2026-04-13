@@ -6,6 +6,7 @@ import threading
 from pathlib import Path
 from typing import Any
 
+from atc_paths import loop_theory_state_path
 from append_derived import append_theorem
 from common import write_json_atomic
 from loop_helpers import append_derived_entry_cache
@@ -54,7 +55,7 @@ def persist_derived_generation(
     payload["derived_generation"] = int(generation)
     payload["updated_at_iteration"] = current_iteration
     payload["updated_at_run_id"] = run_id
-    write_json_atomic(theory_state_path(data_dir), payload)
+    write_json_atomic(loop_theory_state_path(data_dir), payload)
     return payload
 
 

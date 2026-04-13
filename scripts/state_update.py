@@ -4,6 +4,10 @@ import argparse
 from pathlib import Path
 from typing import Any
 
+from atc_paths import loop_archived_problems_path
+from atc_paths import loop_counterexamples_path
+from atc_paths import loop_open_problems_path
+from atc_paths import loop_solved_problems_path
 from common import (
     ARCHIVED_PROBLEMS_FILENAME,
     dedupe_problem_rows_by_stmt,
@@ -28,10 +32,10 @@ def apply_state_update(
     failure_threshold: int = 2,
     current_iteration: int = 0,
 ) -> dict[str, Any]:
-    open_path = data_dir / "open_problems.jsonl"
-    archived_path = data_dir / ARCHIVED_PROBLEMS_FILENAME
-    solved_path = data_dir / "solved_problems.jsonl"
-    counterexamples_path = data_dir / "counterexamples.jsonl"
+    open_path = loop_open_problems_path(data_dir)
+    archived_path = loop_archived_problems_path(data_dir)
+    solved_path = loop_solved_problems_path(data_dir)
+    counterexamples_path = loop_counterexamples_path(data_dir)
 
     open_rows = [normalize_open_problem_row(row) for row in read_jsonl(open_path)]
     archived_rows = read_archived_problem_rows(data_dir)

@@ -10,6 +10,7 @@ from types import SimpleNamespace
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT / "scripts"))
+sys.path.insert(0, str(REPO_ROOT / "scripts" / "loop"))
 
 
 import run_loop
@@ -20,9 +21,11 @@ def main() -> int:
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp = Path(tmpdir)
         data_dir = tmp / "data"
+        loop_dir = data_dir / "loop"
         data_dir.mkdir(parents=True, exist_ok=True)
+        loop_dir.mkdir(parents=True, exist_ok=True)
         write_jsonl_atomic(
-            data_dir / "open_problems.jsonl",
+            loop_dir / "open_problems.jsonl",
             [
                 {
                     "id": "op_000001",
@@ -34,9 +37,9 @@ def main() -> int:
                 },
             ],
         )
-        write_jsonl_atomic(data_dir / "archived_problems.jsonl", [])
-        write_jsonl_atomic(data_dir / "solved_problems.jsonl", [])
-        write_jsonl_atomic(data_dir / "counterexamples.jsonl", [])
+        write_jsonl_atomic(loop_dir / "archived_problems.jsonl", [])
+        write_jsonl_atomic(loop_dir / "solved_problems.jsonl", [])
+        write_jsonl_atomic(loop_dir / "counterexamples.jsonl", [])
 
         summary_path = tmp / "runs" / "run-test" / "summary.json"
         artifact_paths = {
@@ -87,7 +90,7 @@ def main() -> int:
             def fake_run_problem_session(**kwargs):
                 picked = dict(kwargs["picked"])
                 current_iteration = int(kwargs["current_iteration"])
-                open_path = data_dir / "open_problems.jsonl"
+                open_path = loop_dir / "open_problems.jsonl"
                 open_rows = [
                     row
                     for row in run_loop.read_jsonl(open_path)
@@ -119,7 +122,7 @@ def main() -> int:
                 args=args,
                 data_dir=data_dir,
                 scratch_file=tmp / "Scratch.lean",
-                memory_path=data_dir / "formalization_memory.json",
+                memory_path=loop_dir / "formalization_memory.json",
                 derived_path=tmp / "Derived.lean",
                 repo_root=REPO_ROOT,
                 base_theory_context="",
@@ -134,8 +137,6 @@ def main() -> int:
                 prover_statement_worker_settings={},
                 formalize_worker_settings={},
                 repair_worker_settings={},
-                main_theorem_formalize_worker_settings={},
-                main_theorem_repair_worker_settings={},
                 prioritize_open_problems_worker_settings={},
                 derived_runtime_state={},
                 record_problem_rows=lambda *_args, **_kwargs: None,
@@ -148,7 +149,7 @@ def main() -> int:
         if refresh_calls:
             raise RuntimeError(f"refresh should not run after max_iterations is exhausted, got calls={refresh_calls}")
 
-        open_rows = run_loop.read_jsonl(data_dir / "open_problems.jsonl")
+        open_rows = run_loop.read_jsonl(loop_dir / "open_problems.jsonl")
         if open_rows:
             raise RuntimeError(f"open problems should remain empty after the budget is exhausted, got {open_rows}")
 

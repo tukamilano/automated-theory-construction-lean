@@ -7,6 +7,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT / "scripts"))
+sys.path.insert(0, str(REPO_ROOT / "scripts" / "loop"))
 
 
 import run_loop
@@ -17,8 +18,9 @@ from state_update import apply_state_update
 def test_priority_refresh_keeps_archived_rows_archived() -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         data_dir = Path(tmpdir)
+        loop_dir = data_dir / "loop"
         write_jsonl_atomic(
-            data_dir / "open_problems.jsonl",
+            loop_dir / "open_problems.jsonl",
             [
                 {
                     "id": "op_000001",
@@ -30,7 +32,7 @@ def test_priority_refresh_keeps_archived_rows_archived() -> None:
             ],
         )
         write_jsonl_atomic(
-            data_dir / "archived_problems.jsonl",
+            loop_dir / "archived_problems.jsonl",
             [
                 {
                     "id": "op_000002",
@@ -94,8 +96,8 @@ def test_priority_refresh_keeps_archived_rows_archived() -> None:
         if not ran or error:
             raise RuntimeError(f"priority refresh unexpectedly failed: {error}")
 
-        open_rows = read_jsonl(data_dir / "open_problems.jsonl")
-        archived_rows = read_jsonl(data_dir / "archived_problems.jsonl")
+        open_rows = read_jsonl(loop_dir / "open_problems.jsonl")
+        archived_rows = read_jsonl(loop_dir / "archived_problems.jsonl")
         if open_rows:
             raise RuntimeError(f"expected no active open rows after archival, got: {open_rows}")
 
@@ -107,9 +109,10 @@ def test_priority_refresh_keeps_archived_rows_archived() -> None:
 def test_state_update_does_not_remove_archived_rows() -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         data_dir = Path(tmpdir)
-        write_jsonl_atomic(data_dir / "open_problems.jsonl", [])
+        loop_dir = data_dir / "loop"
+        write_jsonl_atomic(loop_dir / "open_problems.jsonl", [])
         write_jsonl_atomic(
-            data_dir / "archived_problems.jsonl",
+            loop_dir / "archived_problems.jsonl",
             [
                 {
                     "id": "op_000010",
@@ -120,8 +123,8 @@ def test_state_update_does_not_remove_archived_rows() -> None:
                 }
             ],
         )
-        write_jsonl_atomic(data_dir / "solved_problems.jsonl", [])
-        write_jsonl_atomic(data_dir / "counterexamples.jsonl", [])
+        write_jsonl_atomic(loop_dir / "solved_problems.jsonl", [])
+        write_jsonl_atomic(loop_dir / "counterexamples.jsonl", [])
 
         report = apply_state_update(
             data_dir=data_dir,
@@ -135,8 +138,8 @@ def test_state_update_does_not_remove_archived_rows() -> None:
         if report.get("moved_to") != "solved":
             raise RuntimeError(f"unexpected move target for archived solved problem: {report}")
 
-        archived_rows = read_jsonl(data_dir / "archived_problems.jsonl")
-        solved_rows = read_jsonl(data_dir / "solved_problems.jsonl")
+        archived_rows = read_jsonl(loop_dir / "archived_problems.jsonl")
+        solved_rows = read_jsonl(loop_dir / "solved_problems.jsonl")
         if [str(row.get("id", "")) for row in archived_rows] != ["op_000010"]:
             raise RuntimeError(f"archived problem should remain in archive after solve, got: {archived_rows}")
         if [str(row.get("id", "")) for row in solved_rows] != ["op_000010"]:
@@ -146,12 +149,13 @@ def test_state_update_does_not_remove_archived_rows() -> None:
 def test_backfill_does_not_duplicate_pending_expand_candidates() -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         data_dir = Path(tmpdir)
-        write_jsonl_atomic(data_dir / "open_problems.jsonl", [])
-        write_jsonl_atomic(data_dir / "archived_problems.jsonl", [])
-        write_jsonl_atomic(data_dir / "solved_problems.jsonl", [])
-        write_jsonl_atomic(data_dir / "counterexamples.jsonl", [])
+        loop_dir = data_dir / "loop"
+        write_jsonl_atomic(loop_dir / "open_problems.jsonl", [])
+        write_jsonl_atomic(loop_dir / "archived_problems.jsonl", [])
+        write_jsonl_atomic(loop_dir / "solved_problems.jsonl", [])
+        write_jsonl_atomic(loop_dir / "counterexamples.jsonl", [])
         write_jsonl_atomic(
-            data_dir / "open_problems.jsonl",
+            loop_dir / "open_problems.jsonl",
             [
                 {
                     "id": "op_000010",
@@ -199,7 +203,7 @@ def test_backfill_does_not_duplicate_pending_expand_candidates() -> None:
         if added_rows:
             raise RuntimeError(f"batch generator should not duplicate a pending expand candidate, got: {added_rows}")
 
-        open_rows = read_jsonl(data_dir / "open_problems.jsonl")
+        open_rows = read_jsonl(loop_dir / "open_problems.jsonl")
         if [str(row.get("id", "")) for row in open_rows] != ["op_000010"]:
             raise RuntimeError(f"pending expand candidate should remain open on duplicate backfill attempt: {open_rows}")
 
@@ -207,12 +211,13 @@ def test_backfill_does_not_duplicate_pending_expand_candidates() -> None:
 def test_priority_refresh_promotes_high_expand_candidates() -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         data_dir = Path(tmpdir)
-        write_jsonl_atomic(data_dir / "open_problems.jsonl", [])
-        write_jsonl_atomic(data_dir / "archived_problems.jsonl", [])
-        write_jsonl_atomic(data_dir / "solved_problems.jsonl", [])
-        write_jsonl_atomic(data_dir / "counterexamples.jsonl", [])
+        loop_dir = data_dir / "loop"
+        write_jsonl_atomic(loop_dir / "open_problems.jsonl", [])
+        write_jsonl_atomic(loop_dir / "archived_problems.jsonl", [])
+        write_jsonl_atomic(loop_dir / "solved_problems.jsonl", [])
+        write_jsonl_atomic(loop_dir / "counterexamples.jsonl", [])
         write_jsonl_atomic(
-            data_dir / "open_problems.jsonl",
+            loop_dir / "open_problems.jsonl",
             [
                 {
                     "id": "op_000003",
@@ -272,7 +277,7 @@ def test_priority_refresh_promotes_high_expand_candidates() -> None:
         if not ran or error:
             raise RuntimeError(f"priority refresh unexpectedly failed: {error}")
 
-        open_rows = read_jsonl(data_dir / "open_problems.jsonl")
+        open_rows = read_jsonl(loop_dir / "open_problems.jsonl")
         if [str(row.get("id", "")) for row in open_rows] != ["op_000003"]:
             raise RuntimeError(f"expand candidate was not present in open queue: {open_rows}")
 

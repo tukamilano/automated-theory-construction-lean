@@ -7,6 +7,10 @@ from pathlib import Path
 from typing import Any
 from typing import Iterable
 
+from atc_paths import loop_theorem_reuse_memory_path
+from atc_paths import refactor_review_report_path
+from atc_paths import refactor_try_at_each_step_apply_report_path
+from atc_paths import refactor_try_at_each_step_raw_output_path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 TASK_NAMES = (
@@ -358,19 +362,19 @@ def load_app_config(args: Any) -> tuple[AppConfig, dict[str, str]]:
         review_report_file=choose_path(
             cli_names=("review_report_file",),
             file_keys=("paths", "review_report_file"),
-            default="AutomatedTheoryConstruction/Derived.refactored.reviewed.report.json",
+            default=str(refactor_review_report_path(Path("data"))),
             label="paths.review_report_file",
         ),
         try_at_each_step_raw_output_file=choose_path(
             cli_names=("try_at_each_step_raw_output_file",),
             file_keys=("paths", "try_at_each_step_raw_output_file"),
-            default="AutomatedTheoryConstruction/Derived.tryAtEachStep.json",
+            default=str(refactor_try_at_each_step_raw_output_path(Path("data"))),
             label="paths.try_at_each_step_raw_output_file",
         ),
         try_at_each_step_apply_report_file=choose_path(
             cli_names=("try_at_each_step_apply_report_file",),
             file_keys=("paths", "try_at_each_step_apply_report_file"),
-            default="AutomatedTheoryConstruction/Derived.tryAtEachStep.apply_report.json",
+            default=str(refactor_try_at_each_step_apply_report_path(Path("data"))),
             label="paths.try_at_each_step_apply_report_file",
         ),
         data_dir=choose_path(
@@ -394,7 +398,7 @@ def load_app_config(args: Any) -> tuple[AppConfig, dict[str, str]]:
         theorem_reuse_memory_file=choose_path(
             cli_names=("theorem_reuse_memory_file",),
             file_keys=("paths", "theorem_reuse_memory_file"),
-            default="data/theorem_reuse_memory.json",
+            default=str(loop_theorem_reuse_memory_path(Path("data"))),
             label="paths.theorem_reuse_memory_file",
         ),
         snapshot_root=choose_path(

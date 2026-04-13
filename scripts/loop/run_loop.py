@@ -20,6 +20,15 @@ scripts_root_str = str(SCRIPTS_ROOT)
 if scripts_root_str not in sys.path:
     sys.path.insert(0, scripts_root_str)
 
+from atc_paths import loop_archived_problems_path
+from atc_paths import loop_counterexamples_path
+from atc_paths import loop_data_dir
+from atc_paths import loop_expand_candidates_path
+from atc_paths import loop_formalization_memory_path
+from atc_paths import loop_open_problems_path
+from atc_paths import loop_paper_claim_rejection_memory_path
+from atc_paths import loop_solved_problems_path
+from atc_paths import loop_theorem_reuse_memory_path
 from proof_packets import (
     FormalizerRequestPacket,
     FormalizerResponsePacket,
@@ -51,7 +60,6 @@ from common import (
 )
 from derived_entries import extract_derived_theorem_entries
 from guidance import unpack_guidance_context
-from generated_library import ensure_generated_scaffold
 from generated_library import render_scratch_template
 from import_inference import infer_minimal_imports, render_import_block
 from lean_verify import verify_scratch
@@ -84,6 +92,8 @@ from loop_helpers import shortlist_relevant_derived_entries
 from loop_helpers import statement_within_char_budget
 from loop_helpers import validate_theorem_name_stem
 from research_agenda import summarize_research_agenda_for_state
+from runtime_reset import reset_loop_runtime_data
+from runtime_reset import reset_loop_work_files
 from state_update import apply_state_update
 from theorem_commit import commit_verified_theorem_and_generation
 from theorem_reuse_memory import append_theorem_reuse_memory_entry
@@ -121,8 +131,8 @@ SEEDS_FILE_PATH = "AutomatedTheoryConstruction/seeds.jsonl"
 SCRATCH_FILE_PATH = "AutomatedTheoryConstruction/Scratch.lean"
 DERIVED_FILE_PATH = "AutomatedTheoryConstruction/Derived.lean"
 THEORY_FILE_PATH = "AutomatedTheoryConstruction/Theory.lean"
-FORMALIZATION_MEMORY_FILE_PATH = "data/formalization_memory.json"
-ARCHIVED_PROBLEMS_FILE_PATH = f"data/{ARCHIVED_PROBLEMS_FILENAME}"
+FORMALIZATION_MEMORY_FILE_PATH = str(loop_formalization_memory_path(Path(DATA_DIR_PATH)))
+ARCHIVED_PROBLEMS_FILE_PATH = str(loop_archived_problems_path(Path(DATA_DIR_PATH)))
 
 RESET_SCRATCH_ON_START = True
 RESET_DERIVED_ON_START = True
@@ -155,7 +165,6 @@ DEFAULT_MAX_SAME_ERROR_STREAK = 5
 COMPILE_METRICS_LOCK = threading.Lock()
 LEAN_VERIFY_LOCK = threading.Lock()
 DERIVED_UPDATE_LOCK = threading.Lock()
-THEORY_STATE_FILENAME = "theory_state.json"
 
 def build_session_scratch_file(base_scratch_file: Path, *, session_type: str, slot_index: int) -> Path:
     stem = base_scratch_file.stem
@@ -285,7 +294,7 @@ def finalize_run_summary(
 
 
 def theory_state_path(data_dir: Path) -> Path:
-    return data_dir / THEORY_STATE_FILENAME
+    return loop_data_dir(data_dir) / "theory_state.json"
 
 
 def write_theory_state(
@@ -400,10 +409,10 @@ def append_expand_candidates(
     if not statements_with_rationale:
         return []
 
-    open_rows = [normalize_open_problem_row(row) for row in read_jsonl(data_dir / "open_problems.jsonl")]
+    open_rows = [normalize_open_problem_row(row) for row in read_jsonl(loop_open_problems_path(data_dir))]
     archived_rows = read_archived_problem_rows(data_dir)
-    solved_rows = read_jsonl(data_dir / "solved_problems.jsonl")
-    counter_rows = read_jsonl(data_dir / "counterexamples.jsonl")
+    solved_rows = read_jsonl(loop_solved_problems_path(data_dir))
+    counter_rows = read_jsonl(loop_counterexamples_path(data_dir))
 
     seen_norms = {
         normalize_stmt_text(str(row.get("stmt", "")))
@@ -445,7 +454,7 @@ def append_expand_candidates(
         added_rows.append(dict(new_row))
 
     if added_rows:
-        write_jsonl_atomic(data_dir / "open_problems.jsonl", dedupe_problem_rows_by_stmt(next_rows))
+        write_jsonl_atomic(loop_open_problems_path(data_dir), dedupe_problem_rows_by_stmt(next_rows))
     return added_rows
 
 
@@ -455,7 +464,7 @@ def collect_important_verified_counterexamples(
     max_items: int = 3,
     max_chars: int = 240,
 ) -> list[str]:
-    rows = read_jsonl(data_dir / "counterexamples.jsonl")
+    rows = read_jsonl(loop_counterexamples_path(data_dir))
     summaries: list[str] = []
     seen_stmt_norms: set[str] = set()
     for row in reversed(rows):
@@ -2154,8 +2163,8 @@ def force_refresh_open_problem_priorities(
     run_id: str,
     theory_state_history_path: Path | None = None,
 ) -> tuple[bool, str, dict[str, Any]]:
-    open_path = data_dir / "open_problems.jsonl"
-    archived_path = data_dir / ARCHIVED_PROBLEMS_FILENAME
+    open_path = loop_open_problems_path(data_dir)
+    archived_path = loop_archived_problems_path(data_dir)
     open_rows = [normalize_open_problem_row(row) for row in read_jsonl(open_path)]
     archived_rows = read_archived_problem_rows(data_dir)
     tracked_rows = [
@@ -2280,7 +2289,7 @@ def maybe_backfill_open_problems_from_batch_generator(
     reserved_problem_ids: set[str] | None = None,
     phase_logger: Callable[..., None] | None = None,
 ) -> tuple[list[dict[str, Any]], str]:
-    open_path = data_dir / "open_problems.jsonl"
+    open_path = loop_open_problems_path(data_dir)
     open_rows = [normalize_open_problem_row(row) for row in read_jsonl(open_path)]
     reserved_ids = set(reserved_problem_ids or set())
     available_open_rows = [
@@ -2301,8 +2310,8 @@ def maybe_backfill_open_problems_from_batch_generator(
         return [], ""
 
     archived_rows = read_archived_problem_rows(data_dir)
-    solved_rows = read_jsonl(data_dir / "solved_problems.jsonl")
-    counter_rows = read_jsonl(data_dir / "counterexamples.jsonl")
+    solved_rows = read_jsonl(loop_solved_problems_path(data_dir))
+    counter_rows = read_jsonl(loop_counterexamples_path(data_dir))
     seen_norms = {
         normalize_stmt_text(str(row.get("stmt", "")))
         for row in (open_rows + archived_rows + solved_rows + counter_rows)
@@ -2434,38 +2443,25 @@ def initialize_runtime_state(
     if not seed_rows:
         raise ValueError(f"Seeds file is empty: {seeds_file}")
 
-    data_dir.mkdir(parents=True, exist_ok=True)
-    generated_root = derived_file.parent / "Generated"
-    ensure_generated_scaffold(
-        generated_root=generated_root,
-        manifest_file=generated_root / "Manifest.lean",
-        catalog_file=generated_root / "catalog.json",
+    reset_loop_runtime_data(
+        data_dir=data_dir,
+        derived_file=derived_file,
+        open_problem_rows=seed_rows,
+        archived_problems_file=archived_problems_file,
+        clear_paper_claim_rejection_memory=True,
     )
-    write_jsonl_atomic(data_dir / "open_problems.jsonl", seed_rows)
-    write_jsonl_atomic(archived_problems_file, [])
-    write_jsonl_atomic(data_dir / "solved_problems.jsonl", [])
-    write_jsonl_atomic(data_dir / "counterexamples.jsonl", [])
-    (data_dir / "theorem_reuse_memory.json").write_text('{"entries": []}\n', encoding="utf-8")
-    (data_dir / "paper_claim_rejection_memory.json").write_text('{"entries": []}\n', encoding="utf-8")
-    (data_dir / LEGACY_DEFERRED_PROBLEMS_FILENAME).unlink(missing_ok=True)
-    (data_dir / LEGACY_PRUNED_OPEN_PROBLEMS_FILENAME).unlink(missing_ok=True)
-    (data_dir / "expand_candidates.jsonl").unlink(missing_ok=True)
-    theory_state_path(data_dir).unlink(missing_ok=True)
-    cleanup_parallel_scratch_files(scratch_file)
-
-    if reset_scratch:
-        scratch_file.parent.mkdir(parents=True, exist_ok=True)
-        scratch_file.write_text(SCRATCH_TEMPLATE, encoding="utf-8")
-
-    if reset_derived:
-        derived_file.parent.mkdir(parents=True, exist_ok=True)
-        derived_file.write_text(DERIVED_TEMPLATE, encoding="utf-8")
-        for cleanup_file in derived_cleanup_files:
-            cleanup_file.unlink(missing_ok=True)
-
-    if reset_formalization_memory:
-        formalization_memory_file.parent.mkdir(parents=True, exist_ok=True)
-        formalization_memory_file.write_text("{}\n", encoding="utf-8")
+    reset_loop_work_files(
+        scratch_file=scratch_file,
+        cleanup_parallel_scratch_files=cleanup_parallel_scratch_files,
+        reset_scratch=reset_scratch,
+        scratch_template=SCRATCH_TEMPLATE,
+        derived_file=derived_file,
+        derived_cleanup_files=derived_cleanup_files,
+        reset_derived=reset_derived,
+        derived_template=DERIVED_TEMPLATE,
+        formalization_memory_file=formalization_memory_file,
+        reset_formalization_memory=reset_formalization_memory,
+    )
 
 
 def capture_continuation_runtime_snapshot(
@@ -2477,12 +2473,12 @@ def capture_continuation_runtime_snapshot(
     derived_cleanup_files: tuple[Path, ...],
 ) -> dict[str, str | int | None]:
     tracked_paths = (
-        data_dir / "open_problems.jsonl",
-        data_dir / ARCHIVED_PROBLEMS_FILENAME,
-        data_dir / "solved_problems.jsonl",
-        data_dir / "counterexamples.jsonl",
-        data_dir / "theorem_reuse_memory.json",
-        data_dir / "paper_claim_rejection_memory.json",
+        loop_open_problems_path(data_dir),
+        loop_archived_problems_path(data_dir),
+        loop_solved_problems_path(data_dir),
+        loop_counterexamples_path(data_dir),
+        loop_theorem_reuse_memory_path(data_dir),
+        loop_paper_claim_rejection_memory_path(data_dir),
         theory_state_path(data_dir),
         formalization_memory_file,
         scratch_file,
@@ -2493,9 +2489,9 @@ def capture_continuation_runtime_snapshot(
         "__history_row_total__": sum(
             len(read_jsonl(path))
             for path in (
-                data_dir / ARCHIVED_PROBLEMS_FILENAME,
-                data_dir / "solved_problems.jsonl",
-                data_dir / "counterexamples.jsonl",
+                loop_archived_problems_path(data_dir),
+                loop_solved_problems_path(data_dir),
+                loop_counterexamples_path(data_dir),
             )
         )
     }
@@ -2529,9 +2525,9 @@ def guard_against_unexpected_continuation_reset(
     after_history_total = sum(
         len(read_jsonl(path))
         for path in (
-            data_dir / ARCHIVED_PROBLEMS_FILENAME,
-            data_dir / "solved_problems.jsonl",
-            data_dir / "counterexamples.jsonl",
+            loop_archived_problems_path(data_dir),
+            loop_solved_problems_path(data_dir),
+            loop_counterexamples_path(data_dir),
         )
     )
     if after_history_total != 0:
@@ -2881,7 +2877,7 @@ def run_problem_session(
         priority_refresh_ran = bool(refresh_outcome.get("priority_refresh_ran", False))
         priority_refresh_error = str(refresh_outcome.get("priority_refresh_error", ""))
         priority_refresh_report = dict(refresh_outcome.get("priority_refresh_report", {}))
-        final_open_rows = [normalize_open_problem_row(row) for row in read_jsonl(data_dir / "open_problems.jsonl")]
+        final_open_rows = [normalize_open_problem_row(row) for row in read_jsonl(loop_open_problems_path(data_dir))]
         final_archived_rows = read_archived_problem_rows(data_dir)
         final_expand_rows = [
             row
@@ -2954,8 +2950,8 @@ def run_parallel_loop(
     record_problem_rows: Callable[..., None],
     record_theorem: Callable[..., None],
 ) -> None:
-    open_path = data_dir / "open_problems.jsonl"
-    archived_path = data_dir / ARCHIVED_PROBLEMS_FILENAME
+    open_path = loop_open_problems_path(data_dir)
+    archived_path = loop_archived_problems_path(data_dir)
     state_lock = threading.Lock()
     reserved_problem_ids: set[str] = set()
     problem_futures: dict[concurrent.futures.Future, dict[str, Any]] = {}
@@ -3509,7 +3505,7 @@ def main() -> None:
         run_id=run_id,
         current_iteration=0,
     )
-    open_path = data_dir / "open_problems.jsonl"
+    open_path = loop_open_problems_path(data_dir)
     initial_problem_rows = [normalize_open_problem_row(row) for row in read_jsonl(open_path)]
     initial_problem_rows.extend(read_archived_problem_rows(data_dir))
     record_problem_rows(

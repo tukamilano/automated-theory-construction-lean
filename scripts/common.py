@@ -7,6 +7,9 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
+from atc_paths import loop_archived_problems_path
+from atc_paths import loop_data_dir
+
 
 ID_PATTERN = re.compile(r"^op_(\d+)$")
 OPEN_PROBLEM_PRIORITY_LABELS = {"high", "medium", "low", "unknown"}
@@ -176,10 +179,11 @@ def merge_archived_problem_rows(
 
 
 def read_archived_problem_rows(data_dir: Path) -> list[dict[str, Any]]:
+    loop_dir = loop_data_dir(data_dir)
     paths = [
-        data_dir / ARCHIVED_PROBLEMS_FILENAME,
-        data_dir / LEGACY_DEFERRED_PROBLEMS_FILENAME,
-        data_dir / LEGACY_PRUNED_OPEN_PROBLEMS_FILENAME,
+        loop_archived_problems_path(data_dir),
+        loop_dir / LEGACY_DEFERRED_PROBLEMS_FILENAME,
+        loop_dir / LEGACY_PRUNED_OPEN_PROBLEMS_FILENAME,
     ]
     combined_rows: list[dict[str, Any]] = []
     for path in paths:

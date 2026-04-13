@@ -618,7 +618,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
     extract_deps = subparsers.add_parser(
         "extract-derived-deps",
-        help="Refresh data/pipeline_artifacts/derived-deps.json from DependencyExtractor.lean and Derived.lean.",
+        help="Refresh data/refactor/derived-deps.json from DependencyExtractor.lean and Derived.lean.",
     )
     _add_common_flags(extract_deps)
     extract_deps.add_argument("--derived-file")

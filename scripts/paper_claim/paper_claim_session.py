@@ -17,6 +17,9 @@ for search_path in (SCRIPTS_ROOT, LOOP_ROOT):
     if search_path_str not in sys.path:
         sys.path.insert(0, search_path_str)
 
+from atc_paths import loop_open_problems_path
+from atc_paths import loop_theorem_reuse_memory_path
+from atc_paths import paper_claim_run_dir
 from common import append_jsonl
 from common import read_jsonl
 from common import normalize_open_problem_row
@@ -3820,7 +3823,7 @@ def run_paper_claim_session(
         phase_attempts_path=phase_attempts_path,
         session_events_path=session_events_path,
         theory_state_history_path=(
-            (phase_attempts_path.parent if phase_attempts_path is not None else data_dir)
+            (phase_attempts_path.parent if phase_attempts_path is not None else paper_claim_run_dir(data_dir, run_id))
             / "theory_state_history.jsonl"
         ),
         state_lock=state_lock,
@@ -3936,7 +3939,7 @@ def resume_paper_claim_session_from_plan_event(
         phase_attempts_path=phase_attempts_path,
         session_events_path=session_events_path,
         theory_state_history_path=(
-            (phase_attempts_path.parent if phase_attempts_path is not None else data_dir)
+            (phase_attempts_path.parent if phase_attempts_path is not None else paper_claim_run_dir(data_dir, run_id))
             / "theory_state_history.jsonl"
         ),
         state_lock=state_lock,
@@ -4620,7 +4623,7 @@ def process_paper_claim_formalization_plan(
             result="proof",
             verify_success=True,
             theory_context=theorem_context,
-            open_rows=[normalize_open_problem_row(row) for row in read_jsonl(data_dir / "open_problems.jsonl")],
+            open_rows=[normalize_open_problem_row(row) for row in read_jsonl(loop_open_problems_path(data_dir))],
             existing_new_problems=[],
             verify_error_excerpt="",
             current_iteration_full_logs=current_iteration_full_logs,
@@ -4687,7 +4690,7 @@ def process_paper_claim_formalization_plan(
         "appended_to_derived": bool(committed_theorem_code),
     }
     with state_lock:
-        append_theorem_reuse_memory_entry(data_dir / "theorem_reuse_memory.json", theorem_reuse_payload)
+        append_theorem_reuse_memory_entry(loop_theorem_reuse_memory_path(data_dir), theorem_reuse_payload)
         refresh_outcome = store_expand_candidates_and_refresh(
             data_dir=data_dir,
             statements_with_rationale=post_expand_candidates,

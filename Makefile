@@ -12,10 +12,10 @@ SCRATCH_FILE ?= AutomatedTheoryConstruction/Scratch.lean
 SEEDS_FILE ?= AutomatedTheoryConstruction/seeds.jsonl
 PREVIEW_FILE ?= AutomatedTheoryConstruction/Derived.refactored.preview.lean
 REVIEWED_FILE ?= AutomatedTheoryConstruction/Derived.refactored.reviewed.lean
-TRY_AT_EACH_STEP_RAW_OUTPUT_FILE ?= AutomatedTheoryConstruction/Derived.tryAtEachStep.json
-TRY_AT_EACH_STEP_APPLY_REPORT_FILE ?= AutomatedTheoryConstruction/Derived.tryAtEachStep.apply_report.json
-DEPS_FILE ?= data/pipeline_artifacts/derived-deps.json
-DERIVED_CHUNK_PLAN_FILE ?= data/pipeline_artifacts/derived-chunk-plan.json
+TRY_AT_EACH_STEP_RAW_OUTPUT_FILE ?= data/refactor/Derived.tryAtEachStep.json
+TRY_AT_EACH_STEP_APPLY_REPORT_FILE ?= data/refactor/Derived.tryAtEachStep.apply_report.json
+DEPS_FILE ?= data/refactor/derived-deps.json
+DERIVED_CHUNK_PLAN_FILE ?= data/refactor/derived-chunk-plan.json
 GENERATED_ROOT ?= AutomatedTheoryConstruction/Generated
 GENERATED_MANIFEST_FILE ?= $(GENERATED_ROOT)/Manifest.lean
 GENERATED_CATALOG_FILE ?= $(GENERATED_ROOT)/catalog.json
@@ -36,7 +36,7 @@ REVIEW_ARGS ?=
 MATERIALIZE_ARGS ?=
 GENERATED_LOCAL_ARGS ?=
 
-.PHONY: help build check check-theory check-derived check-scratch smoke seed loop loop-continue loop-refactor-to-generated loop-continue-refactor-to-generated cycle pipeline paper-claim rewrite review split-generated-local refactor-to-generated
+.PHONY: help build check check-theory check-derived check-scratch smoke test seed seed-loop-refactor-to-generated loop loop-continue loop-refactor-to-generated loop-continue-refactor-to-generated cycle pipeline paper-claim rewrite review split-generated-local refactor-to-generated data-migrate-layout-dry-run data-migrate-layout
 
 help:
 	@printf '%s\n' \
@@ -47,7 +47,9 @@ help:
 		'  make check-derived - lake env lean $(DERIVED_FILE)' \
 		'  make check-scratch - lake env lean $(SCRATCH_FILE)' \
 		'  make smoke         - isolated mock-worker smoke test in a temp repo copy' \
+		'  make test          - run all tests under tests/*_test.py' \
 		'  make seed          - generate seeds.jsonl via scripts/atc_cli.py seed' \
+		'  make seed-loop-refactor-to-generated - run seed -> loop -> pass1.5 -> pass2 -> split -> local pass1.2 -> local pass1.3' \
 		'  make loop          - run the default worker loop via scripts/atc_cli.py loop' \
 		'  make loop-continue - same as loop, but keep current runtime state' \
 		'  make loop-refactor-to-generated - run loop -> pass1.5 -> pass2 -> split -> local pass1.2 -> local pass1.3' \
@@ -59,6 +61,8 @@ help:
 		'  make review        - run scripts/atc_cli.py review' \
 		'  make split-generated-local - run split -> local pass1.2 -> local pass1.3' \
 		'  make refactor-to-generated - run pass1.5 -> pass2 -> split -> local pass1.2 -> local pass1.3' \
+		'  make data-migrate-layout-dry-run - show how legacy data/* files would move into role directories' \
+		'  make data-migrate-layout - migrate legacy data/* files into role directories' \
 		'' \
 		'Common overrides:' \
 		'  WORKER_COMMAND="uv run scripts/mock_worker.py"' \
@@ -90,6 +94,18 @@ check-scratch:
 smoke:
 	python3 tests/smoke_test.py
 
+test:
+	@for f in tests/*_test.py; do \
+		printf '[test] %s\n' "$$f"; \
+		python3 "$$f" || exit 1; \
+	done
+
+data-migrate-layout-dry-run:
+	python3 scripts/migrate_data_layout.py
+
+data-migrate-layout:
+	python3 scripts/migrate_data_layout.py --apply
+
 seed:
 	$(ATC) seed \
 		$(ATC_COMMON_ARGS) \
@@ -97,6 +113,8 @@ seed:
 		--derived-file $(DERIVED_FILE) \
 		--seeds-file $(SEEDS_FILE) \
 		$(SEED_ARGS)
+
+seed-loop-refactor-to-generated: seed loop-refactor-to-generated
 
 loop:
 	$(ATC) loop \

@@ -7,6 +7,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+from atc_paths import refactor_data_dir
 SCRIPT_DIR = Path(__file__).resolve().parent
 SCRIPTS_ROOT = SCRIPT_DIR.parent
 REPO_ROOT = SCRIPTS_ROOT.parent
@@ -18,7 +19,7 @@ DEFAULT_REVIEWED = Path("AutomatedTheoryConstruction/Derived.refactored.reviewed
 DEFAULT_REVIEW_REPORT = Path("AutomatedTheoryConstruction/Derived.refactored.reviewed.report.json")
 DEFAULT_TRY_AT_EACH_STEP_RAW = Path("AutomatedTheoryConstruction/Derived.tryAtEachStep.json")
 DEFAULT_TRY_AT_EACH_STEP_REPORT = Path("AutomatedTheoryConstruction/Derived.tryAtEachStep.apply_report.json")
-DEFAULT_REFACTOR_ARTIFACT_DIR = Path("data/pipeline_artifacts")
+DEFAULT_REFACTOR_ARTIFACT_DIR = refactor_data_dir(Path("data"))
 LEAN_BUILD_TARGETS = (
     "AutomatedTheoryConstruction.Theory",
     "AutomatedTheoryConstruction.Generated.Manifest",

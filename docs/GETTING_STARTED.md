@@ -54,7 +54,7 @@ Keep notation choices conservative. Reusing common Mathlib notation names withou
 - extracted problem families or evaluation checklists
 
 Treat `materials/` as optional external context rather than internal runtime state.
-In particular, keep it separate from `data/theory_state.json`.
+In particular, keep it separate from `data/loop/theory_state.json`.
 If a deep-research summary becomes old, keep using it as context, but treat its claims as lower-confidence than direct source links or primary papers.
 
 ## 4. Check The Lean Targets

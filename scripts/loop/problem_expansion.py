@@ -13,6 +13,10 @@ scripts_root_str = str(SCRIPTS_ROOT)
 if scripts_root_str not in sys.path:
     sys.path.insert(0, scripts_root_str)
 
+from atc_paths import loop_archived_problems_path
+from atc_paths import loop_counterexamples_path
+from atc_paths import loop_open_problems_path
+from atc_paths import loop_solved_problems_path
 from common import ARCHIVED_PROBLEMS_FILENAME
 from common import append_jsonl
 from common import dedupe_problem_rows_by_stmt
@@ -314,10 +318,10 @@ def append_expand_candidates(
 ) -> list[dict[str, Any]]:
     if not statements_with_rationale:
         return []
-    open_rows = [normalize_open_problem_row(row) for row in read_jsonl(data_dir / "open_problems.jsonl")]
+    open_rows = [normalize_open_problem_row(row) for row in read_jsonl(loop_open_problems_path(data_dir))]
     archived_rows = read_archived_problem_rows(data_dir)
-    solved_rows = read_jsonl(data_dir / "solved_problems.jsonl")
-    counter_rows = read_jsonl(data_dir / "counterexamples.jsonl")
+    solved_rows = read_jsonl(loop_solved_problems_path(data_dir))
+    counter_rows = read_jsonl(loop_counterexamples_path(data_dir))
     seen_norms = {
         normalize_stmt_text(str(row.get("stmt", "")))
         for row in (open_rows + archived_rows + solved_rows + counter_rows)
@@ -353,12 +357,12 @@ def append_expand_candidates(
         next_rows.append(new_row)
         added_rows.append(dict(new_row))
     if added_rows:
-        write_jsonl_atomic(data_dir / "open_problems.jsonl", dedupe_problem_rows_by_stmt(next_rows))
+        write_jsonl_atomic(loop_open_problems_path(data_dir), dedupe_problem_rows_by_stmt(next_rows))
     return added_rows
 
 
 def collect_important_verified_counterexamples(data_dir: Path, *, max_items: int = 3, max_chars: int = 240) -> list[str]:
-    rows = read_jsonl(data_dir / "counterexamples.jsonl")
+    rows = read_jsonl(loop_counterexamples_path(data_dir))
     summaries: list[str] = []
     seen_stmt_norms: set[str] = set()
     for row in reversed(rows):
@@ -469,8 +473,8 @@ def force_refresh_open_problem_priorities(
     run_id: str,
     theory_state_history_path: Path | None = None,
 ) -> tuple[bool, str, dict[str, Any]]:
-    open_path = data_dir / "open_problems.jsonl"
-    archived_path = data_dir / ARCHIVED_PROBLEMS_FILENAME
+    open_path = loop_open_problems_path(data_dir)
+    archived_path = loop_archived_problems_path(data_dir)
     open_rows = [normalize_open_problem_row(row) for row in read_jsonl(open_path)]
     archived_rows = read_archived_problem_rows(data_dir)
     tracked_rows = [dict(row, queue_status="open", source_kind=str(row.get("source_kind", "open") or "open")) for row in open_rows]
@@ -562,7 +566,7 @@ def maybe_backfill_open_problems_from_batch_generator(
     reserved_problem_ids: set[str] | None = None,
     phase_logger: Callable[..., None] | None = None,
 ) -> tuple[list[dict[str, Any]], str]:
-    open_path = data_dir / "open_problems.jsonl"
+    open_path = loop_open_problems_path(data_dir)
     open_rows = [normalize_open_problem_row(row) for row in read_jsonl(open_path)]
     reserved_ids = set(reserved_problem_ids or set())
     available_open_rows = [row for row in open_rows if str(row.get("id", "")).strip() and str(row.get("id", "")).strip() not in reserved_ids]
@@ -571,8 +575,8 @@ def maybe_backfill_open_problems_from_batch_generator(
     if has_available_solver_eligible_problem(open_rows, reserved_problem_ids=reserved_ids):
         return [], ""
     archived_rows = read_archived_problem_rows(data_dir)
-    solved_rows = read_jsonl(data_dir / "solved_problems.jsonl")
-    counter_rows = read_jsonl(data_dir / "counterexamples.jsonl")
+    solved_rows = read_jsonl(loop_solved_problems_path(data_dir))
+    counter_rows = read_jsonl(loop_counterexamples_path(data_dir))
     seen_norms = {
         normalize_stmt_text(str(row.get("stmt", "")))
         for row in (open_rows + archived_rows + solved_rows + counter_rows)

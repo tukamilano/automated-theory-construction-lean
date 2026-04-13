@@ -16,6 +16,7 @@ for search_path in (SCRIPTS_ROOT, LOOP_ROOT):
     if search_path_str not in sys.path:
         sys.path.insert(0, search_path_str)
 
+from atc_paths import paper_claim_session_events_path
 from common import load_theory_context
 from derived_entries import extract_derived_theorem_entries
 from paper_claim_session import resume_paper_claim_session_from_plan_event
@@ -138,7 +139,7 @@ def main() -> None:
         else (
             resume_session_events_path
             if resume_session_events_path is not None
-            else data_dir / args.run_id / "paper_claim.events.jsonl"
+            else paper_claim_session_events_path(data_dir, args.run_id)
         )
     )
     _initialize_jsonl_output(phase_attempts_path)

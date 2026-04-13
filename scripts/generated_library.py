@@ -25,6 +25,7 @@ _COMMON_PREAMBLE = (
     "open scoped Mathling.Lambek.ProductFree\n\n"
 )
 CHUNK_STEM_PATTERN = re.compile(r"^C(\d{4})(?:_|$)")
+BACKUP_CHUNK_FILE_PATTERN = re.compile(r"^C\d{4}.*_~\.lean$")
 
 
 def render_scratch_template(*, include_generated_manifest: bool = True) -> str:
@@ -65,6 +66,39 @@ def ensure_generated_scaffold(
         manifest_file.write_text(_render_manifest([]), encoding="utf-8")
     if not catalog_file.exists():
         write_json_atomic(catalog_file, {"version": 1, "chunks": []})
+
+
+def cleanup_generated_backup_chunk_files(generated_root: Path) -> list[Path]:
+    if not generated_root.exists():
+        return []
+
+    removed_files: list[Path] = []
+    for path in generated_root.iterdir():
+        if not path.is_file() or not BACKUP_CHUNK_FILE_PATTERN.fullmatch(path.name):
+            continue
+        path.unlink(missing_ok=True)
+        removed_files.append(path)
+    return removed_files
+
+
+def reset_generated_runtime_state(
+    *,
+    generated_root: Path,
+    manifest_file: Path,
+    catalog_file: Path,
+) -> list[Path]:
+    ensure_generated_scaffold(
+        generated_root=generated_root,
+        manifest_file=manifest_file,
+        catalog_file=catalog_file,
+    )
+    removed_files = cleanup_generated_backup_chunk_files(generated_root)
+    for chunk_file in iter_generated_chunk_files(generated_root):
+        chunk_file.unlink(missing_ok=True)
+        removed_files.append(chunk_file)
+    write_generated_manifest(manifest_file, import_modules=[])
+    write_generated_catalog(catalog_file, chunks=[])
+    return removed_files
 
 
 def iter_generated_chunk_files(generated_root: Path) -> list[Path]:

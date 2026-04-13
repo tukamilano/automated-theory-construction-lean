@@ -14,12 +14,14 @@ scripts_root_str = str(SCRIPTS_ROOT)
 if scripts_root_str not in sys.path:
     sys.path.insert(0, scripts_root_str)
 
+from atc_paths import refactor_chunk_plan_path
+from atc_paths import refactor_deps_path
 from common import write_json_atomic
 
 
 DEFAULT_DERIVED_FILE = Path("AutomatedTheoryConstruction/Derived.lean")
-DEFAULT_DEPS_FILE = Path("data/pipeline_artifacts/derived-deps.json")
-DEFAULT_OUTPUT_FILE = Path("data/pipeline_artifacts/derived-chunk-plan.json")
+DEFAULT_DEPS_FILE = refactor_deps_path(Path("data"))
+DEFAULT_OUTPUT_FILE = refactor_chunk_plan_path(Path("data"))
 
 DECL_PATTERN = re.compile(r"^(theorem|lemma|def|abbrev|inductive|structure)\s+([^\s:({]+)", re.MULTILINE)
 THEOREM_KINDS = {"theorem", "lemma"}

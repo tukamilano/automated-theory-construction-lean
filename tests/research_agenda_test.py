@@ -257,18 +257,92 @@ def test_seed_prompt_includes_materials_guidance() -> None:
             raise RuntimeError(f"missing materials snippet in seed prompt: {snippet}\n{prompt}")
 
 
+def test_seed_prompt_explicitly_states_shared_policy_priority() -> None:
+    prompt = generate_seeds_from_theory.build_prompt(
+        theory_files=[Path("AutomatedTheoryConstruction/Theory.lean")],
+        derived_file=Path("AutomatedTheoryConstruction/Derived.lean"),
+        context_files=[],
+        seed_count=2,
+        extra_instruction="",
+        guidance=build_guidance_context(
+            theory_state={"theory_snapshot": "snapshot"},
+            research_agenda={"themes": ["agenda theme"]},
+            materials={
+                "documents": [{"path": "materials/doc.md", "kind": "markdown", "title": "Doc", "confidence": "high", "content_available": True}],
+                "problem_generation": ["materials hint"],
+            },
+        ),
+        recent_opportunities=[{"stmt": "True", "mode": "expand_candidate", "summary_delta": "signal"}],
+    )
+    required_snippets = (
+        "Keep the visible theory files and `Derived.lean` primary as binding grounding and non-duplication constraints.",
+        "Favor seeds likely to shift future priorities.",
+        "Use `theory_state` and `research_agenda` as primary value guidance after local plausibility is established.",
+        "If `materials` are provided, use them as optional external anchors for outward-looking seeds, especially when deciding whether a candidate is a genuine bridge, boundary sharpening, or structural interface result.",
+        "Use recent open-problem signals only as optional weak hints, not as mandatory targets.",
+        "Do not let `research_agenda`, `materials`, or recent-opportunity language justify weak, duplicate, or off-theory seeds.",
+    )
+    for snippet in required_snippets:
+        if snippet not in prompt:
+            raise RuntimeError(f"missing seed shared-policy snippet: {snippet}\n{prompt}")
+
+
+def test_load_seed_generation_guidance_includes_materials() -> None:
+    original_sync = generate_seeds_from_theory.ensure_materials_derived_current
+    original_load_materials = generate_seeds_from_theory.load_materials
+    original_load_theory_state = generate_seeds_from_theory.load_theory_state
+    original_load_research_agenda = generate_seeds_from_theory.load_research_agenda
+    calls: list[tuple[str, str]] = []
+
+    try:
+        def fake_sync(materials_dir: Path) -> dict[str, object]:
+            calls.append(("sync", str(materials_dir)))
+            return {"materials_dir": str(materials_dir)}
+
+        def fake_load_materials(materials_dir: Path) -> dict[str, object]:
+            calls.append(("load", str(materials_dir)))
+            return {"materials_dir": str(materials_dir), "problem_generation": ["materials hint"]}
+
+        generate_seeds_from_theory.ensure_materials_derived_current = fake_sync
+        generate_seeds_from_theory.load_materials = fake_load_materials
+        generate_seeds_from_theory.load_theory_state = lambda _data_dir: {"theory_snapshot": "snapshot"}
+        generate_seeds_from_theory.load_research_agenda = lambda _path: {"themes": ["agenda"]}
+
+        guidance = generate_seeds_from_theory.load_seed_generation_guidance(
+            repo_root=REPO_ROOT,
+            data_dir=REPO_ROOT / "data",
+        )
+    finally:
+        generate_seeds_from_theory.ensure_materials_derived_current = original_sync
+        generate_seeds_from_theory.load_materials = original_load_materials
+        generate_seeds_from_theory.load_theory_state = original_load_theory_state
+        generate_seeds_from_theory.load_research_agenda = original_load_research_agenda
+
+    materials_dir = str((REPO_ROOT / "materials").resolve())
+    if calls != [("sync", materials_dir), ("load", materials_dir)]:
+        raise RuntimeError(f"unexpected materials loading calls: {calls}")
+    if guidance.get("materials", {}).get("problem_generation") != ["materials hint"]:
+        raise RuntimeError(f"materials guidance missing from seed generation context: {guidance}")
+    if guidance.get("theory_state", {}).get("theory_snapshot") != "snapshot":
+        raise RuntimeError(f"theory_state missing from seed generation context: {guidance}")
+    if guidance.get("research_agenda", {}).get("themes") != ["agenda"]:
+        raise RuntimeError(f"research_agenda missing from seed generation context: {guidance}")
+
+
 def test_runtime_initialization_clears_generation_sidecar_files() -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp_path = Path(tmpdir)
         data_dir = tmp_path / "data"
+        loop_dir = data_dir / "loop"
         data_dir.mkdir(parents=True, exist_ok=True)
+        loop_dir.mkdir(parents=True, exist_ok=True)
         seeds_file = tmp_path / "seeds.jsonl"
         scratch_file = tmp_path / "Scratch.lean"
         derived_file = tmp_path / "Derived.lean"
-        formalization_memory_file = data_dir / "formalization_memory.json"
-        archived_problems_file = data_dir / "archived_problems.jsonl"
-        theorem_reuse_memory_file = data_dir / "theorem_reuse_memory.json"
-        paper_claim_rejection_memory_file = data_dir / "paper_claim_rejection_memory.json"
+        formalization_memory_file = loop_dir / "formalization_memory.json"
+        archived_problems_file = loop_dir / "archived_problems.jsonl"
+        theorem_reuse_memory_file = loop_dir / "theorem_reuse_memory.json"
+        paper_claim_rejection_memory_file = loop_dir / "paper_claim_rejection_memory.json"
 
         write_jsonl_atomic(
             seeds_file,
@@ -337,6 +411,73 @@ def test_runtime_initialization_clears_generation_sidecar_files() -> None:
         rejection_payload = json.loads(paper_claim_rejection_memory_file.read_text(encoding="utf-8"))
         if rejection_payload != {"entries": []}:
             raise RuntimeError("paper_claim_rejection_memory.json was not cleared on initialization")
+
+
+def test_runtime_initialization_clears_generated_backup_chunks_only() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmp_path = Path(tmpdir)
+        data_dir = tmp_path / "data"
+        data_dir.mkdir(parents=True, exist_ok=True)
+        seeds_file = tmp_path / "seeds.jsonl"
+        scratch_file = tmp_path / "Scratch.lean"
+        derived_file = tmp_path / "Derived.lean"
+        generated_root = tmp_path / "Generated"
+        generated_root.mkdir(parents=True, exist_ok=True)
+        backup_chunk = generated_root / "C0001_seed_candidate_~.lean"
+        normal_chunk = generated_root / "C0001_seed_candidate.lean"
+        backup_chunk.write_text("-- backup\n", encoding="utf-8")
+        normal_chunk.write_text("-- canonical\n", encoding="utf-8")
+
+        write_jsonl_atomic(
+            seeds_file,
+            [{"id": "op_000001", "stmt": "True", "src": "seed"}],
+        )
+
+        run_loop.initialize_runtime_state(
+            data_dir=data_dir,
+            seeds_file=seeds_file,
+            scratch_file=scratch_file,
+            reset_scratch=False,
+            derived_file=derived_file,
+            derived_cleanup_files=(),
+            reset_derived=False,
+            formalization_memory_file=data_dir / "loop" / "formalization_memory.json",
+            reset_formalization_memory=False,
+            archived_problems_file=data_dir / "loop" / "archived_problems.jsonl",
+        )
+
+        if backup_chunk.exists():
+            raise RuntimeError("generated backup chunk was not removed during runtime initialization")
+        if not normal_chunk.exists():
+            raise RuntimeError("runtime initialization should not remove canonical generated chunks")
+
+
+def test_seed_reset_clears_generated_backup_chunks_only() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmp_path = Path(tmpdir)
+        data_dir = tmp_path / "data"
+        (data_dir / "loop").mkdir(parents=True, exist_ok=True)
+        generated_root = tmp_path / "Generated"
+        generated_root.mkdir(parents=True, exist_ok=True)
+        backup_chunk = generated_root / "C0002_loop_residue_~.lean"
+        normal_chunk = generated_root / "C0002_loop_residue.lean"
+        backup_chunk.write_text("-- backup\n", encoding="utf-8")
+        normal_chunk.write_text("-- canonical\n", encoding="utf-8")
+
+        generate_seeds_from_theory.reset_runtime_before_seed_generation(
+            data_dir=data_dir,
+            seeds_file=tmp_path / "seeds.jsonl",
+            scratch_file=tmp_path / "Scratch.lean",
+            derived_file=tmp_path / "Derived.lean",
+            derived_cleanup_files=(),
+            formalization_memory_file=data_dir / "loop" / "formalization_memory.json",
+            archived_problems_file=data_dir / "loop" / "archived_problems.jsonl",
+        )
+
+        if backup_chunk.exists():
+            raise RuntimeError("seed reset did not remove generated backup chunk")
+        if not normal_chunk.exists():
+            raise RuntimeError("seed reset should not remove canonical generated chunks")
 
 
 def test_worker_payloads_include_research_agenda() -> None:
@@ -1353,8 +1494,9 @@ def test_force_refresh_writes_research_agenda_to_theory_state() -> None:
     }
     with tempfile.TemporaryDirectory() as tmpdir:
         data_dir = Path(tmpdir)
+        loop_dir = data_dir / "loop"
         write_jsonl_atomic(
-            data_dir / "open_problems.jsonl",
+            loop_dir / "open_problems.jsonl",
             [
                 {
                     "id": "op_000001",
@@ -1365,8 +1507,8 @@ def test_force_refresh_writes_research_agenda_to_theory_state() -> None:
                 }
             ],
         )
-        write_jsonl_atomic(data_dir / "archived_problems.jsonl", [])
-        write_jsonl_atomic(data_dir / "counterexamples.jsonl", [])
+        write_jsonl_atomic(loop_dir / "archived_problems.jsonl", [])
+        write_jsonl_atomic(loop_dir / "counterexamples.jsonl", [])
 
         original_request = run_loop.request_open_problem_priorities
         original_load_prompt_text = run_loop.load_prompt_text
@@ -1422,7 +1564,7 @@ def test_force_refresh_writes_research_agenda_to_theory_state() -> None:
         if not ran or error:
             raise RuntimeError(f"priority refresh unexpectedly failed: {error}")
 
-        theory_state = json.loads((data_dir / "theory_state.json").read_text(encoding="utf-8"))
+        theory_state = json.loads((loop_dir / "theory_state.json").read_text(encoding="utf-8"))
         expected_summary = summarize_research_agenda_for_state(agenda)
         if theory_state.get("research_agenda") != expected_summary:
             raise RuntimeError(f"unexpected research_agenda in theory_state: {theory_state}")
@@ -1544,7 +1686,12 @@ def main() -> int:
     test_validate_generated_agenda_requires_all_sections()
     test_ensure_materials_derived_current_generates_files_from_root_report()
     test_seed_prompt_includes_research_agenda_guidance()
+    test_seed_prompt_includes_materials_guidance()
+    test_seed_prompt_explicitly_states_shared_policy_priority()
+    test_load_seed_generation_guidance_includes_materials()
     test_runtime_initialization_clears_generation_sidecar_files()
+    test_runtime_initialization_clears_generated_backup_chunks_only()
+    test_seed_reset_clears_generated_backup_chunks_only()
     test_worker_payloads_include_research_agenda()
     test_build_paper_claim_retrieval_materials_prefilters_paper_cache()
     test_build_paper_claim_retrieval_materials_separates_unreadable_baselines()

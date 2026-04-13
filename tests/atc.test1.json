@@ -9,9 +9,9 @@
     "log_dir": "data/runs",
     "preview_file": "AutomatedTheoryConstruction/Derived.refactored.preview.lean",
     "reviewed_file": "AutomatedTheoryConstruction/Derived.refactored.reviewed.lean",
-    "try_at_each_step_raw_output_file": "AutomatedTheoryConstruction/Derived.tryAtEachStep.json",
-    "try_at_each_step_apply_report_file": "AutomatedTheoryConstruction/Derived.tryAtEachStep.apply_report.json",
-    "theorem_reuse_memory_file": "data/theorem_reuse_memory.json"
+    "try_at_each_step_raw_output_file": "data/refactor/Derived.tryAtEachStep.json",
+    "try_at_each_step_apply_report_file": "data/refactor/Derived.tryAtEachStep.apply_report.json",
+    "theorem_reuse_memory_file": "data/loop/theorem_reuse_memory.json"
   },
   "worker": {
     "command": "uv run scripts/codex_worker.py",

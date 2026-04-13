@@ -15,6 +15,8 @@ scripts_root_str = str(SCRIPTS_ROOT)
 if scripts_root_str not in sys.path:
     sys.path.insert(0, scripts_root_str)
 
+from atc_paths import loop_theorem_reuse_memory_path
+from atc_paths import refactor_chunk_plan_path
 from extract_derived_dependencies import extract_derived_dependencies
 from generated_library import DEFAULT_GENERATED_CATALOG
 from generated_library import DEFAULT_GENERATED_MANIFEST
@@ -43,7 +45,7 @@ DERIVED_TEMPLATE = (
 
 REPO_ROOT = SCRIPTS_ROOT.parent
 DEFAULT_DERIVED_FILE = Path("AutomatedTheoryConstruction/Derived.lean")
-DEFAULT_PLAN_FILE = Path("data/pipeline_artifacts/derived-chunk-plan.json")
+DEFAULT_PLAN_FILE = refactor_chunk_plan_path(Path("data"))
 SLUG_TOKEN_PATTERN = re.compile(r"[A-Za-z][A-Za-z0-9']*")
 SLUG_STOPWORDS = {
     "thm",
@@ -427,7 +429,7 @@ def main() -> None:
     parser.add_argument("--derived-file", default=str(DEFAULT_DERIVED_FILE))
     parser.add_argument("--deps-file", default=str(DEFAULT_DEPS_FILE))
     parser.add_argument("--theory-file", default="AutomatedTheoryConstruction/Theory.lean")
-    parser.add_argument("--theorem-reuse-memory-file", default="data/theorem_reuse_memory.json")
+    parser.add_argument("--theorem-reuse-memory-file", default=str(loop_theorem_reuse_memory_path(Path("data"))))
     parser.add_argument("--generated-root")
     parser.add_argument("--manifest-file")
     parser.add_argument("--catalog-file")

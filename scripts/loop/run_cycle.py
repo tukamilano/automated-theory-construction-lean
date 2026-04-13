@@ -11,6 +11,11 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from atc_paths import loop_theory_state_path
+from atc_paths import loop_theorem_reuse_memory_path
+from atc_paths import refactor_chunk_plan_path
+from atc_paths import refactor_data_dir
+from atc_paths import refactor_deps_path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 SCRIPTS_ROOT = SCRIPT_DIR.parent
@@ -21,7 +26,7 @@ DEFAULT_REVIEW_OUTPUT_FILE = "AutomatedTheoryConstruction/Derived.refactored.rev
 DEFAULT_REVIEW_REPORT_FILE = "AutomatedTheoryConstruction/Derived.refactored.reviewed.report.json"
 DEFAULT_TRY_AT_EACH_STEP_RAW_OUTPUT_FILE = "AutomatedTheoryConstruction/Derived.tryAtEachStep.json"
 DEFAULT_TRY_AT_EACH_STEP_APPLY_REPORT_FILE = "AutomatedTheoryConstruction/Derived.tryAtEachStep.apply_report.json"
-DEFAULT_PLAN_FILE = "data/pipeline_artifacts/derived-chunk-plan.json"
+DEFAULT_PLAN_FILE = str(refactor_chunk_plan_path(Path("data")))
 
 
 def iso_timestamp_now() -> str:
@@ -51,7 +56,7 @@ def _load_json(path: Path) -> dict[str, Any]:
 
 
 def _read_current_iteration(data_dir: Path) -> int:
-    payload = _load_json(data_dir / "theory_state.json")
+    payload = _load_json(loop_theory_state_path(data_dir))
     return int(payload.get("updated_at_iteration", 0) or 0)
 
 
@@ -135,8 +140,8 @@ def main() -> int:
     parser.add_argument("--try-at-each-step-raw-output-file", default=DEFAULT_TRY_AT_EACH_STEP_RAW_OUTPUT_FILE)
     parser.add_argument("--try-at-each-step-apply-report-file", default=DEFAULT_TRY_AT_EACH_STEP_APPLY_REPORT_FILE)
     parser.add_argument("--try-at-each-step-tactic", default="with_reducible exact?")
-    parser.add_argument("--theorem-reuse-memory-file", default="data/theorem_reuse_memory.json")
-    parser.add_argument("--deps-file", default="data/pipeline_artifacts/derived-deps.json")
+    parser.add_argument("--theorem-reuse-memory-file", default=str(loop_theorem_reuse_memory_path(Path("data"))))
+    parser.add_argument("--deps-file", default=str(refactor_deps_path(Path("data"))))
     parser.add_argument("--generated-root", default="AutomatedTheoryConstruction/Generated")
     parser.add_argument("--manifest-file", default="AutomatedTheoryConstruction/Generated/Manifest.lean")
     parser.add_argument("--catalog-file", default="AutomatedTheoryConstruction/Generated/catalog.json")
@@ -180,7 +185,7 @@ def main() -> int:
     refactor_artifact_dir = (
         Path(args.refactor_artifact_dir)
         if args.refactor_artifact_dir
-        else data_dir / "runs" / cycle_id / "refactor"
+        else refactor_data_dir(data_dir) / cycle_id
     )
     preview_file = _resolve_refactor_artifact_path(
         raw_path=args.preview_file,
