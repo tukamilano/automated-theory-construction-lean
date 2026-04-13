@@ -19,7 +19,13 @@ This is theory construction rather than ordinary proof search: the system expand
 
 ## Quick Start
 
-For the fastest first run, use the bundled example theory with the mock worker. This path does not require Codex CLI.
+The recommended end-to-end path is:
+
+1. Put your Gemini deep-research report under `materials/`.
+2. Build the materials cache.
+3. Regenerate `AutomatedTheoryConstruction/research_agenda.md` from that report.
+4. Run the main seed -> loop -> refactor pipeline.
+5. Run a one-shot paper-claim session.
 
 Prerequisites:
 
@@ -32,15 +38,23 @@ Run:
 
 ```bash
 make build
-make check-scratch
+make materials-cache
+make research-agenda REPORT_FILE=materials/your_report.md
+make seed-loop-refactor-to-generated
+make paper-claim
+```
+
+This builds the project, refreshes `data/materials_cache`, writes `AutomatedTheoryConstruction/research_agenda.md`, runs the main loop plus generated-file refactor path, and then runs a paper-claim session.
+
+If you want to continue from the current runtime state instead of resetting it, use `make loop-continue` or `make loop-continue-refactor-to-generated`.
+If you only want to refresh derived `materials/` artifacts without fetch/extract, use `make materials-derive`.
+If you want the fastest smoke path without Codex CLI, you can still run:
+
+```bash
 uv run python scripts/atc_cli.py loop \
   --worker-command "uv run scripts/mock_worker.py" \
   --max-iterations 1
 ```
-
-This builds the project, checks the temporary verification target, and runs one loop iteration against the current theory and seed state.
-
-`make loop` is a thin wrapper around `scripts/atc_cli.py loop` and resets runtime state by default. Use `make loop-continue` if you want to preserve the current `Derived.lean` and queue state.
 
 ## Documentation
 
@@ -72,8 +86,7 @@ Also treat summary reports in `materials/` as potentially time-sensitive: they a
 To regenerate `AutomatedTheoryConstruction/research_agenda.md` from a deep-research report, use:
 
 ```bash
-uv run python scripts/atc_cli.py research-agenda \
-  --report-file materials/your_report.md
+make research-agenda REPORT_FILE=materials/your_report.md
 ```
 
 ## Refactor Pipeline

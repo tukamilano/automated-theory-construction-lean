@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from pathlib import Path
+import shutil
 from typing import Any
 
 from atc_paths import loop_counterexamples_path
@@ -12,6 +13,8 @@ from atc_paths import loop_paper_claim_rejection_memory_path
 from atc_paths import loop_solved_problems_path
 from atc_paths import loop_theorem_reuse_memory_path
 from atc_paths import loop_theory_state_path
+from atc_paths import paper_claim_data_dir
+from atc_paths import refactor_data_dir
 from common import LEGACY_DEFERRED_PROBLEMS_FILENAME
 from common import LEGACY_PRUNED_OPEN_PROBLEMS_FILENAME
 from common import write_jsonl_atomic
@@ -19,6 +22,15 @@ from generated_library import DEFAULT_GENERATED_CATALOG
 from generated_library import DEFAULT_GENERATED_MANIFEST
 from generated_library import DEFAULT_GENERATED_ROOT
 from generated_library import reset_generated_runtime_state
+
+
+def _clear_directory_contents(root: Path) -> None:
+    root.mkdir(parents=True, exist_ok=True)
+    for path in root.iterdir():
+        if path.is_dir():
+            shutil.rmtree(path)
+        else:
+            path.unlink(missing_ok=True)
 
 
 def reset_loop_runtime_data(
@@ -31,6 +43,8 @@ def reset_loop_runtime_data(
 ) -> None:
     loop_dir = loop_data_dir(data_dir)
     loop_dir.mkdir(parents=True, exist_ok=True)
+    _clear_directory_contents(paper_claim_data_dir(data_dir))
+    _clear_directory_contents(refactor_data_dir(data_dir))
     generated_root = derived_file.parent / DEFAULT_GENERATED_ROOT.name
     reset_generated_runtime_state(
         generated_root=generated_root,

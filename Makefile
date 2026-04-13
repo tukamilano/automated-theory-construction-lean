@@ -21,6 +21,7 @@ GENERATED_MANIFEST_FILE ?= $(GENERATED_ROOT)/Manifest.lean
 GENERATED_CATALOG_FILE ?= $(GENERATED_ROOT)/catalog.json
 GENERATED_LOCAL_MANIFEST_VERIFY_TIMEOUT ?= 300
 SNAPSHOT_ROOT ?= snapshots
+REPORT_FILE ?=
 
 WORKER_COMMAND ?= uv run scripts/codex_worker.py
 WORKER_TIMEOUT ?= 420
@@ -36,7 +37,7 @@ REVIEW_ARGS ?=
 MATERIALIZE_ARGS ?=
 GENERATED_LOCAL_ARGS ?=
 
-.PHONY: help build check check-theory check-derived check-scratch smoke test seed seed-loop-refactor-to-generated loop loop-continue loop-refactor-to-generated loop-continue-refactor-to-generated cycle pipeline paper-claim rewrite review split-generated-local refactor-to-generated data-migrate-layout-dry-run data-migrate-layout
+.PHONY: help build check check-theory check-derived check-scratch smoke test seed seed-loop-refactor-to-generated loop loop-continue loop-refactor-to-generated loop-continue-refactor-to-generated cycle pipeline paper-claim rewrite review split-generated-local refactor-to-generated research-agenda materials-cache materials-derive data-migrate-layout-dry-run data-migrate-layout
 
 help:
 	@printf '%s\n' \
@@ -61,6 +62,9 @@ help:
 		'  make review        - run scripts/atc_cli.py review' \
 		'  make split-generated-local - run split -> local pass1.2 -> local pass1.3' \
 		'  make refactor-to-generated - run pass1.5 -> pass2 -> split -> local pass1.2 -> local pass1.3' \
+		'  make research-agenda REPORT_FILE=materials/your_report.md - regenerate AutomatedTheoryConstruction/research_agenda.md' \
+		'  make materials-cache - build materials-derived files and refresh data/materials_cache' \
+		'  make materials-derive - build materials-derived files only, without fetch/extract' \
 		'  make data-migrate-layout-dry-run - show how legacy data/* files would move into role directories' \
 		'  make data-migrate-layout - migrate legacy data/* files into role directories' \
 		'' \
@@ -115,6 +119,16 @@ seed:
 		$(SEED_ARGS)
 
 seed-loop-refactor-to-generated: seed loop-refactor-to-generated
+
+materials-cache:
+	$(PYTHON) scripts/materials_sync.py --materials-dir materials
+
+materials-derive:
+	$(PYTHON) scripts/materials_sync.py --materials-dir materials --derive-only
+
+research-agenda:
+	@test -n "$(REPORT_FILE)" || { echo 'REPORT_FILE is required, e.g. make research-agenda REPORT_FILE=materials/your_report.md'; exit 1; }
+	$(ATC) research-agenda --report-file $(REPORT_FILE)
 
 loop:
 	$(ATC) loop \

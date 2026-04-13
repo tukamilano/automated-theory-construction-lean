@@ -98,11 +98,11 @@ When a report may be out of date, keep the report for structure and wording, but
 ### Regenerate `research_agenda.md` from a deep-research report
 
 ```bash
-uv run python scripts/atc_cli.py research-agenda \
-  --report-file materials/your_report.md
+make materials-cache
+make research-agenda REPORT_FILE=materials/your_report.md
 ```
 
-This writes directly to `AutomatedTheoryConstruction/research_agenda.md` by default.
+This refreshes `data/materials_cache` and then writes directly to `AutomatedTheoryConstruction/research_agenda.md`.
 If you want to inspect the composed prompt first, add:
 
 ```bash

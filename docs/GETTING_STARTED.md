@@ -41,8 +41,8 @@ The usual first changes are:
 
 1. Put your base theory definitions and axioms in `AutomatedTheoryConstruction/Theory/Core.lean`.
 2. Add helper lemmas or additional modules under `AutomatedTheoryConstruction/Theory/` if needed.
-3. Edit `AutomatedTheoryConstruction/research_agenda.md` to state what kinds of problems the loop should value.
-4. If you do deep research, put the organized output under `materials/`.
+3. If you do deep research, put the organized output under `materials/`.
+4. Regenerate `AutomatedTheoryConstruction/research_agenda.md` from that report instead of editing it ad hoc when possible.
 
 Keep notation choices conservative. Reusing common Mathlib notation names without a strong reason tends to make maintenance harder.
 
@@ -72,17 +72,28 @@ If you only want to check the temporary verification target:
 make check-scratch
 ```
 
-## 5. Run A First Iteration
+## 5. Recommended Quick Start
 
-The fastest path is to use the bundled example theory with the mock worker:
+For the main workflow, use this order:
+
+```bash
+make build
+make materials-cache
+make research-agenda REPORT_FILE=materials/your_report.md
+make seed-loop-refactor-to-generated
+make paper-claim
+```
+
+This is the recommended path when you have a real deep-research report under `materials/`.
+It refreshes `data/materials_cache`, rewrites `AutomatedTheoryConstruction/research_agenda.md`, runs the main loop plus generated-file refactor path, and then runs a one-shot paper-claim session.
+
+If you want the fastest smoke test without Codex CLI, you can still use the bundled mock worker:
 
 ```bash
 uv run python scripts/atc_cli.py loop \
   --worker-command "uv run scripts/mock_worker.py" \
   --max-iterations 1
 ```
-
-This verifies that the runtime loop works without requiring Codex CLI.
 
 ## 6. Seed Generation
 

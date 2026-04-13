@@ -5,8 +5,14 @@
   "title": "Substructural Logic: Understanding the roles of Weakening and Contraction - Mathematics Stack Exchange",
   "content_type": "text/html",
   "extract_confidence": "high",
-  "abstract": "Ask Question Asked 6 years, 7 months ago Modified 6 years, 7 months ago Viewed 396 times 4 $\\begingroup$ I am trying to understand the \"structural\" rules of logic, and how relaxing/adding certain these rules gives rise to different types of logic (linear, affine, etc.) The rules are Exchange : $$\\left(\\Gamma_1, x_1, x_2, \\Gamma_2\\longrightarrow p\\right)\\longrightarrow\\left(\\Gamma_1, x_2, x_1, \\Gamma_2\\longrightarrow p\\right)$$ Weakening : $\\forall x$ , $$\\left(\\Gamma\\longrightarrow p\\right)\\longrightarrow \\left(\\Gamma, x\\longrightarrow p\\right)$$ Contraction $$\\left(\\Gamma, x, x \\longrightarrow p\\right)\\longrightarrow \\left(\\Gamma, x \\longrightarrow p\\right)$$ According to David Walker in Substructural Type Systems (page 5) Linear type systems ensure that every variable is used exactly once by allowing exchange but not weakening or contraction.",
+  "abstract": "Digital Anti-Aliasing versus Decimation Filter Should you trust young rabbis? Does anyone see how to prove \"every prime except 2,3,11,17 is a sum of 2 or 3 distinct primes?\" I've checked it for all primes ≤ 10⁸ Is there a sefer for halachos for when the Mashiach comes? Is there a way to conduct an internationally-acknowledged referendum? Can this grid be 3-colored? Disabled snaps removal shell script E-Bike: strange battery behavior: sometimes works, sometimes doesn't Password checker Photo/Text of this Source How to give a big power up to players against the final boss? How can I learn formal English? Hume: \"The most lively thought is still inferior to the dullest sensation.\" Really? Confusion in the definition of being root of polynomials Are there any issues with trading responsibilities for privileges? Mysterious binomial identity Determine if a string is Sturmian",
   "chunks": [
+    {
+      "chunk_id": "chunk_008",
+      "section": "You must to answer this question.",
+      "page": null,
+      "text": "Digital Anti-Aliasing versus Decimation Filter Should you trust young rabbis? Does anyone see how to prove \"every prime except 2,3,11,17 is a sum of 2 or 3 distinct primes?\" I've checked it for all primes ≤ 10⁸ Is there a sefer for halachos for when the Mashiach comes? Is there a way to conduct an internationally-acknowledged referendum? Can this grid be 3-colored? Disabled snaps removal shell script E-Bike: strange battery behavior: sometimes works, sometimes doesn't Password checker Photo/Text of this Source How to give a big power up to players against the final boss? How can I learn formal English? Hume: \"The most lively thought is still inferior to the dullest sensation.\" Really? Confusion in the definition of being root of polynomials Are there any issues with trading responsibilities for privileges? Mysterious binomial identity Determine if a string is Sturmian"
+    },
     {
       "chunk_id": "chunk_002",
       "section": "Substructural Logic: Understanding the roles of Weakening and Contraction",
@@ -14,16 +20,10 @@
       "text": "Ask Question Asked 6 years, 7 months ago Modified 6 years, 7 months ago Viewed 396 times 4 $\\begingroup$ I am trying to understand the \"structural\" rules of logic, and how relaxing/adding certain these rules gives rise to different types of logic (linear, affine, etc.) The rules are Exchange : $$\\left(\\Gamma_1, x_1, x_2, \\Gamma_2\\longrightarrow p\\right)\\longrightarrow\\left(\\Gamma_1, x_2, x_1, \\Gamma_2\\longrightarrow p\\right)$$ Weakening : $\\forall x$ , $$\\left(\\Gamma\\longrightarrow p\\right)\\longrightarrow \\left(\\Gamma, x\\longrightarrow p\\right)$$ Contraction $$\\left(\\Gamma, x, x \\longrightarrow p\\right)\\longrightarrow \\left(\\Gamma, x \\longrightarrow p\\right)$$ According to David Walker in Substructural Type Systems (page 5) Linear type systems ensure that every variable is used exactly once by allowing exchange but not weakening or contraction."
     },
     {
-      "chunk_id": "chunk_008",
-      "section": "You must to answer this question.",
-      "page": null,
-      "text": "1990s martial arts/underground fighting movie called \"رینگ خونین\" in Iran — looking for the original English title What's your favorite Cantor space? How would empiricists respond to the phenomenological/Husserlian thesis of essences? What is the belief in the correctness of the Bible based upon? Are the new Talgo trains on the Copenhagen-Hamburg route any faster than the old ones in terms of actual travel time? Why is my PWM signal taking 1us to charge mosfet gate? What is the effect on the statistics if the sample is almost the whole population? Future Perfect vs Future Simple Is it true that Benjamin Netanyahu justified the King David Hotel bombing by Jewish terrorists as \"a legitimate act with a military target\"? What were the correct magic words, and do they have a specific meaning? How to disassemble a CatEye Viz450 rear light for repair?"
-    },
-    {
       "chunk_id": "chunk_007",
       "section": "You must to answer this question.",
       "page": null,
-      "text": "Start asking to get answers Find the answer to your question by asking. Ask question Explore related questions logic linear-logic See similar questions with these tags. Related 8 Weakening and Contraction 2 Grigori Mints' ADC method of proof search for a natural deduction in \"sequent-style\" calculus 7 Why is coherence important in the LCCC interpretation of substitution in dependent type theory? 4 Natural Deduction: An unusual presentation? 1 Considering $\\Gamma \\vdash \\varphi$, is $\\Gamma$ a set or a list? 1 Can sequents in the sequent calculus contain free variables? Hot Network Questions Interpretation of negative Thévenin resistance in a circuit with only dependent sources Scrolling half window height when reading PDF on keyboard Disabled snaps removal shell script Is IST–DEL (TK716) or DEL–IST (TK717) still being operated by IndiGo?"
+      "text": "Start asking to get answers Find the answer to your question by asking. Ask question Explore related questions logic linear-logic See similar questions with these tags. Related 8 Weakening and Contraction 2 Grigori Mints' ADC method of proof search for a natural deduction in \"sequent-style\" calculus 7 Why is coherence important in the LCCC interpretation of substitution in dependent type theory? 4 Natural Deduction: An unusual presentation? 1 Considering $\\Gamma \\vdash \\varphi$, is $\\Gamma$ a set or a list? 1 Can sequents in the sequent calculus contain free variables? Hot Network Questions Mysterious second argument of DifferentialRoot How to disassemble a CatEye Viz450 rear light for repair? Trying to find a book about a soldier who was frozen in a lake in the prologue only to be revived years later in a hyper peaceful society"
     },
     {
       "chunk_id": "chunk_005",
@@ -38,16 +38,16 @@
       "text": "Affine type systems ensure that every variable is used at most once by allowing exchange and weakening, but not contraction I'm confused by the phrasing \"not allowing\" certain rules. I've given it some thought, and it seems to me that to achieve the listed properties, it has to mean we explicitly take their negations $p\\rightarrow \\overline{q}$ , not just give up the axiom $p\\rightarrow q$ Am I correct here, or is it simply that we just have to give up the \" $p\\rightarrow q$ \" form of these statements? logic linear-logic Share Cite Follow asked Sep 14, 2019 at 15:10 bumbling-tadpole 43 2 2 bronze badges $\\endgroup$ Add a comment |"
     },
     {
-      "chunk_id": "chunk_009",
-      "section": "You must to answer this question.",
-      "page": null,
-      "text": "When should former PhD supervisors stop being considered conflicts of interest in conference submissions? DocumentMetadata + setspace + biblatex: yields: \"Patching footnotes failed\" What species are the \"famous\" geese of Annandale Water services, Scotland Why do low-pass filters fill in points in discrete signals? Old house on shallow well with inadequate water pressure Should I Re-Tension this Wheel? Graphing a system of inequalities in 3 dimensions Is a 911 dispatcher liable if they ignored/deprioritized a legitimate call, resulting in a preventable death? Skull emoji 💀 in pdfLaTeX more hot questions Question feed"
-    },
-    {
       "chunk_id": "chunk_006",
       "section": "1 Answer 1",
       "page": null,
       "text": "As an analogy, if you don't have flour, this (potentially) limits what you can cook. It doesn't mean that it is now impossible to cook anything for which you have a recipe that involves flour. Maybe you have an alternate recipe that doesn't use flour. Maybe you can produce your own flour. Maybe you couldn't follow any of the recipes using flour even if you did have flour. Share Cite Follow answered Sep 14, 2019 at 20:29 Derek Elkins left SE 26.1k 1 1 gold badge 34 34 silver badges 58 58 bronze badges $\\endgroup$ Add a comment |"
+    },
+    {
+      "chunk_id": "chunk_009",
+      "section": "You must to answer this question.",
+      "page": null,
+      "text": "When should former PhD supervisors stop being considered conflicts of interest in conference submissions? What’s the best way to make StringTemplate not produce TemplateSlot, but still produce TemplateExpression? Short story (possibly by Fritz Leiber) about an English man in New York who is told to watch out for the fish hooks attached to a swerving car What happens if a player forfeits on time, when all of their legal moves would have resulted in a threefold or 50 move rule? more hot questions Question feed"
     },
     {
       "chunk_id": "chunk_004",

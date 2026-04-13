@@ -2,112 +2,76 @@
   "source_id": "resolve_cambridge_org_lambek_calculus_and_formal_languages_2ba0b7ac8e36",
   "source_url": "https://resolve.cambridge.org/core/services/aop-cambridge-core/content/view/E60E1B6CD19E44AC69A80DD2E2B1FCF7/9781316716830c14_p269-272_CBO.pdf/lambek_calculus_and_formal_languages.pdf",
   "label": "Lambek Calculus and Formal Languages \\- Cambridge University Press & Assessment",
-  "title": "Lambek Calculus and Formal Languages - Logic Colloquium '95",
-  "content_type": "text/html",
-  "extract_confidence": "high",
-  "abstract": "A summary is not available for this content so a preview has been provided. Please use the Get access link above for information on how to access this content.",
+  "title": "Lambek Calculus and Formal Languages \\- Cambridge University Press & Assessment",
+  "content_type": "application/pdf",
+  "extract_confidence": "medium",
+  "abstract": "The systematic study of generating grammars was started by N. Chomsky in the 50s (cf. [10]). He defined several classes of generating grammars, which are interesting for both linguists and mathematicians, e. g. context-sensitive gram- mars, context-free grammars, and linear grammars. On the other hand, catego- rial grammars were studied by Y. Bar-Hillel, J. Lambek and others. The notion of a basic categorial grammar was introduced in [1]. In the same paper it was proved that the languages recognized by basic categorial grammars are precisely the context-free ones. Another kind of categorial grammar was introduced by J. Lambek [15]. These grammars are based on a syntactic calculus, presently known as the Lambek calculus. Chomsky [11] conjectured that these grammars are also equivalent to context-free ones. In [12] Cohen proved that every basic categorial grammar (and, thus, every context-",
   "chunks": [
     {
-      "chunk_id": "chunk_005",
-      "section": "Summary",
-      "page": null,
-      "text": "A summary is not available for this content so a preview has been provided. Please use the Get access link above for information on how to access this content."
-    },
-    {
-      "chunk_id": "chunk_003",
-      "section": "Lambek Calculus and Formal Languages",
-      "page": null,
-      "text": "Published online by Cambridge University Press: 24 March 2017 By M. Pentus Edited by Johann A. Makowsky and Elena V. Ravve Show author details M. Pentus Affiliation: Moscow State University Johann A. Makowsky Affiliation: Technion - Israel Institute of Technology, Haifa Elena V. Ravve Affiliation: Technion - Israel Institute of Technology, Haifa Chapter Accessibility Book contents Frontmatter Preface Plenary sessions Special sessions Contents The Number of Path-Components of a Compact Subset of Rn Intervals without Critical Triples Beyond Gödel's Theorem: Turing Nonrigidity Revisited Types and Indescernibles in Finite Models Model Theory of Modules Noninterpretability of Infinite Linear Orders Combinatorial Principles from Adding Cohen Reals Extensions of models of PV Convergence Laws for Random Graphs V=L and Maximize"
-    },
-    {
       "chunk_id": "chunk_002",
-      "section": "Book contents",
+      "section": "",
       "page": null,
-      "text": "Frontmatter Preface Plenary sessions Special sessions Contents The Number of Path-Components of a Compact Subset of R n Intervals without Critical Triples Beyond Gödel's Theorem: Turing Nonrigidity Revisited Types and Indescernibles in Finite Models Model Theory of Modules Noninterpretability of Infinite Linear Orders Combinatorial Principles from Adding Cohen Reals Extensions of models of PV Convergence Laws for Random Graphs V=L and Maximize Towards a Categorical Foundation of Mathematics Strongly Minimal Sets and Geometry Computationally-Sound Proofs Lambek Calculus and Formal Languages Zil'ber's Trichotomy and o-minimal Structures The Higher Infinite in Proof Theory There May Be No Nowhere Dense Ultrafilter Towards Recursive Model Theory Accessible Segments of the Fast Growing Hierarchy Author Index References"
-    },
-    {
-      "chunk_id": "chunk_007",
-      "section": "References",
-      "page": null,
-      "text": "Bar-Hillel , Y. Gaifman , C. and Shamir , E. On categorial and phrase-structure grammars . Bull. Res. Council Israel Sect. F , 9F :1–16, 1960 . Google Scholar van Benthem , J. Language in Action: Categories, Lambdas and Dynamic Logic. North-Holland, Amsterdam , (Studies in Logic 130), 1991 . Buszkowski. , W. Undecidability of some logical extensions of Ajdukiewicz-Lambek calculus . Studia Logica , 37 :59–64, 1978 . Google Scholar Buszkowski. , W. Compatibility of categorial grammar with an associated category system . Zeitschrift für mathematische Logik und Grundlagen der Mathematik , 28 :229–238, 1982 . Google Scholar Buszkowski. , W. Some decision problems in the theory of syntactic categories . Zeitschrift für mathematische Logik und Grundlagen der Mathematik , 28 :539–548, 1982 . Google Scholar"
+      "text": "The systematic study of generating grammars was started by N. Chomsky in the 50s (cf. [10]). He defined several classes of generating grammars, which are interesting for both linguists and mathematicians, e. g. context-sensitive gram- mars, context-free grammars, and linear grammars. On the other hand, catego- rial grammars were studied by Y. Bar-Hillel, J. Lambek and others. The notion of a basic categorial grammar was introduced in [1]. In the same paper it was proved that the languages recognized by basic categorial grammars are precisely the context-free ones. Another kind of categorial grammar was introduced by J. Lambek [15]. These grammars are based on a syntactic calculus, presently known as the Lambek calculus. Chomsky [11] conjectured that these grammars are also equivalent to context-free ones. In [12] Cohen proved that every basic categorial grammar (and, thus, every context-free grammar) is equivalent to a Lambek grammar. He also proposed a proof of the converse. However, as pointed out in [6], this proof contains an error. Buszkowski proved that some special kinds of Lambek grammars are context-free [6, 8, 9]. These grammars use weakly unidirectional types or types of order at most two. The first result of this paper (Theorem 1) says that Lambek grammars gener- ate only context-free languages. Thus they are equivalent to context-free gram- mars and also to basic categorial grammars. This fact (sometimes called the Chomsky Conjecture) was proved in [16] and [17]. The inteneded syntactic string models, i.e., free semigroup models (also called language models or L-models) for the Lambek calculus were considered in [3], [4], and [5]. The more general class of groupoid models has been studied in [7], [13], and [14]. In [4] W. Buszkowski established that the product-free fragment of the Lambek calculus is L-complete (i.e., complete w.r.t. free semigroup models), using the canonical model. The question of L-completeness of the full Lambek calculus remained open (cf. [2]). The second result of this paper (Theorem 2) gives a positive answer to this question. The proof has been publised in [18] and [19]."
     },
     {
       "chunk_id": "chunk_008",
-      "section": "References",
+      "section": "",
       "page": null,
-      "text": "Buszkowski. , W. The equivalence of unidirectional Lambek categorial grammars and context-free grammars . Zeitschrift für mathematische Logik und Grundlagen der Mathematik , 31 :369-384, 1985 . Google Scholar Buszkowski. , W. Completeness Results for Lambek Syntactic Calculus . Zeitschrift für mathematische Logik und Grundlagen der Mathematik , 32 :13–28, 1986 . Google Scholar Buszkowski. , W. Generative power of categorial grammars. In Oehrle , R.T. Bach , E. and Wheeler , D. editors, Categorial Grammars and Natural Language Structures , pages 69–94, Reidel, Dordrecht , 1988 . Buszkowski. , W. On generative capacity of the Lambek calculus. In van Eijck , J. editor, Logics in A I , pages 139–152, Springer, Berlin , 1991 . Chomsky. , N. Syntactic Structures. Mouton, The Hague , 1957 ."
-    },
-    {
-      "chunk_id": "chunk_014",
-      "section": "Save book to Kindle",
-      "page": null,
-      "text": "To save this book to your Kindle, first ensure no-reply@cambridge.org is added to your Approved Personal Document E-mail List under your Personal Document Settings on the Manage Your Content and Devices page of your Amazon account. Then enter the ‘name’ part of your Kindle email address below. Find out more about saving to your Kindle . Note you can select to save to either the @free.kindle.com or @kindle.com variations. ‘@free.kindle.com’ emails are free but can only be saved to your device when it is connected to wi-fi. ‘@kindle.com’ emails can be delivered even when you are not connected to wi-fi, but note that service fees apply. Find out more about the Kindle Personal Document Service . Lambek Calculus and Formal Languages By M. Pentus , Moscow State University"
-    },
-    {
-      "chunk_id": "chunk_009",
-      "section": "References",
-      "page": null,
-      "text": "Chomsky. , N. Formal properties of grammars. In Luce , R.D. et al., editors, Hand-book of Mathematical Psychology , vol. 2 , pages 323–418, Wiley, New York , 1963 . Cohen. , J.M. The equivalence of two concepts of categorial grammar . Information and Control , 10 :475–484, 1967 . Google Scholar Došen , K. A Completeness Theorem for the Lambek Calculus of Syntactic Categories . Zeitschrift für mathematische Logik und Grundlagen der Mathematik , 31 :235–241, 1985 . Google Scholar Došen , K. A brief survey of frames for the Lambek calculus. Bericht 5-90, Konstanzer Berichte zur Logik und Wissenschaftstheorie, Universität Konstanz, 1990 . Lambek. , J. The mathematics of sentence structure . American Mathematical Monthly , 65 (3):154–170, 1958 . Google Scholar"
-    },
-    {
-      "chunk_id": "chunk_017",
-      "section": "Save book to Google Drive",
-      "page": null,
-      "text": "To save content items to your account, please confirm that you agree to abide by our usage policies. If this is the first time you use this feature, you will be asked to authorise Cambridge Core to connect with your account. Find out more about saving content to Google Drive . Lambek Calculus and Formal Languages By M. Pentus , Moscow State University Edited by Johann A. Makowsky , Technion - Israel Institute of Technology, Haifa , Elena V. Ravve , Technion - Israel Institute of Technology, Haifa Book: Logic Colloquium '95 Online publication: 24 March 2017 Chapter DOI: https://doi.org/10.1017/9781316716830.017 Cancel Save ×"
-    },
-    {
-      "chunk_id": "chunk_016",
-      "section": "Save book to Dropbox",
-      "page": null,
-      "text": "To save content items to your account, please confirm that you agree to abide by our usage policies. If this is the first time you use this feature, you will be asked to authorise Cambridge Core to connect with your account. Find out more about saving content to Dropbox . Lambek Calculus and Formal Languages By M. Pentus , Moscow State University Edited by Johann A. Makowsky , Technion - Israel Institute of Technology, Haifa , Elena V. Ravve , Technion - Israel Institute of Technology, Haifa Book: Logic Colloquium '95 Online publication: 24 March 2017 Chapter DOI: https://doi.org/10.1017/9781316716830.017 Cancel Save ×"
+      "text": "1. Y. Bar-Hillel, C. Gaifman, and E. Shamir. On categorial and phrase-structure grammars. Bull. Res. Council Israel Sect. F, 9F:1-16, 1960. 2. J. van Benthem. Language in Action: Categories, Lambdas and Dynamic Logic. North-Holland, Amsterdam, (Studies in Logic 130), 1991. 3. W. Buszkowski. Undecidability of some logical extensions of Ajdukiewicz-Lambek calculus. Studia Logica, 37:59-64, 1978. 4. W. Buszkowski. Compatibility of categorial grammar with an associated cate- gory system. Zeitschriftfϋr mathematische Logik und Grundlagen der Mathematik, 28:229-238, 1982. 5. W. Buszkowski. Some decision problems in the theory of syntactic categories. Zeitschrift fur mathematische Logik und Grundlagen der Mathematik, 28:539-548, 1982. 6. W. Buszkowski. The equivalence of unidirectional Lambek categorial grammars and context-free grammars. Zeitschrift fur mathematische Logik und Grundlagen der Mathematik, 31:369-384, 1985. 7. W. Buszkowski. Completeness Results for Lambek Syntactic Calculus. Zeitschrift fur mathematische Logik und Grundlagen der Mathematik, 32:13-28, 1986. 8. W. Buszkowski. Generative power of categorial grammars. In R.T. Oehrle, E. Bach, and D. Wheeler, editors, Categorial Grammars and Natural Language Struc- tures, pages 69-94, Reidel, Dordrecht, 1988. 9. W. Buszkowski. On generative capacity of the Lambek calculus. In J. van Eijck, editor, Logics in AI, pages 139-152, Springer, Berlin, 1991."
     },
     {
       "chunk_id": "chunk_010",
-      "section": "References",
+      "section": "",
       "page": null,
-      "text": "Pentus. , M. Lambek grammars are context free. Preprint No. 8 of the Department of Math. Logic, Steklov Math. Institute, Series Logic and Computer Science, Moscow , 1992 . Pentus. , M. Lambek grammars are context free . Proceedings of the 8th Annual IEEE Symposium on Logic in Computer Science , 429–433, 1993 . Google Scholar Pentus. , M. Lambek calculus is L-complete . ILLC Prepublication Series LP–93–14, Institute for Logic, Language and Computation, University of Amsterdam, 1993 . Pentus. , M. Models for the Lambek calculus . Annals of Pure and Applied Logic , 75 :179–213, 1995 . Google Scholar"
+      "text": "10. N. Chomsky. Syntactic Structures. Mouton, The Hague, 1957. 11. N. Chomsky. Formal properties of grammars. In R.D. Luce et al., editors, Hand- book of Mathematical Psychology, vol. 2, pages 323-418, Wiley, New York, 1963. 12. J.M. Cohen. The equivalence of two concepts of categorial grammar. Information and Control, 10:475-484, 1967. 13. K. Dosen. A Completeness Theorem for the Lambek Calculus of Syntactic Cat- egories. Zeitschrift fur mathematische Logik und Grundlagen der Mathematik, 31:235-241, 1985. 14. K. Dosen. A brief survey of frames for the Lambek calculus. Bericht 5-90, Kon- stanzer Berichte zur Logik und Wissenschaftstheorie, Universitat Konstanz, 1990. 15. J. Lambek. The mathematics of sentence structure. American Mathematical Monthly, 65(3):154-170, 1958. 16. M. Pentus. Lambek grammars are context free. Preprint No. 8 of the Department of Math. Logic, Steklov Math. Institute, Series Logic and Computer Science, Moscow, 1992. 17. M. Pentus. Lambek grammars are context free. Proceedings of the 8th Annual IEEE Symposium on Logic in Computer Science, 429-433, 1993. 18. M. Pentus. Lambek calculus is L-complete. ILLC Prepublication Series LP-93-14, Institute for Logic, Language and Computation, University of Amsterdam, 1993. 19. M. Pentus. Models for the Lambek calculus. Annals of Pure and Applied Logic, 75:179-213, 1995."
+    },
+    {
+      "chunk_id": "chunk_005",
+      "section": "",
+      "page": null,
+      "text": "2 Lambek grammars recognize context-free languages Definition. We assume that a finite alphabet T and a distinguished type D are given. A Lambek grammar is a mapping / such that, for all t 6 T, f ( t ) C Tp and f ( t ) is finite. The language generated by the Lambek grammar is defined as the set of all expressions t\\ . . .tn over the alphabet T for which there exists a derivable se- quent BI . . . Bn-ϊD such that β, £ /(tf, ) for all i < n. Definition. We assume that two disjoint alphabets T and W are given. The elements of T are called terminal symbols and those of W are auxiliary symbols. A context-free rewrite rule is of the form X =Φ e, where X is an auxiliary symbol and e is a non-empty word in the alphabet T U W. A context-free grammar is a finite set 7£ of context-free rewrite rules, with one auxiliary symbol S designated as its start symbol. By G(T, W, 5, 7£) we denote the set of all expressions over the alphabet TUW that arise through some finite sequence of rewritings of the start symbol S via the rules of 7£. The language generated by the context-free grammar is defined as"
     },
     {
       "chunk_id": "chunk_004",
-      "section": "Lambek Calculus and Formal Languages",
+      "section": "",
       "page": null,
-      "text": "Towards a Categorical Foundation of Mathematics Strongly Minimal Sets and Geometry Computationally-Sound Proofs Lambek Calculus and Formal Languages Zil'ber's Trichotomy and o-minimal Structures The Higher Infinite in Proof Theory There May Be No Nowhere Dense Ultrafilter Towards Recursive Model Theory Accessible Segments of the Fast Growing Hierarchy Author Index References Get access Share Cite"
+      "text": "1 Preliminaries For any set M we denote by M+ the set of all finite non-empty strings consisting of elements of M. The set of all subsets of M is denoted by P(M). We consider the syntactic calculus introduced in [15]. The types of the Lam- bek calculus are built of primitive types pι,p2, and three binary connec- tives , \\, /. We shall denote the set of all types by Tp. Capital letters A,B, ... range over types. Capital Greek letters range over finite (possibly empty) se- quences of types. Sequents of the Lambek calculus are of the form Γ—ϊA, where jΓ is a nonempty sequence of types. Axioms: A—ϊA Rules: Γ-+A Δ-+B , } ΓABΔ-+C , * j ΓΔ-+A B [ Γ(A B)Δ->C l ' v v where Π is non-empty J Π^A\\B ^ ΓΠ(A\\B)Δ-^C Π i Π^A ΓBΔ-+C Γ(B/A)ΠΔ->C Π-+B ΓBΔ-+A (CUT) ΓΠΔ^A The cut-elimination theorem for this calculus is proved in [15]."
     },
     {
-      "chunk_id": "chunk_001",
-      "section": "Login Alert",
+      "chunk_id": "chunk_007",
+      "section": "",
       "page": null,
-      "text": "Cancel × × Search Institution Login Search Hostname: page-component-77f85d65b8-2tv5m Total loading time: 0 Render date: 2026-04-11T10:24:55.403Z Has data issue: false hasContentIssue false Home > Books > Logic Colloquium '95 > Lambek Calculus and Formal Languages Logic Colloquium '95 Buy print or eBook Read book online"
-    },
-    {
-      "chunk_id": "chunk_015",
-      "section": "Save book to Kindle",
-      "page": null,
-      "text": "Edited by Johann A. Makowsky , Technion - Israel Institute of Technology, Haifa , Elena V. Ravve , Technion - Israel Institute of Technology, Haifa Book: Logic Colloquium '95 Online publication: 24 March 2017 Chapter DOI: https://doi.org/10.1017/9781316716830.017 Cancel Save ×"
-    },
-    {
-      "chunk_id": "chunk_011",
-      "section": "Why this information is here",
-      "page": null,
-      "text": "This section outlines the accessibility features of this content - including support for screen readers, full keyboard navigation and high-contrast display options. This may not be relevant for you."
+      "text": "(1) w(A B) = w(A)ow(B); (2) w(A\\B) = {7 E W+ I u;(A) o {7} C w(B)}', (3) w(B/A) = {7 6 W+ I {7} o tι (Λ) C w(B)}. Here for any two sets A C W + and B C W + by .4 o β we denote the set {α o β \\ a £ A and β G B}. Definition. A sequent A\\ . . .An—ϊB is true in a model (W\"1\", o, w) iff tu(Aι) o . . . o w(An) C w(B). Theorem 2. A sequent is derivable in the Lambek calculus if and only if it is true in every L-model. Theorems. A sequent is derivable in the Lambek calculus if and only if it is true in every L-model over an alphabet W consisting of two symbols. References"
     },
     {
       "chunk_id": "chunk_006",
-      "section": "Information",
+      "section": "",
       "page": null,
-      "text": "Type Chapter Information Logic Colloquium '95 , pp. 269 - 272 DOI: https://doi.org/10.1017/9781316716830.017 Publisher: Cambridge University Press Print publication year: 2017"
+      "text": "Theorem 1. For any Lambek grammar there exists a context-free grammar such that the languages generated by these grammars coincide. https://doi.org/10.1017/9781316716830.017 Published online by Cambridge University Press 271 3 L-completeness of the Lambek calculus Definition. We define L-model (also called language model or free semigroup model) to be a triplet ( W + , o , w ) , where W is an arbitrary alphabet, o denotes + + concatenation of words from W , and w is a function w: Tp —> P(>V ) such that"
     },
     {
-      "chunk_id": "chunk_012",
-      "section": "Accessibility Information",
+      "chunk_id": "chunk_001",
+      "section": "",
       "page": null,
-      "text": "Accessibility compliance for the PDF of this chapter is currently unknown and may be updated in the future."
+      "text": "Lambek Calculus and Formal Languages (Extended abstract) Mati Pentus Department of Mathematical Logic Faculty of Mechanics and Mathematics Moscow State University Moscow, Russia, 119899 pentus@lpcs.math.msu.ru Introduction"
     },
     {
-      "chunk_id": "chunk_013",
-      "section": "Cited by",
+      "chunk_id": "chunk_003",
+      "section": "",
       "page": null,
-      "text": "Loading..."
+      "text": "https://doi.org/10.1017/9781316716830.017 Published online by Cambridge University Press 270"
+    },
+    {
+      "chunk_id": "chunk_009",
+      "section": "",
+      "page": null,
+      "text": "https://doi.org/10.1017/9781316716830.017 Published online by Cambridge University Press 272"
+    },
+    {
+      "chunk_id": "chunk_011",
+      "section": "",
+      "page": null,
+      "text": "https://doi.org/10.1017/9781316716830.017 Published online by Cambridge University Press"
     }
   ],
   "source_kind": "publisher_pdf",

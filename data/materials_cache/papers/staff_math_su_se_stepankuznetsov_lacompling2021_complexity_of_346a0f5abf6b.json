@@ -4,248 +4,248 @@
   "label": "Complexity of the Lambek Calculus and Its Extensions",
   "title": "Complexity of the Lambek Calculus and Its Extensions",
   "content_type": "application/pdf",
-  "extract_confidence": "high",
-  "abstract": "About This Talk • This talk will be probably more technical than most of the talks at the conference. • We shall discuss some of the mathematical tools under categorial grammar formalisms. • Once a formalism gets introduced, and it is validated that it captures the desired language phenomena, mathematical questions concerning this formalism arise — most importantly algorithmic ones. • And this is where mathematicians enter the battle. 1/29 About This Talk • This talk will be probably more technical than most of the talks at the conference. • We shall discuss some of the mathematical tools under categorial grammar formalisms. • Once a formalism gets introduced, and it is validated that it captures the desired language phenomena, mathematical questions concerning this formalism arise — most importantly algorithmic ones. • And this is where mathematicians enter the battle. 1/29",
+  "extract_confidence": "medium",
+  "abstract": "• This talk will be probably more technical than most of the talks at the conference. • We shall discuss some of the mathematical tools under categorial grammar formalisms. • Once a formalism gets introduced, and it is validated that it captures the desired language phenomena, mathematical questions concerning this formalism arise — most importantly algorithmic ones. • And this is where mathematicians enter the battle. 1/29 Lambek Calculus • We start with the Lambek calculus, which was introduced by Joachim Lambek (1958) for mathematical description of natural language syntax. 2/29 Lambek Calculus • We start with the Lambek calculus, which was introduced by Joachim Lambek (1958) for mathematical description of natural language syntax. • We formulate it as a sequent calculus. 2/29 Lambek Calculus",
   "chunks": [
     {
-      "chunk_id": "chunk_002",
+      "chunk_id": "chunk_003",
       "section": "",
       "page": null,
-      "text": "About This Talk • This talk will be probably more technical than most of the talks at the conference. • We shall discuss some of the mathematical tools under categorial grammar formalisms. • Once a formalism gets introduced, and it is validated that it captures the desired language phenomena, mathematical questions concerning this formalism arise — most importantly algorithmic ones. • And this is where mathematicians enter the battle. 1/29 About This Talk • This talk will be probably more technical than most of the talks at the conference. • We shall discuss some of the mathematical tools under categorial grammar formalisms. • Once a formalism gets introduced, and it is validated that it captures the desired language phenomena, mathematical questions concerning this formalism arise — most importantly algorithmic ones. • And this is where mathematicians enter the battle. 1/29"
-    },
-    {
-      "chunk_id": "chunk_092",
-      "section": "",
-      "page": null,
-      "text": "Kleene Star • We finish our survey by discussion one of the most interesting operations, namely iteration or Kleene star, 𝐴∗. • In Morrill’s systems, it is denoted by ?𝐴 and called “existential exponential. ” • However, it obeys standard rules for Kleene star, one of which is the omega-rule: (Γ, 𝐴𝑛, Δ → 𝐶 ) ∞ 𝑛=0 Γ, 𝐴∗, Δ → 𝐶 ∗𝐿𝜔 → 𝐴∗ ∗𝑅0 Π → 𝐴 Δ → 𝐴 ∗ Π, Δ → 𝐴 ∗ ∗𝑅 25/29 Kleene Star • With ∗𝐿𝜔, the Lambek calculus with Kleene star are undecidable and Π0 1-complete (Buszkowski, Palka 2007; K. 2020). • This means that disproving a sequent is an enumerable task (due to the finite model property), but proving requires infinitary mechanisms. • Fortunately, Morrill uses his “existential exponential” only in positive positions, which do not involve ∗𝐿𝜔. • Namely, “and” in iterated coordination situations like “John, Bill, Mary and Suzy” receives the type (?𝑁 \\ 𝑁 ) / 𝑁 26/29"
-    },
-    {
-      "chunk_id": "chunk_095",
-      "section": "",
-      "page": null,
-      "text": "Kleene Star • With ∗𝐿𝜔, the Lambek calculus with Kleene star are undecidable and Π0 1-complete (Buszkowski, Palka 2007; K. 2020). • This means that disproving a sequent is an enumerable task (due to the finite model property), but proving requires infinitary mechanisms. • Fortunately, Morrill uses his “existential exponential” only in positive positions, which do not involve ∗𝐿𝜔. • Namely, “and” in iterated coordination situations like “John, Bill, Mary and Suzy” receives the type (?𝑁 \\ 𝑁 ) / 𝑁 26/29 Kleene Star • For logical completeness, however, we need some sort of a left rule for Kleene star. • One option could be an inductive-style axiomatisation (like in action logic, Pratt 1991): → 𝐵 𝐴, 𝐵 → 𝐵 𝐴∗ → 𝐵 ∗𝐿 Π → 𝐴 Γ, 𝐵, Δ → 𝐶 Γ, Π, Δ → 𝐶 𝐶𝑢𝑡 • This again leads an undecidable system, now it is Σ0 1-complete (K. 2019 — solving a problem raised by Kozen in 1994). 27/29"
-    },
-    {
-      "chunk_id": "chunk_008",
-      "section": "",
-      "page": null,
-      "text": "Lambek Calculus • Axioms and inference rules of the Lambek calculus are as follows: 𝐴 → 𝐴 𝐼 𝑑 Γ, 𝐴, 𝐵, Δ → 𝐶 Γ, 𝐴 ⋅ 𝐵, Δ → 𝐶 ⋅𝐿 Π → 𝐴 Δ → 𝐵 Π, Δ → 𝐴 ⋅ 𝐵 ⋅𝑅 Π → 𝐴 Γ, 𝐵, Δ → 𝐶 Γ, Π, 𝐴 \\ 𝐵, Δ → 𝐶 \\ 𝐿 𝐴, Π → 𝐵 Π → 𝐴 \\ 𝐵 \\ 𝑅 Π → 𝐴 Γ, 𝐵, Δ → 𝐶 Γ, 𝐵 / 𝐴, Π, Δ → 𝐶 / 𝐿 Π, 𝐴 → 𝐵 Π → 𝐵 / 𝐴 \\ 𝑅 • Lambek’s restriction here means adding “ Π is non-empty” to \\ 𝑅 and / 𝑅. 3/29 Lambek Calculus • The Lambek calculus is used for modelling natural language: Pete met the girl whom John likes 𝑁 , (𝑁 \\ 𝑆) / 𝑁, 𝑁 / 𝐶𝑁 , 𝐶𝑁 , (𝐶𝑁 \\ 𝐶𝑁 ) /(𝑆 / 𝑁 ), 𝑁 , (𝑁 \\ 𝑆) / 𝑁 → 𝑆 • As one can see from this example, the Lambek calculus is capable of handling quite involved syntax. • Moreover, it can be considered as the preferable system among others, since it is exactly the atomic theory of the language algebra (Pentus 1995). • However, it has severe theoretical limitations. 4/29"
-    },
-    {
-      "chunk_id": "chunk_007",
-      "section": "",
-      "page": null,
-      "text": "Lambek Calculus • We start with the Lambek calculus, which was introduced by Joachim Lambek (1958) for mathematical description of natural language syntax. • We formulate it as a sequent calculus. • Sequents are expressions of the form 𝐴1, … , 𝐴𝑛 → 𝐵 , where 𝐴𝑖 and 𝐵 are formulae built using \\, /, ⋅. • There is a subtle question whether one should allow empty antecedents (𝑛 = 0 ). The constraint which disallows them is called Lambek’s non-emptiness restriction. 2/29 Lambek Calculus • Axioms and inference rules of the Lambek calculus are as follows: 𝐴 → 𝐴 𝐼 𝑑 Γ, 𝐴, 𝐵, Δ → 𝐶 Γ, 𝐴 ⋅ 𝐵, Δ → 𝐶 ⋅𝐿 Π → 𝐴 Δ → 𝐵 Π, Δ → 𝐴 ⋅ 𝐵 ⋅𝑅 Π → 𝐴 Γ, 𝐵, Δ → 𝐶 Γ, Π, 𝐴 \\ 𝐵, Δ → 𝐶 \\ 𝐿 𝐴, Π → 𝐵 Π → 𝐴 \\ 𝐵 \\ 𝑅 Π → 𝐴 Γ, 𝐵, Δ → 𝐶 Γ, 𝐵 / 𝐴, Π, Δ → 𝐶 / 𝐿 Π, 𝐴 → 𝐵 Π → 𝐵 / 𝐴 \\ 𝑅 • Lambek’s restriction here means adding “ Π is non-empty” to \\ 𝑅 and / 𝑅. 3/29"
-    },
-    {
-      "chunk_id": "chunk_051",
-      "section": "",
-      "page": null,
-      "text": "“Dangerous” Extensions • Unlike “harmless” extensions discussed before, there are certain operation which significantly increase algorithmic complexity. • We shall consider the following ones: • additive conjunction and disjunction ( ∧, ∨); • subexponentials (!) which allow non-local contraction Γ, !𝐴, Φ, !𝐴, Δ → 𝐶 Γ, !𝐴, Φ, Δ → 𝐶 !𝐶 or a variant of this rule; • the Kleene star, ∗. 13/29 “Dangerous” Extensions • Unlike “harmless” extensions discussed before, there are certain operation which significantly increase algorithmic complexity. • We shall consider the following ones: • additive conjunction and disjunction ( ∧, ∨); • subexponentials (!) which allow non-local contraction Γ, !𝐴, Φ, !𝐴, Δ → 𝐶 Γ, !𝐴, Φ, Δ → 𝐶 !𝐶 or a variant of this rule; • the Kleene star, ∗. 13/29"
-    },
-    {
-      "chunk_id": "chunk_045",
-      "section": "",
-      "page": null,
-      "text": "Pseudopolynomial Algorithms • For the original Lambek calculus, it is even possible to perform polynomial-time parsing, in the following sense. • Let us consider two complexity parameters: 𝑛 for the size of the sequent and 𝑑 for its depth (roughly speaking, nesting of divisions and multiplications). • Pentus (2010) proposed an algorithm whose running time is polynomial in 𝑛 and exponential in 𝑑: poly (𝑛, 2𝑑 ). • Kanovich et al. (2017) extended this to the Lambek calculus with brackets, but the complexity now is only poly (𝑛, 2𝑑 , 𝑛𝑏), where 𝑏 is bracket nesting depth. • Unfortunately, while 𝑑 is usually small, 𝑏 could be large (in sentences like “the house that Jack built”). • Thus, (pseudo)polynomiality is not robust even for “harmless” extensions. 12/29"
-    },
-    {
-      "chunk_id": "chunk_046",
-      "section": "",
-      "page": null,
-      "text": "Pseudopolynomial Algorithms • For the original Lambek calculus, it is even possible to perform polynomial-time parsing, in the following sense. • Let us consider two complexity parameters: 𝑛 for the size of the sequent and 𝑑 for its depth (roughly speaking, nesting of divisions and multiplications). • Pentus (2010) proposed an algorithm whose running time is polynomial in 𝑛 and exponential in 𝑑: poly (𝑛, 2𝑑 ). • Kanovich et al. (2017) extended this to the Lambek calculus with brackets, but the complexity now is only poly (𝑛, 2𝑑 , 𝑛𝑏), where 𝑏 is bracket nesting depth. • Unfortunately, while 𝑑 is usually small, 𝑏 could be large (in sentences like “the house that Jack built”). • Thus, (pseudo)polynomiality is not robust even for “harmless” extensions. 12/29"
-    },
-    {
-      "chunk_id": "chunk_047",
-      "section": "",
-      "page": null,
-      "text": "Pseudopolynomial Algorithms • For the original Lambek calculus, it is even possible to perform polynomial-time parsing, in the following sense. • Let us consider two complexity parameters: 𝑛 for the size of the sequent and 𝑑 for its depth (roughly speaking, nesting of divisions and multiplications). • Pentus (2010) proposed an algorithm whose running time is polynomial in 𝑛 and exponential in 𝑑: poly (𝑛, 2𝑑 ). • Kanovich et al. (2017) extended this to the Lambek calculus with brackets, but the complexity now is only poly (𝑛, 2𝑑 , 𝑛𝑏), where 𝑏 is bracket nesting depth. • Unfortunately, while 𝑑 is usually small, 𝑏 could be large (in sentences like “the house that Jack built”). • Thus, (pseudo)polynomiality is not robust even for “harmless” extensions. 12/29"
-    },
-    {
-      "chunk_id": "chunk_048",
-      "section": "",
-      "page": null,
-      "text": "Pseudopolynomial Algorithms • For the original Lambek calculus, it is even possible to perform polynomial-time parsing, in the following sense. • Let us consider two complexity parameters: 𝑛 for the size of the sequent and 𝑑 for its depth (roughly speaking, nesting of divisions and multiplications). • Pentus (2010) proposed an algorithm whose running time is polynomial in 𝑛 and exponential in 𝑑: poly (𝑛, 2𝑑 ). • Kanovich et al. (2017) extended this to the Lambek calculus with brackets, but the complexity now is only poly (𝑛, 2𝑑 , 𝑛𝑏), where 𝑏 is bracket nesting depth. • Unfortunately, while 𝑑 is usually small, 𝑏 could be large (in sentences like “the house that Jack built”). • Thus, (pseudo)polynomiality is not robust even for “harmless” extensions. 12/29"
-    },
-    {
-      "chunk_id": "chunk_049",
-      "section": "",
-      "page": null,
-      "text": "Pseudopolynomial Algorithms • For the original Lambek calculus, it is even possible to perform polynomial-time parsing, in the following sense. • Let us consider two complexity parameters: 𝑛 for the size of the sequent and 𝑑 for its depth (roughly speaking, nesting of divisions and multiplications). • Pentus (2010) proposed an algorithm whose running time is polynomial in 𝑛 and exponential in 𝑑: poly (𝑛, 2𝑑 ). • Kanovich et al. (2017) extended this to the Lambek calculus with brackets, but the complexity now is only poly (𝑛, 2𝑑 , 𝑛𝑏), where 𝑏 is bracket nesting depth. • Unfortunately, while 𝑑 is usually small, 𝑏 could be large (in sentences like “the house that Jack built”). • Thus, (pseudo)polynomiality is not robust even for “harmless” extensions. 12/29"
-    },
-    {
-      "chunk_id": "chunk_050",
-      "section": "",
-      "page": null,
-      "text": "Pseudopolynomial Algorithms • For the original Lambek calculus, it is even possible to perform polynomial-time parsing, in the following sense. • Let us consider two complexity parameters: 𝑛 for the size of the sequent and 𝑑 for its depth (roughly speaking, nesting of divisions and multiplications). • Pentus (2010) proposed an algorithm whose running time is polynomial in 𝑛 and exponential in 𝑑: poly (𝑛, 2𝑑 ). • Kanovich et al. (2017) extended this to the Lambek calculus with brackets, but the complexity now is only poly (𝑛, 2𝑑 , 𝑛𝑏), where 𝑏 is bracket nesting depth. • Unfortunately, while 𝑑 is usually small, 𝑏 could be large (in sentences like “the house that Jack built”). • Thus, (pseudo)polynomiality is not robust even for “harmless” extensions. 12/29"
-    },
-    {
-      "chunk_id": "chunk_060",
-      "section": "",
-      "page": null,
-      "text": "Additive Operations • Let us return to more interesting, “dangerous” stuff. • Additive operations are governed by the following inference rules: Γ, 𝐴1, Δ → 𝐶 Γ, 𝐴 2, Δ → 𝐶 Γ, 𝐴1 ∨ 𝐴2, Δ → 𝐶 ∨𝐿 Π → 𝐴 𝑖 Π → 𝐴 1 ∨ 𝐴2 ∨𝑅 Γ, 𝐴𝑖, Δ → 𝐶 Γ, 𝐴1 ∧ 𝐴2, Δ → 𝐶 ∧𝐿 Π → 𝐴 1 Π → 𝐴 2 Π → 𝐴 1 ∧ 𝐴2 ∧𝑅 • Additive operations allow imposing several syntactic conditions on a word at the same time. 16/29 Additive Operations • Let us return to more interesting, “dangerous” stuff. • Additive operations are governed by the following inference rules: Γ, 𝐴1, Δ → 𝐶 Γ, 𝐴 2, Δ → 𝐶 Γ, 𝐴1 ∨ 𝐴2, Δ → 𝐶 ∨𝐿 Π → 𝐴 𝑖 Π → 𝐴 1 ∨ 𝐴2 ∨𝑅 Γ, 𝐴𝑖, Δ → 𝐶 Γ, 𝐴1 ∧ 𝐴2, Δ → 𝐶 ∧𝐿 Π → 𝐴 1 Π → 𝐴 2 Π → 𝐴 1 ∧ 𝐴2 ∧𝑅 • Additive operations allow imposing several syntactic conditions on a word at the same time. 16/29"
-    },
-    {
-      "chunk_id": "chunk_091",
-      "section": "",
-      "page": null,
-      "text": "Kleene Star • We finish our survey by discussion one of the most interesting operations, namely iteration or Kleene star, 𝐴∗. • In Morrill’s systems, it is denoted by ?𝐴 and called “existential exponential. ” • However, it obeys standard rules for Kleene star, one of which is the omega-rule: (Γ, 𝐴𝑛, Δ → 𝐶 ) ∞ 𝑛=0 Γ, 𝐴∗, Δ → 𝐶 ∗𝐿𝜔 → 𝐴∗ ∗𝑅0 Π → 𝐴 Δ → 𝐴 ∗ Π, Δ → 𝐴 ∗ ∗𝑅 25/29 Kleene Star • We finish our survey by discussion one of the most interesting operations, namely iteration or Kleene star, 𝐴∗. • In Morrill’s systems, it is denoted by ?𝐴 and called “existential exponential. ” • However, it obeys standard rules for Kleene star, one of which is the omega-rule: (Γ, 𝐴𝑛, Δ → 𝐶 ) ∞ 𝑛=0 Γ, 𝐴∗, Δ → 𝐶 ∗𝐿𝜔 → 𝐴∗ ∗𝑅0 Π → 𝐴 Δ → 𝐴 ∗ Π, Δ → 𝐴 ∗ ∗𝑅 25/29"
-    },
-    {
-      "chunk_id": "chunk_096",
-      "section": "",
-      "page": null,
-      "text": "Kleene Star • For logical completeness, however, we need some sort of a left rule for Kleene star. • One option could be an inductive-style axiomatisation (like in action logic, Pratt 1991): → 𝐵 𝐴, 𝐵 → 𝐵 𝐴∗ → 𝐵 ∗𝐿 Π → 𝐴 Γ, 𝐵, Δ → 𝐶 Γ, Π, Δ → 𝐶 𝐶𝑢𝑡 • This again leads an undecidable system, now it is Σ0 1-complete (K. 2019 — solving a problem raised by Kozen in 1994). 27/29 Kleene Star • For logical completeness, however, we need some sort of a left rule for Kleene star. • One option could be an inductive-style axiomatisation (like in action logic, Pratt 1991): → 𝐵 𝐴, 𝐵 → 𝐵 𝐴∗ → 𝐵 ∗𝐿 Π → 𝐴 Γ, 𝐵, Δ → 𝐶 Γ, Π, Δ → 𝐶 𝐶𝑢𝑡 • This again leads an undecidable system, now it is Σ0 1-complete (K. 2019 — solving a problem raised by Kozen in 1994). 27/29"
-    },
-    {
-      "chunk_id": "chunk_031",
-      "section": "",
-      "page": null,
-      "text": "Extensions of the Lambek Calculus • In real-life applications, the Lambek calculus is extended by a huge amount of extra operations and syntactic mechanisms. • For example, the calculus of Morrill’s CatLog uses about 45 operations (and this number could grow in the future). • While it is impossible to discuss all these operations in detail during this talk, we shall try to classify them from the algorithmic point of view. • Most of these operations are “harmless, ”in the sense that adding these operations does not increase algorithmic complexity (if we are already in a non-deterministic class like NP or PSPACE). • Others are “dangerous, ”as they lead to complexity growth and even to undecidability. 9/29"
-    },
-    {
-      "chunk_id": "chunk_032",
-      "section": "",
-      "page": null,
-      "text": "Extensions of the Lambek Calculus • In real-life applications, the Lambek calculus is extended by a huge amount of extra operations and syntactic mechanisms. • For example, the calculus of Morrill’s CatLog uses about 45 operations (and this number could grow in the future). • While it is impossible to discuss all these operations in detail during this talk, we shall try to classify them from the algorithmic point of view. • Most of these operations are “harmless, ”in the sense that adding these operations does not increase algorithmic complexity (if we are already in a non-deterministic class like NP or PSPACE). • Others are “dangerous, ”as they lead to complexity growth and even to undecidability. 9/29"
-    },
-    {
-      "chunk_id": "chunk_033",
-      "section": "",
-      "page": null,
-      "text": "Extensions of the Lambek Calculus • In real-life applications, the Lambek calculus is extended by a huge amount of extra operations and syntactic mechanisms. • For example, the calculus of Morrill’s CatLog uses about 45 operations (and this number could grow in the future). • While it is impossible to discuss all these operations in detail during this talk, we shall try to classify them from the algorithmic point of view. • Most of these operations are “harmless, ”in the sense that adding these operations does not increase algorithmic complexity (if we are already in a non-deterministic class like NP or PSPACE). • Others are “dangerous, ”as they lead to complexity growth and even to undecidability. 9/29"
-    },
-    {
-      "chunk_id": "chunk_034",
-      "section": "",
-      "page": null,
-      "text": "Extensions of the Lambek Calculus • In real-life applications, the Lambek calculus is extended by a huge amount of extra operations and syntactic mechanisms. • For example, the calculus of Morrill’s CatLog uses about 45 operations (and this number could grow in the future). • While it is impossible to discuss all these operations in detail during this talk, we shall try to classify them from the algorithmic point of view. • Most of these operations are “harmless, ”in the sense that adding these operations does not increase algorithmic complexity (if we are already in a non-deterministic class like NP or PSPACE). • Others are “dangerous, ”as they lead to complexity growth and even to undecidability. 9/29"
-    },
-    {
-      "chunk_id": "chunk_035",
-      "section": "",
-      "page": null,
-      "text": "Extensions of the Lambek Calculus • In real-life applications, the Lambek calculus is extended by a huge amount of extra operations and syntactic mechanisms. • For example, the calculus of Morrill’s CatLog uses about 45 operations (and this number could grow in the future). • While it is impossible to discuss all these operations in detail during this talk, we shall try to classify them from the algorithmic point of view. • Most of these operations are “harmless, ”in the sense that adding these operations does not increase algorithmic complexity (if we are already in a non-deterministic class like NP or PSPACE). • Others are “dangerous, ”as they lead to complexity growth and even to undecidability. 9/29"
-    },
-    {
-      "chunk_id": "chunk_036",
-      "section": "",
-      "page": null,
-      "text": "“Harmless” Extensions • Fortunately, most of the extensions are “harmless. ” • One of such extensions introduces the bracketing mechanism with modalities and bracket structure which restrict associativity. • This disallows incorrect sentences like “the girl whom John likes Mary and Pete likes” (which are validated by the original Lambek calculus), by making the dependent clause a strong island: “[[ John likes Mary and Pete likes ... ]]. ” • Another example is medial extraction: in order to parse “the girl whom John met yesterday, ” we have to move 𝑁 to the middle of the dependent clause. • This is achieved by assigning type (𝐶𝑁 \\ 𝐶𝑁 ) /(𝑆 / !𝑁 )to “whom, ” where the! modality allows permutation. 10/29"
-    },
-    {
-      "chunk_id": "chunk_037",
-      "section": "",
-      "page": null,
-      "text": "“Harmless” Extensions • Fortunately, most of the extensions are “harmless. ” • One of such extensions introduces the bracketing mechanism with modalities and bracket structure which restrict associativity. • This disallows incorrect sentences like “the girl whom John likes Mary and Pete likes” (which are validated by the original Lambek calculus), by making the dependent clause a strong island: “[[ John likes Mary and Pete likes ... ]]. ” • Another example is medial extraction: in order to parse “the girl whom John met yesterday, ” we have to move 𝑁 to the middle of the dependent clause. • This is achieved by assigning type (𝐶𝑁 \\ 𝐶𝑁 ) /(𝑆 / !𝑁 )to “whom, ” where the! modality allows permutation. 10/29"
-    },
-    {
-      "chunk_id": "chunk_038",
-      "section": "",
-      "page": null,
-      "text": "“Harmless” Extensions • Fortunately, most of the extensions are “harmless. ” • One of such extensions introduces the bracketing mechanism with modalities and bracket structure which restrict associativity. • This disallows incorrect sentences like “the girl whom John likes Mary and Pete likes” (which are validated by the original Lambek calculus), by making the dependent clause a strong island: “[[ John likes Mary and Pete likes ... ]]. ” • Another example is medial extraction: in order to parse “the girl whom John met yesterday, ” we have to move 𝑁 to the middle of the dependent clause. • This is achieved by assigning type (𝐶𝑁 \\ 𝐶𝑁 ) /(𝑆 / !𝑁 )to “whom, ” where the! modality allows permutation. 10/29"
-    },
-    {
-      "chunk_id": "chunk_039",
-      "section": "",
-      "page": null,
-      "text": "“Harmless” Extensions • Fortunately, most of the extensions are “harmless. ” • One of such extensions introduces the bracketing mechanism with modalities and bracket structure which restrict associativity. • This disallows incorrect sentences like “the girl whom John likes Mary and Pete likes” (which are validated by the original Lambek calculus), by making the dependent clause a strong island: “[[ John likes Mary and Pete likes ... ]]. ” • Another example is medial extraction: in order to parse “the girl whom John met yesterday, ” we have to move 𝑁 to the middle of the dependent clause. • This is achieved by assigning type (𝐶𝑁 \\ 𝐶𝑁 ) /(𝑆 / !𝑁 )to “whom, ” where the! modality allows permutation. 10/29"
-    },
-    {
-      "chunk_id": "chunk_040",
-      "section": "",
-      "page": null,
-      "text": "“Harmless” Extensions • Fortunately, most of the extensions are “harmless. ” • One of such extensions introduces the bracketing mechanism with modalities and bracket structure which restrict associativity. • This disallows incorrect sentences like “the girl whom John likes Mary and Pete likes” (which are validated by the original Lambek calculus), by making the dependent clause a strong island: “[[ John likes Mary and Pete likes ... ]]. ” • Another example is medial extraction: in order to parse “the girl whom John met yesterday, ” we have to move 𝑁 to the middle of the dependent clause. • This is achieved by assigning type (𝐶𝑁 \\ 𝐶𝑁 ) /(𝑆 / !𝑁 )to “whom, ” where the! modality allows permutation. 10/29"
-    },
-    {
-      "chunk_id": "chunk_086",
-      "section": "",
-      "page": null,
-      "text": "Subexponentials with Contraction: Brackets • In our JoLLI paper (Kanovich, K., Scedrov 2021) we give proof-theoretic analysis of Morrill’s systems and prove their undecidability. • However, the argument involves using bracket modalities under ! to break the bracket discipline. • In real applications this does not happen, and standard proof search algorithms solve the derivability problem. • Theoretically, this is supported by decidability results for certain conditions on bracket modalities under ! (Kanovich, Stepan G. Kuznetsov, K., Scedrov 2021), which make ! “harmless” (NP for Lambek, PSPACE for MALC). • Notice that now no restriction is imposed on the depth of formulae under !. 24/29"
-    },
-    {
-      "chunk_id": "chunk_087",
-      "section": "",
-      "page": null,
-      "text": "Subexponentials with Contraction: Brackets • In our JoLLI paper (Kanovich, K., Scedrov 2021) we give proof-theoretic analysis of Morrill’s systems and prove their undecidability. • However, the argument involves using bracket modalities under ! to break the bracket discipline. • In real applications this does not happen, and standard proof search algorithms solve the derivability problem. • Theoretically, this is supported by decidability results for certain conditions on bracket modalities under ! (Kanovich, Stepan G. Kuznetsov, K., Scedrov 2021), which make ! “harmless” (NP for Lambek, PSPACE for MALC). • Notice that now no restriction is imposed on the depth of formulae under !. 24/29"
-    },
-    {
-      "chunk_id": "chunk_088",
-      "section": "",
-      "page": null,
-      "text": "Subexponentials with Contraction: Brackets • In our JoLLI paper (Kanovich, K., Scedrov 2021) we give proof-theoretic analysis of Morrill’s systems and prove their undecidability. • However, the argument involves using bracket modalities under ! to break the bracket discipline. • In real applications this does not happen, and standard proof search algorithms solve the derivability problem. • Theoretically, this is supported by decidability results for certain conditions on bracket modalities under ! (Kanovich, Stepan G. Kuznetsov, K., Scedrov 2021), which make ! “harmless” (NP for Lambek, PSPACE for MALC). • Notice that now no restriction is imposed on the depth of formulae under !. 24/29"
-    },
-    {
-      "chunk_id": "chunk_089",
-      "section": "",
-      "page": null,
-      "text": "Subexponentials with Contraction: Brackets • In our JoLLI paper (Kanovich, K., Scedrov 2021) we give proof-theoretic analysis of Morrill’s systems and prove their undecidability. • However, the argument involves using bracket modalities under ! to break the bracket discipline. • In real applications this does not happen, and standard proof search algorithms solve the derivability problem. • Theoretically, this is supported by decidability results for certain conditions on bracket modalities under ! (Kanovich, Stepan G. Kuznetsov, K., Scedrov 2021), which make ! “harmless” (NP for Lambek, PSPACE for MALC). • Notice that now no restriction is imposed on the depth of formulae under !. 24/29"
-    },
-    {
-      "chunk_id": "chunk_090",
-      "section": "",
-      "page": null,
-      "text": "Subexponentials with Contraction: Brackets • In our JoLLI paper (Kanovich, K., Scedrov 2021) we give proof-theoretic analysis of Morrill’s systems and prove their undecidability. • However, the argument involves using bracket modalities under ! to break the bracket discipline. • In real applications this does not happen, and standard proof search algorithms solve the derivability problem. • Theoretically, this is supported by decidability results for certain conditions on bracket modalities under ! (Kanovich, Stepan G. Kuznetsov, K., Scedrov 2021), which make ! “harmless” (NP for Lambek, PSPACE for MALC). • Notice that now no restriction is imposed on the depth of formulae under !. 24/29"
-    },
-    {
-      "chunk_id": "chunk_073",
-      "section": "",
-      "page": null,
-      "text": "Subexponentials with Contraction: Undecidability • The undecidability argument is a refinement of the one used by Lincoln et al. (1992) for proving undecidability for propositional linear logic with the exponential modality (which allows all structural rules: contraction, weakening, and permutation). • Notice that in the non-commutative case the undecidability proof does not require additives. • The argument is based on encoding derivability from finite sets of non-logical axioms. • The latter problem is also undecidable (Buszkowski 1982, 2005), which is quite unfortunate, since sometimes we want to express extra properties of syntactic types (like subtyping: 𝑁 inanimate → 𝑁 ). 20/29"
-    },
-    {
-      "chunk_id": "chunk_074",
-      "section": "",
-      "page": null,
-      "text": "Subexponentials with Contraction: Undecidability • The undecidability argument is a refinement of the one used by Lincoln et al. (1992) for proving undecidability for propositional linear logic with the exponential modality (which allows all structural rules: contraction, weakening, and permutation). • Notice that in the non-commutative case the undecidability proof does not require additives. • The argument is based on encoding derivability from finite sets of non-logical axioms. • The latter problem is also undecidable (Buszkowski 1982, 2005), which is quite unfortunate, since sometimes we want to express extra properties of syntactic types (like subtyping: 𝑁 inanimate → 𝑁 ). 20/29"
-    },
-    {
-      "chunk_id": "chunk_075",
-      "section": "",
-      "page": null,
-      "text": "Subexponentials with Contraction: Undecidability • The undecidability argument is a refinement of the one used by Lincoln et al. (1992) for proving undecidability for propositional linear logic with the exponential modality (which allows all structural rules: contraction, weakening, and permutation). • Notice that in the non-commutative case the undecidability proof does not require additives. • The argument is based on encoding derivability from finite sets of non-logical axioms. • The latter problem is also undecidable (Buszkowski 1982, 2005), which is quite unfortunate, since sometimes we want to express extra properties of syntactic types (like subtyping: 𝑁 inanimate → 𝑁 ). 20/29"
-    },
-    {
-      "chunk_id": "chunk_076",
-      "section": "",
-      "page": null,
-      "text": "Subexponentials with Contraction: Undecidability • The undecidability argument is a refinement of the one used by Lincoln et al. (1992) for proving undecidability for propositional linear logic with the exponential modality (which allows all structural rules: contraction, weakening, and permutation). • Notice that in the non-commutative case the undecidability proof does not require additives. • The argument is based on encoding derivability from finite sets of non-logical axioms. • The latter problem is also undecidable (Buszkowski 1982, 2005), which is quite unfortunate, since sometimes we want to express extra properties of syntactic types (like subtyping: 𝑁 inanimate → 𝑁 ). 20/29"
+      "text": "• This talk will be probably more technical than most of the talks at the conference. • We shall discuss some of the mathematical tools under categorial grammar formalisms. • Once a formalism gets introduced, and it is validated that it captures the desired language phenomena, mathematical questions concerning this formalism arise — most importantly algorithmic ones. • And this is where mathematicians enter the battle. 1/29 Lambek Calculus • We start with the Lambek calculus, which was introduced by Joachim Lambek (1958) for mathematical description of natural language syntax. 2/29 Lambek Calculus • We start with the Lambek calculus, which was introduced by Joachim Lambek (1958) for mathematical description of natural language syntax. • We formulate it as a sequent calculus. 2/29 Lambek Calculus"
     },
     {
       "chunk_id": "chunk_062",
       "section": "",
       "page": null,
-      "text": "Additive Operations • This allows describing finite intersections of context-free languages (Kanazawa 1992) and, moreover, languages generated by conjunctive grammars (K., Okhotin 2017) and closures of such under symbol-to-symbol homomorphisms. • The latter class includes an NP-hard language, thus we have no hope for a pseudopolynomial algorithm here. • The Lambek calculus with additives (MALC) itself is PSPACE-complete (Kanovich 1994), and this holds even for its (\\, ∧)-fragment (Kanovich et al. 2019). • Additive operations raise complexity, but keep decidability, and they are still under the scope of exponential-free linear logic. 17/29"
+      "text": "• With ∗𝐿𝜔 , the Lambek calculus with Kleene star are undecidable and Π01 -complete (Buszkowski, Palka 2007; K. 2020). 26/29 Kleene Star • With ∗𝐿𝜔 , the Lambek calculus with Kleene star are undecidable and Π01 -complete (Buszkowski, Palka 2007; K. 2020). • This means that disproving a sequent is an enumerable task (due to the finite model property), but proving requires infinitary mechanisms. 26/29 Kleene Star • With ∗𝐿𝜔 , the Lambek calculus with Kleene star are undecidable and Π01 -complete (Buszkowski, Palka 2007; K. 2020). • This means that disproving a sequent is an enumerable task (due to the finite model property), but proving requires infinitary mechanisms. • Fortunately, Morrill uses his “existential exponential” only in positive positions, which do not involve ∗𝐿𝜔 . 26/29 Kleene Star"
     },
     {
-      "chunk_id": "chunk_063",
+      "chunk_id": "chunk_060",
       "section": "",
       "page": null,
-      "text": "Additive Operations • This allows describing finite intersections of context-free languages (Kanazawa 1992) and, moreover, languages generated by conjunctive grammars (K., Okhotin 2017) and closures of such under symbol-to-symbol homomorphisms. • The latter class includes an NP-hard language, thus we have no hope for a pseudopolynomial algorithm here. • The Lambek calculus with additives (MALC) itself is PSPACE-complete (Kanovich 1994), and this holds even for its (\\, ∧)-fragment (Kanovich et al. 2019). • Additive operations raise complexity, but keep decidability, and they are still under the scope of exponential-free linear logic. 17/29"
+      "text": "• In our JoLLI paper (Kanovich, K., Scedrov 2021) we give proof-theoretic analysis of Morrill’s systems and prove their undecidability. • However, the argument involves using bracket modalities under ! to break the bracket discipline. • In real applications this does not happen, and standard proof search algorithms solve the derivability problem. • Theoretically, this is supported by decidability results for certain conditions on bracket modalities under ! (Kanovich, Stepan G. Kuznetsov, K., Scedrov 2021), which make ! “harmless” (NP for Lambek, PSPACE for MALC). • Notice that now no restriction is imposed on the depth of formulae under !. 24/29 Kleene Star • We finish our survey by discussion one of the most interesting operations, namely iteration or Kleene star, 𝐴∗ . 25/29 Kleene Star"
     },
     {
-      "chunk_id": "chunk_064",
+      "chunk_id": "chunk_029",
       "section": "",
       "page": null,
-      "text": "Additive Operations • This allows describing finite intersections of context-free languages (Kanazawa 1992) and, moreover, languages generated by conjunctive grammars (K., Okhotin 2017) and closures of such under symbol-to-symbol homomorphisms. • The latter class includes an NP-hard language, thus we have no hope for a pseudopolynomial algorithm here. • The Lambek calculus with additives (MALC) itself is PSPACE-complete (Kanovich 1994), and this holds even for its (\\, ∧)-fragment (Kanovich et al. 2019). • Additive operations raise complexity, but keep decidability, and they are still under the scope of exponential-free linear logic. 17/29"
+      "text": "• There are also toy examples of “harmless” extensions, like adding the word reversal operation R (K. 2012). • These extensions, and many others, still keep the derivability problem in the NP class. • For brackets, there is also a specific question of bracket guessing, or bracket induction (Morrill et al. 2018), since the bracketing (island) structure is not given as the input. • In the implementations, several techniques are used for optimisation, one of which is focusing. Focusing means reorganising a cut-free sequent proof by exchanging rules in a systematic way, which reduces proof-search space. 11/29 Pseudopolynomial Algorithms • For the original Lambek calculus, it is even possible to perform polynomial-time parsing, in the following sense. 12/29 Pseudopolynomial Algorithms"
     },
     {
-      "chunk_id": "chunk_065",
+      "chunk_id": "chunk_044",
       "section": "",
       "page": null,
-      "text": "Additive Operations • This allows describing finite intersections of context-free languages (Kanazawa 1992) and, moreover, languages generated by conjunctive grammars (K., Okhotin 2017) and closures of such under symbol-to-symbol homomorphisms. • The latter class includes an NP-hard language, thus we have no hope for a pseudopolynomial algorithm here. • The Lambek calculus with additives (MALC) itself is PSPACE-complete (Kanovich 1994), and this holds even for its (\\, ∧)-fragment (Kanovich et al. 2019). • Additive operations raise complexity, but keep decidability, and they are still under the scope of exponential-free linear logic. 17/29"
+      "text": "• This allows describing finite intersections of context-free languages (Kanazawa 1992) and, moreover, languages generated by conjunctive grammars (K., Okhotin 2017) and closures of such under symbol-to-symbol homomorphisms. • The latter class includes an NP-hard language, thus we have no hope for a pseudopolynomial algorithm here. • The Lambek calculus with additives (MALC) itself is PSPACE-complete (Kanovich 1994), and this holds even for its (\\, ∧)-fragment (Kanovich et al. 2019). • Additive operations raise complexity, but keep decidability, and they are still under the scope of exponential-free linear logic. 17/29 Subexponentials with Contraction • Real nonlinearity comes with the contraction rule for (sub)exponential modalities. 18/29 Subexponentials with Contraction"
     },
     {
-      "chunk_id": "chunk_055",
+      "chunk_id": "chunk_024",
       "section": "",
       "page": null,
-      "text": "“Harmless” Extensions as “Linear” Ones • Thus, rules for “harmless” operations, from a bird-eye view, just perform some reorganisation of the same material (formulae). • The differences are only in the structure of meta-formulae which form the sequent. • Recently, Pshenitsyn (2021) proposed a general framework for such situations, called the hypergraph Lambek calculus HL. • The syntax of HL is quite involved (using hypergraphs instead of formulae), but it is still in the NP class. • Moreover, it absorbs many of the known “harmless” extensions of the Lambek calculus, so it could probably become the “umbrella logic” for them. 15/29"
+      "text": "• In real-life applications, the Lambek calculus is extended by a huge amount of extra operations and syntactic mechanisms. • For example, the calculus of Morrill’s CatLog uses about 45 operations (and this number could grow in the future). • While it is impossible to discuss all these operations in detail during this talk, we shall try to classify them from the algorithmic point of view. • Most of these operations are “harmless,” in the sense that adding these operations does not increase algorithmic complexity (if we are already in a non-deterministic class like NP or PSPACE). • Others are “dangerous,” as they lead to complexity growth and even to undecidability. 9/29 “Harmless” Extensions • Fortunately, most of the extensions are “harmless.” 10/29 “Harmless” Extensions"
+    },
+    {
+      "chunk_id": "chunk_052",
+      "section": "",
+      "page": null,
+      "text": "• However, it turns out that for practical applications subexponentials which allow contraction can be considered harmless! 21/29 Subexponentials with Contraction: Decidability • However, it turns out that for practical applications subexponentials which allow contraction can be considered harmless! • Let us consider the so-called “relevant modality,” which allows contraction and permutation, but not weakening. 21/29 Subexponentials with Contraction: Decidability • However, it turns out that for practical applications subexponentials which allow contraction can be considered harmless! • Let us consider the so-called “relevant modality,” which allows contraction and permutation, but not weakening. • This ! gets applied to types of syntactic objects which get abstracted."
+    },
+    {
+      "chunk_id": "chunk_004",
+      "section": "",
+      "page": null,
+      "text": "• We start with the Lambek calculus, which was introduced by Joachim Lambek (1958) for mathematical description of natural language syntax. • We formulate it as a sequent calculus. • Sequents are expressions of the form 𝐴1 , … , 𝐴𝑛 → 𝐵, where 𝐴𝑖 and 𝐵 are formulae built using \\, /, ⋅. 2/29 Lambek Calculus • We start with the Lambek calculus, which was introduced by Joachim Lambek (1958) for mathematical description of natural language syntax. • We formulate it as a sequent calculus. • Sequents are expressions of the form 𝐴1 , … , 𝐴𝑛 → 𝐵, where 𝐴𝑖 and 𝐵 are formulae built using \\, /, ⋅. • There is a subtle question whether one should allow empty antecedents (𝑛 = 0). The constraint which disallows them is called Lambek’s non-emptiness restriction. 2/29 Lambek Calculus"
+    },
+    {
+      "chunk_id": "chunk_028",
+      "section": "",
+      "page": null,
+      "text": "• There are also toy examples of “harmless” extensions, like adding the word reversal operation R (K. 2012). 11/29 “Harmless” Extensions • There are also toy examples of “harmless” extensions, like adding the word reversal operation R (K. 2012). • These extensions, and many others, still keep the derivability problem in the NP class. 11/29 “Harmless” Extensions • There are also toy examples of “harmless” extensions, like adding the word reversal operation R (K. 2012). • These extensions, and many others, still keep the derivability problem in the NP class. • For brackets, there is also a specific question of bracket guessing, or bracket induction (Morrill et al. 2018), since the bracketing (island) structure is not given as the input. 11/29 “Harmless” Extensions"
+    },
+    {
+      "chunk_id": "chunk_033",
+      "section": "",
+      "page": null,
+      "text": "• For the original Lambek calculus, it is even possible to perform polynomial-time parsing, in the following sense. • Let us consider two complexity parameters: 𝑛 for the size of the sequent and 𝑑 for its depth (roughly speaking, nesting of divisions and multiplications). • Pentus (2010) proposed an algorithm whose running time is polynomial in 𝑛 and exponential in 𝑑: poly(𝑛, 2𝑑 ). • Kanovich et al. (2017) extended this to the Lambek calculus with brackets, but the complexity now is only poly(𝑛, 2𝑑 , 𝑛𝑏 ), where 𝑏 is bracket nesting depth. • Unfortunately, while 𝑑 is usually small, 𝑏 could be large (in sentences like “the house that Jack built”). • Thus, (pseudo)polynomiality is not robust even for “harmless” extensions. 12/29 “Dangerous” Extensions"
+    },
+    {
+      "chunk_id": "chunk_021",
+      "section": "",
+      "page": null,
+      "text": "• Pentus’ result on NP-hardness of the Lambek calculus was considered as a negative one, limiting the use of the Lambek calculus in practices (in comparison with other categorial grammar formalisms, which are polynomially tractable). • However, in fact the input parameter is the length of a sentence, not the whole text, so it is roughly ≲ 20. • This makes NP brute-force-search algorithms, with good optimisations, practically usable. • Moreover, those can be easily expanded to some “algorithmically harmless” extensions of the system. 8/29 Extensions of the Lambek Calculus • In real-life applications, the Lambek calculus is extended by a huge amount of extra operations and syntactic mechanisms. 9/29 Extensions of the Lambek Calculus"
+    },
+    {
+      "chunk_id": "chunk_053",
+      "section": "",
+      "page": null,
+      "text": "21/29 Subexponentials with Contraction: Decidability • However, it turns out that for practical applications subexponentials which allow contraction can be considered harmless! • Let us consider the so-called “relevant modality,” which allows contraction and permutation, but not weakening. • This ! gets applied to types of syntactic objects which get abstracted. • Usually, this is a noun phrase: !𝑁 . One could potentially think of abstracting a verb, !(𝑁 \\ 𝑆), but definitely not more complicated objects. 21/29 Subexponentials with Contraction: Decidability • Thus, formulae which really appear under ! are (\\, /)-formulae of depth not greater than 1: (𝑞1 … 𝑞𝑛 ) \\ 𝑝 /(𝑟1 … 𝑟𝑚 ). 22/29 Subexponentials with Contraction: Decidability"
+    },
+    {
+      "chunk_id": "chunk_013",
+      "section": "",
+      "page": null,
+      "text": "• The first issue is expressivity. • Lambek grammars can generate only context-free languages (Pentus 1993 — the proof of Chomsky conjecture). • On the other hand, natural language syntax includes non-context-free phenomena (Shieber 1985). • The second issue is complexity. • The Lambek calculus is NP-complete (Pentus 2006), as well as its (\\, /)- and (\\, ⋅)-fragments (Savateev 2008). • The only polynomially decidable fragment is the one with only \\ (Savateev 2007). • Thus, we should simultaneously try to increase expressivity and harness complexity. 5/29 This Talk • A survey of complexity results for the Lambek calculus itself and its fragment was given at the talk of Mati Pentus at Advances in Modal Logic 2010. 6/29 This Talk"
+    },
+    {
+      "chunk_id": "chunk_030",
+      "section": "",
+      "page": null,
+      "text": "• For the original Lambek calculus, it is even possible to perform polynomial-time parsing, in the following sense. • Let us consider two complexity parameters: 𝑛 for the size of the sequent and 𝑑 for its depth (roughly speaking, nesting of divisions and multiplications). 12/29 Pseudopolynomial Algorithms • For the original Lambek calculus, it is even possible to perform polynomial-time parsing, in the following sense. • Let us consider two complexity parameters: 𝑛 for the size of the sequent and 𝑑 for its depth (roughly speaking, nesting of divisions and multiplications). • Pentus (2010) proposed an algorithm whose running time is polynomial in 𝑛 and exponential in 𝑑: poly(𝑛, 2𝑑 ). 12/29 Pseudopolynomial Algorithms"
+    },
+    {
+      "chunk_id": "chunk_022",
+      "section": "",
+      "page": null,
+      "text": "• In real-life applications, the Lambek calculus is extended by a huge amount of extra operations and syntactic mechanisms. • For example, the calculus of Morrill’s CatLog uses about 45 operations (and this number could grow in the future). 9/29 Extensions of the Lambek Calculus • In real-life applications, the Lambek calculus is extended by a huge amount of extra operations and syntactic mechanisms. • For example, the calculus of Morrill’s CatLog uses about 45 operations (and this number could grow in the future). • While it is impossible to discuss all these operations in detail during this talk, we shall try to classify them from the algorithmic point of view. 9/29 Extensions of the Lambek Calculus"
+    },
+    {
+      "chunk_id": "chunk_027",
+      "section": "",
+      "page": null,
+      "text": "• Fortunately, most of the extensions are “harmless.” • One of such extensions introduces the bracketing mechanism with modalities and bracket structure which restrict associativity. • This disallows incorrect sentences like “the girl whom John likes Mary and Pete likes” (which are validated by the original Lambek calculus), by making the dependent clause a strong island: “[[ John likes Mary and Pete likes ... ]].” • Another example is medial extraction: in order to parse “the girl whom John met yesterday,” we have to move 𝑁 to the middle of the dependent clause. • This is achieved by assigning type (𝐶𝑁 \\ 𝐶𝑁 ) /(𝑆 / !𝑁 ) to “whom,” where the ! modality allows permutation. 10/29 “Harmless” Extensions"
+    },
+    {
+      "chunk_id": "chunk_016",
+      "section": "",
+      "page": null,
+      "text": "• The importance of algorithmic decidability and reasonable complexity bounds is connected to the usage of Lambek-style formalisms is natural language parsers. • The (probably) most well-known Lambek-based parsers are Grail (Moot et al.) and CatLog (Morrill et al.). 7/29 Categorial Grammar Parsers • The importance of algorithmic decidability and reasonable complexity bounds is connected to the usage of Lambek-style formalisms is natural language parsers. • The (probably) most well-known Lambek-based parsers are Grail (Moot et al.) and CatLog (Morrill et al.). • Grail uses the non-associative Lambek calculus as the basic system, which is out of the scope of this talk. 7/29 Categorial Grammar Parsers"
+    },
+    {
+      "chunk_id": "chunk_039",
+      "section": "",
+      "page": null,
+      "text": "• Thus, rules for “harmless” operations, from a bird-eye view, just perform some reorganisation of the same material (formulae). • The differences are only in the structure of meta-formulae which form the sequent. • Recently, Pshenitsyn (2021) proposed a general framework for such situations, called the hypergraph Lambek calculus HL. • The syntax of HL is quite involved (using hypergraphs instead of formulae), but it is still in the NP class. • Moreover, it absorbs many of the known “harmless” extensions of the Lambek calculus, so it could probably become the “umbrella logic” for them. 15/29 Additive Operations • Let us return to more interesting, “dangerous” stuff. 16/29 Additive Operations"
+    },
+    {
+      "chunk_id": "chunk_054",
+      "section": "",
+      "page": null,
+      "text": "• Thus, formulae which really appear under ! are (\\, /)-formulae of depth not greater than 1: (𝑞1 … 𝑞𝑛 ) \\ 𝑝 /(𝑟1 … 𝑟𝑚 ). • And for such formulae under !, the derivability problem is decidable and belongs to the NP class (Dudakov et al. 2021). 22/29 Subexponentials with Contraction: Decidability • Thus, formulae which really appear under ! are (\\, /)-formulae of depth not greater than 1: (𝑞1 … 𝑞𝑛 ) \\ 𝑝 /(𝑟1 … 𝑟𝑚 ). • And for such formulae under !, the derivability problem is decidable and belongs to the NP class (Dudakov et al. 2021). • The algorithm uses a dyadic syntax which propagates all applications of contraction up to the axioms. 22/29 Subexponentials with Contraction: Decidability"
+    },
+    {
+      "chunk_id": "chunk_015",
+      "section": "",
+      "page": null,
+      "text": "• A survey of complexity results for the Lambek calculus itself and its fragment was given at the talk of Mati Pentus at Advances in Modal Logic 2010. • In this talk, we shall discuss algorithmic complexity for extensions and variants of the Lambek calculus, trying to see how expressive power correlates with complexity growth. • The presentation is based on joint work and discussions with Mati Pentus, Max Kanovich, Andre Scedrov, Glyn Morrill, and Stanislav Speranski. 6/29 Categorial Grammar Parsers • The importance of algorithmic decidability and reasonable complexity bounds is connected to the usage of Lambek-style formalisms is natural language parsers. 7/29 Categorial Grammar Parsers"
+    },
+    {
+      "chunk_id": "chunk_051",
+      "section": "",
+      "page": null,
+      "text": "• The undecidability argument is a refinement of the one used by Lincoln et al. (1992) for proving undecidability for propositional linear logic with the exponential modality (which allows all structural rules: contraction, weakening, and permutation). • Notice that in the non-commutative case the undecidability proof does not require additives. • The argument is based on encoding derivability from finite sets of non-logical axioms. • The latter problem is also undecidable (Buszkowski 1982, 2005), which is quite unfortunate, since sometimes we want to express extra properties of syntactic types (like subtyping: 𝑁 inanimate → 𝑁 ). 20/29 Subexponentials with Contraction: Decidability"
+    },
+    {
+      "chunk_id": "chunk_032",
+      "section": "",
+      "page": null,
+      "text": "• For the original Lambek calculus, it is even possible to perform polynomial-time parsing, in the following sense. • Let us consider two complexity parameters: 𝑛 for the size of the sequent and 𝑑 for its depth (roughly speaking, nesting of divisions and multiplications). • Pentus (2010) proposed an algorithm whose running time is polynomial in 𝑛 and exponential in 𝑑: poly(𝑛, 2𝑑 ). • Kanovich et al. (2017) extended this to the Lambek calculus with brackets, but the complexity now is only poly(𝑛, 2𝑑 , 𝑛𝑏 ), where 𝑏 is bracket nesting depth. • Unfortunately, while 𝑑 is usually small, 𝑏 could be large (in sentences like “the house that Jack built”). 12/29 Pseudopolynomial Algorithms"
+    },
+    {
+      "chunk_id": "chunk_036",
+      "section": "",
+      "page": null,
+      "text": "• The “harmless” extensions have the following common property: the new rules of inference maintain linearity, in the sense that each formula occurrences in the conclusion of a rule maps to not more than one occurrence in the premise(s). • This makes the size of cut-free proof polynomial w.r.t. the size of the goal sequent, thus an NP upper bound. • In contrast, the rules for “dangerous” operations have more complex premises, which leads to blowup of proof search. 14/29 “Harmless” Extensions as “Linear” Ones • Thus, rules for “harmless” operations, from a bird-eye view, just perform some reorganisation of the same material (formulae). 15/29 “Harmless” Extensions as “Linear” Ones"
+    },
+    {
+      "chunk_id": "chunk_045",
+      "section": "",
+      "page": null,
+      "text": "• Real nonlinearity comes with the contraction rule for (sub)exponential modalities. • The natural language phenomenon here is the situation of multiple extraction: “the paper that the author of signed without reading.” 18/29 Subexponentials with Contraction • Real nonlinearity comes with the contraction rule for (sub)exponential modalities. • The natural language phenomenon here is the situation of multiple extraction: “the paper that the author of signed without reading.” • Here the dependent clause (“the author of ... signed ... without reading ...”) includes several gaps which should be filled by copies of the same 𝑁 (“the paper”). 18/29 Subexponentials with Contraction"
+    },
+    {
+      "chunk_id": "chunk_035",
+      "section": "",
+      "page": null,
+      "text": "• The “harmless” extensions have the following common property: the new rules of inference maintain linearity, in the sense that each formula occurrences in the conclusion of a rule maps to not more than one occurrence in the premise(s). 14/29 “Harmless” Extensions as “Linear” Ones • The “harmless” extensions have the following common property: the new rules of inference maintain linearity, in the sense that each formula occurrences in the conclusion of a rule maps to not more than one occurrence in the premise(s). • This makes the size of cut-free proof polynomial w.r.t. the size of the goal sequent, thus an NP upper bound. 14/29 “Harmless” Extensions as “Linear” Ones"
+    },
+    {
+      "chunk_id": "chunk_048",
+      "section": "",
+      "page": null,
+      "text": "• Non-locality is necessary in the absence of permutation (which is usually not the case); otherwise, logical properties like cut-elimination get broken (Kanovich et al. 2018). • Extensions of the Lambek calculus with a ! which allows 𝑁 𝐶1,2 are undecidable (Kanovich et al. 2018), more precisely, Σ01 -complete. 19/29 Subexponentials with Contraction: Undecidability • The undecidability argument is a refinement of the one used by Lincoln et al. (1992) for proving undecidability for propositional linear logic with the exponential modality (which allows all structural rules: contraction, weakening, and permutation). 20/29 Subexponentials with Contraction: Undecidability"
+    },
+    {
+      "chunk_id": "chunk_009",
+      "section": "",
+      "page": null,
+      "text": "Pete met the girl whom John likes 𝑁, (𝑁 \\ 𝑆) / 𝑁 , 𝑁 / 𝐶𝑁 , 𝐶𝑁 , (𝐶𝑁 \\ 𝐶𝑁 ) /(𝑆 / 𝑁 ), 𝑁, (𝑁 \\ 𝑆) / 𝑁 →𝑆 • As one can see from this example, the Lambek calculus is capable of handling quite involved syntax. • Moreover, it can be considered as the preferable system among others, since it is exactly the atomic theory of the language algebra (Pentus 1995). • However, it has severe theoretical limitations. 4/29 Limitations of the Lambek Calculus • The first issue is expressivity. 5/29 Limitations of the Lambek Calculus • The first issue is expressivity. • Lambek grammars can generate only context-free languages (Pentus 1993 — the proof of Chomsky conjecture)."
+    },
+    {
+      "chunk_id": "chunk_025",
+      "section": "",
+      "page": null,
+      "text": "• Fortunately, most of the extensions are “harmless.” • One of such extensions introduces the bracketing mechanism with modalities and bracket structure which restrict associativity. 10/29 “Harmless” Extensions • Fortunately, most of the extensions are “harmless.” • One of such extensions introduces the bracketing mechanism with modalities and bracket structure which restrict associativity. • This disallows incorrect sentences like “the girl whom John likes Mary and Pete likes” (which are validated by the original Lambek calculus), by making the dependent clause a strong island: “[[ John likes Mary and Pete likes ... ]].” 10/29 “Harmless” Extensions"
+    },
+    {
+      "chunk_id": "chunk_046",
+      "section": "",
+      "page": null,
+      "text": "• Real nonlinearity comes with the contraction rule for (sub)exponential modalities. • The natural language phenomenon here is the situation of multiple extraction: “the paper that the author of signed without reading.” • Here the dependent clause (“the author of ... signed ... without reading ...”) includes several gaps which should be filled by copies of the same 𝑁 (“the paper”). • This requires some form of contraction rule for !𝑁 : … !𝑁 … !𝑁 … → 𝐶 … !𝑁 … … → 𝐶 18/29 Subexponentials with Contraction • The non-local contraction rule is formulated as follows: Γ, !𝐴, Φ, !𝐴, Δ → 𝐶 Γ, !𝐴, Φ, !𝐴, Δ → 𝐶 !𝑁 𝐶1 !𝑁 𝐶2 Γ, !𝐴, Φ, Δ → 𝐶 Γ, Φ, !𝐴, Δ → 𝐶"
+    },
+    {
+      "chunk_id": "chunk_037",
+      "section": "",
+      "page": null,
+      "text": "• Thus, rules for “harmless” operations, from a bird-eye view, just perform some reorganisation of the same material (formulae). • The differences are only in the structure of meta-formulae which form the sequent. 15/29 “Harmless” Extensions as “Linear” Ones • Thus, rules for “harmless” operations, from a bird-eye view, just perform some reorganisation of the same material (formulae). • The differences are only in the structure of meta-formulae which form the sequent. • Recently, Pshenitsyn (2021) proposed a general framework for such situations, called the hypergraph Lambek calculus HL. 15/29 “Harmless” Extensions as “Linear” Ones"
+    },
+    {
+      "chunk_id": "chunk_041",
+      "section": "",
+      "page": null,
+      "text": "• Let us return to more interesting, “dangerous” stuff. • Additive operations are governed by the following inference rules: Γ, 𝐴1 , Δ → 𝐶 Γ, 𝐴2 , Δ → 𝐶 Π → 𝐴𝑖 ∨𝐿 ∨𝑅 Γ, 𝐴1 ∨ 𝐴2 , Δ → 𝐶 Π → 𝐴 1 ∨ 𝐴2 Γ, 𝐴𝑖 , Δ → 𝐶 Π → 𝐴1 Π → 𝐴2 ∧𝐿 ∧𝑅 Γ, 𝐴1 ∧ 𝐴2 , Δ → 𝐶 Π → 𝐴 1 ∧ 𝐴2 • Additive operations allow imposing several syntactic conditions on a word at the same time. 16/29 Additive Operations • This allows describing finite intersections of context-free languages (Kanazawa 1992) and, moreover, languages generated by conjunctive grammars (K., Okhotin 2017) and closures of such under symbol-to-symbol homomorphisms. 17/29 Additive Operations"
+    },
+    {
+      "chunk_id": "chunk_010",
+      "section": "",
+      "page": null,
+      "text": "5/29 Limitations of the Lambek Calculus • The first issue is expressivity. • Lambek grammars can generate only context-free languages (Pentus 1993 — the proof of Chomsky conjecture). • On the other hand, natural language syntax includes non-context-free phenomena (Shieber 1985). 5/29 Limitations of the Lambek Calculus • The first issue is expressivity. • Lambek grammars can generate only context-free languages (Pentus 1993 — the proof of Chomsky conjecture). • On the other hand, natural language syntax includes non-context-free phenomena (Shieber 1985). • The second issue is complexity. 5/29 Limitations of the Lambek Calculus"
     },
     {
       "chunk_id": "chunk_056",
       "section": "",
       "page": null,
-      "text": "“Harmless” Extensions as “Linear” Ones • Thus, rules for “harmless” operations, from a bird-eye view, just perform some reorganisation of the same material (formulae). • The differences are only in the structure of meta-formulae which form the sequent. • Recently, Pshenitsyn (2021) proposed a general framework for such situations, called the hypergraph Lambek calculus HL. • The syntax of HL is quite involved (using hypergraphs instead of formulae), but it is still in the NP class. • Moreover, it absorbs many of the known “harmless” extensions of the Lambek calculus, so it could probably become the “umbrella logic” for them. 15/29"
+      "text": "• In Morrill’s systems for CatLog, contraction has a subtle interaction with the bracketing structure. • This is due to the fact that in multiple extraction there is one principal gap, and others are parasitic ones, appearing in islands: “[the author of ...] signed ... [without reading ...].” • Morrill uses different rules in different versions of his system, we cite one of the most recent ones (Morrill 2018): Ξ(𝐴) → 𝐶 !𝐴 → 𝐵 Ξ(Γ1 , !𝐴, [!𝐴, Γ2 ], Γ3 ) → 𝐶 !𝐿 !𝑅 !𝐶 Ξ(!𝐴) → 𝐶 !𝐴 → !𝐵 Ξ(Γ1 , !𝐴, [[Γ2 ]], Γ3 ) → 𝐶 Ξ(Γ, !𝐴) → 𝐶 Ξ(!𝐴, Γ) → 𝐶 !𝑃 !𝑃 Ξ(!𝐴, Γ) → 𝐶 1 Ξ(Γ, !𝐴) → 𝐶 2 23/29 Subexponentials with Contraction: Brackets"
+    },
+    {
+      "chunk_id": "chunk_023",
+      "section": "",
+      "page": null,
+      "text": "• In real-life applications, the Lambek calculus is extended by a huge amount of extra operations and syntactic mechanisms. • For example, the calculus of Morrill’s CatLog uses about 45 operations (and this number could grow in the future). • While it is impossible to discuss all these operations in detail during this talk, we shall try to classify them from the algorithmic point of view. • Most of these operations are “harmless,” in the sense that adding these operations does not increase algorithmic complexity (if we are already in a non-deterministic class like NP or PSPACE). 9/29 Extensions of the Lambek Calculus"
+    },
+    {
+      "chunk_id": "chunk_019",
+      "section": "",
+      "page": null,
+      "text": "• Pentus’ result on NP-hardness of the Lambek calculus was considered as a negative one, limiting the use of the Lambek calculus in practices (in comparison with other categorial grammar formalisms, which are polynomially tractable). 8/29 Is NP Too Hard? • Pentus’ result on NP-hardness of the Lambek calculus was considered as a negative one, limiting the use of the Lambek calculus in practices (in comparison with other categorial grammar formalisms, which are polynomially tractable). • However, in fact the input parameter is the length of a sentence, not the whole text, so it is roughly ≲ 20. 8/29 Is NP Too Hard?"
+    },
+    {
+      "chunk_id": "chunk_059",
+      "section": "",
+      "page": null,
+      "text": "• In our JoLLI paper (Kanovich, K., Scedrov 2021) we give proof-theoretic analysis of Morrill’s systems and prove their undecidability. • However, the argument involves using bracket modalities under ! to break the bracket discipline. • In real applications this does not happen, and standard proof search algorithms solve the derivability problem. • Theoretically, this is supported by decidability results for certain conditions on bracket modalities under ! (Kanovich, Stepan G. Kuznetsov, K., Scedrov 2021), which make ! “harmless” (NP for Lambek, PSPACE for MALC). 24/29 Subexponentials with Contraction: Brackets"
+    },
+    {
+      "chunk_id": "chunk_065",
+      "section": "",
+      "page": null,
+      "text": "27/29 Kleene Star and Subexponential • We conclude by considering an extension of the Lambek calculus with both ∗ and !. 28/29 Kleene Star and Subexponential • We conclude by considering an extension of the Lambek calculus with both ∗ and !. • Formally speaking, Morrill’s system is such a system. 28/29 Kleene Star and Subexponential • We conclude by considering an extension of the Lambek calculus with both ∗ and !. • Formally speaking, Morrill’s system is such a system. • In the presence of ∗𝐿𝜔 and !𝑁 𝐶1,2 , this system’s complexity is as high as Π11 (K., Speranski 2021). 28/29 Kleene Star and Subexponential"
+    },
+    {
+      "chunk_id": "chunk_063",
+      "section": "",
+      "page": null,
+      "text": "• With ∗𝐿𝜔 , the Lambek calculus with Kleene star are undecidable and Π01 -complete (Buszkowski, Palka 2007; K. 2020). • This means that disproving a sequent is an enumerable task (due to the finite model property), but proving requires infinitary mechanisms. • Fortunately, Morrill uses his “existential exponential” only in positive positions, which do not involve ∗𝐿𝜔 . • Namely, “and” in iterated coordination situations like “John, Bill, Mary and Suzy” receives the type (?𝑁 \\ 𝑁 ) / 𝑁 26/29 Kleene Star • For logical completeness, however, we need some sort of a left rule for Kleene star. 27/29 Kleene Star"
+    },
+    {
+      "chunk_id": "chunk_064",
+      "section": "",
+      "page": null,
+      "text": "• For logical completeness, however, we need some sort of a left rule for Kleene star. • One option could be an inductive-style axiomatisation (like in action logic, Pratt 1991): → 𝐵 𝐴, 𝐵 → 𝐵 Π → 𝐴 Γ, 𝐵, Δ → 𝐶 ∗𝐿 𝐶𝑢𝑡 𝐴∗ → 𝐵 Γ, Π, Δ → 𝐶 27/29 Kleene Star • For logical completeness, however, we need some sort of a left rule for Kleene star. • One option could be an inductive-style axiomatisation (like in action logic, Pratt 1991): → 𝐵 𝐴, 𝐵 → 𝐵 Π → 𝐴 Γ, 𝐵, Δ → 𝐶 ∗𝐿 𝐶𝑢𝑡 𝐴∗ → 𝐵 Γ, Π, Δ → 𝐶 • This again leads an undecidable system, now it is Σ01 -complete (K. 2019 — solving a problem raised by Kozen in 1994)."
+    },
+    {
+      "chunk_id": "chunk_018",
+      "section": "",
+      "page": null,
+      "text": "• The importance of algorithmic decidability and reasonable complexity bounds is connected to the usage of Lambek-style formalisms is natural language parsers. • The (probably) most well-known Lambek-based parsers are Grail (Moot et al.) and CatLog (Morrill et al.). • Grail uses the non-associative Lambek calculus as the basic system, which is out of the scope of this talk. • However, the non-associative Lambek calculus, unlike the associative one, is polynomially decidable. • CatLog’s calculus is associative, but includes a mechanism of brackets for controlled non-associativity. 7/29 Is NP Too Hard?"
     }
   ],
   "source_kind": "direct_pdf",

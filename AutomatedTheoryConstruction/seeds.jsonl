@@ -1,0 +1,7 @@
+{"id":"op_000001","stmt":"∀ {A B : Tp}, [A] ⇒ B ↔ A = B","src":"seed","priority":"unknown","priority_rationale":"","failure_count":0}
+{"id":"op_000002","stmt":"∀ {Γ : List Tp} {A : Tp}, (∀ x ∈ Γ, is_atom x) → Γ ⇒ A → is_atom A ∧ Γ = [A]","src":"seed","priority":"unknown","priority_rationale":"","failure_count":0}
+{"id":"op_000003","stmt":"∀ {Γ : List Tp} {s : String}, Γ ⇒ #s → Γ ≠ [#s] → (∃ L B A Δ Λ, Γ = L ++ [B ⧸ A] ++ Δ ++ Λ ∧ Δ ⇒ A ∧ L ++ [B] ++ Λ ⇒ #s) ∨ (∃ Γ₁ Δ A B Λ, Γ = Γ₁ ++ Δ ++ [A ⧹ B] ++ Λ ∧ Δ ⇒ A ∧ Γ₁ ++ [B] ++ Λ ⇒ #s)","src":"seed","priority":"unknown","priority_rationale":"","failure_count":0}
+{"id":"op_000004","stmt":"∀ {Γ Δ : List Tp} {A B : Tp}, Γ ⇒ (A ⧹ B) → Δ ⇒ A → Δ ++ Γ ⇒ B","src":"seed","priority":"unknown","priority_rationale":"","failure_count":0}
+{"id":"op_000005","stmt":"∀ {Γ Δ : List Tp} {A B : Tp}, Γ ⇒ (B ⧸ A) → Δ ⇒ A → Γ ++ Δ ⇒ B","src":"seed","priority":"unknown","priority_rationale":"","failure_count":0}
+{"id":"op_000006","stmt":"∀ {Γ Δ : List Tp} {A B C : Tp}, Γ ⇒ (A ⧹ B) → Δ ⇒ (B ⧹ C) → Γ ++ Δ ⇒ (A ⧹ C)","src":"seed","priority":"unknown","priority_rationale":"","failure_count":0}
+{"id":"op_000007","stmt":"∀ {Γ Δ : List Tp} {A B C : Tp}, Γ ⇒ (C ⧸ B) → Δ ⇒ (B ⧸ A) → Γ ++ Δ ⇒ (C ⧸ A)","src":"seed","priority":"unknown","priority_rationale":"","failure_count":0}

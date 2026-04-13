@@ -1,1 +1,269 @@
-{}
+{
+  "op_000001": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∀ {A B : Tp}, [A] ⇒ B ↔ A = B",
+      "formalized_statement": "∀ {A B : Tp}, [A] ⇒ B ↔ A = B",
+      "statement_formalization_notes": "Used the existing `Tp` type and sequent notation `⇒` from the theory context; the input statement already matches valid Lean syntax.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization"
+    },
+    {
+      "result": "counterexample",
+      "verify_success": true,
+      "proof_sketch": "Refute the universal equivalence by taking A = Tp.atom \"p\" and B = (Tp.atom \"q\" ⧸ Tp.atom \"p\") ⧹ Tp.atom \"q\". There is an explicit derivation [A] ⇒ B: first derive [(Tp.atom \"q\" ⧸ Tp.atom \"p\"), Tp.atom \"p\"] ⇒ Tp.atom \"q\" with Sequent.rdiv_l from two axioms, then apply Sequent.ldiv_r. If the target statement were true, this derivation would force A = B, but after unfolding A and B this is an impossible equality between different Tp constructors.",
+      "prelude_code": "",
+      "proof_text": "intro h\nlet A : Tp := Tp.atom \"p\"\nlet B : Tp := (Tp.atom \"q\" ⧸ Tp.atom \"p\") ⧹ Tp.atom \"q\"\nhave hseq : [A] ⇒ B := by\n  dsimp [A, B]\n  apply Sequent.ldiv_r\n  · simp\n  · simpa using\n      (Sequent.rdiv_l\n        (Δ := [Tp.atom \"p\"])\n        (A := Tp.atom \"p\")\n        (Γ := [])\n        (B := Tp.atom \"q\")\n        (Λ := [])\n        (C := Tp.atom \"q\")\n        Sequent.ax\n        Sequent.ax)\nhave hEq : A = B := (h (A := A) (B := B)).mp hseq\ndsimp [A, B] at hEq\ncases hEq",
+      "counterexample_text": "Use A = Tp.atom \"p\" and B = (Tp.atom \"q\" ⧸ Tp.atom \"p\") ⧹ Tp.atom \"q\". The sequent [A] ⇒ B is derivable by Sequent.rdiv_l followed by Sequent.ldiv_r, but A and B are not equal because one is an atom and the other is an ldiv term.",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "no_diagnostics | toolchain=leanprover/lean4:v4.29.0-rc6"
+    }
+  ],
+  "op_000002": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∀ {Γ : List Tp} {A : Tp}, (∀ x ∈ Γ, is_atom x) → Γ ⇒ A → is_atom A ∧ Γ = [A]",
+      "formalized_statement": "∀ {Γ : List Tp} {A : Tp}, (∀ x ∈ Γ, is_atom x) → Γ ⇒ A → is_atom A ∧ Γ = [A]",
+      "statement_formalization_notes": "The input statement is already a valid Lean proposition in the repository’s notation, so I kept it unchanged.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization"
+    },
+    {
+      "result": "counterexample",
+      "verify_success": true,
+      "proof_sketch": "Instantiate the statement with Γ = [#\"p\"] and A = ((#\"q\" ⧸ #\"p\") ⧹ #\"q\"). The context assumption is immediate because the only member of Γ is atomic. Derive [#\"q\" ⧸ #\"p\", #\"p\"] ⇒ #\"q\" using `Sequent.rdiv_l` from the two axioms `[ #\"p\" ] ⇒ #\"p\"` and `[ #\"q\" ] ⇒ #\"q\"`, then derive [#\"p\"] ⇒ ((#\"q\" ⧸ #\"p\") ⧹ #\"q\") using `Sequent.ldiv_r`. Applying the claimed statement yields `is_atom ((#\"q\" ⧸ #\"p\") ⧹ #\"q\")`, which simplifies to `False`.",
+      "prelude_code": "",
+      "proof_text": "intro h\nlet p : Tp := #\"p\"\nlet q : Tp := #\"q\"\nlet A : Tp := ((q ⧸ p) ⧹ q)\nhave hctx : ∀ x ∈ [p], is_atom x := by\n  intro x hx\n  simp at hx\n  subst hx\n  simp [p, is_atom]\nhave hpq : [q ⧸ p, p] ⇒ q := by\n  have hp : [p] ⇒ p := Sequent.ax\n  have hq : [q] ⇒ q := Sequent.ax\n  simpa using\n    (Sequent.rdiv_l (Γ := []) (Δ := [p]) (Λ := []) (A := p) (B := q) (C := q) hp hq)\nhave hder : [p] ⇒ A := by\n  have hne : [p] ≠ [] := by simp\n  simpa [A] using (Sequent.ldiv_r (Γ := [p]) (A := q ⧸ p) (B := q) hne hpq)\nhave hatom : is_atom A := (h hctx hder).1\nsimpa [A, is_atom] using hatom",
+      "counterexample_text": "A concrete refutation is Γ = [Tp.atom \"p\"] and A = Tp.ldiv (Tp.rdiv (Tp.atom \"q\") (Tp.atom \"p\")) (Tp.atom \"q\"). The context assumption `(∀ x ∈ Γ, is_atom x)` holds because the only element of Γ is atomic. There is a derivation `[Tp.rdiv (Tp.atom \"q\") (Tp.atom \"p\"), Tp.atom \"p\"] ⇒ Tp.atom \"q\"` by `Sequent.rdiv_l` from two uses of `Sequent.ax`, and then `Sequent.ldiv_r` gives `[Tp.atom \"p\"] ⇒ Tp.ldiv (Tp.rdiv (Tp.atom \"q\") (Tp.atom \"p\")) (Tp.atom \"q\")`. But `is_atom A` is false, so the implication does not hold.",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.loop.002.lean:32:2: warning: Try `simp at hatom` instead of `simpa using hatom` | Note: This linter can be disabled with `set_option linter.unnecessarySimpa false` | toolchain=leanprover/lean4:v4.29.0-rc6"
+    }
+  ],
+  "op_000008": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∀ {A : Tp} {s : String}, [A] ⇒ Tp.atom s ↔ A = Tp.atom s",
+      "formalized_statement": "∀ {A : Tp} {s : String}, ([A] ⇒ Tp.atom s) ↔ A = Tp.atom s",
+      "statement_formalization_notes": "Used the existing `⇒` sequent notation and made the sequent side explicit with parentheses for unambiguous parsing.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization"
+    },
+    {
+      "result": "proof",
+      "verify_success": false,
+      "proof_sketch": "Use proof-search completeness on the forward implication. For a singleton context, `prove1 [A] (Tp.atom s)` simplifies by cases on `A`: if `A` is atomic, it forces the singleton-equality branch; if `A` is a slash type, the only candidate branch requires `prove1 [] X`, but `prove1 [] X = false` for every `X`, so those cases are impossible. The reverse implication is just `Sequent.ax` after rewriting by the equality.",
+      "prelude_code": "",
+      "proof_text": "intro A s\nconstructor\n· intro h\n  have hnil : ∀ X : Tp, prove1 [] X = false := by\n    intro X\n    cases X <;> simp [prove1, candidates, picks, splits]\n  have hp : prove1 [A] (Tp.atom s) := prove1_complete h\n  cases A with\n  | atom t =>\n      simp [prove1, candidates, picks, splits] at hp\n      cases hp\n      rfl\n  | ldiv A B =>\n      simp [prove1, candidates, picks, splits, hnil] at hp\n  | rdiv B A =>\n      simp [prove1, candidates, picks, splits, hnil] at hp\n· intro h\n  simpa [h] using (Sequent.ax : [Tp.atom s] ⇒ Tp.atom s)",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.loop.002.lean:19:24: warning: Possibly looping simp theorem: `prove1.eq_1`",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.loop.002.lean:19:24: warning: Possibly looping simp theorem: `prove1.eq_1` | Note: Possibly caused by: `candidates`, `List.append_assoc`, `List.cons_append`, `List.nil_append`, and `prove1` | Hint: You can disable a simp theorem from the default simp set by passing `- theoremName` to `simp`."
+    },
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "Keep the previous proof-search strategy, but avoid `simp [prove1, ...]` because the recursive equation theorem for `prove1` loops. First prove `prove1 [] X = false` by `unfold prove1` and case split on `X`. Then convert the sequent hypothesis to `prove1 [A] (Tp.atom s)` using completeness, case split on `A`, and unfold `prove1` only once in each branch. The atomic branch simplifies to the singleton-equality case; the slash branches simplify to contradiction because they require the empty-context subcall. The reverse implication is `Sequent.ax` after rewriting by the equality.",
+      "prelude_code": "",
+      "proof_text": "intro A s\nconstructor\n· intro h\n  have hnil : ∀ X : Tp, prove1 [] X = false := by\n    intro X\n    unfold prove1\n    cases X <;> simp [candidates, picks]\n  have hp : prove1 [A] (Tp.atom s) := prove1_complete h\n  cases A with\n  | atom t =>\n      unfold prove1 at hp\n      simp [candidates, picks] at hp\n      cases hp\n      rfl\n  | ldiv A B =>\n      unfold prove1 at hp\n      simp [candidates, picks, splits, hnil] at hp\n  | rdiv B A =>\n      unfold prove1 at hp\n      simp [candidates, picks, splits, hnil] at hp\n· intro h\n  simpa [h] using (Sequent.ax : [Tp.atom s] ⇒ Tp.atom s)",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "no_diagnostics | toolchain=leanprover/lean4:v4.29.0-rc6"
+    }
+  ],
+  "op_000009": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∀ {Γ : List Tp} {s : String}, Γ ⇒ Tp.atom s → Γ = [Tp.atom s] ∨ (∃ L B A Δ Λ, Γ = L ++ [B ⧸ A] ++ Δ ++ Λ ∧ Δ ⇒ A ∧ L ++ [B] ++ Λ ⇒ Tp.atom s) ∨ (∃ Γ₁ Δ A B R, Γ = Γ₁ ++ Δ ++ [A ⧹ B] ++ R ∧ Δ ⇒ A ∧ Γ₁ ++ [B] ++ R ⇒ Tp.atom s)",
+      "formalized_statement": "∀ {Γ : List Tp} {s : String}, Γ ⇒ Tp.atom s → Γ = [Tp.atom s] ∨ (∃ (L : List Tp) (B A : Tp) (Δ Λ : List Tp), Γ = L ++ [B ⧸ A] ++ Δ ++ Λ ∧ (Δ ⇒ A) ∧ (L ++ [B] ++ Λ ⇒ Tp.atom s)) ∨ (∃ (Γ₁ Δ : List Tp) (A B : Tp) (R : List Tp), Γ = Γ₁ ++ Δ ++ [A ⧹ B] ++ R ∧ (Δ ⇒ A) ∧ (Γ₁ ++ [B] ++ R ⇒ Tp.atom s))",
+      "statement_formalization_notes": "Formalized the given decomposition verbatim, with explicit existential binder types for the list and type components.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization"
+    },
+    {
+      "result": "proof",
+      "verify_success": false,
+      "proof_sketch": "Case split on the derivation of an atomic succedent. The axiom case yields the singleton context; the two left rules directly provide the required decomposition witnesses.",
+      "prelude_code": "",
+      "proof_text": "intro h\ncases h with\n| ax =>\n    exact Or.inl rfl\n| rdiv_l d_arg d_main =>\n    rename_i Δ A Γ₁ B Λ\n    exact Or.inr <| Or.inl ⟨Γ₁, B, A, Δ, Λ, rfl, d_arg, d_main⟩\n| ldiv_l d_arg d_main =>\n    rename_i Δ A Γ₁ B Λ\n    exact Or.inr <| Or.inr ⟨Γ₁, Δ, A, B, Λ, rfl, d_arg, d_main⟩",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.loop.lean:16:2: error: Invalid alternative name `ax`: Expected `nil` or `cons`",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.loop.lean:16:2: error: Invalid alternative name `ax`: Expected `nil` or `cons` | AutomatedTheoryConstruction/Scratch.loop.lean:18:2: error: Invalid alternative name `rdiv_l`: Expected `nil` or `cons` | AutomatedTheoryConstruction/Scratch.loop.lean:21:2: error: Invalid alternative name `ldiv_l`: Expected `nil` or `cons`"
+    },
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "The previous script destructed the first implicit binder `Γ : List Tp` instead of the derivation. Introduce the implicit context and atom name first, then case-split on the sequent proof. For an atomic succedent, the right-introduction constructors are impossible, so the remaining cases are `ax`, `rdiv_l`, and `ldiv_l`; the latter two directly provide the existential witnesses.",
+      "prelude_code": "",
+      "proof_text": "intro Γ s h\ncases h with\n| ax =>\n    exact Or.inl rfl\n| rdiv_l d_arg d_main =>\n    rename_i Δ A Γ₁ B Λ\n    exact Or.inr <| Or.inl ⟨Γ₁, B, A, Δ, Λ, rfl, d_arg, d_main⟩\n| ldiv_l d_arg d_main =>\n    rename_i Δ A Γ₁ B Λ\n    exact Or.inr <| Or.inr ⟨Γ₁, Δ, A, B, Λ, rfl, d_arg, d_main⟩",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "no_diagnostics | toolchain=leanprover/lean4:v4.29.0-rc6"
+    }
+  ],
+  "op_000017": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∀ {A B : Tp}, ([A] ⇒ B) ↔ A = B ∨ (∃ C D, B = D ⧸ C ∧ [A] ++ [C] ⇒ D) ∨ (∃ C D, B = C ⧹ D ∧ [C] ++ [A] ⇒ D)",
+      "formalized_statement": "∀ {A B : Tp}, ([A] ⇒ B) ↔ A = B ∨ (∃ C : Tp, ∃ D : Tp, B = D ⧸ C ∧ ([A] ++ [C] ⇒ D)) ∨ (∃ C : Tp, ∃ D : Tp, B = C ⧹ D ∧ ([C] ++ [A] ⇒ D))",
+      "statement_formalization_notes": "Used the repository's notation-first style with explicit nested existential binders over `Tp`.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization"
+    },
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "Split on the succedent `B`. If `B` is atomic, use the existing singleton-atom theorem. If `B` is a right or left division, use `rdiv_invertible` or `ldiv_invertible` for the forward direction, and `Sequent.rdiv_r` or `Sequent.ldiv_r` for the reverse direction.",
+      "prelude_code": "",
+      "proof_text": "intro A B\nconstructor\n· intro h\n  cases B with\n  | atom s =>\n      exact Or.inl (thm_singleton_atom_iff_eq_000008.mp h)\n  | rdiv D C =>\n      exact Or.inr <| Or.inl ⟨C, D, rfl, rdiv_invertible h⟩\n  | ldiv C D =>\n      exact Or.inr <| Or.inr ⟨C, D, rfl, ldiv_invertible h⟩\n· intro h\n  rcases h with hEq | ⟨C, D, rfl, hDC⟩ | ⟨C, D, rfl, hCD⟩\n  · cases hEq\n    exact Sequent.ax\n  · exact Sequent.rdiv_r (Γ := [A]) (A := C) (B := D) (by simp) hDC\n  · exact Sequent.ldiv_r (Γ := [A]) (A := C) (B := D) (by simp) hCD",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "no_diagnostics | toolchain=leanprover/lean4:v4.29.0-rc6"
+    }
+  ],
+  "op_000016": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "Every derivation of Γ ⇒ Tp.atom s admits a finite focused decomposition tree obtained by iterating the atomic-succedent last-step analysis until every leaf is a singleton atomic axiom.",
+      "formalized_statement": "∀ {Γ : List Tp} {s : String}, Γ ⇒ Tp.atom s → ∃ n : Nat, proveAux n Γ (Tp.atom s) = true",
+      "statement_formalization_notes": "Formalized the decomposition tree via the existing bounded proof-search procedure `proveAux`, which recursively encodes the atomic-succedent last-step analysis with singleton atomic axioms as base leaves.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization"
+    },
+    {
+      "result": "proof",
+      "verify_success": false,
+      "proof_sketch": "Use `prove2_iff_sequent` to turn the derivation into `prove2 Γ (Tp.atom s)`, then unfold `prove2` and take the built-in bound `list_degree Γ + tp_degree (Tp.atom s) + 1` as the witness.",
+      "prelude_code": "",
+      "proof_text": "intro h\nrefine ⟨list_degree Γ + tp_degree (Tp.atom s) + 1, ?_⟩\nhave h' : prove2 Γ (Tp.atom s) :=\n  (prove2_iff_sequent (Γ := Γ) (A := Tp.atom s)).2 h\nsimpa [prove2] using h'",
+      "counterexample_text": "",
+      "lean_error_excerpt": "AutomatedTheoryConstruction/Scratch.loop.lean:15:9: error: Invalid `⟨...⟩` notation: The expected type",
+      "lean_error_fingerprint": "AutomatedTheoryConstruction/Scratch.loop.lean:15:9: error: Invalid `⟨...⟩` notation: The expected type | h ⇒ #s✝ → ∃ n, proveAux n h (#s✝) = true | is not an inductive type"
+    },
+    {
+      "result": "proof",
+      "verify_success": true,
+      "proof_sketch": "The previous argument was essentially correct; the failure came from introducing only one binder, which caused Lean to treat `h` as the implicit context `Γ`. Introduce `Γ` and `s` explicitly first, then the derivation `h`. Convert `h` to `prove2 Γ (Tp.atom s)` via `prove2_iff_sequent`, and choose the built-in bound `list_degree Γ + tp_degree (Tp.atom s) + 1` as the witness. Unfolding `prove2` gives the required `proveAux` equality.",
+      "prelude_code": "",
+      "proof_text": "intro Γ s h\nrefine ⟨list_degree Γ + tp_degree (Tp.atom s) + 1, ?_⟩\nhave h' : prove2 Γ (Tp.atom s) :=\n  (prove2_iff_sequent (Γ := Γ) (A := Tp.atom s)).2 h\nsimpa [prove2] using h'",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "no_diagnostics | toolchain=leanprover/lean4:v4.29.0-rc6"
+    }
+  ],
+  "op_000018": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "Every derivation [A] ⇒ B admits a finite focused singleton decomposition tree obtained by iterating the outermost slash classification on the succedent until the distinguished singleton branch reaches A, with each step recording the corresponding side sequent generated by that slash.",
+      "formalized_statement": "",
+      "statement_formalization_notes": "The context provides sequents, slash invertibility, and proof search via `candidates`/`prove1`, but no existing notion of a focused singleton decomposition tree or distinguished branch. Encoding that object faithfully would require introducing new inductive structure beyond the allowed conservative proposition formalization, so a reliable Lean statement is not available from the given context alone.",
+      "result": "stuck",
+      "verify_success": false,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization"
+    },
+    {
+      "stage": "",
+      "source_statement": "",
+      "formalized_statement": "",
+      "statement_formalization_notes": "",
+      "result": "stuck",
+      "verify_success": false,
+      "proof_sketch": "The context provides sequents, slash invertibility, and proof search via `candidates`/`prove1`, but no existing notion of a focused singleton decomposition tree or distinguished branch. Encoding that object faithfully would require introducing new inductive structure beyond the allowed conservative proposition formalization, so a reliable Lean statement is not available from the given context alone.",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "non_formalized_result"
+    },
+    {
+      "stage": "statement_formalization",
+      "source_statement": "Every derivation [A] ⇒ B admits a finite focused singleton decomposition tree obtained by iterating the outermost slash classification on the succedent until the distinguished singleton branch reaches A, with each step recording the corresponding side sequent generated by that slash.",
+      "formalized_statement": "",
+      "statement_formalization_notes": "The repository has the one-step singleton classification theorem, but it does not define a focused singleton decomposition tree, a distinguished singleton branch, or the recursive side-sequent object named in the statement. A faithful Lean formalization would require introducing new inductive structure, so the conservative result is stuck.",
+      "result": "stuck",
+      "verify_success": false,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization"
+    },
+    {
+      "result": "stuck",
+      "verify_success": false,
+      "proof_sketch": "The repository has the one-step singleton classification theorem, but it does not define a focused singleton decomposition tree, a distinguished singleton branch, or the recursive side-sequent object named in the statement. A faithful Lean formalization would require introducing new inductive structure, so the conservative result is stuck.",
+      "prelude_code": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "non_formalized_result"
+    }
+  ],
+  "op_000021": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "For atomic goals, successful runs of `proveAux` are in height-preserving correspondence with focused decomposition trees: `proveAux n Γ (Tp.atom s) = true` exactly when there exists a focused atomic decomposition tree for `Γ ⇒ Tp.atom s` of height at most `n`.",
+      "statement_prelude_code": "def FocusedTree : Nat → List Tp → Tp → Prop\n  | 0, _, _ => False\n  | n + 1, Γ, Tp.atom s =>\n      Γ = [Tp.atom s] ∨\n      ∃ c ∈ candidates Γ,\n        match c with\n        | Cand.rdiv L B A Δ Λ =>\n            FocusedTree n Δ A ∧ FocusedTree n (L ++ [B] ++ Λ) (Tp.atom s)\n        | Cand.ldiv Γ₁ Δ A B R =>\n            FocusedTree n Δ A ∧ FocusedTree n (Γ₁ ++ [B] ++ R) (Tp.atom s)\n  | n + 1, Γ, Tp.ldiv A B =>\n      Γ ≠ [] ∧ FocusedTree n ([A] ++ Γ) B\n  | n + 1, Γ, Tp.rdiv B A =>\n      Γ ≠ [] ∧ FocusedTree n (Γ ++ [A]) B",
+      "formalized_statement": "∀ {n : Nat} {Γ : List Tp} {s : String}, proveAux n Γ (# s) = true ↔ FocusedTree n Γ (# s)",
+      "theorem_name_stem": "proveaux_atom_tree_exact",
+      "docstring_summary": "Atomic `proveAux` is exact for focused trees up to height `n`.",
+      "statement_formalization_notes": "No decomposition-tree predicate appears in the provided context, so the prelude introduces a small recursive Prop `FocusedTree` that conservatively mirrors the branching structure of `proveAux`; its fuel parameter is used as the height-at-most bound.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization"
+    }
+  ],
+  "op_000011": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∀ {Γ : List Tp} {A : Tp}, (∀ x ∈ Γ, is_atom x) → Γ ⇒ A → ∃ s : String, Γ = [Tp.atom s]",
+      "statement_prelude_code": "",
+      "formalized_statement": "∀ {Γ : List Tp} {A : Tp}, (∀ x ∈ Γ, is_atom x) → Γ ⇒ A → ∃ s : String, Γ = [Tp.atom s]",
+      "theorem_name_stem": "atomic_context_singleton",
+      "docstring_summary": "Any derivable all-atomic context is a singleton atom.",
+      "statement_formalization_notes": "Formalized directly in the repository's notation using `is_atom`, `⇒`, and `Tp.atom`, with arbitrary succedent `A` as stated.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization"
+    }
+  ]
+}
