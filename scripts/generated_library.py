@@ -12,6 +12,7 @@ from common import write_json_atomic
 DEFAULT_GENERATED_ROOT = Path("AutomatedTheoryConstruction/Generated")
 DEFAULT_GENERATED_MANIFEST = DEFAULT_GENERATED_ROOT / "Manifest.lean"
 DEFAULT_GENERATED_CATALOG = DEFAULT_GENERATED_ROOT / "catalog.json"
+DEFAULT_REPO_ROOT = Path(__file__).resolve().parent.parent
 
 _BASE_IMPORTS = (
     "import Mathlib\n"
@@ -28,15 +29,43 @@ CHUNK_STEM_PATTERN = re.compile(r"^C(\d{4})(?:_|$)")
 BACKUP_CHUNK_FILE_PATTERN = re.compile(r"^C\d{4}.*_~\.lean$")
 
 
-def render_scratch_template(*, include_generated_manifest: bool = True) -> str:
-    imports = [
-        "import Mathlib",
-        "import AutomatedTheoryConstruction.Lambek",
-    ]
-    if include_generated_manifest:
-        imports.append("import AutomatedTheoryConstruction.Generated.Manifest")
-    imports.append("import AutomatedTheoryConstruction.Derived")
-    import_block = "\n".join(imports)
+def _module_file_for(module_name: str, *, repo_root: Path) -> Path:
+    return repo_root / (module_name.replace(".", "/") + ".lean")
+
+
+def module_exists(module_name: str, *, repo_root: Path = DEFAULT_REPO_ROOT) -> bool:
+    return _module_file_for(module_name, repo_root=repo_root).exists()
+
+
+def scratch_import_modules(
+    *,
+    include_generated_manifest: bool = True,
+    repo_root: Path = DEFAULT_REPO_ROOT,
+) -> list[str]:
+    modules = ["Mathlib"]
+    # Keep optional ATC imports aligned with the actual file layout.
+    for module_name in (
+        "AutomatedTheoryConstruction.Lambek",
+        "AutomatedTheoryConstruction.Generated.Manifest" if include_generated_manifest else "",
+        "AutomatedTheoryConstruction.Derived",
+    ):
+        if module_name and module_exists(module_name, repo_root=repo_root):
+            modules.append(module_name)
+    return modules
+
+
+def render_scratch_template(
+    *,
+    include_generated_manifest: bool = True,
+    repo_root: Path = DEFAULT_REPO_ROOT,
+) -> str:
+    import_block = "\n".join(
+        f"import {module_name}"
+        for module_name in scratch_import_modules(
+            include_generated_manifest=include_generated_manifest,
+            repo_root=repo_root,
+        )
+    )
     return (
         import_block
         + "\n\n"

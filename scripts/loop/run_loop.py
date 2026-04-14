@@ -61,6 +61,7 @@ from common import (
 from derived_entries import extract_derived_theorem_entries
 from guidance import unpack_guidance_context
 from generated_library import render_scratch_template
+from generated_library import scratch_import_modules
 from import_inference import infer_minimal_imports, render_import_block
 from lean_verify import verify_scratch
 from formalization_runtime import attempt_formalization_until_timeout
@@ -992,10 +993,8 @@ def formalize_to_scratch(
 
     scratch = (
         render_import_block(extra_imports)
-        +
-        "import AutomatedTheoryConstruction.Lambek\n"
-        "import AutomatedTheoryConstruction.Generated.Manifest\n"
-        "import AutomatedTheoryConstruction.Derived\n\n"
+        + "\n".join(f"import {module_name}" for module_name in scratch_import_modules())
+        + "\n\n"
         "set_option autoImplicit false\n\n"
         "namespace AutomatedTheoryConstruction\n\n"
         f"{SCRATCH_OPEN_DECLS}"
