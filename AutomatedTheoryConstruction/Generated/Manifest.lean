@@ -1,1 +1,4 @@
--- Generated manifest
+import AutomatedTheoryConstruction.Generated.C0001_singleton_focused_tree
+import AutomatedTheoryConstruction.Generated.C0002_left_right_only
+import AutomatedTheoryConstruction.Generated.C0003_derivation_uniform_rep
+import AutomatedTheoryConstruction.Generated.C0004_left_focused_tree

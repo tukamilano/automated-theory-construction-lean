@@ -571,42 +571,6 @@ def _refactor_derived_result(payload: dict[str, Any]) -> dict[str, Any]:
         "change_notes": ["mock_worker: returned input unchanged"] if derived_code else [],
         "touched_theorems": focus_theorem_names,
     }
-
-
-def _plan_derived_compression_result(payload: dict[str, Any]) -> dict[str, Any]:
-    theorem_inventory = payload.get("theorem_inventory", [])
-    return {
-        "result": "noop" if isinstance(theorem_inventory, list) else "stuck",
-        "summary": "mock_worker: no compression plan generated" if isinstance(theorem_inventory, list) else "mock_worker: invalid theorem inventory",
-        "items": [],
-    }
-
-
-def _apply_derived_compression_item_result(payload: dict[str, Any]) -> dict[str, Any]:
-    derived_code = str(payload.get("derived_code", "")).strip()
-    plan_item = payload.get("plan_item", {})
-    touched_theorems = []
-    if isinstance(plan_item, dict):
-        for key in ("anchor_theorems", "rewrite_targets", "new_theorems", "local_reorder_region", "section_members"):
-            raw = plan_item.get(key, [])
-            if not isinstance(raw, list):
-                continue
-            for item in raw:
-                cleaned = str(item).strip()
-                if cleaned and cleaned not in touched_theorems:
-                    touched_theorems.append(cleaned)
-        insert_before = str(plan_item.get("insert_before", "")).strip()
-        if insert_before and insert_before not in touched_theorems:
-            touched_theorems.append(insert_before)
-    return {
-        "result": "noop" if derived_code else "stuck",
-        "refactored_code": derived_code,
-        "summary": "mock_worker: no compression item applied" if derived_code else "mock_worker: no Derived.lean content provided",
-        "change_notes": ["mock_worker: returned input unchanged"] if derived_code else [],
-        "touched_theorems": touched_theorems,
-    }
-
-
 def main() -> None:
     try:
         request = _read_request()
@@ -647,10 +611,6 @@ def main() -> None:
             result_payload = _post_theorem_expand_result(payload)
         elif task_type == "refactor_derived":
             result_payload = _refactor_derived_result(payload)
-        elif task_type == "plan_derived_compression":
-            result_payload = _plan_derived_compression_result(payload)
-        elif task_type == "apply_derived_compression_item":
-            result_payload = _apply_derived_compression_item_result(payload)
         else:
             raise ValueError(f"unsupported task_type: {task_type}")
 

@@ -85,7 +85,15 @@ make paper-claim
 ```
 
 This is the recommended path when you have a real deep-research report under `materials/`.
+Gemini Deep Research is the recommended default for producing that report.
 It refreshes `data/materials_cache`, rewrites `AutomatedTheoryConstruction/research_agenda.md`, runs the main loop plus generated-file refactor path, and then runs a one-shot paper-claim session.
+After the first run, prefer:
+
+```bash
+make loop-continue-refactor-to-generated
+```
+
+Use that when you want to keep the current runtime state and continue the loop plus refactor cycle instead of resetting from scratch.
 
 If you want the fastest smoke test without Codex CLI, you can still use the bundled mock worker:
 

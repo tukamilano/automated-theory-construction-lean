@@ -712,7 +712,6 @@ def build_worker_env(config: AppConfig, *, task_names: Iterable[str] = TASK_NAME
     put("ATC_WORKER_TIMEOUT", config.worker.timeout)
     put("ATC_CODEX_MODEL", config.worker.codex_model)
     put("ATC_CODEX_TIMEOUT", config.worker.codex_timeout)
-
     for task_name in task_names:
         task = config.worker.tasks.get(task_name)
         if task is None:

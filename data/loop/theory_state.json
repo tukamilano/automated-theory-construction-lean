@@ -1,43 +1,44 @@
 {
   "agenda_pressure": [
-    "Prefer exact equivalences and recursive normal forms over nearby corollaries.",
-    "Reward proof-search results only when they expose canonical structure, not just bounded success.",
-    "Use counterexamples to isolate surviving criteria or obstructions rather than accumulate negatives.",
-    "Prefer fragment theorems that sharpen structural taxonomy or language correspondence."
+    "Favor exact subsystem equivalences and rule-theoretic characterizations over nearby corollaries.",
+    "Spend asymmetry pressure on left interfaces and search bridges because right translation is already complete enough.",
+    "Reward results that connect fragment predicates, proof objects, and search procedures in one package.",
+    "Use negative results mainly when they isolate mixed-orientation escape or derivation-level non-rigidity."
   ],
   "current_bottlenecks": [
-    "One-step decomposition theorems have not yet been iterated into canonical finite objects.",
-    "Atomic proof search has bounded completeness but not exact candidate-level or tree-level correspondence.",
-    "The all-atomic counterexample has not yet been converted into a final positive boundary theorem.",
-    "Fragment classifications are still disconnected from the proof-search and focusing story."
+    "LeftRep still lacks the clean intrinsic subsystem presentation already available on the right.",
+    "One-step atomic reduction laws have not yet been lifted to reusable recursive normal forms.",
+    "Candidate syntax and prove1-style restricted search are not yet exact tests for one-sided membership.",
+    "Focused witness iff theorems exist, but witness-level substitution closure is still missing."
   ],
-  "derived_generation": 6,
+  "derived_generation": 36,
   "desired_summary_changes": [
-    "An exact recursive focused decomposition-tree account for singleton and atomic derivations.",
-    "A height-preserving equivalence between focused search objects and `proveAux` success.",
-    "A positive surviving criterion or normal form for all-atomic antecedents after the known refutation.",
-    "A reusable iterated head-normal-form taxonomy for one-sided slash fragments with grammar-facing significance."
+    "An exact pure-left or left least-closure presentation that puts LeftRep on the same intrinsic footing as RightRep.",
+    "Bilateral recursive head-normal-form theorems for atomic conclusions, not only one-step reductions.",
+    "Exact candidate or restricted-search equivalences for one-sided fragment membership.",
+    "Focused witness theories that are compositional under same-orientation substitution rather than merely existential."
   ],
   "important_verified_counterexamples": [
-    "∀ {Γ : List Tp} {A : Tp}, (∀ x ∈ Γ, is_atom x) → Γ ⇒ A → is_atom A ∧ Γ = [A]",
-    "∀ {A B : Tp}, [A] ⇒ B ↔ A = B"
+    "For every derivation d : Γ ⇒ A, if every formula in A :: Γ is LeftDivisionOnly then d can be transformed into a derivation of Γ ⇒ A using no right-division rules, and if every formula in A :: Γ is RightDivisionOnly then d can be transfor...",
+    "∀ N : Nat, 2 ≤ N → ∃ Γ : List Tp, ∃ A : Tp, list_degree Γ + tp_degree A = N ∧ Γ ⇒ A ∧ FocusedTree (N + 1) Γ A ∧ ∀ m < N + 1, ¬ FocusedTree m Γ A",
+    "∀ N : Nat, ∃ Γ : List Tp, ∃ A : Tp, list_degree Γ + tp_degree A = N ∧ Γ ⇒ A ∧ FocusedTree (N + 1) Γ A ∧ ∀ m < N + 1, ¬ FocusedTree m Γ A"
   ],
   "missing_bridges": [
-    "A bridge from singleton outermost classification to finite focused decomposition trees.",
-    "A bridge from atomic candidate enumeration to exact soundness and completeness of last-step search.",
-    "A bridge from the all-atomic counterexample to a canonical derivation normal form.",
-    "A bridge from one-sided fragment normal forms to grammar or language-theoretic correspondence."
+    "From LeftRep to an exact pure-left or rule-theoretic intrinsic presentation.",
+    "From one-step atomic reductions to full recursive left and right head-normal forms.",
+    "From candidates and restricted search to exact LeftRep and RightRep criteria.",
+    "From existential homogeneous witnesses to compositional cut-stable focused proof objects."
   ],
   "next_direction": {
-    "guidance": "Prioritize problems that turn the verified one-step decompositions and bounded search theorem into exact recursive focused trees or exact candidate correspondences, using fragment normal forms mainly when they instantiate that same recursive picture.",
-    "label": "exact_recursive_focusing",
-    "rationale": "The counterexamples block naive rigidity restorations, while the current positive theorems already isolate the outermost step; the next summary change therefore comes from exact recursive focusing interfaces rather than more local slash lemmas or stand-alone negatives."
+    "guidance": "Prioritize pure-left or rule-theoretic intrinsic characterizations together with exact candidate or restricted-search bridges that make one-sided membership algorithmically and structurally internal.",
+    "label": "left_internalization_and_search_bridges",
+    "rationale": "Right-side internalization is already in hand, while the left subsystem interface and search-level exactness remain the clearest missing bridges; atomic-context escape and failed singleton and depth programs show that overlap and quantitative variants are lower leverage."
   },
   "overexplored_patterns": [
-    "Single-step slash transport and composition lemmas.",
-    "Weaker restatements of already proved atomic-succedent or singleton-atom facts.",
-    "Additional negative singleton or atomic variants that stop short of a reusable criterion.",
-    "Fragment observations that do not reach an iterated normal form or exact search correspondence."
+    "Overlap-to-singleton and bidirectional-rigidity corollaries near the current atomic-overlap theorem.",
+    "One-way forgetting lemmas from homogeneous witnesses to ambient focusing or derivability.",
+    "Singleton and atomic-context variants that do not build subsystem or search interfaces.",
+    "Pure depth, degree, or candidate-count sharpness questions detached from fragment internalization."
   ],
   "research_agenda": {
     "anti_goals": [
@@ -72,12 +73,12 @@
     ]
   },
   "summary_basis": {
-    "archived_problem_count": 11,
-    "derived_theorem_count": 6,
-    "open_problem_count": 6
+    "archived_problem_count": 53,
+    "derived_theorem_count": 35,
+    "open_problem_count": 7
   },
-  "theory_snapshot": "The verified core now has sharp outermost control at the atomic and singleton interfaces: atomic succedents admit a last-step slash decomposition, singleton derivability admits an outermost succedent classification, singleton-to-atom derivability collapses to equality, and atomic proof search is complete up to some finite height bound. The main frontier is no longer to find more one-step lemmas, but to turn these facts into exact recursive objects: finite focused decomposition trees, exact candidate completeness and soundness, and a height-sensitive equivalence with the Boolean search procedure. Verified counterexamples to general singleton rigidity and to the naive all-atomic antecedent theorem force progress toward surviving boundary criteria, canonical normal forms, and fragment taxonomies rather than more transport lemmas or extra negative variants.",
-  "updated_at_iteration": 9,
+  "theory_snapshot": "The theory now has exact derivation-level and focused-witness characterizations of both one-sided fragments, same-orientation cut closure, bilateral one-step atomic reduction laws, and an exact pure-right translation theorem, so the right fragment already behaves as an intrinsic subsystem. The main frontier is to match that strength on the left and to turn the atomic reduction and candidate machinery into exact recursive and proof-search interfaces rather than external recognizers. Verified boundary evidence constrains the agenda: atomic contexts can still derive sequents outside both one-sided fragments, singleton-rigidity programs have already failed outside the atomic singleton boundary, and focused-depth sharpness claims have failed, so overlap-collapse and quantitative sharpness variants are unlikely to change the summary.",
+  "updated_at_iteration": 50,
   "updated_at_run_id": "20260413-173137-loop",
   "version": 1
 }

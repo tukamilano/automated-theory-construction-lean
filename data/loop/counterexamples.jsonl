@@ -1,2 +1,6 @@
 {"id":"op_000001","stmt":"∀ {A B : Tp}, [A] ⇒ B ↔ A = B","run_id":"20260413-173137-loop","iteration":1,"session_type":"loop"}
 {"id":"op_000002","stmt":"∀ {Γ : List Tp} {A : Tp}, (∀ x ∈ Γ, is_atom x) → Γ ⇒ A → is_atom A ∧ Γ = [A]","run_id":"20260413-173137-loop","iteration":2,"session_type":"loop"}
+{"id":"op_000011","stmt":"∀ {Γ : List Tp} {A : Tp}, (∀ x ∈ Γ, is_atom x) → Γ ⇒ A → ∃ s : String, Γ = [Tp.atom s]","run_id":"20260413-173137-loop","iteration":10,"session_type":"loop"}
+{"id":"op_000029","stmt":"∀ N : Nat, ∃ Γ : List Tp, ∃ A : Tp, list_degree Γ + tp_degree A = N ∧ Γ ⇒ A ∧ FocusedTree (N + 1) Γ A ∧ ∀ m < N + 1, ¬ FocusedTree m Γ A","run_id":"20260413-173137-loop","iteration":15,"session_type":"loop"}
+{"id":"op_000033","stmt":"∀ N : Nat, 2 ≤ N → ∃ Γ : List Tp, ∃ A : Tp, list_degree Γ + tp_degree A = N ∧ Γ ⇒ A ∧ FocusedTree (N + 1) Γ A ∧ ∀ m < N + 1, ¬ FocusedTree m Γ A","run_id":"20260413-173137-loop","iteration":17,"session_type":"loop"}
+{"id":"op_000049","stmt":"For every derivation d : Γ ⇒ A, if every formula in A :: Γ is LeftDivisionOnly then d can be transformed into a derivation of Γ ⇒ A using no right-division rules, and if every formula in A :: Γ is RightDivisionOnly then d can be transformed into one using no left-division rules.","run_id":"20260413-173137-loop","iteration":31,"session_type":"loop"}

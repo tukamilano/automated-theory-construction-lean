@@ -107,6 +107,7 @@ def _add_loop_tuning_flags(parser: argparse.ArgumentParser) -> None:
 def _add_pipeline_refactor_toggles(parser: argparse.ArgumentParser, *, default: bool | None = None) -> None:
     for flag in (
         "run-seed",
+        "run-alpha-dedupe-before-pass-1_5",
         "run-refactor-pass-1_5",
         "run-refactor-pass-2",
     ):
@@ -119,6 +120,8 @@ def _add_pipeline_artifact_flags(
     include_review_output_file: bool = False,
     include_theorem_reuse_memory: bool = False,
 ) -> None:
+    parser.add_argument("--alpha-dedupe-report-file")
+    parser.add_argument("--alpha-dedupe-equivalence-mode", choices=("alpha", "defeq"))
     parser.add_argument("--review-report-file")
     parser.add_argument("--try-at-each-step-tactic")
     parser.add_argument("--try-at-each-step-raw-output-file")
@@ -199,6 +202,8 @@ def _pipeline_command(args: argparse.Namespace, config: AppConfig) -> tuple[list
     _append_flag(cmd, "--formalization-retry-budget-sec", config.runtime.formalization_retry_budget_sec)
     _append_flag(cmd, "--max-same-error-streak", config.runtime.max_same_error_streak)
     _append_flag(cmd, "--preview-file", args.preview_file or config.paths.preview_file)
+    _append_flag(cmd, "--alpha-dedupe-report-file", args.alpha_dedupe_report_file)
+    _append_flag(cmd, "--alpha-dedupe-equivalence-mode", args.alpha_dedupe_equivalence_mode)
     _append_flag(cmd, "--review-output-file", args.review_output_file or config.paths.reviewed_file)
     _append_flag(cmd, "--review-report-file", args.review_report_file or config.paths.review_report_file)
     _append_flag(
@@ -219,6 +224,8 @@ def _pipeline_command(args: argparse.Namespace, config: AppConfig) -> tuple[list
     _append_flag(cmd, "--review-model", args.review_model)
     _append_flag(cmd, "--review-sandbox", args.review_sandbox)
     _append_bool_flag(cmd, "--run-seed", config.runtime.run_seed)
+    if args.run_alpha_dedupe_before_pass_1_5 is not None:
+        _append_bool_flag(cmd, "--run-alpha-dedupe-before-pass-1_5", args.run_alpha_dedupe_before_pass_1_5)
     _append_bool_flag(cmd, "--run-refactor-pass-1_5", config.runtime.run_refactor_pass_1_5)
     _append_bool_flag(cmd, "--run-refactor-pass-2", config.runtime.run_refactor_pass_2)
     if args.no_review_verify:
@@ -240,6 +247,8 @@ def _cycle_command(args: argparse.Namespace, config: AppConfig) -> tuple[list[st
         args.phase_attempts_file,
     )
     _append_flag(cmd, "--preview-file", args.preview_file or config.paths.preview_file)
+    _append_flag(cmd, "--alpha-dedupe-report-file", args.alpha_dedupe_report_file)
+    _append_flag(cmd, "--alpha-dedupe-equivalence-mode", getattr(args, "alpha_dedupe_equivalence_mode", None))
     _append_flag(cmd, "--review-output-file", args.review_output_file or config.paths.reviewed_file)
     _append_flag(cmd, "--review-report-file", args.review_report_file or config.paths.review_report_file)
     _append_flag(
@@ -293,6 +302,8 @@ def _cycle_command(args: argparse.Namespace, config: AppConfig) -> tuple[list[st
         cmd.append("--skip-paper-claim")
     if args.skip_refactor:
         cmd.append("--skip-refactor")
+    if getattr(args, "skip_alpha_dedupe_before_pass_1_5", False):
+        cmd.append("--skip-alpha-dedupe-before-pass-1_5")
     _append_flag(cmd, "--parallel-sessions", config.runtime.parallel_sessions)
     _append_flag(cmd, "--seed-count", config.runtime.seed_count)
     _append_flag(cmd, "--open-problem-failure-threshold", config.runtime.open_problem_failure_threshold)
@@ -305,9 +316,6 @@ def _cycle_command(args: argparse.Namespace, config: AppConfig) -> tuple[list[st
         args.generated_repair_verify_timeout or config.runtime.generated_repair_verify_timeout,
     )
     _append_flag(cmd, "--batch-generator-open-target-min", args.batch_generator_open_target_min)
-    _append_flag(cmd, "--generated-local-worker-timeout", args.generated_local_worker_timeout)
-    _append_flag(cmd, "--generated-local-manifest-verify-timeout", args.generated_local_manifest_verify_timeout)
-    _append_flag(cmd, "--generated-local-max-rounds-per-pass", args.generated_local_max_rounds_per_pass)
     return cmd, build_worker_env(config)
 
 
@@ -502,6 +510,8 @@ def _build_parser() -> argparse.ArgumentParser:
     cycle.add_argument("--data-dir")
     cycle.add_argument("--phase-attempts-file")
     cycle.add_argument("--preview-file")
+    cycle.add_argument("--alpha-dedupe-report-file")
+    cycle.add_argument("--alpha-dedupe-equivalence-mode", choices=("alpha", "defeq"))
     cycle.add_argument("--review-output-file")
     cycle.add_argument("--review-report-file")
     cycle.add_argument("--try-at-each-step-raw-output-file")
@@ -518,15 +528,13 @@ def _build_parser() -> argparse.ArgumentParser:
     cycle.add_argument("--skip-verify", action="store_true")
     cycle.add_argument("--skip-paper-claim", action="store_true")
     cycle.add_argument("--skip-refactor", action="store_true")
+    cycle.add_argument("--skip-alpha-dedupe-before-pass-1_5", action="store_true")
     cycle.add_argument("--initialize-on-start", action=argparse.BooleanOptionalAction, default=None)
     cycle.add_argument("--phase-logs", action=argparse.BooleanOptionalAction, default=None)
     cycle.add_argument("--generated-repair-verify-timeout", type=int)
     cycle.add_argument("--batch-generator-open-target-min", type=int, default=2)
-    cycle.add_argument("--generated-local-worker-timeout", type=int)
-    cycle.add_argument("--generated-local-manifest-verify-timeout", type=int)
-    cycle.add_argument("--generated-local-max-rounds-per-pass", type=int)
 
-    pipeline = subparsers.add_parser("pipeline", help="Run seed -> loop -> preview copy -> rewrite -> review.")
+    pipeline = subparsers.add_parser("pipeline", help="Run seed -> loop -> preview copy -> alpha-dedupe -> rewrite -> review.")
     _add_common_flags(pipeline)
     _add_worker_flags(pipeline, include_refactor_task=True)
     _add_loop_task_worker_flags(pipeline)

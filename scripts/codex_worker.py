@@ -13,17 +13,12 @@ from llm_exec import resolve_provider
 from llm_exec import run_llm_exec
 
 
-TASK_TYPE_ENV_ALIASES = {
-    "plan_derived_compression": "refactor_derived",
-    "apply_derived_compression_item": "refactor_derived",
-}
+TASK_TYPE_ENV_ALIASES = {}
 
 
 def _task_is_unbounded_by_default(task_type: str) -> bool:
     return task_type in {
         "refactor_derived",
-        "plan_derived_compression",
-        "apply_derived_compression_item",
         "paper_claim_codex_prove",
     } or task_type.startswith("problem_design_")
 
@@ -307,8 +302,6 @@ def main() -> None:
             "repair",
             "expand",
             "refactor_derived",
-            "plan_derived_compression",
-            "apply_derived_compression_item",
             "prioritize_open_problems",
             "problem_design_cluster",
             "problem_design_contextualize",

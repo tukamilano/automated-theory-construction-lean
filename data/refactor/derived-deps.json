@@ -1,271 +1,394 @@
 [
   {
-    "name": "AutomatedTheoryConstruction.thm_sequent_degree_bound_000005_is_false",
+    "name": "AutomatedTheoryConstruction.thm_singleton_sequent_iff_eq_000001_is_false",
     "constCategory": "theorem",
     "constType": "",
     "references": []
   },
   {
-    "name": "AutomatedTheoryConstruction.thm_singleton_sequent_eq_000002_is_false",
+    "name": "AutomatedTheoryConstruction.thm_atomic_context_singleton_000002_is_false",
     "constCategory": "theorem",
     "constType": "",
     "references": []
   },
   {
-    "name": "AutomatedTheoryConstruction.thm_singleton_atom_derivation_shape_000009_is_false",
+    "name": "AutomatedTheoryConstruction.thm_atom_sequent_decompose_000009",
     "constCategory": "theorem",
     "constType": "",
     "references": []
   },
   {
-    "name": "AutomatedTheoryConstruction.thm_atom_count_bounded_by_context_000010_is_false",
+    "name": "AutomatedTheoryConstruction.thm_singleton_atom_iff_eq_000008",
     "constCategory": "theorem",
     "constType": "",
     "references": []
   },
   {
-    "name": "AutomatedTheoryConstruction.thm_singleton_nonatom_derivation_shape_000013",
+    "name": "AutomatedTheoryConstruction.thm_singleton_sequent_classification_000017",
+    "constCategory": "theorem",
+    "constType": "",
+    "references": [
+      "AutomatedTheoryConstruction.thm_singleton_atom_iff_eq_000008"
+    ]
+  },
+  {
+    "name": "AutomatedTheoryConstruction.thm_atomic_focused_tree_exists_000016",
     "constCategory": "theorem",
     "constType": "",
     "references": []
   },
   {
-    "name": "AutomatedTheoryConstruction.thm_singleton_atomic_sequent_iff_000011",
+    "name": "AutomatedTheoryConstruction.thm_proveaux_atom_tree_exact_000021",
     "constCategory": "theorem",
     "constType": "",
     "references": []
   },
   {
-    "name": "AutomatedTheoryConstruction.thm_singleton_atom_sequent_iff_000018",
-    "constCategory": "theorem",
-    "constType": "",
-    "references": [
-      "AutomatedTheoryConstruction.thm_singleton_atomic_sequent_iff_000011"
-    ]
-  },
-  {
-    "name": "AutomatedTheoryConstruction.thm_singleton_sequent_iff_cases_000022",
-    "constCategory": "theorem",
-    "constType": "",
-    "references": [
-      "AutomatedTheoryConstruction.thm_singleton_atomic_sequent_iff_000011"
-    ]
-  },
-  {
-    "name": "AutomatedTheoryConstruction.thm_atom_context_sequent_cases_000023",
-    "constCategory": "theorem",
-    "constType": "",
-    "references": [
-      "AutomatedTheoryConstruction.thm_singleton_atomic_sequent_iff_000011"
-    ]
-  },
-  {
-    "name": "AutomatedTheoryConstruction.thm_atom_goal_candidate_cases_000007",
+    "name": "AutomatedTheoryConstruction.thm_atomic_context_singleton_000011_is_false",
     "constCategory": "theorem",
     "constType": "",
     "references": []
   },
   {
-    "name": "AutomatedTheoryConstruction.thm_occurs_atom_from_context_000021_is_false",
+    "name": "AutomatedTheoryConstruction.thm_sequent_iff_focused_tree_000023",
+    "constCategory": "theorem",
+    "constType": "",
+    "references": [
+      "AutomatedTheoryConstruction.thm_proveaux_atom_tree_exact_000021"
+    ]
+  },
+  {
+    "name": "AutomatedTheoryConstruction.thm_proveaux_focused_tree_exact_000022",
+    "constCategory": "theorem",
+    "constType": "",
+    "references": [
+      "AutomatedTheoryConstruction.thm_proveaux_atom_tree_exact_000021"
+    ]
+  },
+  {
+    "name": "AutomatedTheoryConstruction.thm_bounded_focused_tree_threshold_000026",
+    "constCategory": "theorem",
+    "constType": "",
+    "references": [
+      "AutomatedTheoryConstruction.thm_proveaux_focused_tree_exact_000022",
+      "AutomatedTheoryConstruction.thm_proveaux_atom_tree_exact_000021"
+    ]
+  },
+  {
+    "name": "AutomatedTheoryConstruction.thm_sharp_focused_degree_bound_000029_is_false",
+    "constCategory": "theorem",
+    "constType": "",
+    "references": [
+      "AutomatedTheoryConstruction.thm_proveaux_atom_tree_exact_000021"
+    ]
+  },
+  {
+    "name": "AutomatedTheoryConstruction.thm_atomic_context_fragment_gap_000025",
     "constCategory": "theorem",
     "constType": "",
     "references": []
   },
   {
-    "name": "AutomatedTheoryConstruction.support_ok_replace",
-    "constCategory": "lemma",
+    "name": "AutomatedTheoryConstruction.thm_atomic_candidate_exactness_000020",
+    "constCategory": "theorem",
     "constType": "",
-    "references": [
-      "AutomatedTheoryConstruction.thm_occurs_atom_from_context_000021_is_false"
-    ]
+    "references": []
   },
   {
-    "name": "AutomatedTheoryConstruction.support_ok_self_singleton",
-    "constCategory": "lemma",
-    "constType": "",
-    "references": [
-      "AutomatedTheoryConstruction.thm_occurs_atom_from_context_000021_is_false",
-      "AutomatedTheoryConstruction.support_ok_replace"
-    ]
-  },
-  {
-    "name": "AutomatedTheoryConstruction.thm_derivable_support_ok_000032",
+    "name": "AutomatedTheoryConstruction.thm_sharp_focused_degree_from_two_000033_is_false",
     "constCategory": "theorem",
     "constType": "",
     "references": [
-      "AutomatedTheoryConstruction.thm_occurs_atom_from_context_000021_is_false",
-      "AutomatedTheoryConstruction.support_ok_replace",
-      "AutomatedTheoryConstruction.support_ok_self_singleton"
+      "AutomatedTheoryConstruction.thm_singleton_atom_iff_eq_000008",
+      "AutomatedTheoryConstruction.thm_proveaux_atom_tree_exact_000021"
     ]
   },
   {
-    "name": "AutomatedTheoryConstruction.thm_atomic_candidate_tree_iff_sequent_000030",
-    "constCategory": "theorem",
-    "constType": "",
-    "references": [
-      "AutomatedTheoryConstruction.thm_atom_goal_candidate_cases_000007",
-      "AutomatedTheoryConstruction.thm_singleton_atomic_sequent_iff_000011"
-    ]
-  },
-  {
-    "name": "AutomatedTheoryConstruction.thm_support_closure_matches_support_ok_000036",
-    "constCategory": "theorem",
-    "constType": "",
-    "references": [
-      "AutomatedTheoryConstruction.thm_occurs_atom_from_context_000021_is_false",
-      "AutomatedTheoryConstruction.support_ok_self_singleton",
-      "AutomatedTheoryConstruction.support_ok_replace"
-    ]
-  },
-  {
-    "name": "AutomatedTheoryConstruction.thm_candidate_tree_iff_sequent_000038",
-    "constCategory": "theorem",
-    "constType": "",
-    "references": [
-      "AutomatedTheoryConstruction.thm_singleton_atomic_sequent_iff_000011",
-      "AutomatedTheoryConstruction.thm_atomic_candidate_tree_iff_sequent_000030"
-    ]
-  },
-  {
-    "name": "AutomatedTheoryConstruction.thm_support_closure_exact_complete_000041_is_false",
-    "constCategory": "theorem",
-    "constType": "",
-    "references": [
-      "AutomatedTheoryConstruction.thm_occurs_atom_from_context_000021_is_false",
-      "AutomatedTheoryConstruction.thm_singleton_atomic_sequent_iff_000011"
-    ]
-  },
-  {
-    "name": "AutomatedTheoryConstruction.thm_handed_support_closure_iff_sequent_000048",
-    "constCategory": "theorem",
-    "constType": "",
-    "references": [
-      "AutomatedTheoryConstruction.thm_atomic_candidate_tree_iff_sequent_000030"
-    ]
-  },
-  {
-    "name": "AutomatedTheoryConstruction.exists_left_tp_of_isLeftOnly",
+    "name": "AutomatedTheoryConstruction.left_only_of_left_tp",
     "constCategory": "lemma",
     "constType": "",
     "references": []
   },
   {
-    "name": "AutomatedTheoryConstruction.exists_right_tp_of_isRightOnly",
+    "name": "AutomatedTheoryConstruction.right_only_of_right_tp",
     "constCategory": "lemma",
     "constType": "",
     "references": [
-      "AutomatedTheoryConstruction.exists_left_tp_of_isLeftOnly"
+      "AutomatedTheoryConstruction.left_only_of_left_tp"
     ]
   },
   {
-    "name": "AutomatedTheoryConstruction.exists_left_ctx_of_allLeftOnly",
+    "name": "AutomatedTheoryConstruction.exists_left_tp_of_left_only",
     "constCategory": "lemma",
     "constType": "",
     "references": [
-      "AutomatedTheoryConstruction.exists_left_tp_of_isLeftOnly"
+      "AutomatedTheoryConstruction.left_only_of_left_tp"
     ]
   },
   {
-    "name": "AutomatedTheoryConstruction.exists_right_ctx_of_allRightOnly",
+    "name": "AutomatedTheoryConstruction.exists_right_tp_of_right_only",
     "constCategory": "lemma",
     "constType": "",
     "references": [
-      "AutomatedTheoryConstruction.exists_right_tp_of_isRightOnly",
-      "AutomatedTheoryConstruction.exists_left_tp_of_isLeftOnly"
+      "AutomatedTheoryConstruction.left_only_of_left_tp"
     ]
   },
   {
-    "name": "AutomatedTheoryConstruction.thm_full_one_sided_conservativity_000042",
-    "constCategory": "theorem",
-    "constType": "",
-    "references": [
-      "AutomatedTheoryConstruction.exists_left_tp_of_isLeftOnly",
-      "AutomatedTheoryConstruction.exists_right_ctx_of_allRightOnly",
-      "AutomatedTheoryConstruction.exists_right_tp_of_isRightOnly",
-      "AutomatedTheoryConstruction.exists_left_ctx_of_allLeftOnly"
-    ]
-  },
-  {
-    "name": "AutomatedTheoryConstruction.thm_residual_support_normal_form_000050",
-    "constCategory": "theorem",
-    "constType": "",
-    "references": [
-      "AutomatedTheoryConstruction.thm_handed_support_closure_iff_sequent_000048",
-      "AutomatedTheoryConstruction.thm_occurs_atom_from_context_000021_is_false",
-      "AutomatedTheoryConstruction.support_ok_replace",
-      "AutomatedTheoryConstruction.thm_support_closure_matches_support_ok_000036"
-    ]
-  },
-  {
-    "name": "AutomatedTheoryConstruction.leftHandedSupportClosure_iff_sequent",
+    "name": "AutomatedTheoryConstruction.exists_left_ctx_of_atomic",
     "constCategory": "lemma",
     "constType": "",
     "references": [
-      "AutomatedTheoryConstruction.exists_left_tp_of_isLeftOnly",
-      "AutomatedTheoryConstruction.thm_atomic_candidate_tree_iff_sequent_000030"
+      "AutomatedTheoryConstruction.thm_atomic_context_fragment_gap_000025"
     ]
   },
   {
-    "name": "AutomatedTheoryConstruction.rightHandedSupportClosure_iff_sequent",
+    "name": "AutomatedTheoryConstruction.exists_right_ctx_of_atomic",
     "constCategory": "lemma",
     "constType": "",
     "references": [
-      "AutomatedTheoryConstruction.leftHandedSupportClosure_iff_sequent",
-      "AutomatedTheoryConstruction.thm_atomic_candidate_tree_iff_sequent_000030"
+      "AutomatedTheoryConstruction.thm_atomic_context_fragment_gap_000025"
     ]
   },
   {
-    "name": "AutomatedTheoryConstruction.thm_one_sided_handed_conservativity_000051",
+    "name": "AutomatedTheoryConstruction.thm_atomic_context_one_sided_iff_000035",
     "constCategory": "theorem",
     "constType": "",
     "references": [
-      "AutomatedTheoryConstruction.exists_left_tp_of_isLeftOnly",
-      "AutomatedTheoryConstruction.thm_handed_support_closure_iff_sequent_000048",
-      "AutomatedTheoryConstruction.exists_right_ctx_of_allRightOnly",
-      "AutomatedTheoryConstruction.exists_right_tp_of_isRightOnly",
-      "AutomatedTheoryConstruction.leftHandedSupportClosure_iff_sequent",
-      "AutomatedTheoryConstruction.thm_full_one_sided_conservativity_000042",
-      "AutomatedTheoryConstruction.exists_left_ctx_of_allLeftOnly"
+      "AutomatedTheoryConstruction.right_only_of_right_tp",
+      "AutomatedTheoryConstruction.left_only_of_left_tp",
+      "AutomatedTheoryConstruction.thm_atomic_context_fragment_gap_000025",
+      "AutomatedTheoryConstruction.exists_right_ctx_of_atomic",
+      "AutomatedTheoryConstruction.exists_left_tp_of_left_only",
+      "AutomatedTheoryConstruction.exists_right_tp_of_right_only",
+      "AutomatedTheoryConstruction.exists_left_ctx_of_atomic"
     ]
   },
   {
-    "name": "AutomatedTheoryConstruction.thm_residual_candidate_tree_bijection_000055",
-    "constCategory": "theorem",
+    "name": "AutomatedTheoryConstruction.exists_left_ctx_of_left_only",
+    "constCategory": "lemma",
     "constType": "",
     "references": [
-      "AutomatedTheoryConstruction.thm_handed_support_closure_iff_sequent_000048",
-      "AutomatedTheoryConstruction.thm_residual_support_normal_form_000050",
-      "AutomatedTheoryConstruction.thm_occurs_atom_from_context_000021_is_false",
-      "AutomatedTheoryConstruction.thm_candidate_tree_iff_sequent_000038"
+      "AutomatedTheoryConstruction.left_only_of_left_tp",
+      "AutomatedTheoryConstruction.exists_left_tp_of_left_only"
     ]
   },
   {
-    "name": "AutomatedTheoryConstruction.thm_residual_graph_recognizes_sequent_000062",
-    "constCategory": "theorem",
+    "name": "AutomatedTheoryConstruction.exists_right_ctx_of_right_only",
+    "constCategory": "lemma",
     "constType": "",
     "references": [
-      "AutomatedTheoryConstruction.thm_residual_support_normal_form_000050",
-      "AutomatedTheoryConstruction.thm_occurs_atom_from_context_000021_is_false",
-      "AutomatedTheoryConstruction.thm_handed_support_closure_iff_sequent_000048"
+      "AutomatedTheoryConstruction.left_only_of_left_tp",
+      "AutomatedTheoryConstruction.exists_right_tp_of_right_only"
     ]
   },
   {
-    "name": "AutomatedTheoryConstruction.thm_residual_atomic_branch_bound_000057",
+    "name": "AutomatedTheoryConstruction.thm_uniform_orientation_fragment_iff_000041",
     "constCategory": "theorem",
     "constType": "",
     "references": [
-      "AutomatedTheoryConstruction.thm_residual_support_normal_form_000050"
+      "AutomatedTheoryConstruction.exists_right_ctx_of_right_only",
+      "AutomatedTheoryConstruction.exists_left_ctx_of_left_only",
+      "AutomatedTheoryConstruction.right_only_of_right_tp",
+      "AutomatedTheoryConstruction.left_only_of_left_tp",
+      "AutomatedTheoryConstruction.thm_atomic_context_fragment_gap_000025",
+      "AutomatedTheoryConstruction.exists_left_tp_of_left_only",
+      "AutomatedTheoryConstruction.exists_right_tp_of_right_only"
     ]
   },
   {
-    "name": "AutomatedTheoryConstruction.thm_same_handed_support_exactness_000059_is_false",
+    "name": "AutomatedTheoryConstruction.thm_uniform_derivation_rep_000046",
     "constCategory": "theorem",
     "constType": "",
     "references": [
-      "AutomatedTheoryConstruction.thm_handed_support_closure_iff_sequent_000048",
-      "AutomatedTheoryConstruction.exists_left_tp_of_isLeftOnly",
-      "AutomatedTheoryConstruction.thm_occurs_atom_from_context_000021_is_false",
-      "AutomatedTheoryConstruction.thm_singleton_atomic_sequent_iff_000011"
+      "AutomatedTheoryConstruction.thm_atomic_context_fragment_gap_000025"
+    ]
+  },
+  {
+    "name": "AutomatedTheoryConstruction.thm_uniform_orientation_yields_fragment_000047",
+    "constCategory": "theorem",
+    "constType": "",
+    "references": [
+      "AutomatedTheoryConstruction.exists_right_ctx_of_right_only",
+      "AutomatedTheoryConstruction.left_only_of_left_tp",
+      "AutomatedTheoryConstruction.exists_left_ctx_of_left_only",
+      "AutomatedTheoryConstruction.exists_left_tp_of_left_only",
+      "AutomatedTheoryConstruction.exists_right_tp_of_right_only",
+      "AutomatedTheoryConstruction.thm_atomic_context_fragment_gap_000025"
+    ]
+  },
+  {
+    "name": "AutomatedTheoryConstruction.thm_one_sided_derivation_normalization_000049_is_false",
+    "constCategory": "theorem",
+    "constType": "",
+    "references": [
+      "AutomatedTheoryConstruction.left_only_of_left_tp",
+      "AutomatedTheoryConstruction.thm_uniform_derivation_rep_000046",
+      "AutomatedTheoryConstruction.thm_atomic_context_fragment_gap_000025",
+      "AutomatedTheoryConstruction.thm_singleton_atom_iff_eq_000008"
+    ]
+  },
+  {
+    "name": "AutomatedTheoryConstruction.thm_uniform_orientation_implies_oriented_derivation_000055",
+    "constCategory": "theorem",
+    "constType": "",
+    "references": [
+      "AutomatedTheoryConstruction.left_only_of_left_tp",
+      "AutomatedTheoryConstruction.thm_uniform_orientation_yields_fragment_000047",
+      "AutomatedTheoryConstruction.thm_uniform_derivation_rep_000046",
+      "AutomatedTheoryConstruction.thm_atomic_context_fragment_gap_000025"
+    ]
+  },
+  {
+    "name": "AutomatedTheoryConstruction.thm_left_right_rep_atomic_iff_000052",
+    "constCategory": "theorem",
+    "constType": "",
+    "references": [
+      "AutomatedTheoryConstruction.right_only_of_right_tp",
+      "AutomatedTheoryConstruction.left_only_of_left_tp",
+      "AutomatedTheoryConstruction.thm_atomic_context_fragment_gap_000025",
+      "AutomatedTheoryConstruction.thm_uniform_orientation_yields_fragment_000047"
+    ]
+  },
+  {
+    "name": "AutomatedTheoryConstruction.thm_left_oriented_derivation_exact_000058",
+    "constCategory": "theorem",
+    "constType": "",
+    "references": [
+      "AutomatedTheoryConstruction.left_only_of_left_tp",
+      "AutomatedTheoryConstruction.thm_uniform_derivation_rep_000046",
+      "AutomatedTheoryConstruction.thm_atomic_context_fragment_gap_000025",
+      "AutomatedTheoryConstruction.thm_uniform_orientation_implies_oriented_derivation_000055"
+    ]
+  },
+  {
+    "name": "AutomatedTheoryConstruction.thm_right_oriented_derivation_exact_000059",
+    "constCategory": "theorem",
+    "constType": "",
+    "references": [
+      "AutomatedTheoryConstruction.right_only_of_right_tp",
+      "AutomatedTheoryConstruction.left_only_of_left_tp",
+      "AutomatedTheoryConstruction.thm_uniform_derivation_rep_000046",
+      "AutomatedTheoryConstruction.thm_uniform_orientation_implies_oriented_derivation_000055",
+      "AutomatedTheoryConstruction.thm_atomic_context_fragment_gap_000025"
+    ]
+  },
+  {
+    "name": "AutomatedTheoryConstruction.thm_one_sided_rep_cut_closed_000050",
+    "constCategory": "theorem",
+    "constType": "",
+    "references": [
+      "AutomatedTheoryConstruction.left_only_of_left_tp",
+      "AutomatedTheoryConstruction.thm_uniform_derivation_rep_000046",
+      "AutomatedTheoryConstruction.thm_atomic_context_fragment_gap_000025",
+      "AutomatedTheoryConstruction.thm_right_oriented_derivation_exact_000059",
+      "AutomatedTheoryConstruction.thm_uniform_orientation_implies_oriented_derivation_000055",
+      "AutomatedTheoryConstruction.thm_left_oriented_derivation_exact_000058"
+    ]
+  },
+  {
+    "name": "AutomatedTheoryConstruction.thm_left_only_focused_tree_000062",
+    "constCategory": "theorem",
+    "constType": "",
+    "references": [
+      "AutomatedTheoryConstruction.left_only_of_left_tp",
+      "AutomatedTheoryConstruction.thm_sequent_iff_focused_tree_000023",
+      "AutomatedTheoryConstruction.thm_proveaux_atom_tree_exact_000021"
+    ]
+  },
+  {
+    "name": "AutomatedTheoryConstruction.thm_leftrep_ldiv_inversion_000053",
+    "constCategory": "theorem",
+    "constType": "",
+    "references": [
+      "AutomatedTheoryConstruction.thm_atomic_context_fragment_gap_000025",
+      "AutomatedTheoryConstruction.left_only_of_left_tp",
+      "AutomatedTheoryConstruction.thm_uniform_derivation_rep_000046",
+      "AutomatedTheoryConstruction.thm_left_oriented_derivation_exact_000058"
+    ]
+  },
+  {
+    "name": "AutomatedTheoryConstruction.thm_right_only_focused_tree_000067",
+    "constCategory": "theorem",
+    "constType": "",
+    "references": [
+      "AutomatedTheoryConstruction.left_only_of_left_tp",
+      "AutomatedTheoryConstruction.thm_sequent_iff_focused_tree_000023",
+      "AutomatedTheoryConstruction.thm_proveaux_atom_tree_exact_000021"
+    ]
+  },
+  {
+    "name": "AutomatedTheoryConstruction.thm_rightrep_rdiv_inversion_000054",
+    "constCategory": "theorem",
+    "constType": "",
+    "references": [
+      "AutomatedTheoryConstruction.left_only_of_left_tp",
+      "AutomatedTheoryConstruction.thm_uniform_derivation_rep_000046",
+      "AutomatedTheoryConstruction.thm_right_oriented_derivation_exact_000059",
+      "AutomatedTheoryConstruction.thm_uniform_orientation_implies_oriented_derivation_000055",
+      "AutomatedTheoryConstruction.thm_atomic_context_fragment_gap_000025"
+    ]
+  },
+  {
+    "name": "AutomatedTheoryConstruction.thm_left_focused_tree_iff_left_only_000071",
+    "constCategory": "theorem",
+    "constType": "",
+    "references": [
+      "AutomatedTheoryConstruction.thm_left_only_focused_tree_000062",
+      "AutomatedTheoryConstruction.thm_sequent_iff_focused_tree_000023",
+      "AutomatedTheoryConstruction.thm_proveaux_atom_tree_exact_000021"
+    ]
+  },
+  {
+    "name": "AutomatedTheoryConstruction.thm_right_focused_tree_iff_000075",
+    "constCategory": "theorem",
+    "constType": "",
+    "references": [
+      "AutomatedTheoryConstruction.thm_sequent_iff_focused_tree_000023",
+      "AutomatedTheoryConstruction.thm_right_only_focused_tree_000067",
+      "AutomatedTheoryConstruction.thm_proveaux_atom_tree_exact_000021"
+    ]
+  },
+  {
+    "name": "AutomatedTheoryConstruction.thm_leftrep_atom_reduction_000072",
+    "constCategory": "theorem",
+    "constType": "",
+    "references": [
+      "AutomatedTheoryConstruction.thm_atomic_context_fragment_gap_000025",
+      "AutomatedTheoryConstruction.thm_left_oriented_derivation_exact_000058",
+      "AutomatedTheoryConstruction.thm_atom_sequent_decompose_000009",
+      "AutomatedTheoryConstruction.thm_singleton_atom_iff_eq_000008",
+      "AutomatedTheoryConstruction.left_only_of_left_tp",
+      "AutomatedTheoryConstruction.thm_uniform_derivation_rep_000046"
+    ]
+  },
+  {
+    "name": "AutomatedTheoryConstruction.thm_rightrep_atom_reduction_000078",
+    "constCategory": "theorem",
+    "constType": "",
+    "references": [
+      "AutomatedTheoryConstruction.left_only_of_left_tp",
+      "AutomatedTheoryConstruction.thm_right_oriented_derivation_exact_000059",
+      "AutomatedTheoryConstruction.thm_atomic_context_fragment_gap_000025",
+      "AutomatedTheoryConstruction.thm_atom_sequent_decompose_000009",
+      "AutomatedTheoryConstruction.thm_uniform_derivation_rep_000046",
+      "AutomatedTheoryConstruction.thm_singleton_atom_iff_eq_000008",
+      "AutomatedTheoryConstruction.thm_uniform_orientation_implies_oriented_derivation_000055"
+    ]
+  },
+  {
+    "name": "AutomatedTheoryConstruction.thm_rightrep_pure_right_exact_000080",
+    "constCategory": "theorem",
+    "constType": "",
+    "references": [
+      "AutomatedTheoryConstruction.thm_atomic_context_fragment_gap_000025"
+    ]
+  },
+  {
+    "name": "AutomatedTheoryConstruction.thm_leftrep_iff_left_sequent_000086",
+    "constCategory": "theorem",
+    "constType": "",
+    "references": [
+      "AutomatedTheoryConstruction.thm_atomic_context_fragment_gap_000025"
     ]
   }
 ]

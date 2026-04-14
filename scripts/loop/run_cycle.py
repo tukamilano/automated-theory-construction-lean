@@ -11,17 +11,22 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+SCRIPT_DIR = Path(__file__).resolve().parent
+SCRIPTS_ROOT = SCRIPT_DIR.parent
+scripts_root_str = str(SCRIPTS_ROOT)
+if scripts_root_str not in sys.path:
+    sys.path.insert(0, scripts_root_str)
+
 from atc_paths import loop_theory_state_path
 from atc_paths import loop_theorem_reuse_memory_path
 from atc_paths import refactor_chunk_plan_path
 from atc_paths import refactor_data_dir
 from atc_paths import refactor_deps_path
 
-SCRIPT_DIR = Path(__file__).resolve().parent
-SCRIPTS_ROOT = SCRIPT_DIR.parent
 REPO_ROOT = SCRIPTS_ROOT.parent
 
 DEFAULT_PREVIEW_FILE = "AutomatedTheoryConstruction/Derived.refactored.preview.lean"
+DEFAULT_ALPHA_DEDUPE_REPORT_FILE = "AutomatedTheoryConstruction/Derived.alpha_dedupe.report.json"
 DEFAULT_REVIEW_OUTPUT_FILE = "AutomatedTheoryConstruction/Derived.refactored.reviewed.lean"
 DEFAULT_REVIEW_REPORT_FILE = "AutomatedTheoryConstruction/Derived.refactored.reviewed.report.json"
 DEFAULT_TRY_AT_EACH_STEP_RAW_OUTPUT_FILE = "AutomatedTheoryConstruction/Derived.tryAtEachStep.json"
@@ -135,6 +140,8 @@ def main() -> int:
     parser.add_argument("--data-dir", default="data")
     parser.add_argument("--phase-attempts-file")
     parser.add_argument("--preview-file", default=DEFAULT_PREVIEW_FILE)
+    parser.add_argument("--alpha-dedupe-report-file", default=DEFAULT_ALPHA_DEDUPE_REPORT_FILE)
+    parser.add_argument("--alpha-dedupe-equivalence-mode", choices=("alpha", "defeq"), default="defeq")
     parser.add_argument("--review-output-file", default=DEFAULT_REVIEW_OUTPUT_FILE)
     parser.add_argument("--review-report-file", default=DEFAULT_REVIEW_REPORT_FILE)
     parser.add_argument("--try-at-each-step-raw-output-file", default=DEFAULT_TRY_AT_EACH_STEP_RAW_OUTPUT_FILE)
@@ -157,14 +164,12 @@ def main() -> int:
     parser.add_argument("--formalization-retry-budget-sec", type=int, default=300)
     parser.add_argument("--max-same-error-streak", type=int, default=5)
     parser.add_argument("--generated-repair-verify-timeout", type=int, default=300)
-    parser.add_argument("--generated-local-worker-timeout", type=int, default=300)
-    parser.add_argument("--generated-local-manifest-verify-timeout", type=int, default=300)
-    parser.add_argument("--generated-local-max-rounds-per-pass", type=int, default=5)
     parser.add_argument("--initialize-on-start", action=argparse.BooleanOptionalAction, default=False)
     parser.add_argument("--phase-logs", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--skip-verify", action="store_true")
     parser.add_argument("--skip-paper-claim", action="store_true")
     parser.add_argument("--skip-refactor", action="store_true")
+    parser.add_argument("--skip-alpha-dedupe-before-pass-1_5", action="store_true")
     args = parser.parse_args()
 
     theory_file = Path(args.theory_file)
@@ -195,6 +200,11 @@ def main() -> int:
     review_output_file = _resolve_refactor_artifact_path(
         raw_path=args.review_output_file,
         default_path=DEFAULT_REVIEW_OUTPUT_FILE,
+        artifact_dir=refactor_artifact_dir,
+    )
+    alpha_dedupe_report_file = _resolve_refactor_artifact_path(
+        raw_path=args.alpha_dedupe_report_file,
+        default_path=DEFAULT_ALPHA_DEDUPE_REPORT_FILE,
         artifact_dir=refactor_artifact_dir,
     )
     review_report_file = _resolve_refactor_artifact_path(
@@ -301,6 +311,28 @@ def main() -> int:
             preview_file.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(derived_file, preview_file)
 
+            if not args.skip_alpha_dedupe_before_pass_1_5:
+                alpha_dedupe_cmd = [
+                    sys.executable,
+                    _script_path("refactor/delete_alpha_equiv_duplicates.py"),
+                    "--input-file",
+                    str(preview_file),
+                    "--output-file",
+                    str(preview_file),
+                    "--alpha-source-file",
+                    str(derived_file),
+                    "--build-target",
+                    "AutomatedTheoryConstruction.Derived",
+                    "--equivalence-mode",
+                    args.alpha_dedupe_equivalence_mode,
+                    "--report-file",
+                    str(alpha_dedupe_report_file),
+                ]
+                if _run_stage("alpha-dedupe-pre-pass-1_5", alpha_dedupe_cmd, env=env) != 0:
+                    refactor_status = "alpha_dedupe_error"
+                    fatal_stage = "refactor"
+                    return 1
+
             rewrite_cmd = [
                 sys.executable,
                 _script_path("refactor/apply_try_at_each_step_rewrites.py"),
@@ -365,30 +397,6 @@ def main() -> int:
                 fatal_stage = "refactor"
                 return 1
 
-            local_pass_cmd = [
-                sys.executable,
-                _script_path("refactor/run_generated_local_passes.py"),
-                "--generated-root",
-                str(generated_root),
-                "--theory-file",
-                str(theory_file),
-                "--theorem-reuse-memory-file",
-                str(theorem_reuse_memory_file),
-                "--worker-command",
-                str(args.worker_command or ""),
-                "--worker-timeout",
-                str(args.generated_local_worker_timeout),
-                "--manifest-verify-timeout",
-                str(args.generated_local_manifest_verify_timeout),
-                "--max-rounds-per-pass",
-                str(args.generated_local_max_rounds_per_pass),
-            ]
-            if not args.worker_command:
-                local_pass_cmd = [item for item in local_pass_cmd if item not in {"--worker-command", ""}]
-            if _run_stage("generated-local-passes", local_pass_cmd, env=env) != 0:
-                refactor_status = "local_pass_error"
-                fatal_stage = "refactor"
-                return 1
             refactor_status = "ok"
 
         return 0
@@ -435,6 +443,7 @@ def main() -> int:
                     "data_dir": str(data_dir),
                     "refactor_artifact_dir": str(refactor_artifact_dir),
                     "preview_file": str(preview_file),
+                    "alpha_dedupe_report_file": str(alpha_dedupe_report_file),
                     "review_output_file": str(review_output_file),
                     "review_report_file": str(review_report_file),
                     "try_at_each_step_raw_output_file": str(raw_output_file),

@@ -606,10 +606,6 @@ theorem thm_uniform_orientation_fragment_iff_000041 : ∀ (Γ : List Tp) (A : Tp
       refine ⟨Γ', A', hΓ', hA', ?_⟩
       simpa [Right.Sequent, hΓ', hA'] using hseq
 
-/-- One-sided representability iff the sequent is derivable with uniform division orientation. -/
-theorem thm_one_sided_rep_uniform_orientation_000042 : ∀ (Γ : List Tp) (A : Tp), (LeftRep Γ A ∨ RightRep Γ A) ↔ (Γ ⇒ A ∧ ((∀ x ∈ A :: Γ, LeftDivisionOnly x) ∨ (∀ x ∈ A :: Γ, RightDivisionOnly x))) := by
-  exact fun Γ A => thm_uniform_orientation_fragment_iff_000041 Γ A
-
 abbrev HasLeftOrientedDerivation (Γ : List Tp) (A : Tp) : Prop :=
   LeftRep Γ A
 

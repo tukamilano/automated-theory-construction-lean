@@ -21,7 +21,7 @@ This is theory construction rather than ordinary proof search: the system expand
 
 The recommended end-to-end path is:
 
-1. Put your Gemini deep-research report under `materials/`.
+1. Put your deep-research report under `materials/`. Gemini Deep Research is the recommended default for this step.
 2. Build the materials cache.
 3. Regenerate `AutomatedTheoryConstruction/research_agenda.md` from that report.
 4. Run the main seed -> loop -> refactor pipeline.
@@ -46,7 +46,8 @@ make paper-claim
 
 This builds the project, refreshes `data/materials_cache`, writes `AutomatedTheoryConstruction/research_agenda.md`, runs the main loop plus generated-file refactor path, and then runs a paper-claim session.
 
-If you want to continue from the current runtime state instead of resetting it, use `make loop-continue` or `make loop-continue-refactor-to-generated`.
+For subsequent iterations after the first `make seed-loop-refactor-to-generated`, prefer `make loop-continue-refactor-to-generated` so the loop/refactor cycle continues from the current runtime state instead of resetting it.
+If you want to continue only the loop without the refactor stages, use `make loop-continue`.
 If you only want to refresh derived `materials/` artifacts without fetch/extract, use `make materials-derive`.
 If you want the fastest smoke path without Codex CLI, you can still run:
 
@@ -93,13 +94,13 @@ make research-agenda REPORT_FILE=materials/your_report.md
 
 The post-loop refactor path is intentionally staged:
 
-1. Whole-file rewrite cleanup (`rewrite`, pass 1.5)
-2. Whole-file review-focused cleanup (`review`, pass 2.0)
-3. Split `Derived.lean` into `Generated/C000x_*.lean`
-4. Run local generated-file reuse and repair passes
+1. Alpha-equivalent theorem dedupe on the preview copy
+2. Whole-file rewrite cleanup (`rewrite`, pass 1.5)
+3. Whole-file review-focused cleanup (`review`, pass 2.0)
+4. Split `Derived.lean` into `Generated/C000x_*.lean`
 5. Recheck the whole `AutomatedTheoryConstruction.Generated.Manifest`
 
-This keeps global cleanup and local compression separate, which makes generated-file repair more tractable.
+This keeps global cleanup separate from generated-file materialization, while still ending on a verified manifest build.
 
 ## License
 

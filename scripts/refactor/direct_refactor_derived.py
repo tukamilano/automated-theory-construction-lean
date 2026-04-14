@@ -121,7 +121,6 @@ Task:
 - Do not redesign the theorem inventory.
 - Prefer review-focused cleanup only: localize `classical`, remove brittle proof steps, tidy `have` structure, remove `by exact`, and prefer stable rewrites / `simpa` / short `calc` blocks.
 - For paper-claim-style results, prefer rewriting proofs to explicitly reuse existing `Derived.lean` theorems when that can be done without changing statements.
-- If two theorems have the same statement, prefer reducing the duplication by rewriting the later proof into an explicit alias/delegation to the earlier theorem rather than keeping two independent proofs.
 - Do not introduce `sorry`.
 - Do not add or remove global instances, `[simp]` attributes, notation, coercions, or transparency changes.
 {extra_step}{verify_step}{final_step}

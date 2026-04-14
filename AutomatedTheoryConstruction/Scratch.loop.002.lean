@@ -10,22 +10,18 @@ namespace AutomatedTheoryConstruction
 open Mathling.Lambek.ProductFree
 open scoped Mathling.Lambek.ProductFree
 
-theorem thm_singleton_sequent_classification_000017 : ∀ {A B : Tp}, ([A] ⇒ B) ↔ A = B ∨ (∃ C : Tp, ∃ D : Tp, B = D ⧸ C ∧ ([A] ++ [C] ⇒ D)) ∨ (∃ C : Tp, ∃ D : Tp, B = C ⧹ D ∧ ([C] ++ [A] ⇒ D)) := by
-  intro A B
+theorem thm_leftrep_iff_left_sequent_000086 : ∀ (Γ : List Tp) (A : Tp), LeftRep Γ A ↔ ∃ ΓL : List Mathling.Lambek.ProductFree.Left.Tp, ∃ AL : Mathling.Lambek.ProductFree.Left.Tp, Γ = ΓL.map Mathling.Lambek.ProductFree.Left.Tp.toProductFree ∧ A = AL.toProductFree ∧ Mathling.Lambek.ProductFree.Left.Sequent ΓL AL := by
+  intro Γ A
   constructor
   · intro h
-    cases B with
-    | atom s =>
-        exact Or.inl (thm_singleton_atom_iff_eq_000008.mp h)
-    | rdiv D C =>
-        exact Or.inr <| Or.inl ⟨C, D, rfl, rdiv_invertible h⟩
-    | ldiv C D =>
-        exact Or.inr <| Or.inr ⟨C, D, rfl, ldiv_invertible h⟩
+    rcases h with ⟨ΓL, AL, hΓ, hA, hseq⟩
+    refine ⟨ΓL, AL, ?_, ?_, hseq⟩
+    · simpa [Mathling.Lambek.ProductFree.Left.ctxToProductFree] using hΓ.symm
+    · simpa using hA.symm
   · intro h
-    rcases h with hEq | ⟨C, D, rfl, hDC⟩ | ⟨C, D, rfl, hCD⟩
-    · cases hEq
-      exact Sequent.ax
-    · exact Sequent.rdiv_r (Γ := [A]) (A := C) (B := D) (by simp) hDC
-    · exact Sequent.ldiv_r (Γ := [A]) (A := C) (B := D) (by simp) hCD
+    rcases h with ⟨ΓL, AL, hΓ, hA, hseq⟩
+    refine ⟨ΓL, AL, ?_, ?_, hseq⟩
+    · simpa [Mathling.Lambek.ProductFree.Left.ctxToProductFree] using hΓ.symm
+    · simpa using hA.symm
 
 end AutomatedTheoryConstruction

@@ -93,6 +93,7 @@ uv run python scripts/atc_cli.py seed \
 
 For reusable domain knowledge, prefer curating it under `materials/` instead of repeatedly passing one-off files.
 That keeps deep research available across prioritization, expansion, and paper-claim work.
+Gemini Deep Research is the recommended default for producing those reports.
 When a report may be out of date, keep the report for structure and wording, but use source-link bundles for novelty checks and literature positioning.
 
 ### Regenerate `research_agenda.md` from a deep-research report
@@ -129,6 +130,14 @@ make loop
 make loop-continue
 ```
 
+If you also want to keep the generated-file refactor stages in the same cycle, prefer:
+
+```bash
+make loop-continue-refactor-to-generated
+```
+
+This is the normal continuation command after an initial `make seed-loop-refactor-to-generated`.
+
 ### Run a larger one-shot pipeline
 
 ```bash
@@ -146,11 +155,19 @@ make pipeline PIPELINE_ARGS="--max-iterations 40"
 
 ```bash
 cp AutomatedTheoryConstruction/Derived.lean AutomatedTheoryConstruction/Derived.refactored.preview.lean
+uv run python scripts/refactor/delete_alpha_equiv_duplicates.py \
+  --input-file AutomatedTheoryConstruction/Derived.refactored.preview.lean \
+  --output-file AutomatedTheoryConstruction/Derived.refactored.preview.lean \
+  --alpha-source-file AutomatedTheoryConstruction/Derived.lean \
+  --build-target AutomatedTheoryConstruction.Derived \
+  --report-file AutomatedTheoryConstruction/Derived.alpha_dedupe.report.json
 uv run python scripts/atc_cli.py rewrite
 uv run python scripts/atc_cli.py review
 ```
 
-`rewrite` is the pass 1.5 cleanup stage. `review` is the pass 2.0 review-focused cleanup stage.
+The alpha-dedupe step runs first on the preview copy and, by default, deletes later theorems whose elaborated theorem types are definitionally equal to earlier ones. `rewrite` is the pass 1.5 cleanup stage. `review` is the pass 2.0 review-focused cleanup stage.
+
+If you want the stricter old behavior, use `--equivalence-mode alpha` on the script above, or `ALPHA_DEDUPE_EQUIVALENCE_MODE=alpha make theorem-dedupe`.
 
 ### Materialize generated chunk files
 
@@ -158,7 +175,7 @@ uv run python scripts/atc_cli.py review
 uv run python scripts/atc_cli.py materialize-generated
 ```
 
-This splits `Derived.lean` into `AutomatedTheoryConstruction/Generated/C000x_*.lean`, rebuilds `Manifest.lean` and `catalog.json`, and performs generated-level verification and repair.
+This splits `Derived.lean` into `AutomatedTheoryConstruction/Generated/C000x_*.lean`, rebuilds `Manifest.lean` and `catalog.json`, and rechecks `AutomatedTheoryConstruction.Generated.Manifest`.
 
 If you want the bundled end-to-end shortcut for the whole refactor path:
 
