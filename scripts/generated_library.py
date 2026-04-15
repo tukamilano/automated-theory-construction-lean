@@ -14,15 +14,6 @@ DEFAULT_GENERATED_MANIFEST = DEFAULT_GENERATED_ROOT / "Manifest.lean"
 DEFAULT_GENERATED_CATALOG = DEFAULT_GENERATED_ROOT / "catalog.json"
 DEFAULT_REPO_ROOT = Path(__file__).resolve().parent.parent
 
-_BASE_IMPORTS = (
-    "import Mathlib\n"
-    "import AutomatedTheoryConstruction.Theory\n"
-)
-
-_COMMON_PREAMBLE = (
-    "set_option autoImplicit false\n\n"
-    "namespace AutomatedTheoryConstruction\n\n"
-)
 CHUNK_STEM_PATTERN = re.compile(r"^C(\d{4})(?:_|$)")
 BACKUP_CHUNK_FILE_PATTERN = re.compile(r"^C\d{4}.*_~\.lean$")
 
@@ -150,19 +141,49 @@ def build_library_entries(*, generated_root: Path, derived_file: Path) -> list[d
     return entries
 
 
+def render_module_source(
+    *,
+    import_modules: list[str],
+    context_block: str,
+    carried_context_lines: list[str] | None = None,
+    body: str,
+) -> str:
+    import_block = "\n".join(f"import {module_name}" for module_name in import_modules if module_name).strip()
+    sections: list[str] = []
+    if import_block:
+        sections.append(import_block)
+    normalized_context = context_block.strip()
+    if normalized_context:
+        sections.append(normalized_context)
+    normalized_carried = "\n".join(line.rstrip() for line in (carried_context_lines or []) if line.strip()).strip()
+    if normalized_carried:
+        sections.append(normalized_carried)
+    cleaned_body = body.strip()
+    if cleaned_body:
+        sections.append(cleaned_body)
+    rendered = "\n\n".join(sections).rstrip()
+    if "namespace AutomatedTheoryConstruction" in normalized_context:
+        rendered += "\n\nend AutomatedTheoryConstruction"
+    return rendered + "\n"
+
+
 def render_generated_chunk(
     *,
     prior_module: str | None,
+    import_modules: list[str],
+    context_block: str,
+    carried_context_lines: list[str] | None = None,
     body: str,
 ) -> str:
-    imports = [_BASE_IMPORTS.rstrip()]
+    imports = list(import_modules)
     if prior_module:
-        imports.append(f"import {prior_module}")
-    import_block = "\n".join(imports).strip() + "\n\n"
-    cleaned_body = body.strip()
-    if cleaned_body:
-        cleaned_body += "\n\n"
-    return import_block + _COMMON_PREAMBLE + cleaned_body + "end AutomatedTheoryConstruction\n"
+        imports.append(prior_module)
+    return render_module_source(
+        import_modules=imports,
+        context_block=context_block,
+        carried_context_lines=carried_context_lines,
+        body=body,
+    )
 
 
 def write_generated_catalog(catalog_file: Path, *, chunks: list[dict[str, Any]]) -> None:

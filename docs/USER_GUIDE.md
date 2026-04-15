@@ -177,6 +177,18 @@ uv run python scripts/atc_cli.py materialize-generated
 
 This splits `Derived.lean` into `AutomatedTheoryConstruction/Generated/C000x_*.lean`, rebuilds `Manifest.lean` and `catalog.json`, and rechecks `AutomatedTheoryConstruction.Generated.Manifest`.
 
+If you want to materialize the reviewed refactor output without first copying it back onto `Derived.lean`, use:
+
+```bash
+make materialize-reviewed-generated
+```
+
+For any other source file, override the Make input explicitly:
+
+```bash
+make materialize-generated MATERIALIZE_DERIVED_FILE=AutomatedTheoryConstruction/Derived.refactored.reviewed.lean
+```
+
 If you want the bundled end-to-end shortcut for the whole refactor path:
 
 ```bash

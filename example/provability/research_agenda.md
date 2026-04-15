@@ -50,11 +50,15 @@ The following kinds of outputs are not mathematically interesting for this proje
 4. **Odd-parity and even-parity generalizations**
    Define and study two generalizations of `△`: one in which `⊠` appears an odd number of times, and one in which `⊠` appears an even number of times.
 
-## 5. Sample Problems
+## 5. Soft Constraints
 
-As a check on understanding, the following concrete questions should be kept in view:
-
-1. Does there exist an APS with no Gödelian fixed point such that `⊠⊤` is refutable?
-2. Does there exist an APS in which `⊤` is not maximal and which has a Gödelian fixed point not equivalent to `⊠⊤`?
-3. Does there exist an APS in which `⊤` is not maximal but Gödelian fixed points do exist, and in which `⊠⊤` is not equivalent to `⊠⊠⊤`?
-4. Does there exist an APS in which `⊤` is maximal but no Gödelian fixed point exists?
+* **Keep `□`, `⊠`, and their composites visibly central**
+  Generalization should not obscure the concrete operator patterns whose fixed-point behavior is under investigation.
+* **Prefer structural results over isolated examples**
+  Individual examples are useful only insofar as they contribute to a broader explanation of existence, uniqueness, or nonexistence of fixed points.
+* **State clearly which phenomena depend on finiteness or infiniteness**
+  Whenever possible, separate effects that arise from the size of the underlying set from effects caused by other structural assumptions.
+* **Distinguish essential assumptions from technical conveniences**
+  When presenting a theorem or counterexample, indicate which hypotheses drive the phenomenon and which are merely artifacts of the proof.
+* **Favor generality only when it preserves explanatory force**
+  Broader formulations of `△` are desirable only when they sharpen the classification of fixed-point behavior or reveal mathematically meaningful logical phenomena.

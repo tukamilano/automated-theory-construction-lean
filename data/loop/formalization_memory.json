@@ -1783,5 +1783,41 @@
       "lean_error_excerpt": "",
       "lean_error_fingerprint": "formalizer_returned_stuck"
     }
+  ],
+  "op_000069": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] (k : ℕ), 0 < k → Nonempty (ACR.GödelFixpoint α) → (∃ g : ACR.GödelFixpoint α, ∃ m n : ℕ, m < n ∧ ((((fun z : α => □z)^[k])^[m]) g.1 ≐ (((fun z : α => □z)^[k])^[n]) g.1)) → Nonempty (ACR.HenkinFixpoint α)",
+      "statement_prelude_code": "",
+      "formalized_statement": "∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] (k : ℕ), 0 < k → Nonempty (ACR.GödelFixpoint α) → (∃ g : ACR.GödelFixpoint α, ∃ m n : ℕ, m < n ∧ ((((fun z : α => □z)^[k])^[m]) g.1 ≐ ((((fun z : α => □z)^[k])^[n]) g.1))) → Nonempty (ACR.HenkinFixpoint α)",
+      "theorem_name_stem": "boxk_repeat_henkin",
+      "docstring_summary": "A repeated positive box-power orbit on a Godel fixpoint yields a Henkin fixpoint.",
+      "statement_formalization_notes": "Kept the statement close to the input, using the repository notation `≐` and the explicit iterate form already present in the problem text.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization"
+    }
+  ],
+  "op_000068": [
+    {
+      "stage": "statement_formalization",
+      "source_statement": "∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] (k : ℕ), 0 < k → (∃ x : α, x ≤ ((fun z : α => □z)^[k]) x ∧ Set.Finite {y : α | ∃ n : ℕ, ((((fun z : α => □z)^[k])^[n]) x = y)}) → Nonempty (ACR.HenkinFixpoint α)",
+      "statement_prelude_code": "",
+      "formalized_statement": "∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] (k : ℕ), 0 < k → (∃ x : α, x ≤ ((fun z : α => □z)^[k]) x ∧ Set.Finite {y : α | ∃ n : ℕ, ((((fun z : α => □z)^[k])^[n]) x = y)}) → Nonempty (ACR.HenkinFixpoint α)",
+      "theorem_name_stem": "finite_boxk_orbit_henkin",
+      "docstring_summary": "A finite positive box-k orbit above its start yields a Henkin fixpoint.",
+      "statement_formalization_notes": "Dropped the local `boxk` abbreviation because it already exists in the environment; kept the original iterate-based proposition unchanged in meaning.",
+      "result": "ok",
+      "verify_success": true,
+      "proof_sketch": "",
+      "proof_text": "",
+      "counterexample_text": "",
+      "lean_error_excerpt": "",
+      "lean_error_fingerprint": "statement_formalization"
+    }
   ]
 }

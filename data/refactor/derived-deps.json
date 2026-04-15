@@ -1,0 +1,165 @@
+[
+  {
+    "name": "AutomatedTheoryConstruction.thm_godel_fixpoint_iff_reft_000002",
+    "constCategory": "theorem",
+    "constType": "",
+    "references": []
+  },
+  {
+    "name": "AutomatedTheoryConstruction.thm_godel_fixpoint_unique_000001",
+    "constCategory": "theorem",
+    "constType": "",
+    "references": []
+  },
+  {
+    "name": "AutomatedTheoryConstruction.thm_henkin_without_godel_model_000013",
+    "constCategory": "theorem",
+    "constType": "",
+    "references": []
+  },
+  {
+    "name": "AutomatedTheoryConstruction.thm_reft_top_equiv_no_godel_000008_is_false",
+    "constCategory": "theorem",
+    "constType": "",
+    "references": []
+  },
+  {
+    "name": "AutomatedTheoryConstruction.thm_inconsistent_godel_model_exists_000009",
+    "constCategory": "theorem",
+    "constType": "",
+    "references": []
+  },
+  {
+    "name": "AutomatedTheoryConstruction.thm_godel_implies_henkin_fixpoint_000014",
+    "constCategory": "theorem",
+    "constType": "",
+    "references": []
+  },
+  {
+    "name": "AutomatedTheoryConstruction.thm_godel_fixpoint_reft_top_000017_is_false",
+    "constCategory": "theorem",
+    "constType": "",
+    "references": []
+  },
+  {
+    "name": "AutomatedTheoryConstruction.thm_subsingleton_inconsistent_godel_000020",
+    "constCategory": "theorem",
+    "constType": "",
+    "references": []
+  },
+  {
+    "name": "AutomatedTheoryConstruction.thm_consistent_topbox_no_henkin_000026",
+    "constCategory": "theorem",
+    "constType": "",
+    "references": []
+  },
+  {
+    "name": "AutomatedTheoryConstruction.thm_finite_topbox_henkin_exists_000029",
+    "constCategory": "theorem",
+    "constType": "",
+    "references": []
+  },
+  {
+    "name": "AutomatedTheoryConstruction.thm_constant_reft_aps_no_henkin_000030_is_false",
+    "constCategory": "theorem",
+    "constType": "",
+    "references": []
+  },
+  {
+    "name": "AutomatedTheoryConstruction.thm_finite_box_orbit_henkin_000032",
+    "constCategory": "theorem",
+    "constType": "",
+    "references": []
+  },
+  {
+    "name": "AutomatedTheoryConstruction.thm_finite_henkin_fixpoint_exists_000031",
+    "constCategory": "theorem",
+    "constType": "",
+    "references": [
+      "AutomatedTheoryConstruction.thm_finite_box_orbit_henkin_000032"
+    ]
+  },
+  {
+    "name": "AutomatedTheoryConstruction.thm_godel_orbit_infinite_000038",
+    "constCategory": "theorem",
+    "constType": "",
+    "references": [
+      "AutomatedTheoryConstruction.thm_finite_box_orbit_henkin_000032"
+    ]
+  },
+  {
+    "name": "AutomatedTheoryConstruction.thm_henkin_exists_from_godel_000039_is_false",
+    "constCategory": "theorem",
+    "constType": "",
+    "references": [
+      "AutomatedTheoryConstruction.thm_consistent_topbox_no_henkin_000026",
+      "AutomatedTheoryConstruction.thm_reft_top_equiv_no_godel_000008_is_false"
+    ]
+  },
+  {
+    "name": "AutomatedTheoryConstruction.thm_constant_reft_extension_criterion_000033_is_false",
+    "constCategory": "theorem",
+    "constType": "",
+    "references": []
+  },
+  {
+    "name": "AutomatedTheoryConstruction.thm_box_orbit_repeat_henkin_000042",
+    "constCategory": "theorem",
+    "constType": "",
+    "references": []
+  },
+  {
+    "name": "AutomatedTheoryConstruction.thm_constant_reft_iff_bounds_000044",
+    "constCategory": "theorem",
+    "constType": "",
+    "references": []
+  },
+  {
+    "name": "AutomatedTheoryConstruction.thm_constant_reft_aps_iff_000050",
+    "constCategory": "theorem",
+    "constType": "",
+    "references": []
+  },
+  {
+    "name": "AutomatedTheoryConstruction.thm_constant_reflection_iff_box_fixpoint_000035_is_false",
+    "constCategory": "theorem",
+    "constType": "",
+    "references": [
+      "AutomatedTheoryConstruction.thm_constant_reft_iff_bounds_000044"
+    ]
+  },
+  {
+    "name": "AutomatedTheoryConstruction.thm_constant_aps_iff_bounds_000051",
+    "constCategory": "theorem",
+    "constType": "",
+    "references": [
+      "AutomatedTheoryConstruction.thm_constant_reft_aps_iff_000050"
+    ]
+  },
+  {
+    "name": "AutomatedTheoryConstruction.thm_finite_boxk_orbit_henkin_000037",
+    "constCategory": "theorem",
+    "constType": "",
+    "references": []
+  },
+  {
+    "name": "AutomatedTheoryConstruction.thm_boxk_orbit_repeat_fixpoint_000047",
+    "constCategory": "theorem",
+    "constType": "",
+    "references": []
+  },
+  {
+    "name": "AutomatedTheoryConstruction.thm_box_orbit_repeat_henkin_000046",
+    "constCategory": "theorem",
+    "constType": "",
+    "references": []
+  },
+  {
+    "name": "AutomatedTheoryConstruction.thm_henkin_iff_box_orbit_repeat_000057",
+    "constCategory": "theorem",
+    "constType": "",
+    "references": [
+      "AutomatedTheoryConstruction.thm_box_orbit_repeat_henkin_000046"
+    ]
+  }
+]

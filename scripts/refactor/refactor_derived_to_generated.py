@@ -23,6 +23,7 @@ from generated_library import DEFAULT_GENERATED_MANIFEST
 from generated_library import DEFAULT_GENERATED_ROOT
 from generated_library import ensure_generated_scaffold
 from generated_library import iter_generated_chunk_files
+from generated_library import render_module_source
 from generated_library import render_generated_chunk
 from generated_library import write_generated_catalog
 from generated_library import write_generated_manifest
@@ -74,6 +75,10 @@ SLUG_STOPWORDS = {
     "same",
 }
 CAMEL_TOKEN_PATTERN = re.compile(r"[A-Z]?[a-z]+|[A-Z]+(?=[A-Z]|$)|\d+")
+DECLARATION_START_PATTERN = re.compile(
+    r"^(?:protected\s+|private\s+)?(?:theorem|lemma|def|abbrev|instance|inductive|structure|class|axiom|example)\b"
+)
+CARRIED_CONTEXT_PATTERN = re.compile(r"^(?:universe|variable|opaque)\b")
 
 
 def _print_progress(event: str, **fields: Any) -> None:
@@ -213,35 +218,115 @@ def _extract_declaration_blocks(source_text: str) -> list[str]:
     return blocks
 
 
-def _render_materialized_derived(blocks: list[str]) -> str:
+def _collect_carried_context_lines(source_text: str, *, before_line: int) -> list[str]:
+    carried: list[str] = []
+    seen: set[str] = set()
+    for index, line in enumerate(source_text.splitlines(), start=1):
+        if index >= before_line:
+            break
+        if not line.strip():
+            continue
+        if line[:1].isspace():
+            continue
+        stripped = line.strip()
+        if not CARRIED_CONTEXT_PATTERN.match(stripped):
+            continue
+        if stripped in seen:
+            continue
+        seen.add(stripped)
+        carried.append(stripped)
+    return carried
+
+
+def _extract_module_context(source_text: str) -> tuple[list[str], str]:
+    preamble_lines: list[str] = []
+    for line in source_text.splitlines():
+        stripped = line.strip()
+        if DECLARATION_START_PATTERN.match(stripped):
+            break
+        if stripped.startswith("/--"):
+            break
+        if stripped == "end AutomatedTheoryConstruction":
+            break
+        preamble_lines.append(line)
+    preamble_text = "\n".join(preamble_lines)
+
+    import_modules: list[str] = []
+    context_lines: list[str] = []
+    for line in preamble_text.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("import "):
+            module_name = stripped.removeprefix("import ").strip()
+            if module_name == "AutomatedTheoryConstruction.Generated.Manifest":
+                continue
+            if module_name not in import_modules:
+                import_modules.append(module_name)
+            continue
+        if stripped == "end AutomatedTheoryConstruction":
+            continue
+        context_lines.append(line)
+
+    if not import_modules:
+        import_modules = [
+            "Mathlib",
+            "AutomatedTheoryConstruction.Theory",
+        ]
+
+    context_block = "\n".join(context_lines).strip()
+    if not context_block:
+        context_block = "\n".join(
+            [
+                "set_option autoImplicit false",
+                "",
+                "namespace AutomatedTheoryConstruction",
+            ]
+        )
+    elif "namespace AutomatedTheoryConstruction" not in context_block:
+        context_block = "\n".join(
+            [
+                "set_option autoImplicit false",
+                "",
+                "namespace AutomatedTheoryConstruction",
+                "",
+                context_block,
+            ]
+        )
+    context_block = "\n".join(
+        line for line in context_block.splitlines() if line.strip() != "end AutomatedTheoryConstruction"
+    ).strip()
+
+    return import_modules, context_block
+
+
+def _render_materialized_derived(
+    blocks: list[str],
+    *,
+    import_modules: list[str],
+    context_block: str,
+) -> str:
     body = "\n\n".join(blocks).strip()
-    parts = [
-        "import Mathlib",
-        "import AutomatedTheoryConstruction.Theory",
-        "",
-        "set_option autoImplicit false",
-        "",
-        "namespace AutomatedTheoryConstruction",
-        "",
-        "open Mathling.Lambek.ProductFree",
-        "open scoped Mathling.Lambek.ProductFree",
-        "",
-    ]
-    if body:
-        parts.append(body)
-        parts.append("")
-    parts.append("end AutomatedTheoryConstruction")
-    parts.append("")
-    return "\n".join(parts)
+    return render_module_source(
+        import_modules=import_modules,
+        context_block=context_block,
+        body=body,
+    )
 
 
 def _materialize_library_source(*, generated_root: Path, derived_file: Path) -> str:
     blocks: list[str] = []
+    import_modules: list[str] | None = None
+    context_block: str | None = None
+    if derived_file.exists():
+        import_modules, context_block = _extract_module_context(derived_file.read_text(encoding="utf-8"))
     for chunk_file in iter_generated_chunk_files(generated_root):
         blocks.extend(_extract_declaration_blocks(chunk_file.read_text(encoding="utf-8")))
     if derived_file.exists():
         blocks.extend(_extract_declaration_blocks(derived_file.read_text(encoding="utf-8")))
-    return _render_materialized_derived(blocks)
+    return _render_materialized_derived(
+        blocks,
+        import_modules=import_modules or ["Mathlib", "AutomatedTheoryConstruction.Theory"],
+        context_block=context_block or "set_option autoImplicit false\n\nnamespace AutomatedTheoryConstruction",
+    )
 
 
 def _run_manifest_build(timeout_sec: int | None) -> dict[str, Any]:
@@ -353,6 +438,7 @@ def materialize_derived_to_generated(
     import_modules: list[str] = []
     previous_module: str | None = None
     used_slugs: set[str] = set()
+    chunk_import_modules, chunk_context_block = _extract_module_context(derived_text)
 
     for index, cluster in enumerate(plan["clusters"], start=1):
         chunk_id = f"C{index:04d}"
@@ -367,7 +453,16 @@ def materialize_derived_to_generated(
             cluster["node_names"][-1],
         )
         output_file.write_text(
-            render_generated_chunk(prior_module=previous_module, body=body),
+            render_generated_chunk(
+                prior_module=previous_module,
+                import_modules=chunk_import_modules,
+                context_block=chunk_context_block,
+                carried_context_lines=_collect_carried_context_lines(
+                    derived_text,
+                    before_line=int(cluster["start_line"]),
+                ),
+                body=body,
+            ),
             encoding="utf-8",
         )
         catalog_chunks.append(

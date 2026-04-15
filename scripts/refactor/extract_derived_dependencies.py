@@ -23,6 +23,7 @@ from plan_derived_chunks import parse_declaration_order
 REPO_ROOT = SCRIPTS_ROOT.parent
 DEFAULT_EXTRACTOR_FILE = REPO_ROOT / "LeanTools/DependencyExtractor.lean"
 DEFAULT_BUILD_TARGET = "AutomatedTheoryConstruction.Derived"
+DEFAULT_DERIVED_PATH = (REPO_ROOT / DEFAULT_DERIVED_FILE).resolve()
 
 
 def _lean_string_literal(text: str) -> str:
@@ -33,18 +34,43 @@ def _lean_name_literal(full_name: str) -> str:
     return f"`{full_name}"
 
 
+def _split_import_block(source: str) -> tuple[list[str], str]:
+    imports: list[str] = []
+    body_lines: list[str] = []
+    in_import_prefix = True
+    for line in source.splitlines():
+        stripped = line.strip()
+        if in_import_prefix and stripped.startswith("import "):
+            if stripped not in imports:
+                imports.append(stripped)
+            continue
+        if in_import_prefix and not stripped:
+            continue
+        in_import_prefix = False
+        body_lines.append(line)
+    return imports, "\n".join(body_lines).strip()
+
+
 def _build_harness_source(
     *,
-    derived_import: str,
+    import_lines: list[str],
+    derived_body: str,
     extractor_source: str,
     declaration_names: list[str],
     output_file: Path,
     depth: int,
 ) -> str:
     names_block = "\n".join(f"  {_lean_name_literal(name)}," for name in declaration_names)
+    extractor_imports, extractor_body = _split_import_block(extractor_source)
+    imports = extractor_imports.copy()
+    for line in import_lines:
+        if line not in imports:
+            imports.append(line)
     return (
-        f"import {derived_import}\n\n"
-        f"{extractor_source.rstrip()}\n\n"
+        "\n".join(imports).rstrip()
+        + "\n\n"
+        + f"{derived_body.rstrip()}\n\n"
+        + f"{extractor_body.rstrip()}\n\n"
         "def derivedDecls : List Name := [\n"
         f"{names_block}\n"
         "]\n\n"
@@ -53,6 +79,13 @@ def _build_harness_source(
         "  let js <- serializeList g\n"
         f"  let _ <- writeJsonToFile {_lean_string_literal(str(output_file))} js\n"
     )
+
+
+def _derived_harness_parts_for(derived_file: Path, *, build_target: str) -> tuple[list[str], str]:
+    resolved = derived_file.resolve()
+    if resolved == DEFAULT_DERIVED_PATH:
+        return [f"import {build_target}"], ""
+    return _split_import_block(derived_file.read_text(encoding="utf-8"))
 
 
 def _normalize_dependency_payload(
@@ -140,18 +173,19 @@ def extract_derived_dependencies(
     derived_text = derived_file.read_text(encoding="utf-8")
     grouped_declarations = parse_declaration_order(derived_text)
     declaration_names = [decl["name"] for decl in parse_declaration_entries(derived_text)]
-    build_result = subprocess.run(
-        ["lake", "build", build_target],
-        cwd=str(REPO_ROOT),
-        check=False,
-        capture_output=True,
-        text=True,
-    )
-    if build_result.returncode != 0:
-        raise RuntimeError(
-            "failed to build Derived before dependency extraction: "
-            + "\n".join(part for part in (build_result.stdout, build_result.stderr) if part).strip()
+    if derived_file.resolve() == DEFAULT_DERIVED_PATH:
+        build_result = subprocess.run(
+            ["lake", "build", build_target],
+            cwd=str(REPO_ROOT),
+            check=False,
+            capture_output=True,
+            text=True,
         )
+        if build_result.returncode != 0:
+            raise RuntimeError(
+                "failed to build Derived before dependency extraction: "
+                + "\n".join(part for part in (build_result.stdout, build_result.stderr) if part).strip()
+            )
 
     output_file.parent.mkdir(parents=True, exist_ok=True)
     extractor_source = extractor_file.read_text(encoding="utf-8")
@@ -160,9 +194,11 @@ def extract_derived_dependencies(
         tmp_path = Path(tmp_dir)
         harness_file = tmp_path / "DerivedDependencyHarness.lean"
         temp_output_file = tmp_path / "derived-deps.json"
+        import_lines, derived_body = _derived_harness_parts_for(derived_file, build_target=build_target)
         harness_file.write_text(
             _build_harness_source(
-                derived_import=build_target,
+                import_lines=import_lines,
+                derived_body=derived_body,
                 extractor_source=extractor_source,
                 declaration_names=declaration_names,
                 output_file=temp_output_file,

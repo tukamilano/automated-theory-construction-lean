@@ -14,6 +14,7 @@ PREVIEW_FILE ?= AutomatedTheoryConstruction/Derived.refactored.preview.lean
 ALPHA_DEDUPE_REPORT_FILE ?= AutomatedTheoryConstruction/Derived.alpha_dedupe.report.json
 ALPHA_DEDUPE_EQUIVALENCE_MODE ?= defeq
 REVIEWED_FILE ?= AutomatedTheoryConstruction/Derived.refactored.reviewed.lean
+MATERIALIZE_DERIVED_FILE ?= $(DERIVED_FILE)
 TRY_AT_EACH_STEP_RAW_OUTPUT_FILE ?= data/refactor/Derived.tryAtEachStep.json
 TRY_AT_EACH_STEP_APPLY_REPORT_FILE ?= data/refactor/Derived.tryAtEachStep.apply_report.json
 DEPS_FILE ?= data/refactor/derived-deps.json
@@ -37,7 +38,7 @@ REWRITE_ARGS ?=
 REVIEW_ARGS ?=
 MATERIALIZE_ARGS ?=
 
-.PHONY: help build check check-theory check-derived check-scratch smoke test seed seed-loop-refactor-to-generated loop loop-continue loop-refactor-to-generated loop-continue-refactor-to-generated cycle pipeline paper-claim theorem-dedupe alpha-dedupe rewrite review materialize-generated refactor-to-generated research-agenda materials-cache materials-derive data-migrate-layout-dry-run data-migrate-layout
+.PHONY: help build check check-theory check-derived check-scratch smoke test seed seed-loop-refactor-to-generated loop loop-continue loop-refactor-to-generated loop-continue-refactor-to-generated cycle pipeline paper-claim theorem-dedupe alpha-dedupe rewrite review materialize-generated materialize-reviewed-generated refactor-to-generated research-agenda materials-cache materials-derive data-migrate-layout-dry-run data-migrate-layout
 
 help:
 	@printf '%s\n' \
@@ -61,7 +62,8 @@ help:
 		'  make theorem-dedupe - delete later theorems whose theorem types are definitionally equivalent' \
 		'  make rewrite       - run scripts/atc_cli.py rewrite' \
 		'  make review        - run scripts/atc_cli.py review' \
-		'  make materialize-generated - split Derived into Generated chunks and rebuild manifest/catalog' \
+		'  make materialize-generated - split MATERIALIZE_DERIVED_FILE into Generated chunks and rebuild manifest/catalog' \
+		'  make materialize-reviewed-generated - materialize REVIEWED_FILE without first copying it onto Derived.lean' \
 		'  make refactor-to-generated - run theorem-dedupe -> pass1.5 -> pass2 -> materialize generated' \
 		'  make research-agenda REPORT_FILE=materials/your_report.md - regenerate AutomatedTheoryConstruction/research_agenda.md' \
 		'  make materials-cache - build materials-derived files and refresh data/materials_cache' \
@@ -74,6 +76,7 @@ help:
 		'  WORKER_TIMEOUT=600 CODEX_TIMEOUT=540' \
 		'  ATC_COMMON_ARGS="--config configs/atc.continue.json"' \
 		'  THEORY_FILE=... DERIVED_FILE=... SCRATCH_FILE=...' \
+		'  MATERIALIZE_DERIVED_FILE=...  # override materialize-generated input explicitly' \
 		'  CONTINUE_CONFIG=configs/atc.continue.json' \
 		'  ALPHA_DEDUPE_EQUIVALENCE_MODE=defeq|alpha' \
 		'  THEORY_FILE should point to the Theory.lean entry module' \
@@ -210,13 +213,17 @@ review:
 materialize-generated:
 	$(ATC) materialize-generated \
 		$(ATC_COMMON_ARGS) \
-		--derived-file $(DERIVED_FILE) \
+		--derived-file $(MATERIALIZE_DERIVED_FILE) \
 		--deps-file $(DEPS_FILE) \
 		--generated-root $(GENERATED_ROOT) \
 		--manifest-file $(GENERATED_MANIFEST_FILE) \
 		--catalog-file $(GENERATED_CATALOG_FILE) \
 		--plan-file $(DERIVED_CHUNK_PLAN_FILE) \
 		$(MATERIALIZE_ARGS)
+
+materialize-reviewed-generated: MATERIALIZE_DERIVED_FILE=$(REVIEWED_FILE)
+materialize-reviewed-generated: MATERIALIZE_ARGS+=--no-reset-derived
+materialize-reviewed-generated: materialize-generated
 
 refactor-to-generated:
 	cp $(DERIVED_FILE) $(PREVIEW_FILE)
