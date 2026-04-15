@@ -1,7 +1,0 @@
-{"id":"op_000001","stmt":"∀ {α : Type*} [ACR α] [Prov α] [Reft α] [APS α] [C5 α] {g h : GödelFixpoint α}, g.1 ≐ h.1","src":"seed","priority":"unknown","priority_rationale":"","failure_count":0}
-{"id":"op_000002","stmt":"∀ {α : Type*} [ACR α] [Prov α] [Reft α] [APS α] [C5 α], Nonempty (GödelFixpoint α) ↔ ⊠⊠(⊤ : α) ≐ ⊠⊤","src":"seed","priority":"unknown","priority_rationale":"","failure_count":0}
-{"id":"op_000003","stmt":"∀ {α : Type*} [ACR α] [Prov α] [Reft α] [APS α] [C5 α], Consistent α → (Nonempty (GödelFixpoint α) ↔ ¬⊬ ⊠(⊤ : α))","src":"seed","priority":"unknown","priority_rationale":"","failure_count":0}
-{"id":"op_000004","stmt":"∀ {α : Type*} [ACR α] [Prov α] [Reft α] [APS α] [C5 α] {x : α}, x ≐ ⊠(⊤ : α) → x ≐ ⊠x","src":"seed","priority":"unknown","priority_rationale":"","failure_count":0}
-{"id":"op_000005","stmt":"∀ {α : Type*} [ACR α] [Prov α] [Reft α] [APS α] [C5 α] {x : α}, x ≐ ⊠(⊤ : α) → x ≐ □x","src":"seed","priority":"unknown","priority_rationale":"","failure_count":0}
-{"id":"op_000006","stmt":"∀ {α : Type*} [ACR α] [Prov α] [Reft α] [APS α] [C5 α] {h : HenkinFixpoint α}, h.1 ≐ ⊠(⊤ : α)","src":"seed","priority":"unknown","priority_rationale":"","failure_count":0}
-{"id":"op_000007","stmt":"∀ {α : Type*} [ACR α] [Prov α] [Reft α] [APS α] [C5 α], Nonempty (HenkinFixpoint α) ↔ Nonempty (GödelFixpoint α)","src":"seed","priority":"unknown","priority_rationale":"","failure_count":0}

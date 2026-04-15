@@ -1,0 +1,8 @@
+nohup: ignoring input
+uv run python scripts/atc_cli.py seed \
+	 \
+	--theory-file AutomatedTheoryConstruction/Theory.lean \
+	--derived-file AutomatedTheoryConstruction/Derived.lean \
+	--seeds-file AutomatedTheoryConstruction/seeds.jsonl \
+	
+[atc] exec: /usr/bin/python3 /home/kei.tsukamoto/ATC_private/scripts/generate_seeds_from_theory.py --theory-file /home/kei.tsukamoto/ATC_private/AutomatedTheoryConstruction/Theory.lean --derived-file /home/kei.tsukamoto/ATC_private/AutomatedTheoryConstruction/Derived.lean --output-file /home/kei.tsukamoto/ATC_private/AutomatedTheoryConstruction/seeds.jsonl --seed-count 7 --seed-src seed --sandbox read-only
