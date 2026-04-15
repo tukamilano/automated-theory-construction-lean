@@ -36,8 +36,6 @@ DERIVED_TEMPLATE = (
     "import AutomatedTheoryConstruction.Generated.Manifest\n\n"
     "set_option autoImplicit false\n\n"
     "namespace AutomatedTheoryConstruction\n\n"
-    "open Mathling.Lambek.ProductFree\n"
-    "open scoped Mathling.Lambek.ProductFree\n\n"
     "-- Verified theorems are appended here by scripts/append_derived.py.\n"
     "-- Keep any short theorem docstrings/comments here instead of a separate metadata index.\n\n"
     "end AutomatedTheoryConstruction\n"

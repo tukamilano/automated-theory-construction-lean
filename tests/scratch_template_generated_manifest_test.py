@@ -27,6 +27,17 @@ def main() -> int:
         raise RuntimeError("run_loop DERIVED_TEMPLATE is missing Generated.Manifest import")
     if expected_import not in paper_claim_session.SCRATCH_TEMPLATE:
         raise RuntimeError("paper_claim_session SCRATCH_TEMPLATE is missing Generated.Manifest import")
+    unexpected_open = "open Mathling.Lambek.ProductFree"
+    unexpected_open_scoped = "open scoped Mathling.Lambek.ProductFree"
+    for label, text in (
+        ("tracked Scratch.lean", tracked_scratch.read_text(encoding="utf-8")),
+        ("tracked Derived.lean", tracked_derived.read_text(encoding="utf-8")),
+        ("run_loop SCRATCH_TEMPLATE", run_loop.SCRATCH_TEMPLATE),
+        ("run_loop DERIVED_TEMPLATE", run_loop.DERIVED_TEMPLATE),
+        ("paper_claim_session SCRATCH_TEMPLATE", paper_claim_session.SCRATCH_TEMPLATE),
+    ):
+        if unexpected_open in text or unexpected_open_scoped in text:
+            raise RuntimeError(f"{label} unexpectedly contains ProductFree open directives")
     _, scratch = run_loop.formalize_to_scratch(
         theorem_name="thm_test_generated_manifest_000001",
         stmt="True",
@@ -36,6 +47,8 @@ def main() -> int:
     )
     if expected_import not in scratch:
         raise RuntimeError("formalize_to_scratch output is missing Generated.Manifest import")
+    if unexpected_open in scratch or unexpected_open_scoped in scratch:
+        raise RuntimeError("formalize_to_scratch output unexpectedly contains ProductFree open directives")
     print("scratch template generated manifest test passed")
     return 0
 

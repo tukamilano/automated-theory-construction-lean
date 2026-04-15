@@ -157,6 +157,10 @@ end AutomatedTheoryConstruction
         derived_after = derived_file.read_text(encoding="utf-8")
         if "theorem alpha" in derived_after or "theorem zeta" in derived_after:
             raise RuntimeError("expected Derived.lean to be reset")
+        if "open Mathling.Lambek.ProductFree" in derived_after:
+            raise RuntimeError("reset Derived.lean unexpectedly contains ProductFree open")
+        if "open scoped Mathling.Lambek.ProductFree" in derived_after:
+            raise RuntimeError("reset Derived.lean unexpectedly contains scoped ProductFree open")
         library_entries = build_library_entries(generated_root=generated_root, derived_file=derived_file)
         theorem_names = [entry["theorem_name"] for entry in library_entries]
         if theorem_names != ["alpha", "beta", "gamma", "delta", "epsilon", "zeta"]:

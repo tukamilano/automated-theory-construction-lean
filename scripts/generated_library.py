@@ -22,8 +22,6 @@ _BASE_IMPORTS = (
 _COMMON_PREAMBLE = (
     "set_option autoImplicit false\n\n"
     "namespace AutomatedTheoryConstruction\n\n"
-    "open Mathling.Lambek.ProductFree\n"
-    "open scoped Mathling.Lambek.ProductFree\n\n"
 )
 CHUNK_STEM_PATTERN = re.compile(r"^C(\d{4})(?:_|$)")
 BACKUP_CHUNK_FILE_PATTERN = re.compile(r"^C\d{4}.*_~\.lean$")
@@ -71,8 +69,6 @@ def render_scratch_template(
         + "\n\n"
         + "set_option autoImplicit false\n\n"
         + "namespace AutomatedTheoryConstruction\n\n"
-        + "open Mathling.Lambek.ProductFree\n"
-        + "open scoped Mathling.Lambek.ProductFree\n\n"
         + "-- Temporary Lean code generated for verification is written here.\n\n"
         + "end AutomatedTheoryConstruction\n"
     )

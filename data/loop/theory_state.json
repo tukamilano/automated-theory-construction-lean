@@ -1,0 +1,83 @@
+{
+  "agenda_pressure": [
+    "Keep □, its positive iterates, and orbit dynamics central rather than returning to local ⊠⊤ packaging.",
+    "Prefer exact equivalences and reusable criteria over one-off existential separators.",
+    "Reward unification of one-step and composite dynamics instead of proliferating parallel fixed-k variants.",
+    "Use counterexamples to isolate the roles of consistency and C5, not to motivate cosmetic repairs."
+  ],
+  "current_bottlenecks": [
+    "No exact theorem yet identifies box^k fixed-point existence with ordinary Henkin existence for all positive k.",
+    "Composite orbit criteria still stop short of a full per-k equivalence with Henkin existence.",
+    "The consistent separator boundary below C5 remains constrained by orbit obstructions but not decided.",
+    "Too many queue items are still dominated by C5 canonicity or constant-reflection packaging."
+  ],
+  "derived_generation": 25,
+  "desired_summary_changes": [
+    "Collapse all positive-iterate box^k fixed points to ordinary Henkin existence.",
+    "Upgrade one-step orbit-repeat characterizations to exact per-k composite-dynamics criteria.",
+    "Settle whether consistent Gödel existence can persist without Henkin existence below C5.",
+    "Clarify whether consistency alone links Gödel existence to the top-box equation below C5."
+  ],
+  "important_verified_counterexamples": [
+    "In equality-preorder `ACR` models with monotone `□`, determine whether the existence of a constant-reflection `APS` is equivalent to the existence of some `c` with `c = □c`.",
+    "Characterize exactly when a constant reflection operator can extend a given `ACR` and `Prov` structure to an `APS`: for fixed `c`, give necessary and sufficient conditions for the existence of `Reft` and `APS` with `∀ x, ⊠x = c`.",
+    "∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α], ACR.Consistent α → Nonempty (ACR.GödelFixpoint α) → (⊠⊠(⊤ : α) ≐ ⊠⊤) → Nonempty (ACR.HenkinFixpoint α)"
+  ],
+  "missing_bridges": [
+    "A theorem collapsing arbitrary positive-iterate box^k fixed points to ordinary Henkin points.",
+    "A per-k orbit-repeat criterion exactly equivalent to Henkin existence.",
+    "A clean below-C5 consistency-sensitive bridge between Gödel existence and the top-box equation.",
+    "A sharp account of whether the known infinitary orbit obstructions are merely necessary or actually realized by consistent separators."
+  ],
+  "next_direction": {
+    "guidance": "Prioritize exact theorems showing that positive-iterate box^k fixed-point and orbit-repeat phenomena collapse to ordinary Henkin existence for every k > 0.",
+    "label": "positive_iterate_collapse",
+    "rationale": "This is the clearest summary-changing gap left after the verified one-step orbit characterization, and existing counterexamples already push C5 packaging and constant-reflection variants off the critical path while separator evidence shows that any failure case must evade finite or repeating dynamics."
+  },
+  "overexplored_patterns": [
+    "C5 witness-packaging and canonical-representative variants centered on ⊠⊤.",
+    "Constant-reflection refinements that only restate monotonicity-plus-bounds classifications.",
+    "Existential separator statements padded with extra infinitary conjuncts.",
+    "Degenerate-model classifications that do not feed back into composite collapse or separator structure."
+  ],
+  "research_agenda": {
+    "anti_goals": [
+      "Superficial reformulations",
+      "Complexity without conceptual gain",
+      "Overly specialized conditions"
+    ],
+    "canonical_targets": [
+      "A characterization of fixed-point existence and uniqueness",
+      "A theory of counterexample construction",
+      "A finite-versus-infinite dichotomy",
+      "Odd-parity and even-parity generalizations"
+    ],
+    "soft_constraints": [
+      "Keep `□`, `⊠`, and their composites visibly central",
+      "Prefer structural results over isolated examples",
+      "State clearly which phenomena depend on finiteness or infiniteness",
+      "Distinguish essential assumptions from technical conveniences"
+    ],
+    "themes": [
+      "Existence and uniqueness of fixed points for composites `△`",
+      "Structural conditions for generalized composites",
+      "Counterexample models for nonexistence of fixed points",
+      "Minimal causes of counterexample formation"
+    ],
+    "valued_problem_types": [
+      "Order-theoretic proofs with reuse value",
+      "Sharp separation between finite and infinite underlying sets",
+      "Results stated for genuinely general classes of `△`",
+      "Logically meaningful phenomena even in restricted settings"
+    ]
+  },
+  "summary_basis": {
+    "archived_problem_count": 44,
+    "derived_theorem_count": 25,
+    "open_problem_count": 5
+  },
+  "theory_snapshot": "The current theory has a solid one-step dynamical core: ordinary Henkin existence is exactly captured by repetition modulo equivalence along an inflationary □-orbit, and finite orbit behavior already forces Henkin points. The main open structural gap is whether this one-step picture collapses all positive iterates as well, both at the level of box^k fixed points and at the level of per-k orbit criteria. A second frontier is the consistent below-C5 boundary relating Gödel existence, Henkin failure, and the top-box equation. Verified counterexamples already block broad canonicity and constant-reflection repairs, so genuine progress must come from exact collapse theorems or sharp separator principles rather than more packaging variants.",
+  "updated_at_iteration": 49,
+  "updated_at_run_id": "20260414-221630-loop",
+  "version": 1
+}

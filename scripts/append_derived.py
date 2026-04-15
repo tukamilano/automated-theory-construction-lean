@@ -12,6 +12,8 @@ THEOREM_DECL_PATTERN = re.compile(r"(^|\n)\s*theorem\s+([A-Za-z0-9_']+)\b", re.M
 LEAN_DECL_NAME_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_']*$")
 LEAN_IMPORT_PATTERN = re.compile(r"^import\s+([A-Za-z0-9_.']+)\s*$", re.MULTILINE)
 OPEN_DECL_PATTERN = re.compile(r"^\s*open(?:\s+scoped)?\s+.+$")
+UNIVERSE_DECL_PATTERN = re.compile(r"^\s*universe\s+.+$")
+SET_OPTION_PATTERN = re.compile(r"^\s*set_option\s+.+$")
 DOCSTRING_MAX_CHARS = 240
 
 
@@ -175,7 +177,11 @@ def sanitize_prelude_block(prelude_block: str, existing_content: str) -> str:
             kept_lines.append("")
             continue
         normalized = normalize_block_text(line)
-        if OPEN_DECL_PATTERN.fullmatch(stripped) and normalized in existing_lines:
+        if normalized in existing_lines and (
+            OPEN_DECL_PATTERN.fullmatch(stripped)
+            or UNIVERSE_DECL_PATTERN.fullmatch(stripped)
+            or SET_OPTION_PATTERN.fullmatch(stripped)
+        ):
             continue
         kept_lines.append(line)
         existing_lines.add(normalized)

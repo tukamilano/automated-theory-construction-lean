@@ -110,19 +110,12 @@ def debug_log(msg: str) -> None:
 
 SCRATCH_TEMPLATE = render_scratch_template()
 
-SCRATCH_OPEN_DECLS = (
-    "open Mathling.Lambek.ProductFree\n"
-    "open scoped Mathling.Lambek.ProductFree\n\n"
-)
-
 DERIVED_TEMPLATE = (
     "import Mathlib\n"
     "import AutomatedTheoryConstruction.Theory\n\n"
     "import AutomatedTheoryConstruction.Generated.Manifest\n\n"
     "set_option autoImplicit false\n\n"
     "namespace AutomatedTheoryConstruction\n\n"
-    "open Mathling.Lambek.ProductFree\n"
-    "open scoped Mathling.Lambek.ProductFree\n\n"
     "-- Verified theorems are appended here by scripts/append_derived.py.\n"
     "-- Keep any short theorem docstrings/comments here instead of a separate metadata index.\n\n"
     "end AutomatedTheoryConstruction\n"
@@ -997,7 +990,6 @@ def formalize_to_scratch(
         + "\n\n"
         "set_option autoImplicit false\n\n"
         "namespace AutomatedTheoryConstruction\n\n"
-        f"{SCRATCH_OPEN_DECLS}"
         f"{prelude_block}"
         f"{theorem}\n"
         "end AutomatedTheoryConstruction\n"
