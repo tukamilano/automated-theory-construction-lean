@@ -32,6 +32,7 @@ from materials_pipeline import parse_source_link_entries
 from materials_pipeline import save_paper_record
 from materials_sync import ensure_materials_derived_current
 from research_agenda import DEFAULT_RESEARCH_AGENDA_PATH
+from research_agenda import DEFAULT_RESEARCH_AGENDA_JSON_PATH
 from research_agenda import LEGACY_RESEARCH_AGENDA_PATH
 from research_agenda import empty_research_agenda
 from research_agenda import load_research_agenda
@@ -44,6 +45,14 @@ def test_parse_research_agenda_markdown_extracts_sections() -> None:
     payload = parse_research_agenda_markdown(
         """# Research Agenda
 
+Intro paragraph.
+
+## Main Objects
+- composite operators
+
+## Main Phenomena
+- fixed-point existence
+
 ## Themes
 - bridge theorem clusters
 
@@ -51,7 +60,7 @@ def test_parse_research_agenda_markdown_extracts_sections() -> None:
 - classification results
 - separation statements
 
-## Anti-Goals
+## What Does Not Count As Progress
 - cosmetic rewrites
 
 ## Canonical Targets
@@ -61,12 +70,20 @@ def test_parse_research_agenda_markdown_extracts_sections() -> None:
 - stay close to the active theory
 """
     )
+    if payload["title"] != "Research Agenda":
+        raise RuntimeError(f"unexpected title: {payload}")
+    if payload["introduction"] != "Intro paragraph.":
+        raise RuntimeError(f"unexpected introduction: {payload}")
+    if payload["main_objects"] != ["composite operators"]:
+        raise RuntimeError(f"unexpected main objects: {payload}")
+    if payload["main_phenomena"] != ["fixed-point existence"]:
+        raise RuntimeError(f"unexpected main phenomena: {payload}")
     if payload["themes"] != ["bridge theorem clusters"]:
         raise RuntimeError(f"unexpected themes: {payload}")
     if payload["valued_problem_types"] != ["classification results", "separation statements"]:
         raise RuntimeError(f"unexpected valued problem types: {payload}")
-    if payload["anti_goals"] != ["cosmetic rewrites"]:
-        raise RuntimeError(f"unexpected anti-goals: {payload}")
+    if payload["what_does_not_count_as_progress"] != ["cosmetic rewrites"]:
+        raise RuntimeError(f"unexpected progress exclusions: {payload}")
     if payload["canonical_targets"] != ["exact boundary results"]:
         raise RuntimeError(f"unexpected canonical targets: {payload}")
     if payload["soft_constraints"] != ["stay close to the active theory"]:
@@ -77,7 +94,17 @@ def test_parse_research_agenda_markdown_handles_numbered_headings_and_ignores_pa
     payload = parse_research_agenda_markdown(
         """# Research Agenda
 
-## 1. Themes
+## 1. Main Objects
+
+* **Composite operators**
+  Supporting explanation that should be retained.
+
+## 2. Main Phenomena
+
+* **Fixed-point existence**
+  Supporting explanation that should also be retained.
+
+## 3. Themes
 
 Introductory paragraph that should not become an item.
 
@@ -86,7 +113,7 @@ Introductory paragraph that should not become an item.
 * **Boundary criteria**
   > Example paragraph that should also be ignored.
 
-## 2. Valued Problem Types
+## 4. Valued Problem Types
 
 Within this agenda, solutions to problems of the following kinds are especially valuable.
 
@@ -95,9 +122,13 @@ Within this agenda, solutions to problems of the following kinds are especially 
 2. **Separation statements**
 """
     )
-    if payload["themes"] != ["Bridge theorem clusters", "Boundary criteria"]:
+    if payload["main_objects"] != ["Composite operators Supporting explanation that should be retained."]:
+        raise RuntimeError(f"unexpected numbered-heading main objects: {payload}")
+    if payload["main_phenomena"] != ["Fixed-point existence Supporting explanation that should also be retained."]:
+        raise RuntimeError(f"unexpected numbered-heading main phenomena: {payload}")
+    if payload["themes"] != ["Bridge theorem clusters Supporting explanation that should not become a separate item.", "Boundary criteria > Example paragraph that should also be ignored."]:
         raise RuntimeError(f"unexpected numbered-heading themes: {payload}")
-    if payload["valued_problem_types"] != ["Classification results", "Separation statements"]:
+    if payload["valued_problem_types"] != ["Classification results Extended explanation that should not become a second item.", "Separation statements"]:
         raise RuntimeError(f"unexpected numbered-heading valued problem types: {payload}")
 
 
@@ -115,13 +146,15 @@ def test_load_research_agenda_falls_back_to_legacy_root_file() -> None:
         legacy_path.write_text(
             """# Research Agenda
 
-## Themes
+## Main Objects
 - legacy bridge theorem clusters
 """,
             encoding="utf-8",
         )
         payload = load_research_agenda(repo_root / DEFAULT_RESEARCH_AGENDA_PATH)
-    if payload["themes"] != ["legacy bridge theorem clusters"]:
+        if not (repo_root / LEGACY_RESEARCH_AGENDA_PATH.with_suffix(".json")).exists():
+            raise RuntimeError("expected JSON sidecar to be generated for legacy fallback agenda")
+    if payload["main_objects"] != ["legacy bridge theorem clusters"]:
         raise RuntimeError(f"expected legacy fallback research agenda, got: {payload}")
 
 
@@ -135,9 +168,11 @@ def test_seed_prompt_includes_research_agenda_guidance() -> None:
         guidance=build_guidance_context(
             theory_state={},
             research_agenda={
+                "main_objects": ["composite operators"],
+                "main_phenomena": ["fixed-point existence"],
                 "themes": ["bridge theorem clusters"],
                 "valued_problem_types": ["classification results"],
-                "anti_goals": ["cosmetic rewrites"],
+                "what_does_not_count_as_progress": ["cosmetic rewrites"],
                 "canonical_targets": ["exact boundary results"],
                 "soft_constraints": ["stay close to the active theory"],
             },
@@ -145,9 +180,11 @@ def test_seed_prompt_includes_research_agenda_guidance() -> None:
     )
     required_snippets = (
         "Research agenda: treat the following as external value guidance",
+        "Main objects: composite operators",
+        "Main phenomena: fixed-point existence",
         "Themes: bridge theorem clusters",
         "Valued problem types: classification results",
-        "Anti-goals: cosmetic rewrites",
+        "What does not count as progress: cosmetic rewrites",
         "Canonical targets: exact boundary results",
         "Soft constraints: stay close to the active theory",
     )
@@ -180,27 +217,33 @@ def test_render_research_agenda_user_prompt_substitutes_placeholders() -> None:
 def test_validate_generated_agenda_requires_all_sections() -> None:
     good = """# Research Agenda for Test
 
-## 1. Themes
+## 1. Main Objects
+- object
+
+## 2. Main Phenomena
+- phenomenon
+
+## 3. Themes
 - theme
 
-## 2. Valued Problem Types
+## 4. Valued Problem Types
 - problem type
 
-## 3. Anti-Goals
+## 5. What Does Not Count As Progress
 - anti-goal
 
-## 4. Canonical Targets
+## 6. Canonical Targets
 1. target
 
-## 5. Soft Constraints
+## 7. Soft Constraints
 - soft constraint
 """
     generate_research_agenda_from_report.validate_generated_agenda(good)
 
     bad = """# Research Agenda for Test
 
-## 1. Themes
-- theme
+## 1. Main Objects
+- object
 """
     try:
         generate_research_agenda_from_report.validate_generated_agenda(bad)
@@ -329,6 +372,46 @@ def test_load_seed_generation_guidance_includes_materials() -> None:
         raise RuntimeError(f"research_agenda missing from seed generation context: {guidance}")
 
 
+def test_load_research_agenda_generates_json_sidecar() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        repo_root = Path(tmpdir)
+        markdown_path = repo_root / DEFAULT_RESEARCH_AGENDA_PATH
+        markdown_path.parent.mkdir(parents=True, exist_ok=True)
+        markdown_path.write_text(
+            """# Research Agenda for Test
+
+## 1. Main Objects
+- composite operators
+
+## 2. Main Phenomena
+- fixed-point existence
+
+## 3. Themes
+- bridge theorems
+
+## 4. Valued Problem Types
+- classification results
+
+## 5. What Does Not Count As Progress
+- cosmetic rewrites
+
+## 6. Canonical Targets
+1. exact boundary results
+
+## 7. Soft Constraints
+- stay close to the active theory
+""",
+            encoding="utf-8",
+        )
+        payload = load_research_agenda(markdown_path)
+        json_path = repo_root / DEFAULT_RESEARCH_AGENDA_JSON_PATH
+        if not json_path.exists():
+            raise RuntimeError("expected JSON sidecar to be generated")
+        json_payload = json.loads(json_path.read_text(encoding="utf-8"))
+        if json_payload != payload:
+            raise RuntimeError(f"JSON sidecar payload mismatch: {json_payload} != {payload}")
+
+
 def test_runtime_initialization_clears_generation_sidecar_files() -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp_path = Path(tmpdir)
@@ -413,7 +496,7 @@ def test_runtime_initialization_clears_generation_sidecar_files() -> None:
             raise RuntimeError("paper_claim_rejection_memory.json was not cleared on initialization")
 
 
-def test_runtime_initialization_clears_generated_backup_chunks_only() -> None:
+def test_runtime_initialization_removes_derived_sidecar_directory() -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp_path = Path(tmpdir)
         data_dir = tmp_path / "data"
@@ -421,10 +504,10 @@ def test_runtime_initialization_clears_generated_backup_chunks_only() -> None:
         seeds_file = tmp_path / "seeds.jsonl"
         scratch_file = tmp_path / "Scratch.lean"
         derived_file = tmp_path / "Derived.lean"
-        generated_root = tmp_path / "Generated"
-        generated_root.mkdir(parents=True, exist_ok=True)
-        backup_chunk = generated_root / "C0001_seed_candidate_~.lean"
-        normal_chunk = generated_root / "C0001_seed_candidate.lean"
+        sidecar_dir = tmp_path / "Generated"
+        sidecar_dir.mkdir(parents=True, exist_ok=True)
+        backup_chunk = sidecar_dir / "C0001_seed_candidate_~.lean"
+        normal_chunk = sidecar_dir / "C0001_seed_candidate.lean"
         backup_chunk.write_text("-- backup\n", encoding="utf-8")
         normal_chunk.write_text("-- canonical\n", encoding="utf-8")
 
@@ -446,21 +529,18 @@ def test_runtime_initialization_clears_generated_backup_chunks_only() -> None:
             archived_problems_file=data_dir / "loop" / "archived_problems.jsonl",
         )
 
-        if backup_chunk.exists():
-            raise RuntimeError("generated backup chunk was not removed during runtime initialization")
-        if not normal_chunk.exists():
-            raise RuntimeError("runtime initialization should not remove canonical generated chunks")
+        if sidecar_dir.exists():
+            raise RuntimeError("runtime initialization should remove obsolete sidecar directory")
 
-
-def test_seed_reset_clears_generated_backup_chunks_only() -> None:
+def test_seed_reset_removes_derived_sidecar_directory() -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp_path = Path(tmpdir)
         data_dir = tmp_path / "data"
         (data_dir / "loop").mkdir(parents=True, exist_ok=True)
-        generated_root = tmp_path / "Generated"
-        generated_root.mkdir(parents=True, exist_ok=True)
-        backup_chunk = generated_root / "C0002_loop_residue_~.lean"
-        normal_chunk = generated_root / "C0002_loop_residue.lean"
+        sidecar_dir = tmp_path / "Generated"
+        sidecar_dir.mkdir(parents=True, exist_ok=True)
+        backup_chunk = sidecar_dir / "C0002_loop_residue_~.lean"
+        normal_chunk = sidecar_dir / "C0002_loop_residue.lean"
         backup_chunk.write_text("-- backup\n", encoding="utf-8")
         normal_chunk.write_text("-- canonical\n", encoding="utf-8")
 
@@ -474,10 +554,8 @@ def test_seed_reset_clears_generated_backup_chunks_only() -> None:
             archived_problems_file=data_dir / "loop" / "archived_problems.jsonl",
         )
 
-        if backup_chunk.exists():
-            raise RuntimeError("seed reset did not remove generated backup chunk")
-        if not normal_chunk.exists():
-            raise RuntimeError("seed reset should not remove canonical generated chunks")
+        if sidecar_dir.exists():
+            raise RuntimeError("seed reset should remove obsolete sidecar directory")
 
 
 def test_worker_payloads_include_research_agenda() -> None:
@@ -1682,6 +1760,7 @@ def main() -> int:
     test_parse_research_agenda_markdown_handles_numbered_headings_and_ignores_paragraphs()
     test_load_research_agenda_missing_file_is_empty()
     test_load_research_agenda_falls_back_to_legacy_root_file()
+    test_load_research_agenda_generates_json_sidecar()
     test_render_research_agenda_user_prompt_substitutes_placeholders()
     test_validate_generated_agenda_requires_all_sections()
     test_ensure_materials_derived_current_generates_files_from_root_report()
@@ -1690,8 +1769,8 @@ def main() -> int:
     test_seed_prompt_explicitly_states_shared_policy_priority()
     test_load_seed_generation_guidance_includes_materials()
     test_runtime_initialization_clears_generation_sidecar_files()
-    test_runtime_initialization_clears_generated_backup_chunks_only()
-    test_seed_reset_clears_generated_backup_chunks_only()
+    test_runtime_initialization_removes_derived_sidecar_directory()
+    test_seed_reset_removes_derived_sidecar_directory()
     test_worker_payloads_include_research_agenda()
     test_build_paper_claim_retrieval_materials_prefilters_paper_cache()
     test_build_paper_claim_retrieval_materials_separates_unreadable_baselines()

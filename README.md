@@ -40,13 +40,13 @@ Run:
 make build
 make materials-cache
 make research-agenda REPORT_FILE=materials/your_report.md
-make seed-loop-refactor-to-generated
+make seed-loop-refactor-derived
 make paper-claim
 ```
 
-This builds the project, refreshes `data/materials_cache`, writes `AutomatedTheoryConstruction/research_agenda.md`, runs the main loop plus generated-file refactor path, and then runs a paper-claim session.
+This builds the project, refreshes `data/materials_cache`, writes `AutomatedTheoryConstruction/research_agenda.md`, runs the main loop plus whole-file refactor path on `Derived.lean`, and then runs a paper-claim session.
 
-For subsequent iterations after the first `make seed-loop-refactor-to-generated`, prefer `make loop-continue-refactor-to-generated` so the loop/refactor cycle continues from the current runtime state instead of resetting it.
+For subsequent iterations after the first `make seed-loop-refactor-derived`, prefer `make loop-continue-refactor-derived` so the loop/refactor cycle continues from the current runtime state instead of resetting it.
 If you want to continue only the loop without the refactor stages, use `make loop-continue`.
 If you only want to refresh derived `materials/` artifacts without fetch/extract, use `make materials-derive`.
 If you want the fastest smoke path without Codex CLI, you can still run:
@@ -97,10 +97,10 @@ The post-loop refactor path is intentionally staged:
 1. Alpha-equivalent theorem dedupe on the preview copy
 2. Whole-file rewrite cleanup (`rewrite`, pass 1.5)
 3. Whole-file review-focused cleanup (`review`, pass 2.0)
-4. Split `Derived.lean` into `Generated/C000x_*.lean`
-5. Recheck the whole `AutomatedTheoryConstruction.Generated.Manifest`
+4. Copy the reviewed result back into `Derived.lean`
+5. Recheck the main Lean targets against the updated derived theory
 
-This keeps global cleanup separate from generated-file materialization, while still ending on a verified manifest build.
+This keeps global cleanup separate from proof search while still ending on a verified `Derived.lean`.
 
 ## License
 

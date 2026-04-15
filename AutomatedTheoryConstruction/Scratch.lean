@@ -1,5 +1,4 @@
 import Mathlib
-import AutomatedTheoryConstruction.Generated.Manifest
 import AutomatedTheoryConstruction.Derived
 
 set_option autoImplicit false

@@ -28,7 +28,6 @@ DEFAULT_TRY_AT_EACH_STEP_REPORT = Path("AutomatedTheoryConstruction/Derived.tryA
 DEFAULT_REFACTOR_ARTIFACT_DIR = refactor_data_dir(Path("data"))
 LEAN_BUILD_TARGETS = (
     "AutomatedTheoryConstruction.Theory",
-    "AutomatedTheoryConstruction.Generated.Manifest",
     "AutomatedTheoryConstruction.Derived",
 )
 
@@ -94,13 +93,6 @@ def require_success(stage_name: str, completed: subprocess.CompletedProcess[str]
             flush=True,
         )
         raise SystemExit(completed.returncode)
-
-
-def stage_timed_out(completed: subprocess.CompletedProcess[str] | None) -> bool:
-    if completed is None or completed.returncode == 0:
-        return False
-    combined = "\n".join(part for part in (completed.stdout, completed.stderr) if part).lower()
-    return "timed out after" in combined or "timeoutexpired" in combined
 
 
 def prepare_preview_file(source_file: Path, preview_file: Path, *, dry_run: bool) -> None:
@@ -272,8 +264,6 @@ def _add_main_worker_flags(parser: argparse.ArgumentParser, *, worker_timeout_he
     for prefix in task_prefixes:
         parser.add_argument(f"--{prefix}-worker-command")
         parser.add_argument(f"--{prefix}-worker-timeout", type=int, help=worker_timeout_help)
-    parser.add_argument("--refactor-worker-command")
-    parser.add_argument("--refactor-worker-timeout", type=int, help=worker_timeout_help)
 
 
 def _add_budget_flags(parser: argparse.ArgumentParser) -> None:
@@ -282,7 +272,7 @@ def _add_budget_flags(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--formalization-retry-budget-sec", type=int, help=retry_budget_help)
 
 
-def _add_loop_tuning_flags(parser: argparse.ArgumentParser, *, worker_timeout_help: str, verify_timeout_help: str) -> None:
+def _add_loop_tuning_flags(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--open-problem-failure-threshold", type=int)
     parser.add_argument("--max-same-error-streak", type=int)
 
@@ -321,7 +311,6 @@ def parse_args() -> argparse.Namespace:
         )
     )
     worker_timeout_help = "Per worker subprocess timeout in seconds."
-    verify_timeout_help = "Per Lean verification timeout in seconds."
     _add_context_flags(parser)
     parser.add_argument("--seed-count", type=int, default=4)
     parser.add_argument("--seed-src", default="seed")
@@ -331,12 +320,7 @@ def parse_args() -> argparse.Namespace:
     _add_initialize_phase_flags(parser)
     _add_loop_flags(parser)
     _add_main_worker_flags(parser, worker_timeout_help=worker_timeout_help)
-    parser.add_argument("--refactor-verify-timeout", type=int, help=verify_timeout_help)
-    _add_loop_tuning_flags(
-        parser,
-        worker_timeout_help=worker_timeout_help,
-        verify_timeout_help=verify_timeout_help,
-    )
+    _add_loop_tuning_flags(parser)
     _add_budget_flags(parser)
     _add_path_flags(parser)
     _add_rewrite_and_review_flags(parser)

@@ -60,8 +60,8 @@ from common import (
 )
 from derived_entries import extract_derived_theorem_entries
 from guidance import unpack_guidance_context
-from generated_library import render_scratch_template
-from generated_library import scratch_import_modules
+from scratch_templates import render_scratch_template
+from scratch_templates import scratch_import_modules
 from import_inference import infer_minimal_imports, render_import_block
 from lean_verify import verify_scratch
 from formalization_runtime import attempt_formalization_until_timeout
@@ -99,6 +99,11 @@ from state_update import apply_state_update
 from theorem_commit import commit_verified_theorem_and_generation
 from theorem_reuse_memory import append_theorem_reuse_memory_entry
 from worker_client import invoke_worker_json, load_task_worker_settings, load_worker_settings
+from append_derived import build_derived_entries_from_file
+from theorem_store import DERIVED_TEMPLATE
+from theorem_store import PRODUCT_TEMPLATE
+from theorem_store import ensure_product_file
+from theorem_store import product_file_for_derived
 
 
 def debug_log(msg: str) -> None:
@@ -109,17 +114,6 @@ def debug_log(msg: str) -> None:
 
 
 SCRATCH_TEMPLATE = render_scratch_template()
-
-DERIVED_TEMPLATE = (
-    "import Mathlib\n"
-    "import AutomatedTheoryConstruction.Theory\n\n"
-    "import AutomatedTheoryConstruction.Generated.Manifest\n\n"
-    "set_option autoImplicit false\n\n"
-    "namespace AutomatedTheoryConstruction\n\n"
-    "-- Verified theorems are appended here by scripts/append_derived.py.\n"
-    "-- Keep any short theorem docstrings/comments here instead of a separate metadata index.\n\n"
-    "end AutomatedTheoryConstruction\n"
-)
 DATA_DIR_PATH = "data"
 SEEDS_FILE_PATH = "AutomatedTheoryConstruction/seeds.jsonl"
 SCRATCH_FILE_PATH = "AutomatedTheoryConstruction/Scratch.lean"
@@ -957,6 +951,25 @@ def select_formalizer_prompt(prompt_map: dict[str, str], *, result: str) -> str:
     return prompt_map["proof"]
 
 
+def _split_prelude_imports(prelude_code: str) -> tuple[list[str], str]:
+    imports: list[str] = []
+    body_lines: list[str] = []
+    in_import_prefix = True
+    for line in prelude_code.splitlines():
+        stripped = line.strip()
+        if in_import_prefix and stripped.startswith("import "):
+            module_name = stripped.removeprefix("import ").strip()
+            if module_name and module_name not in imports:
+                imports.append(module_name)
+            continue
+        if in_import_prefix and not stripped:
+            continue
+        in_import_prefix = False
+        body_lines.append(line.rstrip())
+    body = "\n".join(body_lines).strip()
+    return imports, body
+
+
 def formalize_to_scratch(
     theorem_name: str,
     stmt: str,
@@ -967,7 +980,6 @@ def formalize_to_scratch(
 ) -> tuple[str, str]:
     theorem_name = validate_theorem_name(theorem_name)
     _ = stmt
-    extra_imports = infer_minimal_imports("")
     if mode == "proof":
         raw_body = proof_text.strip() if proof_text.strip() else "sorry"
         body = "\n  ".join(line.rstrip() for line in raw_body.splitlines())
@@ -980,13 +992,17 @@ def formalize_to_scratch(
         body = "\n  ".join(line.rstrip() for line in raw_body.splitlines())
         theorem = f"theorem {theorem_name}_is_false : ¬({stmt}) := by\n  {body}\n"
 
-    prelude_block = prelude_code.strip()
+    inferred_imports = infer_minimal_imports("")
+    prelude_imports, prelude_block = _split_prelude_imports(prelude_code)
+    import_modules: list[str] = []
+    for module_name in inferred_imports + prelude_imports + scratch_import_modules():
+        if module_name not in import_modules:
+            import_modules.append(module_name)
     if prelude_block:
         prelude_block = prelude_block + "\n\n"
 
     scratch = (
-        render_import_block(extra_imports)
-        + "\n".join(f"import {module_name}" for module_name in scratch_import_modules())
+        render_import_block(import_modules)
         + "\n\n"
         "set_option autoImplicit false\n\n"
         "namespace AutomatedTheoryConstruction\n\n"
@@ -2428,6 +2444,7 @@ def initialize_runtime_state(
     reset_formalization_memory: bool,
     archived_problems_file: Path,
 ) -> None:
+    ensure_product_file(product_file_for_derived(derived_file))
     seed_rows = dedupe_problem_rows_by_stmt(
         [normalize_open_problem_row(row) for row in read_jsonl(seeds_file)]
     )
@@ -2463,6 +2480,7 @@ def capture_continuation_runtime_snapshot(
     derived_file: Path,
     derived_cleanup_files: tuple[Path, ...],
 ) -> dict[str, str | int | None]:
+    product_file = product_file_for_derived(derived_file)
     tracked_paths = (
         loop_open_problems_path(data_dir),
         loop_archived_problems_path(data_dir),
@@ -2473,6 +2491,7 @@ def capture_continuation_runtime_snapshot(
         theory_state_path(data_dir),
         formalization_memory_file,
         scratch_file,
+        product_file,
         derived_file,
         *derived_cleanup_files,
     )
@@ -2527,6 +2546,28 @@ def guard_against_unexpected_continuation_reset(
     raise RuntimeError(
         "Continuation run unexpectedly cleared archived/solved/counterexample state; restored the pre-run snapshot. "
         "This usually means an initialization/reset path ran during a supposed continuation run."
+    )
+
+
+def validate_continuation_theorem_context(
+    *,
+    data_dir: Path,
+    derived_file: Path,
+) -> None:
+    solved_rows = read_jsonl(loop_solved_problems_path(data_dir))
+    if not solved_rows:
+        return
+
+    product_file = product_file_for_derived(derived_file)
+    library_entries = build_derived_entries_from_file(product_file) + build_derived_entries_from_file(derived_file)
+    if library_entries:
+        return
+
+    raise RuntimeError(
+        "Continuation run requested with solved problems already recorded, but no theorem library entries were found "
+        "in Product.lean or Derived.lean. This usually means both theorem stores were reset or never initialized for continuation. "
+        "Restore the theorem library, or use an initializing run instead of "
+        "--no-initialize-on-start."
     )
 
 
@@ -3323,7 +3364,6 @@ def prebuild_lean_project() -> list[dict[str, Any]]:
     results: list[dict[str, Any]] = []
     for target in (
         "AutomatedTheoryConstruction.Theory",
-        "AutomatedTheoryConstruction.Generated.Manifest",
         "AutomatedTheoryConstruction.Derived",
     ):
         started = time.monotonic()
@@ -3415,6 +3455,10 @@ def main() -> None:
     repo_root = REPO_ROOT
     continuation_snapshot = None
     if not args.initialize_on_start:
+        validate_continuation_theorem_context(
+            data_dir=data_dir,
+            derived_file=derived_path,
+        )
         continuation_snapshot = capture_continuation_runtime_snapshot(
             data_dir=data_dir,
             formalization_memory_file=memory_path,

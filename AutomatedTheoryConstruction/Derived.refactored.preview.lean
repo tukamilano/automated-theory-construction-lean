@@ -137,24 +137,19 @@ instance : ACR.Reft PUnit where
 
 instance : ACR.APS PUnit where
   prov_mono := by
-    intro x y hxy
-    exact PUnit.le (□x) (□y)
+    exact fun {x y} a => PUnit.le (□x) (□y)
   reft_anti_mono := by
-    intro x y hxy
-    exact PUnit.le (⊠y) (⊠x)
+    exact fun {x y} a => PUnit.le (⊠y) (⊠x)
   top_le_reft_bot := by
     trivial
   le_reft_top_of_le_prov_of_le_reft := by
-    intro x y hxy hxr
-    exact PUnit.le x (⊠⊤)
+    exact fun {x y} a a_1 => PUnit.le x (⊠⊤)
   reft_le_prov_reft := by
-    intro x
-    exact PUnit.le (⊠x) (□⊠x)
+    exact fun {x} => PUnit.le (⊠x) (□⊠x)
 
 instance : ACR.C5 PUnit where
   le_top := by
-    intro x
-    exact PUnit.le x ⊤
+    exact fun {x} => PUnit.le x ⊤
 
 /-- An inconsistent C5 APS model with a Godel fixpoint exists. -/
 theorem thm_inconsistent_godel_model_exists_000009 : ∃ (α : Type*) (_ : ACR α) (_ : ACR.Prov α) (_ : ACR.Reft α) (_ : ACR.APS α) (_ : ACR.C5 α), ¬ ACR.Consistent α ∧ Nonempty (ACR.GödelFixpoint α) := by
@@ -192,11 +187,9 @@ instance : ACR CounterexampleThree where
   bot := CounterexampleThree.one
   le x y := x = y
   le_refl := by
-    intro a
-    rfl
+    exact fun a => ((fun a => a) ∘ fun a => a) rfl
   le_trans := by
-    intro a b c hab hbc
-    simpa [hab] using hbc
+    exact fun a b c a_1 a_2 => cast (congrArg (Eq a) a_2) a_1
 
 instance : ACR.Reft CounterexampleThree where
   reft := counterexampleReft
@@ -344,7 +337,7 @@ theorem thm_finite_box_orbit_henkin_000032 : ∀ {α : Type*} [ACR α] [ACR.Prov
     intro a b hab
     exact ACR.prov_mono hab
   have horbit : Monotone fun n : ℕ => f^[n] x :=
-    Monotone.monotone_iterate_of_le_map hmono hx
+    Monotone.monotone_iterate_of_le_map hmono (by exact le_of_eq_of_le rfl hx)
   let s : Set α := {y : α | ∃ n : ℕ, f^[n] x = y}
   have hsfin : s.Finite := by
     exact (Set.finite_iff_finite_of_encard_eq_encard rfl).mp hfin
@@ -436,7 +429,7 @@ theorem thm_constant_reft_extension_criterion_000033_is_false : ¬(∀ {α : Typ
       constructor
       · exact Or.inl rfl
       · exact Or.inl rfl)
-  rcases hex with ⟨hR, hA, _⟩
+  rcases hex with ⟨hR, hA, _hconst⟩
   letI : ACR.Reft (ULift Op000033Model) := hR
   letI : ACR.APS (ULift Op000033Model) := hA
   have hmono :=
@@ -459,7 +452,7 @@ theorem thm_box_orbit_repeat_henkin_000042 : ∀ {α : Type*} [ACR α] [ACR.Prov
     show g.1 ≤ □g.1
     exact le_trans g.2.1 (ACR.reft_gf_le_box_gf (g := g))
   have horbit : Monotone fun k : ℕ => f^[k] g.1 :=
-    Monotone.monotone_iterate_of_le_map hmono hg
+    Monotone.monotone_iterate_of_le_map hmono (by exact le_of_eq_of_le rfl hg)
   refine ⟨⟨f^[m] g.1, ?_⟩⟩
   constructor
   · simpa [f, Function.iterate_succ_apply'] using horbit (Nat.le_succ m)
@@ -470,8 +463,9 @@ theorem thm_box_orbit_repeat_henkin_000042 : ∀ {α : Type*} [ACR α] [ACR.Prov
 theorem thm_constant_reft_iff_bounds_000044 : ∀ {α : Type*} [ACR α] [ACR.Prov α] (c : α), Monotone (fun x : α => □x) → ((∃ hR : ACR.Reft α, ∃ hA : @ACR.APS α _ _ hR, ∀ x : α, @ACR.Reft.reft α _ hR x = c) ↔ ((⊤ : α) ≤ c ∧ c ≤ □c)) := by
   intro α _ _ c hmono
   constructor
-  · rintro ⟨hR, _, hconst⟩
+  · rintro ⟨hR, hA, hconst⟩
     letI : ACR.Reft α := hR
+    letI : ACR.APS α := hA
     constructor
     · simpa [hconst ⊥] using (ACR.top_le_reft_bot (α := α))
     · simpa [hconst c] using (ACR.reft_le_prov_reft (α := α) (x := c))
@@ -479,8 +473,7 @@ theorem thm_constant_reft_iff_bounds_000044 : ∀ {α : Type*} [ACR α] [ACR.Pro
     let hR : ACR.Reft α := { reft := fun _ => c }
     have hA : @ACR.APS α _ _ hR :=
       { prov_mono := by
-          intro x y hxy
-          exact hmono hxy
+          exact fun {x y} a => Monotone.imp hmono a
         reft_anti_mono := by
           intro x y hxy
           exact le_rfl
@@ -563,9 +556,10 @@ theorem thm_constant_reflection_iff_box_fixpoint_000035_is_false : ¬(∀ {α : 
   have hiff := h (α := ULift Op000035Bool) hEq hMono
   have hleft : ∃ c : ULift Op000035Bool, ∃ hR : ACR.Reft (ULift Op000035Bool), ∃ hA : @ACR.APS (ULift Op000035Bool) _ _ hR, ∀ x : ULift Op000035Bool, @ACR.Reft.reft (ULift Op000035Bool) _ hR x = c :=
     hiff.2 ⟨⟨Op000035Bool.ff⟩, rfl⟩
-  rcases hleft with ⟨c, hR, _, hconst⟩
+  rcases hleft with ⟨c, hR, hA, hconst⟩
   letI : ACR.Reft (ULift Op000035Bool) := hR
-  have hbounds := (thm_constant_reft_iff_bounds_000044 (α := ULift Op000035Bool) (c := c) hMono).1 ⟨hR, inferInstance, hconst⟩
+  letI : ACR.APS (ULift Op000035Bool) := hA
+  have hbounds := (thm_constant_reft_iff_bounds_000044 (α := ULift Op000035Bool) (c := c) hMono).1 ⟨hR, hA, hconst⟩
   cases c using ULift.casesOn with
   | _ c =>
       cases c with
@@ -1466,19 +1460,15 @@ theorem thm_consistent_acr_iff_nontrivial_000119 : ∀ α : Type*, (∃ h : ACR 
 theorem thm_acr_exists_iff_nonempty_000123 : ∀ α : Type*, (∃ h : ACR α, True) ↔ Nonempty α := by
   intro α
   constructor
-  · rintro ⟨_, -⟩
+  · rintro ⟨h, -⟩
     exact bot_nonempty α
   · rintro ⟨a⟩
     refine ⟨{
       top := a
       bot := a
       le := fun _ _ => True
-      le_refl := by
-        intro x
-        trivial
-      le_trans := by
-        intro a b c hab hbc
-        trivial
+      le_refl := by exact fun a => True.intro
+      le_trans := by exact fun a b c a_2 a_3 => True.intro
     }, trivial⟩
 
 /-- Universal ACR inconsistency characterizes subsingleton carriers. -/
@@ -1596,7 +1586,7 @@ theorem thm_trivial_box_package_iff_nonempty_000125 : ∀ α : Type*, (∃ (_ : 
 theorem thm_consistent_trivial_box_nontrivial_000126 : ∀ α : Type*, (∃ hA : ACR α, ∃ hP : @ACR.Prov α hA, ∃ hR : @ACR.Reft α hA, ∃ hAPS : @ACR.APS α hA hP hR, ∃ hC5 : @ACR.C5 α hA hP hR hAPS, @ACR.Consistent α hA ∧ ∀ x : α, @ACR.Equivalent α hA x (@ACR.Prov.prov α hA hP x)) ↔ Nontrivial α := by
   intro α
   constructor
-  · rintro ⟨hA, hP, hR, hAPS, _, hCons, hEq⟩
+  · rintro ⟨hA, hP, hR, hAPS, hC5, hCons, hEq⟩
     exact (thm_consistent_acr_iff_nontrivial_000119 α).mp ⟨hA, hCons⟩
   · intro hN
     classical

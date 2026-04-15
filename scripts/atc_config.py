@@ -73,7 +73,6 @@ class RuntimeConfig:
     run_refactor_pass_2: bool = True
     try_at_each_step_tactic: str = "with_reducible exact?"
     open_problem_failure_threshold: int = 2
-    generated_repair_verify_timeout: int = 300
     prover_retry_budget_sec: int = 120
     formalization_retry_budget_sec: int = 300
     max_same_error_streak: int = 5
@@ -581,15 +580,6 @@ def load_app_config(args: Any) -> tuple[AppConfig, dict[str, str]]:
                 default=2,
                 minimum=0,
                 label="runtime.open_problem_failure_threshold",
-            )
-        ),
-        generated_repair_verify_timeout=int(
-            choose_int(
-                cli_names=("generated_repair_verify_timeout",),
-                file_keys=("runtime", "generated_repair_verify_timeout"),
-                default=300,
-                minimum=0,
-                label="runtime.generated_repair_verify_timeout",
             )
         ),
         prover_retry_budget_sec=int(

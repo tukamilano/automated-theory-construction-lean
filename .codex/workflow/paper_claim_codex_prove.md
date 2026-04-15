@@ -16,7 +16,7 @@ Rules:
   - introduce a `have` only when it changes the goal shape, records a reusable intermediate fact, or makes the proof materially clearer.
 - Temporary `sorry` is allowed during exploration when it helps expose dependencies or unblock local proof search.
 - Do not edit `AutomatedTheoryConstruction/Derived.lean`.
-- Do not edit files under `AutomatedTheoryConstruction/Generated/`.
+- Do not edit sidecar theorem files; edit `AutomatedTheoryConstruction/Derived.lean`.
 - Use `lake env lean AutomatedTheoryConstruction/Scratch.lean` to check progress.
 - `status = ok` requires that `Scratch.lean` verifies and contains no relevant `sorry`.
 - If you return `blocked`, briefly explain the remaining holes or blockers in `notes`.

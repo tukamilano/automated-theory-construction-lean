@@ -400,7 +400,7 @@ def render_relevant_derived_context(entries: list[dict[str, Any]], max_chars: in
 
     lines = [
         "",
-        "-- Relevant verified theorems from Generated/Derived:",
+        "-- Relevant verified theorems from Derived:",
         "-- Check these theorem names before re-deriving from axioms.",
     ]
     for entry in entries:

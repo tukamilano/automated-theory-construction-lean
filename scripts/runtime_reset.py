@@ -18,12 +18,6 @@ from atc_paths import refactor_data_dir
 from common import LEGACY_DEFERRED_PROBLEMS_FILENAME
 from common import LEGACY_PRUNED_OPEN_PROBLEMS_FILENAME
 from common import write_jsonl_atomic
-from generated_library import DEFAULT_GENERATED_CATALOG
-from generated_library import DEFAULT_GENERATED_MANIFEST
-from generated_library import DEFAULT_GENERATED_ROOT
-from generated_library import reset_generated_runtime_state
-
-
 def _clear_directory_contents(root: Path) -> None:
     root.mkdir(parents=True, exist_ok=True)
     for path in root.iterdir():
@@ -45,12 +39,7 @@ def reset_loop_runtime_data(
     loop_dir.mkdir(parents=True, exist_ok=True)
     _clear_directory_contents(paper_claim_data_dir(data_dir))
     _clear_directory_contents(refactor_data_dir(data_dir))
-    generated_root = derived_file.parent / DEFAULT_GENERATED_ROOT.name
-    reset_generated_runtime_state(
-        generated_root=generated_root,
-        manifest_file=generated_root / DEFAULT_GENERATED_MANIFEST.name,
-        catalog_file=generated_root / DEFAULT_GENERATED_CATALOG.name,
-    )
+    shutil.rmtree(derived_file.parent / "Generated", ignore_errors=True)
     write_jsonl_atomic(loop_open_problems_path(data_dir), open_problem_rows)
     write_jsonl_atomic(archived_problems_file, [])
     write_jsonl_atomic(loop_solved_problems_path(data_dir), [])

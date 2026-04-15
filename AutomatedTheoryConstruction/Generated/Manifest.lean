@@ -1,2 +1,0 @@
-import AutomatedTheoryConstruction.Generated.C0001_godel_henkin_fixpoint
-import AutomatedTheoryConstruction.Generated.C0002_henkin_constant_orbit

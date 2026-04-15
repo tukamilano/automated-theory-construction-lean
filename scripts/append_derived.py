@@ -5,6 +5,12 @@ import re
 from pathlib import Path
 
 from import_inference import infer_minimal_imports, render_import_block
+from theorem_store import DERIVED_TEMPLATE
+from theorem_store import END_MARKER
+from theorem_store import ensure_product_file
+from theorem_store import extract_module_body
+from theorem_store import product_file_for_derived
+from theorem_store import render_promoted_product
 
 
 THEOREM_NAME_PATTERN = re.compile(r"\btheorem\s+([A-Za-z0-9_']+)\b")
@@ -197,11 +203,8 @@ def append_theorem(
     derived_file.parent.mkdir(parents=True, exist_ok=True)
     required_imports = infer_minimal_imports(theorem_code)
     if not derived_file.exists():
-        derived_file.write_text(
-            render_import_block(required_imports)
-            + "import AutomatedTheoryConstruction.Theory\n\nnamespace AutomatedTheoryConstruction\n\nend AutomatedTheoryConstruction\n",
-            encoding="utf-8",
-        )
+        ensure_product_file(product_file_for_derived(derived_file))
+        derived_file.write_text(DERIVED_TEMPLATE, encoding="utf-8")
 
     if theorem_name is None:
         match = THEOREM_NAME_PATTERN.search(theorem_code)
@@ -225,7 +228,7 @@ def append_theorem(
     if not blocks_to_add:
         return False
 
-    end_marker = "end AutomatedTheoryConstruction"
+    end_marker = END_MARKER
     idx = content.rfind(end_marker)
     if idx == -1:
         raise ValueError("Derived file is missing end namespace marker")
@@ -234,6 +237,30 @@ def append_theorem(
     new_content = content[:idx] + insert + content[idx:]
     derived_file.write_text(new_content, encoding="utf-8")
     return True
+
+
+def promote_staging_to_product(product_file: Path, staging_file: Path) -> bool:
+    if not staging_file.exists():
+        return False
+    staged_text = staging_file.read_text(encoding="utf-8")
+    staged_body = extract_module_body(staged_text)
+    if not staged_body.strip():
+        return False
+
+    ensure_product_file(product_file)
+    existing_product_text = product_file.read_text(encoding="utf-8")
+    promoted_text = render_promoted_product(
+        existing_product_text=existing_product_text,
+        staged_text=staged_text,
+    )
+    product_file.write_text(promoted_text, encoding="utf-8")
+    return True
+
+
+def reset_staging_derived_file(derived_file: Path) -> None:
+    derived_file.parent.mkdir(parents=True, exist_ok=True)
+    ensure_product_file(product_file_for_derived(derived_file))
+    derived_file.write_text(DERIVED_TEMPLATE, encoding="utf-8")
 
 
 def main() -> None:

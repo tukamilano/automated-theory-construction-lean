@@ -2,12 +2,28 @@
 
 This document sets out the current research agenda for APS, the very simple model proposed by Beklemishev and Shamkanov for understanding provability. The aim is to organize work around structural questions about fixed points of composites of the operators `□` and `⊠`, rather than around isolated example calculations alone.
 
-## 1. Themes
+## 1. Main Objects
 
-Let `△` denote any operator obtained by composing `□` and `⊠` finitely many times, for example `□⊠□`.
+* **Composites `△` of `□` and `⊠`**
+  Let `△` denote any operator obtained by composing `□` and `⊠` finitely many times, for example `□⊠□`. These composites should be treated as primary objects of classification in their own right, not merely as notation for isolated examples.
+* **Families of composites `△` cut by coarse structural parameters**
+  Important families of composites `△` should be organized by parameters such as the number of occurrences of `⊠`, parity of those occurrences, total composition length, and endpoint pattern.
+
+## 2. Main Phenomena
+
+* **Existence of fixed points for composites `△`**
+  Determine when a given composite `△` admits a fixed point, preferably by criteria that apply to meaningful families of composites.
+* **Uniqueness of fixed points for composites `△`**
+  Determine when a fixed point of a composite `△` must be unique, and isolate the structural causes of that uniqueness.
+* **Nonexistence of fixed points and its witnesses**
+  Determine when a composite `△` has no fixed point and what kinds of APS models witness that failure.
+* **Dependence of fixed-point behavior on structural regimes**
+  Clarify which fixed-point phenomena depend on finiteness versus infiniteness, parity class, or other coarse structural distinctions among composites `△`.
+
+## 3. Themes
 
 * **Existence and uniqueness of fixed points for composites `△`**
-  Clarify when a given composite `△` has a fixed point, and when such a fixed point must be unique.
+  Seek explanations of fixed-point behavior that treat composites `△` as a family and not merely as a collection of syntactic instances.
 * **Structural conditions for generalized composites**
   When `△` is generalized, identify conditions that genuinely characterize the existence or uniqueness of fixed points, rather than conditions tailored to a single construction.
 * **Counterexample models for nonexistence of fixed points**
@@ -15,7 +31,7 @@ Let `△` denote any operator obtained by composing `□` and `⊠` finitely man
 * **Minimal causes of counterexample formation**
   Isolate which structural assumptions are truly necessary for constructing a model in which a given `△` has no fixed point.
 
-## 2. Valued Problem Types
+## 4. Valued Problem Types
 
 Within this agenda, the following kinds of results are especially valuable:
 
@@ -24,11 +40,11 @@ Within this agenda, the following kinds of results are especially valuable:
 * **Sharp separation between finite and infinite underlying sets**
   Establish results that distinguish the role of finiteness from that of infiniteness in APS. For example, it would be valuable to show that certain counterexample models exist on infinite underlying sets but cannot occur on finite ones.
 * **Results stated for genuinely general classes of `△`**
-  Favor statements that continue to make sense beyond one narrowly specified syntactic form of composite operator.
+  Favor statements that classify parameterized families of composites `△`, rather than advancing one narrowly specified syntactic form at a time.
 * **Logically meaningful phenomena even in restricted settings**
   Even when a result is not maximally general, it is valuable if it reveals phenomena relevant to mathematical logic or to themes surrounding the incompleteness theorems.
 
-## 3. Anti-Goals
+## 5. What Does Not Count As Progress
 
 The following kinds of outputs are not mathematically interesting for this project and should be avoided:
 
@@ -38,8 +54,10 @@ The following kinds of outputs are not mathematically interesting for this proje
   Avoid making `△` or its surrounding assumptions more complicated when the only effect is to make calculations harder without creating new structure or explanation.
 * **Overly specialized conditions**
   Avoid generating conditions that are optimized for a very specific situation but do not plausibly capture broader fixed-point behavior.
+* **Instance-by-instance treatment without a family-level view**
+  Avoid studying one composite `△` after another unless the point is to expose a reusable classification, boundary, or witness pattern.
 
-## 4. Canonical Targets
+## 6. Canonical Targets
 
 1. **A characterization of fixed-point existence and uniqueness**
    Develop conditions on composites `△` that explain when fixed points exist and when they are uniquely determined.
@@ -49,8 +67,10 @@ The following kinds of outputs are not mathematically interesting for this proje
    Clarify whether the existence of certain counterexamples depends essentially on the underlying set being infinite, or whether similar failures already occur in finite APS models.
 4. **Odd-parity and even-parity generalizations**
    Define and study two generalizations of `△`: one in which `⊠` appears an odd number of times, and one in which `⊠` appears an even number of times.
+5. **A classification framework for families of composites `△`**
+   Organize composites `△` into mathematically meaningful families and describe how fixed-point behavior depends on that organization.
 
-## 5. Soft Constraints
+## 7. Soft Constraints
 
 * **Keep `□`, `⊠`, and their composites visibly central**
   Generalization should not obscure the concrete operator patterns whose fixed-point behavior is under investigation.
@@ -62,3 +82,5 @@ The following kinds of outputs are not mathematically interesting for this proje
   When presenting a theorem or counterexample, indicate which hypotheses drive the phenomenon and which are merely artifacts of the proof.
 * **Favor generality only when it preserves explanatory force**
   Broader formulations of `△` are desirable only when they sharpen the classification of fixed-point behavior or reveal mathematically meaningful logical phenomena.
+* **Name the family-level parameter under study whenever possible**
+  When a theorem concerns composites `△`, state explicitly which family or coarse structural regime is being investigated.

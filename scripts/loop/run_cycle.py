@@ -8,6 +8,7 @@ import subprocess
 import sys
 import tempfile
 from datetime import datetime
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -18,10 +19,11 @@ if scripts_root_str not in sys.path:
     sys.path.insert(0, scripts_root_str)
 
 from atc_paths import loop_theory_state_path
-from atc_paths import loop_theorem_reuse_memory_path
-from atc_paths import refactor_chunk_plan_path
 from atc_paths import refactor_data_dir
-from atc_paths import refactor_deps_path
+from append_derived import promote_staging_to_product
+from append_derived import reset_staging_derived_file
+from theorem_store import ensure_product_file
+from theorem_store import product_file_for_derived
 
 REPO_ROOT = SCRIPTS_ROOT.parent
 
@@ -31,7 +33,27 @@ DEFAULT_REVIEW_OUTPUT_FILE = "AutomatedTheoryConstruction/Derived.refactored.rev
 DEFAULT_REVIEW_REPORT_FILE = "AutomatedTheoryConstruction/Derived.refactored.reviewed.report.json"
 DEFAULT_TRY_AT_EACH_STEP_RAW_OUTPUT_FILE = "AutomatedTheoryConstruction/Derived.tryAtEachStep.json"
 DEFAULT_TRY_AT_EACH_STEP_APPLY_REPORT_FILE = "AutomatedTheoryConstruction/Derived.tryAtEachStep.apply_report.json"
-DEFAULT_PLAN_FILE = str(refactor_chunk_plan_path(Path("data")))
+
+
+@dataclass(frozen=True)
+class RefactorPaths:
+    artifact_dir: Path
+    preview_file: Path
+    alpha_dedupe_report_file: Path
+    review_output_file: Path
+    review_report_file: Path
+    raw_output_file: Path
+    apply_report_file: Path
+
+
+@dataclass
+class CycleStatus:
+    loop_status: str
+    paper_claim_status: str
+    refactor_status: str
+    fatal_stage: str
+    paper_claim_report: dict[str, Any]
+    current_iteration: int
 
 
 def iso_timestamp_now() -> str:
@@ -130,6 +152,280 @@ def _summarize_paper_claim_report(report: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _resolve_refactor_paths(args: argparse.Namespace, *, data_dir: Path, cycle_id: str) -> RefactorPaths:
+    artifact_dir = refactor_data_dir(data_dir) / cycle_id
+    return RefactorPaths(
+        artifact_dir=artifact_dir,
+        preview_file=_resolve_refactor_artifact_path(
+            raw_path=DEFAULT_PREVIEW_FILE,
+            default_path=DEFAULT_PREVIEW_FILE,
+            artifact_dir=artifact_dir,
+        ),
+        review_output_file=_resolve_refactor_artifact_path(
+            raw_path=DEFAULT_REVIEW_OUTPUT_FILE,
+            default_path=DEFAULT_REVIEW_OUTPUT_FILE,
+            artifact_dir=artifact_dir,
+        ),
+        alpha_dedupe_report_file=_resolve_refactor_artifact_path(
+            raw_path=DEFAULT_ALPHA_DEDUPE_REPORT_FILE,
+            default_path=DEFAULT_ALPHA_DEDUPE_REPORT_FILE,
+            artifact_dir=artifact_dir,
+        ),
+        review_report_file=_resolve_refactor_artifact_path(
+            raw_path=DEFAULT_REVIEW_REPORT_FILE,
+            default_path=DEFAULT_REVIEW_REPORT_FILE,
+            artifact_dir=artifact_dir,
+        ),
+        raw_output_file=_resolve_refactor_artifact_path(
+            raw_path=DEFAULT_TRY_AT_EACH_STEP_RAW_OUTPUT_FILE,
+            default_path=DEFAULT_TRY_AT_EACH_STEP_RAW_OUTPUT_FILE,
+            artifact_dir=artifact_dir,
+        ),
+        apply_report_file=_resolve_refactor_artifact_path(
+            raw_path=DEFAULT_TRY_AT_EACH_STEP_APPLY_REPORT_FILE,
+            default_path=DEFAULT_TRY_AT_EACH_STEP_APPLY_REPORT_FILE,
+            artifact_dir=artifact_dir,
+        ),
+    )
+
+
+def _run_loop_stage(
+    *,
+    args: argparse.Namespace,
+    env: dict[str, str],
+    start_iteration: int,
+) -> int:
+    loop_cmd = [sys.executable, _script_path("loop/run_loop.py")]
+    _append_bool_flag(loop_cmd, "--initialize-on-start", bool(args.initialize_on_start))
+    _append_bool_flag(loop_cmd, "--phase-logs", bool(args.phase_logs))
+    if args.skip_verify:
+        loop_cmd.append("--skip-verify")
+    _append_flag(loop_cmd, "--worker-command", args.worker_command)
+    _append_flag(loop_cmd, "--worker-timeout", args.worker_timeout)
+    _append_flag(loop_cmd, "--iteration-offset", start_iteration)
+    _append_flag(loop_cmd, "--max-iterations", args.cycle_iterations)
+    _append_flag(loop_cmd, "--parallel-sessions", args.parallel_sessions)
+    _append_flag(loop_cmd, "--seed-count", args.seed_count)
+    _append_flag(loop_cmd, "--open-problem-failure-threshold", args.open_problem_failure_threshold)
+    _append_flag(loop_cmd, "--prover-retry-budget-sec", args.prover_retry_budget_sec)
+    _append_flag(loop_cmd, "--formalization-retry-budget-sec", args.formalization_retry_budget_sec)
+    _append_flag(loop_cmd, "--max-same-error-streak", args.max_same_error_streak)
+    return _run_stage("loop", loop_cmd, env=env)
+
+
+def _run_paper_claim_stage(
+    *,
+    args: argparse.Namespace,
+    env: dict[str, str],
+    theory_file: Path,
+    derived_file: Path,
+    scratch_file: Path,
+    data_dir: Path,
+    cycle_id: str,
+    current_iteration: int,
+    phase_attempts_file: Path | None,
+) -> tuple[str, dict[str, Any]]:
+    with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as tmp:
+        report_file = Path(tmp.name)
+    try:
+        paper_claim_cmd = [
+            sys.executable,
+            _script_path("paper_claim/run_paper_claim_session.py"),
+            "--enable-worker",
+            "--theory-file",
+            str(theory_file),
+            "--derived-file",
+            str(derived_file),
+            "--scratch-file",
+            str(scratch_file),
+            "--data-dir",
+            str(data_dir),
+            "--run-id",
+            cycle_id,
+            "--current-iteration",
+            str(current_iteration),
+            "--report-file",
+            str(report_file),
+            "--batch-generator-seed-count",
+            str(args.seed_count),
+            "--batch-generator-open-target-min",
+            str(args.batch_generator_open_target_min),
+            "--open-problem-failure-threshold",
+            str(args.open_problem_failure_threshold),
+            "--paper-claim-retry-budget-sec",
+            str(args.formalization_retry_budget_sec),
+        ]
+        _append_flag(paper_claim_cmd, "--phase-attempts-file", phase_attempts_file)
+        _append_flag(paper_claim_cmd, "--worker-command", args.worker_command)
+        _append_flag(paper_claim_cmd, "--worker-timeout", args.worker_timeout)
+        _append_bool_flag(paper_claim_cmd, "--phase-logs", bool(args.phase_logs))
+        if args.skip_verify:
+            paper_claim_cmd.append("--skip-verify")
+        paper_claim_returncode = _run_stage("paper-claim", paper_claim_cmd, env=env)
+        paper_claim_report = (
+            json.loads(report_file.read_text(encoding="utf-8"))
+            if report_file.exists()
+            else {}
+        )
+        if paper_claim_returncode != 0 and not paper_claim_report:
+            paper_claim_report = {
+                "status": "paper_claim_error",
+                "processed": False,
+                "verify_success": False,
+            }
+        paper_claim_status = str(paper_claim_report.get("status", "ok" if paper_claim_returncode == 0 else "error"))
+        return paper_claim_status, paper_claim_report
+    finally:
+        report_file.unlink(missing_ok=True)
+
+
+def _run_refactor_stage(
+    *,
+    args: argparse.Namespace,
+    env: dict[str, str],
+    derived_file: Path,
+    paths: RefactorPaths,
+) -> str:
+    product_file = product_file_for_derived(derived_file)
+    ensure_product_file(product_file)
+    paths.artifact_dir.mkdir(parents=True, exist_ok=True)
+    print(f"[cycle] refactor-preview-copy: {derived_file} -> {paths.preview_file}", file=sys.stderr, flush=True)
+    paths.preview_file.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(derived_file, paths.preview_file)
+
+    alpha_dedupe_cmd = [
+        sys.executable,
+        _script_path("refactor/delete_alpha_equiv_duplicates.py"),
+        "--input-file",
+        str(paths.preview_file),
+        "--output-file",
+        str(paths.preview_file),
+        "--alpha-source-file",
+        str(derived_file),
+        "--build-target",
+        "AutomatedTheoryConstruction.Derived",
+        "--equivalence-mode",
+        "defeq",
+        "--report-file",
+        str(paths.alpha_dedupe_report_file),
+    ]
+    if _run_stage("alpha-dedupe-pre-pass-1_5", alpha_dedupe_cmd, env=env) != 0:
+        return "alpha_dedupe_error"
+
+    rewrite_cmd = [
+        sys.executable,
+        _script_path("refactor/apply_try_at_each_step_rewrites.py"),
+        "--input-file",
+        str(paths.preview_file),
+        "--output-file",
+        str(paths.preview_file),
+        "--raw-output-file",
+        str(paths.raw_output_file),
+        "--apply-report-file",
+        str(paths.apply_report_file),
+        "--tactic",
+        "with_reducible exact?",
+    ]
+    if _run_stage("rewrite", rewrite_cmd, env=env) != 0:
+        return "rewrite_error"
+
+    review_cmd = [
+        sys.executable,
+        _script_path("refactor/direct_refactor_derived.py"),
+        "--input-file",
+        str(paths.preview_file),
+        "--output-file",
+        str(paths.review_output_file),
+        "--report-file",
+        str(paths.review_report_file),
+    ]
+    if _run_stage("review", review_cmd, env=env) != 0:
+        return "review_error"
+
+    original_product = product_file.read_text(encoding="utf-8") if product_file.exists() else ""
+    original_derived = derived_file.read_text(encoding="utf-8") if derived_file.exists() else ""
+    print(f"[cycle] refactor-promote-review: {paths.review_output_file} -> {product_file}", file=sys.stderr, flush=True)
+    try:
+        promote_staging_to_product(product_file, paths.review_output_file)
+        reset_staging_derived_file(derived_file)
+        product_build = _run_stage("product-build", ["lake", "build", "AutomatedTheoryConstruction.Product"], env=env)
+        if product_build != 0:
+            raise RuntimeError("product build failed")
+        derived_build = _run_stage("derived-build", ["lake", "build", "AutomatedTheoryConstruction.Derived"], env=env)
+        if derived_build != 0:
+            raise RuntimeError("derived build failed")
+    except Exception:
+        product_file.write_text(original_product, encoding="utf-8")
+        derived_file.write_text(original_derived, encoding="utf-8")
+        return "promote_error"
+    return "ok"
+
+
+def _write_cycle_snapshot(
+    *,
+    snapshot_dir: Path,
+    theory_file: Path,
+    derived_file: Path,
+    data_dir: Path,
+    cycle_id: str,
+    started_at: str,
+    start_iteration: int,
+    target_iteration: int,
+    status: CycleStatus,
+    paths: RefactorPaths,
+) -> None:
+    product_file = product_file_for_derived(derived_file)
+    finished_at = iso_timestamp_now()
+    overall_status = "ok" if not status.fatal_stage else "error"
+    snapshot_paths = [
+        theory_file,
+        product_file,
+        derived_file,
+        data_dir,
+    ]
+    for config_name in (
+        "configs/atc.json",
+        "configs/atc.toml",
+        "atc.json",
+        "atc.toml",
+    ):
+        config_path = REPO_ROOT / config_name
+        if config_path.exists():
+            snapshot_paths.append(config_path)
+    for path in snapshot_paths:
+        _copy_into_snapshot(path, snapshot_dir)
+    _write_cycle_manifest(
+        snapshot_dir,
+        {
+            "cycle_id": cycle_id,
+            "status": overall_status,
+            "fatal_stage": status.fatal_stage,
+            "started_at": started_at,
+            "finished_at": finished_at,
+            "start_iteration": start_iteration,
+            "target_iteration": target_iteration,
+            "end_iteration": status.current_iteration,
+            "loop_status": status.loop_status,
+            "paper_claim_status": status.paper_claim_status,
+            "refactor_status": status.refactor_status,
+            "paper_claim_report": _summarize_paper_claim_report(status.paper_claim_report),
+            "paths": {
+                "theory_file": str(theory_file),
+                "product_file": str(product_file),
+                "derived_file": str(derived_file),
+                "data_dir": str(data_dir),
+                "refactor_artifact_dir": str(paths.artifact_dir),
+                "preview_file": str(paths.preview_file),
+                "alpha_dedupe_report_file": str(paths.alpha_dedupe_report_file),
+                "review_output_file": str(paths.review_output_file),
+                "review_report_file": str(paths.review_report_file),
+                "try_at_each_step_raw_output_file": str(paths.raw_output_file),
+                "try_at_each_step_apply_report_file": str(paths.apply_report_file),
+            },
+        },
+    )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Run one ATC cycle: loop -> paper claim -> refactor -> snapshot.")
     parser.add_argument("--theory-file", default="AutomatedTheoryConstruction/Theory.lean")
@@ -139,21 +435,6 @@ def main() -> int:
     parser.add_argument("--worker-timeout", type=int)
     parser.add_argument("--data-dir", default="data")
     parser.add_argument("--phase-attempts-file")
-    parser.add_argument("--preview-file", default=DEFAULT_PREVIEW_FILE)
-    parser.add_argument("--alpha-dedupe-report-file", default=DEFAULT_ALPHA_DEDUPE_REPORT_FILE)
-    parser.add_argument("--alpha-dedupe-equivalence-mode", choices=("alpha", "defeq"), default="defeq")
-    parser.add_argument("--review-output-file", default=DEFAULT_REVIEW_OUTPUT_FILE)
-    parser.add_argument("--review-report-file", default=DEFAULT_REVIEW_REPORT_FILE)
-    parser.add_argument("--try-at-each-step-raw-output-file", default=DEFAULT_TRY_AT_EACH_STEP_RAW_OUTPUT_FILE)
-    parser.add_argument("--try-at-each-step-apply-report-file", default=DEFAULT_TRY_AT_EACH_STEP_APPLY_REPORT_FILE)
-    parser.add_argument("--try-at-each-step-tactic", default="with_reducible exact?")
-    parser.add_argument("--theorem-reuse-memory-file", default=str(loop_theorem_reuse_memory_path(Path("data"))))
-    parser.add_argument("--deps-file", default=str(refactor_deps_path(Path("data"))))
-    parser.add_argument("--generated-root", default="AutomatedTheoryConstruction/Generated")
-    parser.add_argument("--manifest-file", default="AutomatedTheoryConstruction/Generated/Manifest.lean")
-    parser.add_argument("--catalog-file", default="AutomatedTheoryConstruction/Generated/catalog.json")
-    parser.add_argument("--plan-file", default=DEFAULT_PLAN_FILE)
-    parser.add_argument("--refactor-artifact-dir")
     parser.add_argument("--snapshot-root", default="snapshots")
     parser.add_argument("--cycle-iterations", type=int, default=20)
     parser.add_argument("--parallel-sessions", type=int, default=1)
@@ -163,294 +444,81 @@ def main() -> int:
     parser.add_argument("--prover-retry-budget-sec", type=int, default=120)
     parser.add_argument("--formalization-retry-budget-sec", type=int, default=300)
     parser.add_argument("--max-same-error-streak", type=int, default=5)
-    parser.add_argument("--generated-repair-verify-timeout", type=int, default=300)
     parser.add_argument("--initialize-on-start", action=argparse.BooleanOptionalAction, default=False)
     parser.add_argument("--phase-logs", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--skip-verify", action="store_true")
-    parser.add_argument("--skip-paper-claim", action="store_true")
-    parser.add_argument("--skip-refactor", action="store_true")
-    parser.add_argument("--skip-alpha-dedupe-before-pass-1_5", action="store_true")
     args = parser.parse_args()
 
     theory_file = Path(args.theory_file)
     derived_file = Path(args.derived_file)
     scratch_file = Path(args.scratch_file)
     data_dir = Path(args.data_dir)
-    theorem_reuse_memory_file = Path(args.theorem_reuse_memory_file)
-    deps_file = Path(args.deps_file)
-    generated_root = Path(args.generated_root)
-    manifest_file = Path(args.manifest_file)
-    catalog_file = Path(args.catalog_file)
     snapshot_root = Path(args.snapshot_root)
     phase_attempts_file = Path(args.phase_attempts_file) if args.phase_attempts_file else None
 
     start_iteration = _read_current_iteration(data_dir)
     target_iteration = start_iteration + args.cycle_iterations
     cycle_id, snapshot_dir = _next_cycle_snapshot_dir(snapshot_root)
-    refactor_artifact_dir = (
-        Path(args.refactor_artifact_dir)
-        if args.refactor_artifact_dir
-        else refactor_data_dir(data_dir) / cycle_id
-    )
-    preview_file = _resolve_refactor_artifact_path(
-        raw_path=args.preview_file,
-        default_path=DEFAULT_PREVIEW_FILE,
-        artifact_dir=refactor_artifact_dir,
-    )
-    review_output_file = _resolve_refactor_artifact_path(
-        raw_path=args.review_output_file,
-        default_path=DEFAULT_REVIEW_OUTPUT_FILE,
-        artifact_dir=refactor_artifact_dir,
-    )
-    alpha_dedupe_report_file = _resolve_refactor_artifact_path(
-        raw_path=args.alpha_dedupe_report_file,
-        default_path=DEFAULT_ALPHA_DEDUPE_REPORT_FILE,
-        artifact_dir=refactor_artifact_dir,
-    )
-    review_report_file = _resolve_refactor_artifact_path(
-        raw_path=args.review_report_file,
-        default_path=DEFAULT_REVIEW_REPORT_FILE,
-        artifact_dir=refactor_artifact_dir,
-    )
-    raw_output_file = _resolve_refactor_artifact_path(
-        raw_path=args.try_at_each_step_raw_output_file,
-        default_path=DEFAULT_TRY_AT_EACH_STEP_RAW_OUTPUT_FILE,
-        artifact_dir=refactor_artifact_dir,
-    )
-    apply_report_file = _resolve_refactor_artifact_path(
-        raw_path=args.try_at_each_step_apply_report_file,
-        default_path=DEFAULT_TRY_AT_EACH_STEP_APPLY_REPORT_FILE,
-        artifact_dir=refactor_artifact_dir,
-    )
-    plan_file = Path(args.plan_file)
+    refactor_paths = _resolve_refactor_paths(args, data_dir=data_dir, cycle_id=cycle_id)
     started_at = iso_timestamp_now()
     env = os.environ.copy()
-    loop_status = "pending"
-    paper_claim_status = "skipped" if args.skip_paper_claim else "pending"
-    refactor_status = "skipped" if args.skip_refactor else "pending"
-    fatal_stage = ""
-    paper_claim_report: dict[str, Any] = {}
-    current_iteration = start_iteration
+    status = CycleStatus(
+        loop_status="pending",
+        paper_claim_status="pending",
+        refactor_status="pending",
+        fatal_stage="",
+        paper_claim_report={},
+        current_iteration=start_iteration,
+    )
 
     try:
-        loop_cmd = [sys.executable, _script_path("loop/run_loop.py")]
-        _append_bool_flag(loop_cmd, "--initialize-on-start", bool(args.initialize_on_start))
-        _append_bool_flag(loop_cmd, "--phase-logs", bool(args.phase_logs))
-        if args.skip_verify:
-            loop_cmd.append("--skip-verify")
-        _append_flag(loop_cmd, "--worker-command", args.worker_command)
-        _append_flag(loop_cmd, "--worker-timeout", args.worker_timeout)
-        _append_flag(loop_cmd, "--iteration-offset", start_iteration)
-        _append_flag(loop_cmd, "--max-iterations", args.cycle_iterations)
-        _append_flag(loop_cmd, "--parallel-sessions", args.parallel_sessions)
-        _append_flag(loop_cmd, "--seed-count", args.seed_count)
-        _append_flag(loop_cmd, "--open-problem-failure-threshold", args.open_problem_failure_threshold)
-        _append_flag(loop_cmd, "--prover-retry-budget-sec", args.prover_retry_budget_sec)
-        _append_flag(loop_cmd, "--formalization-retry-budget-sec", args.formalization_retry_budget_sec)
-        _append_flag(loop_cmd, "--max-same-error-streak", args.max_same_error_streak)
-        loop_returncode = _run_stage("loop", loop_cmd, env=env)
-        current_iteration = _read_current_iteration(data_dir)
-        loop_status = "ok" if loop_returncode == 0 else "error"
+        loop_returncode = _run_loop_stage(
+            args=args,
+            env=env,
+            start_iteration=start_iteration,
+        )
+        status.current_iteration = _read_current_iteration(data_dir)
+        status.loop_status = "ok" if loop_returncode == 0 else "error"
         if loop_returncode != 0:
-            fatal_stage = "loop"
+            status.fatal_stage = "loop"
             return 1
 
-        if not args.skip_paper_claim:
-            with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as tmp:
-                report_file = Path(tmp.name)
-            try:
-                paper_claim_cmd = [
-                    sys.executable,
-                    _script_path("paper_claim/run_paper_claim_session.py"),
-                    "--enable-worker",
-                    "--theory-file",
-                    str(theory_file),
-                    "--derived-file",
-                    str(derived_file),
-                    "--scratch-file",
-                    str(scratch_file),
-                    "--data-dir",
-                    str(data_dir),
-                    "--run-id",
-                    cycle_id,
-                    "--current-iteration",
-                    str(current_iteration),
-                    "--report-file",
-                    str(report_file),
-                    "--batch-generator-seed-count",
-                    str(args.seed_count),
-                    "--batch-generator-open-target-min",
-                    str(args.batch_generator_open_target_min),
-                    "--open-problem-failure-threshold",
-                    str(args.open_problem_failure_threshold),
-                    "--paper-claim-retry-budget-sec",
-                    str(args.formalization_retry_budget_sec),
-                ]
-                _append_flag(paper_claim_cmd, "--phase-attempts-file", phase_attempts_file)
-                _append_flag(paper_claim_cmd, "--worker-command", args.worker_command)
-                _append_flag(paper_claim_cmd, "--worker-timeout", args.worker_timeout)
-                _append_bool_flag(paper_claim_cmd, "--phase-logs", bool(args.phase_logs))
-                if args.skip_verify:
-                    paper_claim_cmd.append("--skip-verify")
-                paper_claim_returncode = _run_stage("paper-claim", paper_claim_cmd, env=env)
-                if report_file.exists():
-                    paper_claim_report = json.loads(report_file.read_text(encoding="utf-8"))
-                if paper_claim_returncode != 0 and not paper_claim_report:
-                    paper_claim_report = {
-                        "status": "paper_claim_error",
-                        "processed": False,
-                        "verify_success": False,
-                    }
-                paper_claim_status = str(paper_claim_report.get("status", "ok" if paper_claim_returncode == 0 else "error"))
-            finally:
-                report_file.unlink(missing_ok=True)
+        status.paper_claim_status, status.paper_claim_report = _run_paper_claim_stage(
+            args=args,
+            env=env,
+            theory_file=theory_file,
+            derived_file=derived_file,
+            scratch_file=scratch_file,
+            data_dir=data_dir,
+            cycle_id=cycle_id,
+            current_iteration=status.current_iteration,
+            phase_attempts_file=phase_attempts_file,
+        )
 
-        if not args.skip_refactor:
-            refactor_artifact_dir.mkdir(parents=True, exist_ok=True)
-            print(f"[cycle] refactor-preview-copy: {derived_file} -> {preview_file}", file=sys.stderr, flush=True)
-            preview_file.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(derived_file, preview_file)
-
-            if not args.skip_alpha_dedupe_before_pass_1_5:
-                alpha_dedupe_cmd = [
-                    sys.executable,
-                    _script_path("refactor/delete_alpha_equiv_duplicates.py"),
-                    "--input-file",
-                    str(preview_file),
-                    "--output-file",
-                    str(preview_file),
-                    "--alpha-source-file",
-                    str(derived_file),
-                    "--build-target",
-                    "AutomatedTheoryConstruction.Derived",
-                    "--equivalence-mode",
-                    args.alpha_dedupe_equivalence_mode,
-                    "--report-file",
-                    str(alpha_dedupe_report_file),
-                ]
-                if _run_stage("alpha-dedupe-pre-pass-1_5", alpha_dedupe_cmd, env=env) != 0:
-                    refactor_status = "alpha_dedupe_error"
-                    fatal_stage = "refactor"
-                    return 1
-
-            rewrite_cmd = [
-                sys.executable,
-                _script_path("refactor/apply_try_at_each_step_rewrites.py"),
-                "--input-file",
-                str(preview_file),
-                "--output-file",
-                str(preview_file),
-                "--raw-output-file",
-                str(raw_output_file),
-                "--apply-report-file",
-                str(apply_report_file),
-                "--tactic",
-                args.try_at_each_step_tactic,
-            ]
-            if _run_stage("rewrite", rewrite_cmd, env=env) != 0:
-                refactor_status = "rewrite_error"
-                fatal_stage = "refactor"
-                return 1
-
-            review_cmd = [
-                sys.executable,
-                _script_path("refactor/direct_refactor_derived.py"),
-                "--input-file",
-                str(preview_file),
-                "--output-file",
-                str(review_output_file),
-                "--report-file",
-                str(review_report_file),
-            ]
-            if _run_stage("review", review_cmd, env=env) != 0:
-                refactor_status = "review_error"
-                fatal_stage = "refactor"
-                return 1
-
-            print(f"[cycle] refactor-promote-review: {review_output_file} -> {derived_file}", file=sys.stderr, flush=True)
-            shutil.copyfile(review_output_file, derived_file)
-
-            materialize_cmd = [
-                sys.executable,
-                _script_path("refactor/refactor_derived_to_generated.py"),
-                "--derived-file",
-                str(derived_file),
-                "--deps-file",
-                str(deps_file),
-                "--theory-file",
-                str(theory_file),
-                "--theorem-reuse-memory-file",
-                str(theorem_reuse_memory_file),
-                "--generated-root",
-                str(generated_root),
-                "--manifest-file",
-                str(manifest_file),
-                "--catalog-file",
-                str(catalog_file),
-                "--plan-file",
-                str(plan_file),
-                "--generated-repair-verify-timeout",
-                str(args.generated_repair_verify_timeout),
-            ]
-            if _run_stage("materialize-generated", materialize_cmd, env=env) != 0:
-                refactor_status = "materialize_error"
-                fatal_stage = "refactor"
-                return 1
-
-            refactor_status = "ok"
+        status.refactor_status = _run_refactor_stage(
+            args=args,
+            env=env,
+            derived_file=derived_file,
+            paths=refactor_paths,
+        )
+        if status.refactor_status != "ok":
+            status.fatal_stage = "refactor"
+            return 1
 
         return 0
     finally:
-        finished_at = iso_timestamp_now()
-        current_iteration = _read_current_iteration(data_dir)
-        overall_status = "ok" if not fatal_stage else "error"
-        snapshot_paths = [
-            theory_file,
-            derived_file,
-            generated_root,
-            data_dir,
-        ]
-        for config_name in (
-            "configs/atc.json",
-            "configs/atc.toml",
-            "atc.json",
-            "atc.toml",
-        ):
-            config_path = REPO_ROOT / config_name
-            if config_path.exists():
-                snapshot_paths.append(config_path)
-        for path in snapshot_paths:
-            _copy_into_snapshot(path, snapshot_dir)
-        _write_cycle_manifest(
-            snapshot_dir,
-            {
-                "cycle_id": cycle_id,
-                "status": overall_status,
-                "fatal_stage": fatal_stage,
-                "started_at": started_at,
-                "finished_at": finished_at,
-                "start_iteration": start_iteration,
-                "target_iteration": target_iteration,
-                "end_iteration": current_iteration,
-                "loop_status": loop_status,
-                "paper_claim_status": paper_claim_status,
-                "refactor_status": refactor_status,
-                "paper_claim_report": _summarize_paper_claim_report(paper_claim_report),
-                "paths": {
-                    "theory_file": str(theory_file),
-                    "derived_file": str(derived_file),
-                    "generated_root": str(generated_root),
-                    "data_dir": str(data_dir),
-                    "refactor_artifact_dir": str(refactor_artifact_dir),
-                    "preview_file": str(preview_file),
-                    "alpha_dedupe_report_file": str(alpha_dedupe_report_file),
-                    "review_output_file": str(review_output_file),
-                    "review_report_file": str(review_report_file),
-                    "try_at_each_step_raw_output_file": str(raw_output_file),
-                    "try_at_each_step_apply_report_file": str(apply_report_file),
-                    "plan_file": str(plan_file),
-                },
-            },
+        status.current_iteration = _read_current_iteration(data_dir)
+        _write_cycle_snapshot(
+            snapshot_dir=snapshot_dir,
+            theory_file=theory_file,
+            derived_file=derived_file,
+            data_dir=data_dir,
+            cycle_id=cycle_id,
+            started_at=started_at,
+            start_iteration=start_iteration,
+            target_iteration=target_iteration,
+            status=status,
+            paths=refactor_paths,
         )
 
 

@@ -13,6 +13,7 @@ from llm_exec import run_llm_exec
 from prompt_loader import load_prompt_file
 from research_agenda import DEFAULT_RESEARCH_AGENDA_PATH
 from research_agenda import parse_research_agenda_markdown
+from research_agenda import write_research_agenda_json
 
 
 DEFAULT_SYSTEM_PROMPT = Path("prompts/research_agenda/system.md")
@@ -28,9 +29,11 @@ DEFAULT_LOCAL_PREFERENCES = [
 ]
 
 SECTION_ORDER = (
+    ("main_objects", "Main Objects"),
+    ("main_phenomena", "Main Phenomena"),
     ("themes", "Themes"),
     ("valued_problem_types", "Valued Problem Types"),
-    ("anti_goals", "Anti-Goals"),
+    ("what_does_not_count_as_progress", "What Does Not Count As Progress"),
     ("canonical_targets", "Canonical Targets"),
     ("soft_constraints", "Soft Constraints"),
 )
@@ -199,6 +202,7 @@ def run_generation(
             generated_text = (completed.stdout or "").strip()
         validate_generated_agenda(generated_text)
         write_text_atomic(output_file, generated_text)
+        write_research_agenda_json(output_file, parse_research_agenda_markdown(generated_text))
         return generated_text
     finally:
         try:

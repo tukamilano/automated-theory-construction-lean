@@ -1,7 +1,7 @@
 {
-  "after_theorem_count": 25,
-  "before_theorem_count": 25,
-  "elapsed_sec": 111.0,
+  "after_theorem_count": 49,
+  "before_theorem_count": 49,
+  "elapsed_sec": 163.5,
   "input_file": "AutomatedTheoryConstruction/Derived.refactored.preview.lean",
   "model": "",
   "output_file": "AutomatedTheoryConstruction/Derived.refactored.reviewed.lean",

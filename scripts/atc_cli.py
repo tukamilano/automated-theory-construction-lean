@@ -34,6 +34,11 @@ def _append_bool_flag(cmd: list[str], flag: str, enabled: bool) -> None:
     cmd.append(flag if enabled else f"--no-{flag.removeprefix('--')}")
 
 
+def _append_many_flags(cmd: list[str], flag_values: list[tuple[str, str | int | Path | None]]) -> None:
+    for flag, value in flag_values:
+        _append_flag(cmd, flag, value)
+
+
 def _run_command(cmd: list[str], *, env_updates: dict[str, str], dry_run: bool) -> int:
     env = os.environ.copy()
     env.update(env_updates)
@@ -118,7 +123,6 @@ def _add_pipeline_artifact_flags(
     parser: argparse.ArgumentParser,
     *,
     include_review_output_file: bool = False,
-    include_theorem_reuse_memory: bool = False,
 ) -> None:
     parser.add_argument("--alpha-dedupe-report-file")
     parser.add_argument("--alpha-dedupe-equivalence-mode", choices=("alpha", "defeq"))
@@ -126,8 +130,6 @@ def _add_pipeline_artifact_flags(
     parser.add_argument("--try-at-each-step-tactic")
     parser.add_argument("--try-at-each-step-raw-output-file")
     parser.add_argument("--try-at-each-step-apply-report-file")
-    if include_theorem_reuse_memory:
-        parser.add_argument("--theorem-reuse-memory-file")
     if include_review_output_file:
         parser.add_argument("--review-output-file")
 
@@ -235,56 +237,29 @@ def _pipeline_command(args: argparse.Namespace, config: AppConfig) -> tuple[list
 
 def _cycle_command(args: argparse.Namespace, config: AppConfig) -> tuple[list[str], dict[str, str]]:
     cmd = _python_command("loop/run_cycle.py")
-    _append_flag(cmd, "--worker-command", args.worker_command)
-    _append_flag(cmd, "--worker-timeout", args.worker_timeout)
-    _append_flag(cmd, "--theory-file", args.theory_file or config.paths.theory_file)
-    _append_flag(cmd, "--derived-file", args.derived_file or config.paths.derived_file)
-    _append_flag(cmd, "--scratch-file", args.scratch_file or config.paths.scratch_file)
-    _append_flag(cmd, "--data-dir", args.data_dir or config.paths.data_dir)
-    _append_flag(
+    _append_many_flags(
         cmd,
-        "--phase-attempts-file",
-        args.phase_attempts_file,
-    )
-    _append_flag(cmd, "--preview-file", args.preview_file or config.paths.preview_file)
-    _append_flag(cmd, "--alpha-dedupe-report-file", args.alpha_dedupe_report_file)
-    _append_flag(cmd, "--alpha-dedupe-equivalence-mode", getattr(args, "alpha_dedupe_equivalence_mode", None))
-    _append_flag(cmd, "--review-output-file", args.review_output_file or config.paths.reviewed_file)
-    _append_flag(cmd, "--review-report-file", args.review_report_file or config.paths.review_report_file)
-    _append_flag(
-        cmd,
-        "--try-at-each-step-raw-output-file",
-        args.try_at_each_step_raw_output_file or config.paths.try_at_each_step_raw_output_file,
-    )
-    _append_flag(
-        cmd,
-        "--try-at-each-step-apply-report-file",
-        args.try_at_each_step_apply_report_file or config.paths.try_at_each_step_apply_report_file,
-    )
-    _append_flag(
-        cmd,
-        "--try-at-each-step-tactic",
-        args.try_at_each_step_tactic or config.runtime.try_at_each_step_tactic,
-    )
-    _append_flag(
-        cmd,
-        "--theorem-reuse-memory-file",
-        args.theorem_reuse_memory_file or config.paths.theorem_reuse_memory_file,
-    )
-    _append_flag(cmd, "--deps-file", args.deps_file)
-    _append_flag(cmd, "--generated-root", args.generated_root)
-    _append_flag(cmd, "--manifest-file", args.manifest_file)
-    _append_flag(cmd, "--catalog-file", args.catalog_file)
-    _append_flag(cmd, "--plan-file", args.plan_file)
-    _append_flag(
-        cmd,
-        "--snapshot-root",
-        args.snapshot_root or config.paths.snapshot_root,
-    )
-    _append_flag(
-        cmd,
-        "--cycle-iterations",
-        args.cycle_iterations if args.cycle_iterations is not None else config.runtime.cycle_iterations,
+        [
+            ("--worker-command", args.worker_command),
+            ("--worker-timeout", args.worker_timeout),
+            ("--theory-file", args.theory_file or config.paths.theory_file),
+            ("--derived-file", args.derived_file or config.paths.derived_file),
+            ("--scratch-file", args.scratch_file or config.paths.scratch_file),
+            ("--data-dir", args.data_dir or config.paths.data_dir),
+            ("--phase-attempts-file", args.phase_attempts_file),
+            ("--snapshot-root", args.snapshot_root or config.paths.snapshot_root),
+            (
+                "--cycle-iterations",
+                args.cycle_iterations if args.cycle_iterations is not None else config.runtime.cycle_iterations,
+            ),
+            ("--parallel-sessions", config.runtime.parallel_sessions),
+            ("--seed-count", config.runtime.seed_count),
+            ("--open-problem-failure-threshold", config.runtime.open_problem_failure_threshold),
+            ("--prover-retry-budget-sec", config.runtime.prover_retry_budget_sec),
+            ("--paper-claim-retry-budget-sec", config.runtime.formalization_retry_budget_sec),
+            ("--max-same-error-streak", config.runtime.max_same_error_streak),
+            ("--batch-generator-open-target-min", args.batch_generator_open_target_min),
+        ],
     )
     _append_bool_flag(
         cmd,
@@ -298,24 +273,6 @@ def _cycle_command(args: argparse.Namespace, config: AppConfig) -> tuple[list[st
     )
     if args.skip_verify:
         cmd.append("--skip-verify")
-    if args.skip_paper_claim:
-        cmd.append("--skip-paper-claim")
-    if args.skip_refactor:
-        cmd.append("--skip-refactor")
-    if getattr(args, "skip_alpha_dedupe_before_pass_1_5", False):
-        cmd.append("--skip-alpha-dedupe-before-pass-1_5")
-    _append_flag(cmd, "--parallel-sessions", config.runtime.parallel_sessions)
-    _append_flag(cmd, "--seed-count", config.runtime.seed_count)
-    _append_flag(cmd, "--open-problem-failure-threshold", config.runtime.open_problem_failure_threshold)
-    _append_flag(cmd, "--prover-retry-budget-sec", config.runtime.prover_retry_budget_sec)
-    _append_flag(cmd, "--paper-claim-retry-budget-sec", config.runtime.formalization_retry_budget_sec)
-    _append_flag(cmd, "--max-same-error-streak", config.runtime.max_same_error_streak)
-    _append_flag(
-        cmd,
-        "--generated-repair-verify-timeout",
-        args.generated_repair_verify_timeout or config.runtime.generated_repair_verify_timeout,
-    )
-    _append_flag(cmd, "--batch-generator-open-target-min", args.batch_generator_open_target_min)
     return cmd, build_worker_env(config)
 
 
@@ -411,36 +368,6 @@ def _rewrite_command(args: argparse.Namespace, config: AppConfig) -> tuple[list[
     return cmd, {}
 
 
-def _materialize_generated_command(args: argparse.Namespace, config: AppConfig) -> tuple[list[str], dict[str, str]]:
-    cmd = _python_command("refactor/refactor_derived_to_generated.py")
-    _append_flag(cmd, "--derived-file", getattr(args, "derived_file", None) or config.paths.derived_file)
-    _append_flag(cmd, "--deps-file", args.deps_file)
-    _append_flag(cmd, "--theory-file", getattr(args, "theory_file", None) or config.paths.theory_file)
-    _append_flag(
-        cmd,
-        "--theorem-reuse-memory-file",
-        getattr(args, "theorem_reuse_memory_file", None) or config.paths.theorem_reuse_memory_file,
-    )
-    _append_flag(cmd, "--generated-root", args.generated_root)
-    _append_flag(cmd, "--manifest-file", args.manifest_file)
-    _append_flag(cmd, "--catalog-file", args.catalog_file)
-    _append_flag(cmd, "--plan-file", args.plan_file)
-    _append_flag(cmd, "--min-nodes", args.min_nodes)
-    _append_flag(cmd, "--max-nodes", args.max_nodes)
-    _append_flag(cmd, "--target-nodes", args.target_nodes)
-    _append_flag(cmd, "--cut-penalty", args.cut_penalty)
-    _append_bool_flag(cmd, "--reset-derived", args.reset_derived)
-    _append_bool_flag(cmd, "--refresh-dependencies", args.refresh_dependencies)
-    _append_flag(cmd, "--deps-depth", args.deps_depth)
-    _append_bool_flag(cmd, "--verify-manifest", args.verify_manifest)
-    _append_flag(
-        cmd,
-        "--generated-repair-verify-timeout",
-        getattr(args, "generated_repair_verify_timeout", None) or config.runtime.generated_repair_verify_timeout,
-    )
-    return cmd, build_worker_env(config, task_names=("refactor_derived",))
-
-
 def _extract_derived_deps_command(args: argparse.Namespace, config: AppConfig) -> tuple[list[str], dict[str, str]]:
     cmd = _python_command("refactor/extract_derived_dependencies.py")
     _append_flag(cmd, "--derived-file", getattr(args, "derived_file", None) or config.paths.derived_file)
@@ -509,29 +436,11 @@ def _build_parser() -> argparse.ArgumentParser:
     cycle.add_argument("--scratch-file")
     cycle.add_argument("--data-dir")
     cycle.add_argument("--phase-attempts-file")
-    cycle.add_argument("--preview-file")
-    cycle.add_argument("--alpha-dedupe-report-file")
-    cycle.add_argument("--alpha-dedupe-equivalence-mode", choices=("alpha", "defeq"))
-    cycle.add_argument("--review-output-file")
-    cycle.add_argument("--review-report-file")
-    cycle.add_argument("--try-at-each-step-raw-output-file")
-    cycle.add_argument("--try-at-each-step-apply-report-file")
-    cycle.add_argument("--try-at-each-step-tactic")
-    cycle.add_argument("--theorem-reuse-memory-file")
-    cycle.add_argument("--deps-file")
-    cycle.add_argument("--generated-root")
-    cycle.add_argument("--manifest-file")
-    cycle.add_argument("--catalog-file")
-    cycle.add_argument("--plan-file")
     cycle.add_argument("--snapshot-root")
     cycle.add_argument("--cycle-iterations", type=int)
     cycle.add_argument("--skip-verify", action="store_true")
-    cycle.add_argument("--skip-paper-claim", action="store_true")
-    cycle.add_argument("--skip-refactor", action="store_true")
-    cycle.add_argument("--skip-alpha-dedupe-before-pass-1_5", action="store_true")
     cycle.add_argument("--initialize-on-start", action=argparse.BooleanOptionalAction, default=None)
     cycle.add_argument("--phase-logs", action=argparse.BooleanOptionalAction, default=None)
-    cycle.add_argument("--generated-repair-verify-timeout", type=int)
     cycle.add_argument("--batch-generator-open-target-min", type=int, default=2)
 
     pipeline = subparsers.add_parser("pipeline", help="Run seed -> loop -> preview copy -> alpha-dedupe -> rewrite -> review.")
@@ -548,7 +457,7 @@ def _build_parser() -> argparse.ArgumentParser:
     _add_loop_tuning_flags(pipeline)
     pipeline.add_argument("--skip-loop-verify", action="store_true")
     pipeline.add_argument("--preview-file")
-    _add_pipeline_artifact_flags(pipeline, include_review_output_file=True, include_theorem_reuse_memory=True)
+    _add_pipeline_artifact_flags(pipeline, include_review_output_file=True)
     _add_review_flags(pipeline)
     _add_pipeline_refactor_toggles(pipeline, default=None)
 
@@ -600,30 +509,6 @@ def _build_parser() -> argparse.ArgumentParser:
     rewrite.add_argument("--backup-file")
     rewrite.add_argument("--verify-timeout", type=int, help=verify_timeout_help)
 
-    materialize_generated = subparsers.add_parser(
-        "materialize-generated",
-        help="Split Derived.lean into contiguous Generated chunk files and rebuild Manifest/catalog.",
-    )
-    _add_common_flags(materialize_generated)
-    _add_worker_flags(materialize_generated, include_refactor_task=True)
-    materialize_generated.add_argument("--derived-file")
-    materialize_generated.add_argument("--theory-file")
-    materialize_generated.add_argument("--theorem-reuse-memory-file")
-    materialize_generated.add_argument("--deps-file")
-    materialize_generated.add_argument("--generated-root")
-    materialize_generated.add_argument("--manifest-file")
-    materialize_generated.add_argument("--catalog-file")
-    materialize_generated.add_argument("--plan-file")
-    materialize_generated.add_argument("--min-nodes", type=int, default=6)
-    materialize_generated.add_argument("--max-nodes", type=int, default=14)
-    materialize_generated.add_argument("--target-nodes", type=int)
-    materialize_generated.add_argument("--cut-penalty", type=float, default=0.25)
-    materialize_generated.add_argument("--reset-derived", action=argparse.BooleanOptionalAction, default=True)
-    materialize_generated.add_argument("--refresh-dependencies", action=argparse.BooleanOptionalAction, default=True)
-    materialize_generated.add_argument("--deps-depth", type=int, default=1)
-    materialize_generated.add_argument("--verify-manifest", action=argparse.BooleanOptionalAction, default=True)
-    materialize_generated.add_argument("--generated-repair-verify-timeout", type=int)
-
     extract_deps = subparsers.add_parser(
         "extract-derived-deps",
         help="Refresh data/refactor/derived-deps.json from DependencyExtractor.lean and Derived.lean.",
@@ -670,7 +555,7 @@ def _build_parser() -> argparse.ArgumentParser:
     config_show.add_argument("--seed-count", type=int)
     _add_loop_tuning_flags(config_show)
     _add_pipeline_refactor_toggles(config_show, default=None)
-    _add_pipeline_artifact_flags(config_show, include_review_output_file=False, include_theorem_reuse_memory=False)
+    _add_pipeline_artifact_flags(config_show, include_review_output_file=False)
 
     return parser
 
@@ -696,7 +581,6 @@ def main() -> int:
         "paper-claim": _paper_claim_command,
         "rewrite": _rewrite_command,
         "review": _review_command,
-        "materialize-generated": _materialize_generated_command,
         "extract-derived-deps": _extract_derived_deps_command,
         "research-agenda": _research_agenda_command,
     }

@@ -117,4 +117,42 @@ lemma gf_equiv_reft_top [C5 α] {g : GödelFixpoint α} : g.1 ≐ ⊠⊤ := by
 
 end ACR
 
+/-- Symbols generating composite operators `△` from `□` and `⊠`. -/
+inductive DeltaSymbol where
+  | box
+  | reft
+  deriving DecidableEq, Repr
+
+/-- Backward-compatible alias for older code that still refers to `DeltaAtom`. -/
+abbrev DeltaAtom := DeltaSymbol
+
+/-- Finite words in the operator alphabet `{□, ⊠}`. -/
+abbrev Delta := List DeltaSymbol
+
+namespace Delta
+
+abbrev box : DeltaSymbol := .box
+abbrev reft : DeltaSymbol := .reft
+
+/-- Interpret a single `Delta` symbol as an operator on `α`. -/
+def actSymbol [ACR α] [ACR.Prov α] [ACR.Reft α] : DeltaSymbol → α → α
+  | .box  => fun x => □x
+  | .reft => fun x => ⊠x
+
+/-- Interpret a `Delta` word by applying its symbols from left to right. -/
+def act [ACR α] [ACR.Prov α] [ACR.Reft α] : Delta → α → α
+  | [] => id
+  | a :: d => fun x => act d (actSymbol a x)
+
+def pow (d : Delta) (n : Nat) : Delta :=
+  List.flatten (List.replicate n d)
+
+def countBox (d : Delta) : Nat :=
+  d.count box
+
+def countReft (d : Delta) : Nat :=
+  d.count reft
+
+end Delta
+
 end

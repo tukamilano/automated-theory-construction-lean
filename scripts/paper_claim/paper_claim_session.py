@@ -24,7 +24,7 @@ from common import append_jsonl
 from common import read_jsonl
 from common import normalize_open_problem_row
 from derived_entries import extract_derived_theorem_entries
-from generated_library import render_scratch_template
+from scratch_templates import render_scratch_template
 from guidance import unpack_guidance_context
 from lean_verify import verify_scratch
 from loop_common import iso_timestamp_now

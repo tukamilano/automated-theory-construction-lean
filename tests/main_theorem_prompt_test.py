@@ -23,7 +23,7 @@ def test_problem_design_prompts_exist_and_are_strict() -> None:
 
     cluster_prompt = (REPO_ROOT / "prompts" / "problem_design" / "cluster.md").read_text(encoding="utf-8")
     for snippet in (
-        "Clusterer of the currently visible `Generated` / `Derived` theorem inventory.",
+        "Clusterer of the currently visible `Derived` theorem inventory.",
         "Partition the visible verified results into a small number of conceptual clusters.",
         "Return 2-4 clusters.",
         "\"cluster_id\": \"cluster_001\"",
@@ -37,7 +37,7 @@ def test_problem_design_prompts_exist_and_are_strict() -> None:
         "Literature contextualizer for one verified theorem cluster.",
         "Use `materials.paper_reading_context` and `materials.paper_excerpt_context` as the main direct-reading evidence.",
         "produce `no_go_faces` aggressively",
-        "Do not use proximity to `Generated` / `Derived` as negative evidence by itself.",
+        "Do not use proximity to `Derived` as negative evidence by itself.",
         "\"headline_viability\": \"promising|unclear|weak\"",
         "\"what_counts_as_real_delta\": [\"theorem-level deltas that would still count from the outside\"]",
         "\"must_clear_for_novelty\": [\"conditions the later proposal must satisfy\"]",
@@ -133,7 +133,7 @@ def test_paper_claim_codex_prove_workflow_prompt_exists() -> None:
         "Work only on `AutomatedTheoryConstruction/Scratch.lean`.",
         "You may refine the theorem statement if needed.",
         "Do not edit `AutomatedTheoryConstruction/Derived.lean`.",
-        "Do not edit files under `AutomatedTheoryConstruction/Generated/`.",
+        "Do not edit sidecar theorem files; edit `AutomatedTheoryConstruction/Derived.lean` only.",
         "Use `lake env lean AutomatedTheoryConstruction/Scratch.lean` to check progress.",
         "avoid theorem-local wrappers like `have h : <same statement> := by ...; exact h`",
         "Return exactly one JSON object.",

@@ -1,44 +1,44 @@
 {
   "agenda_pressure": [
-    "Keep □, its positive iterates, and orbit dynamics central rather than returning to local ⊠⊤ packaging.",
-    "Prefer exact equivalences and reusable criteria over one-off existential separators.",
-    "Reward unification of one-step and composite dynamics instead of proliferating parallel fixed-k variants.",
-    "Use counterexamples to isolate the roles of consistency and C5, not to motivate cosmetic repairs."
+    "Prefer exact characterizations and subtype interfaces over more examples or repaired counterexamples.",
+    "Use canonical realizations and constant-top regimes as organizing positive theory, not as sources of extra finite special cases.",
+    "Keep `□`, `⊠`, and their composites central only when they yield reusable structural criteria.",
+    "Down-rank local separator decorations unless they clearly compress several proof paths or change the summary."
   ],
   "current_bottlenecks": [
-    "No exact theorem yet identifies box^k fixed-point existence with ordinary Henkin existence for all positive k.",
-    "Composite orbit criteria still stop short of a full per-k equivalence with Henkin existence.",
-    "The consistent separator boundary below C5 remains constrained by orbit obstructions but not decided.",
-    "Too many queue items are still dominated by C5 canonicity or constant-reflection packaging."
+    "Gödel classification is still mostly pointwise and not yet expressed as a full subtype interface.",
+    "The iterate theory remains split across one-step, some-`k`, and Gödel-gated formulations.",
+    "Many remaining queue items are separator or parity decorations whose resolution would not rewrite the summary.",
+    "The sharp minimal hypothesis under which global or near-global `⊠` collapse forces inconsistency is still not isolated."
   ],
-  "derived_generation": 25,
+  "derived_generation": 49,
   "desired_summary_changes": [
-    "Collapse all positive-iterate box^k fixed points to ordinary Henkin existence.",
-    "Upgrade one-step orbit-repeat characterizations to exact per-k composite-dynamics criteria.",
-    "Settle whether consistent Gödel existence can persist without Henkin existence below C5.",
-    "Clarify whether consistency alone links Gödel existence to the top-box equation below C5."
+    "An exact subtype equivalence identifying the Gödel-fixpoint locus with the `⊤`-equivalence locus in the constant-top or canonical benchmark regime.",
+    "A single nongated per-`k` characterization of Henkin existence that subsumes the current orbit-repeat and iterate-fixed-point fragments.",
+    "A minimal-threshold inconsistency theorem stated in reusable reflection-fixed-point language rather than witness-specific collapse facts.",
+    "Canonical benchmark realizations packaged as interface theorems for whole fixed-point subtypes, not just existence witnesses."
   ],
   "important_verified_counterexamples": [
-    "In equality-preorder `ACR` models with monotone `□`, determine whether the existence of a constant-reflection `APS` is equivalent to the existence of some `c` with `c = □c`.",
-    "Characterize exactly when a constant reflection operator can extend a given `ACR` and `Prov` structure to an `APS`: for fixed `c`, give necessary and sufficient conditions for the existence of `Reft` and `APS` with `∀ x, ⊠x = c`.",
-    "∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α], ACR.Consistent α → Nonempty (ACR.GödelFixpoint α) → (⊠⊠(⊤ : α) ≐ ⊠⊤) → Nonempty (ACR.HenkinFixpoint α)"
+    "For every cardinality `κ` with `κ ≠ 1`, there exists a type `α` of size `κ` carrying a consistent `ACR`/`Prov`/`Reft`/`APS`/`C5` structure such that `∀ x, x ≐ □x`, the order on `α` is total and antisymmetric, and `ACR.GödelFixpoint α` is...",
+    "∀ n : ℕ, 1 ≤ n → ∃ (α : Type*) (_ : Fintype α) (_ : ACR α) (_ : ACR.Prov α) (_ : ACR.Reft α) (_ : ACR.APS α) (_ : ACR.C5 α), ACR.Consistent α ∧ (∀ x : α, x ≐ □x) ∧ (∀ x y : α, x ≤ y ∨ y ≤ x) ∧ (∀ x y : α, x ≤ y → y ≤ x → x = y) ∧ Nonempt...",
+    "∀ {α : Type*} [Fintype α] [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] [ACR.C5 α], ACR.Consistent α → (∀ x : α, x ≐ □x) → (∀ x y : α, x ≤ y ∨ y ≤ x) → (∀ {x y : α}, x ≤ y → y ≤ x → x = y) → (Nonempty (ACR.GödelFixpoint α) ↔ ∃ m : ℕ, Fin..."
   ],
   "missing_bridges": [
-    "A theorem collapsing arbitrary positive-iterate box^k fixed points to ordinary Henkin points.",
-    "A per-k orbit-repeat criterion exactly equivalent to Henkin existence.",
-    "A clean below-C5 consistency-sensitive bridge between Gödel existence and the top-box equation.",
-    "A sharp account of whether the known infinitary orbit obstructions are merely necessary or actually realized by consistent separators."
+    "A bridge from constant-top Gödel collapse theorems to an actual equivalence of fixed-point subtypes.",
+    "A bridge from verified orbit-repeat implications to one exact nongated per-`k` Henkin criterion.",
+    "A bridge from canonical bounded-linear realizations to full descriptions of both Gödel and Henkin loci.",
+    "A bridge from extreme reflection-collapse assumptions to a definitive minimal inconsistency theorem."
   ],
   "next_direction": {
-    "guidance": "Prioritize exact theorems showing that positive-iterate box^k fixed-point and orbit-repeat phenomena collapse to ordinary Henkin existence for every k > 0.",
-    "label": "positive_iterate_collapse",
-    "rationale": "This is the clearest summary-changing gap left after the verified one-step orbit characterization, and existing counterexamples already push C5 packaging and constant-reflection variants off the critical path while separator evidence shows that any failure case must evade finite or repeating dynamics."
+    "guidance": "Prioritize exact subtype equivalences for Gödel loci and nongated per-`k` Henkin characterizations before pursuing more separator or finite-family variants.",
+    "label": "complete_exact_godel_and_iterate_interfaces",
+    "rationale": "These are the only visible directions likely to change the summary now: counterexamples have already drained value from parity, irrefutability, and decorated separator problems, while the main unsatisfied structural gaps are the Gödel subtype bridge and the unified iterate interface, with minimal `⊠`-collapse inconsistency as the main secondary boundary."
   },
   "overexplored_patterns": [
-    "C5 witness-packaging and canonical-representative variants centered on ⊠⊤.",
-    "Constant-reflection refinements that only restate monotonicity-plus-bounds classifications.",
-    "Existential separator statements padded with extra infinitary conjuncts.",
-    "Degenerate-model classifications that do not feed back into composite collapse or separator structure."
+    "Parity-only claims in finite trivial-`□` chain settings.",
+    "Separator existence statements with added orbit, involution, or total-collapse decoration.",
+    "Batch restatements of already known iterate-repeat implications.",
+    "Constant-reflection refinements that stay inside the already organized monotonicity-plus-bounds theory."
   ],
   "research_agenda": {
     "anti_goals": [
@@ -72,12 +72,12 @@
     ]
   },
   "summary_basis": {
-    "archived_problem_count": 44,
-    "derived_theorem_count": 25,
-    "open_problem_count": 5
+    "archived_problem_count": 88,
+    "derived_theorem_count": 49,
+    "open_problem_count": 6
   },
-  "theory_snapshot": "The current theory has a solid one-step dynamical core: ordinary Henkin existence is exactly captured by repetition modulo equivalence along an inflationary □-orbit, and finite orbit behavior already forces Henkin points. The main open structural gap is whether this one-step picture collapses all positive iterates as well, both at the level of box^k fixed points and at the level of per-k orbit criteria. A second frontier is the consistent below-C5 boundary relating Gödel existence, Henkin failure, and the top-box equation. Verified counterexamples already block broad canonicity and constant-reflection repairs, so genuine progress must come from exact collapse theorems or sharp separator principles rather than more packaging variants.",
-  "updated_at_iteration": 0,
+  "theory_snapshot": "The theory now has a stable positive core: under `C5`, Gödel existence is exactly characterized by `⊠⊠⊤ ≐ ⊠⊤`, Gödel points are unique up to equivalence, and canonical bounded-linear realizations already supply benchmark positive models. Trivial-`□` regimes are also largely organized on the Henkin side, with existence and pointwise realization already understood, while constant-top assumptions collapse Gödel points to the `⊤`-locus. The main frontier is therefore no longer example production but interface completion: an exact subtype-level description of the Gödel locus and a single nongated per-`k` Henkin characterization. Verified counterexamples strongly constrain parity stories, irrefutability converses, and separator embellishments, and they push the remaining boundary work toward minimal inconsistency thresholds for reflection collapse rather than further decorated models.",
+  "updated_at_iteration": 49,
   "updated_at_run_id": "20260415-101921-loop",
   "version": 1
 }

@@ -17,7 +17,7 @@ loop: generate -> formalize -> verify -> repair
         ↓
 [Derived.lean] accumulated verified theorems
         ↓
-optional cleanup and split-based refactor stages
+optional whole-file cleanup/refactor stages
 ```
 
 The important separation is:
@@ -130,13 +130,13 @@ make loop
 make loop-continue
 ```
 
-If you also want to keep the generated-file refactor stages in the same cycle, prefer:
+If you also want to keep the whole-file refactor stages in the same cycle, prefer:
 
 ```bash
-make loop-continue-refactor-to-generated
+make loop-continue-refactor-derived
 ```
 
-This is the normal continuation command after an initial `make seed-loop-refactor-to-generated`.
+This is the normal continuation command after an initial `make seed-loop-refactor-derived`.
 
 ### Run a larger one-shot pipeline
 
@@ -169,31 +169,13 @@ The alpha-dedupe step runs first on the preview copy and, by default, deletes la
 
 If you want the stricter old behavior, use `--equivalence-mode alpha` on the script above, or `ALPHA_DEDUPE_EQUIVALENCE_MODE=alpha make theorem-dedupe`.
 
-### Materialize generated chunk files
+### Run the bundled whole-file refactor shortcut
 
 ```bash
-uv run python scripts/atc_cli.py materialize-generated
+make refactor-derived
 ```
 
-This splits `Derived.lean` into `AutomatedTheoryConstruction/Generated/C000x_*.lean`, rebuilds `Manifest.lean` and `catalog.json`, and rechecks `AutomatedTheoryConstruction.Generated.Manifest`.
-
-If you want to materialize the reviewed refactor output without first copying it back onto `Derived.lean`, use:
-
-```bash
-make materialize-reviewed-generated
-```
-
-For any other source file, override the Make input explicitly:
-
-```bash
-make materialize-generated MATERIALIZE_DERIVED_FILE=AutomatedTheoryConstruction/Derived.refactored.reviewed.lean
-```
-
-If you want the bundled end-to-end shortcut for the whole refactor path:
-
-```bash
-make refactor-to-generated
-```
+This runs theorem dedupe on a preview copy, then `rewrite`, then `review`, and finally copies the reviewed result back onto `Derived.lean`.
 
 ## Worker Modes
 
