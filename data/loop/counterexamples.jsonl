@@ -1,0 +1,1 @@
+{"id":"op_000009","stmt":"∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] (d : Delta), Even (Delta.countReft d) → (Nonempty {x : α // x ≐ Delta.act d x} ↔ Nonempty (ACR.HenkinFixpoint α))","run_id":"20260415-165853-loop","iteration":5,"session_type":"loop"}

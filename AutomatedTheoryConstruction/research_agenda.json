@@ -3,7 +3,6 @@
     "A characterization of fixed-point existence and uniqueness Develop conditions on composites `△` that explain when fixed points exist and when they are uniquely determined.",
     "A theory of counterexample construction Determine what kinds of APS models witness the nonexistence of fixed points, and identify which structural ingredients are genuinely necessary in such constructions.",
     "A finite-versus-infinite dichotomy Clarify whether the existence of certain counterexamples depends essentially on the underlying set being infinite, or whether similar failures already occur in finite APS models.",
-    "Odd-parity and even-parity generalizations Define and study two generalizations of `△`: one in which `⊠` appears an odd number of times, and one in which `⊠` appears an even number of times.",
     "A classification framework for families of composites `△` Organize composites `△` into mathematically meaningful families and describe how fixed-point behavior depends on that organization."
   ],
   "introduction": "This document sets out the current research agenda for APS, the very simple model proposed by Beklemishev and Shamkanov for understanding provability. The aim is to organize work around structural questions about fixed points of composites of the operators `□` and `⊠`, rather than around isolated example calculations alone.",

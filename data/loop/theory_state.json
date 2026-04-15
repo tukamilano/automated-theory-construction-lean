@@ -1,0 +1,92 @@
+{
+  "agenda_pressure": [
+    "Favor family-level parity theorems over isolated syntactic instances.",
+    "Reward sharp corrected criteria, converses, and obstruction theorems over local support lemmas.",
+    "Use counterexamples to identify essential assumptions such as degeneracy and finiteness.",
+    "Prefer problems whose significance remains visible at the top-level theory summary."
+  ],
+  "current_bottlenecks": [
+    "The unrestricted even theorem is false, but no corrected replacement or sharp obstruction theorem has been established.",
+    "Odd-side results are still split across existence, uniqueness, and normalization candidates instead of one classification theorem.",
+    "The role of degeneracy versus broader structural causes in the even counterexample is unresolved.",
+    "The finite-versus-infinite status of Henkin failure is still unknown."
+  ],
+  "derived_generation": 1,
+  "desired_summary_changes": [
+    "A corrected family-level theorem explaining exactly when even fixed points imply Henkin behavior.",
+    "A family-level odd criterion linking arbitrary odd composites to Gödel-side existence or canonical form.",
+    "A completed odd classification that combines existence, uniqueness, and canonical representative statements.",
+    "A sharp regime statement separating degenerate, nondegenerate, finite, and infinite causes of even-side failure."
+  ],
+  "important_verified_counterexamples": [
+    "∀ {α : Type*} [ACR α] [ACR.Prov α] [ACR.Reft α] [ACR.APS α] (d : Delta), Even (Delta.countReft d) → (Nonempty {x : α // x ≐ Delta.act d x} ↔ Nonempty (ACR.HenkinFixpoint α))"
+  ],
+  "missing_bridges": [
+    "A bridge from arbitrary odd fixed points to a canonical Gödel-side representative or exact criterion.",
+    "A bridge from the falsified unrestricted even theorem to a corrected nondegenerate hypothesis set.",
+    "A bridge connecting odd uniqueness and odd existence into one classification-level theorem.",
+    "A bridge separating infinite-model artifacts from genuinely finite counterexample behavior."
+  ],
+  "next_direction": {
+    "guidance": "Prioritize problems that determine whether the falsified even-to-Henkin bridge can be repaired by excluding degeneracy or instead fails in broader nontrivial or finite regimes.",
+    "label": "sharpen_even_boundary_conditions",
+    "rationale": "The verified counterexample already rules out bare even parity as a valid summary theorem, so the highest-value progress is to isolate the exact boundary of failure before adding more local parity lemmas."
+  },
+  "overexplored_patterns": [
+    "One-way odd transfer lemmas that stop short of an equivalence or canonical classification.",
+    "Special power-family statements that avoid arbitrary-composite parity structure.",
+    "Pointwise normalization claims with no clear bridge to existence or uniqueness theorems.",
+    "Local even-side lemmas that do not sharpen the verified counterexample boundary."
+  ],
+  "research_agenda": {
+    "canonical_targets": [
+      "A characterization of fixed-point existence and uniqueness Develop conditions on composites `△` that explain when fixed points exist and when they are uniquely determined.",
+      "A theory of counterexample construction Determine what kinds of APS models witness the nonexistence of fixed points, and identify which structural ingredients are genuinely necessary in such constructions.",
+      "A finite-versus-infinite dichotomy Clarify whether the existence of certain counterexamples depends essentially on the underlying set being infinite, or whether similar failures already occur in finite APS models.",
+      "Odd-parity and even-parity generalizations Define and study two generalizations of `△`: one in which `⊠` appears an odd number of times, and one in which `⊠` appears an even number of times."
+    ],
+    "main_objects": [
+      "Composites `△` of `□` and `⊠` Let `△` denote any operator obtained by composing `□` and `⊠` finitely many times, for example `□⊠□`. These composites should be treated as primary objects of classification in their own right, not merely as notation for isolated examples.",
+      "Families of composites `△` cut by coarse structural parameters Important families of composites `△` should be organized by parameters such as the number of occurrences of `⊠`, parity of those occurrences, total composition length, and endpoint pattern."
+    ],
+    "main_phenomena": [
+      "Existence of fixed points for composites `△` Determine when a given composite `△` admits a fixed point, preferably by criteria that apply to meaningful families of composites.",
+      "Uniqueness of fixed points for composites `△` Determine when a fixed point of a composite `△` must be unique, and isolate the structural causes of that uniqueness.",
+      "Nonexistence of fixed points and its witnesses Determine when a composite `△` has no fixed point and what kinds of APS models witness that failure.",
+      "Dependence of fixed-point behavior on structural regimes Clarify which fixed-point phenomena depend on finiteness versus infiniteness, parity class, or other coarse structural distinctions among composites `△`."
+    ],
+    "soft_constraints": [
+      "Keep `□`, `⊠`, and their composites visibly central Generalization should not obscure the concrete operator patterns whose fixed-point behavior is under investigation.",
+      "Prefer structural results over isolated examples Individual examples are useful only insofar as they contribute to a broader explanation of existence, uniqueness, or nonexistence of fixed points.",
+      "State clearly which phenomena depend on finiteness or infiniteness Whenever possible, separate effects that arise from the size of the underlying set from effects caused by other structural assumptions.",
+      "Distinguish essential assumptions from technical conveniences When presenting a theorem or counterexample, indicate which hypotheses drive the phenomenon and which are merely artifacts of the proof."
+    ],
+    "themes": [
+      "Existence and uniqueness of fixed points for composites `△` Seek explanations of fixed-point behavior that treat composites `△` as a family and not merely as a collection of syntactic instances.",
+      "Structural conditions for generalized composites When `△` is generalized, identify conditions that genuinely characterize the existence or uniqueness of fixed points, rather than conditions tailored to a single construction.",
+      "Counterexample models for nonexistence of fixed points If `△` has no fixed point, determine what kinds of APS models can witness this failure.",
+      "Minimal causes of counterexample formation Isolate which structural assumptions are truly necessary for constructing a model in which a given `△` has no fixed point."
+    ],
+    "valued_problem_types": [
+      "Order-theoretic proofs with reuse value Prefer proofs that connect APS fixed-point questions to existing order-theoretic ideas, since such methods may apply more broadly. In particular, meaningful connections with major fixed-point principles such as the Knaster-Tarski theorem would be highly valuable.",
+      "Sharp separation between finite and infinite underlying sets Establish results that distinguish the role of finiteness from that of infiniteness in APS. For example, it would be valuable to show that certain counterexample models exist on infinite underlying sets but cannot occur on finite ones.",
+      "Results stated for genuinely general classes of `△` Favor statements that classify parameterized families of composites `△`, rather than advancing one narrowly specified syntactic form at a time.",
+      "Logically meaningful phenomena even in restricted settings Even when a result is not maximally general, it is valuable if it reveals phenomena relevant to mathematical logic or to themes surrounding the incompleteness theorems."
+    ],
+    "what_does_not_count_as_progress": [
+      "Superficial reformulations Avoid proposals that merely rewrite existing statements or proofs in different notation without producing new mathematical insight.",
+      "Complexity without conceptual gain Avoid making `△` or its surrounding assumptions more complicated when the only effect is to make calculations harder without creating new structure or explanation.",
+      "Overly specialized conditions Avoid generating conditions that are optimized for a very specific situation but do not plausibly capture broader fixed-point behavior.",
+      "Instance-by-instance treatment without a family-level view Avoid studying one composite `△` after another unless the point is to expose a reusable classification, boundary, or witness pattern."
+    ]
+  },
+  "summary_basis": {
+    "archived_problem_count": 10,
+    "derived_theorem_count": 1,
+    "open_problem_count": 6
+  },
+  "theory_snapshot": "The current theory is centered on parity-based behavior of composite operators, with the odd side still aiming for a family-level existence and classification theorem and the even side now constrained by a verified failure of the unrestricted Henkin correspondence. The main frontier is to determine whether the even-side failure is purely the degenerate identity case or persists for nontrivial composites and possibly in finite models. On the odd side, the remaining structural gap is to unify existence, uniqueness, and canonical form into one reusable picture rather than leaving them as separate support lemmas. The decisive boundary evidence remains the falsity of the unrestricted even fixed-point/Henkin equivalence.",
+  "updated_at_iteration": 7,
+  "updated_at_run_id": "20260415-165853-loop",
+  "version": 1
+}

@@ -65,9 +65,7 @@ The following kinds of outputs are not mathematically interesting for this proje
    Determine what kinds of APS models witness the nonexistence of fixed points, and identify which structural ingredients are genuinely necessary in such constructions.
 3. **A finite-versus-infinite dichotomy**
    Clarify whether the existence of certain counterexamples depends essentially on the underlying set being infinite, or whether similar failures already occur in finite APS models.
-4. **Odd-parity and even-parity generalizations**
-   Define and study two generalizations of `△`: one in which `⊠` appears an odd number of times, and one in which `⊠` appears an even number of times.
-5. **A classification framework for families of composites `△`**
+4. **A classification framework for families of composites `△`**
    Organize composites `△` into mathematically meaningful families and describe how fixed-point behavior depends on that organization.
 
 ## 7. Soft Constraints
