@@ -1,113 +1,32 @@
 # Automated Theory Construction
 
-This project builds and verifies nontrivial mathematical structure **automatically** in Lean 4.
+Automated Theory Construction (ATC) is a Lean 4 workflow for building verified theory from a small axiom base.
+Instead of aiming at one hand-picked theorem, the system generates candidate statements, formalizes them, verifies them in Lean, and accumulates successful results into a growing derived theory.
 
-Given only a small axiom system, it generates candidate statements, attempts formal proofs, and accumulates verified theorems into a growing derived theory — without manually specifying targets in advance.
+## Core Idea
 
-Unlike conventional workflows that aim directly at predefined theorems, this system **constructs theory bottom-up**, continuously generating and refining local statements in a way that mirrors — and scales — experimental mathematical practice.
+> Do not aim directly at the final theorem. Generate the surrounding structure until the theorem becomes inevitable.
 
-## Core Claim
+The main loop works like this:
 
-> Starting from minimal axioms, the system autonomously discovers and verifies structured theory that typically requires deliberate human design.
+1. Start from a base theory in `AutomatedTheoryConstruction/Theory.lean`.
+2. Generate local candidate statements from the current theory state.
+3. Attempt formalization and proof in Lean.
+4. Append verified results to `AutomatedTheoryConstruction/Derived.lean`.
+5. Recycle failed attempts into refined follow-up problems.
 
-## Highlighted Result: CCR → Fock Space Structure
+This is theory construction rather than ordinary proof search: the system expands the space of statements as it works.
 
-From a minimal axiom system consisting only of:
-- creation / annihilation operators
-- a vacuum axiom
+## Quick Start
 
-this system automatically derives:
+The recommended end-to-end path is:
 
-- ladder operator structure  
-- eigenvalue laws for the number operator  
-- linear independence of generated ket families  
-- a finite-dimensional impossibility theorem  
-- structural representation results of the generated span  
+1. Put your deep-research report under `materials/`. Gemini Deep Research is the recommended default for this step.
+2. Build the materials cache.
+3. Regenerate `AutomatedTheoryConstruction/research_agenda.md` from that report.
+4. Run the main seed -> loop -> refactor pipeline.
 
-All results are:
-- fully formalized in Lean 4  
-- mechanically verified  
-- produced through the automated loop (not manually curated proofs)  
-
-Crucially, **no explicit representation theory or Fock-space structure is assumed upfront**.
-
-The system recovers these structures purely through iterative exploration of the axioms.
-
-[Application to canonical commutation relations in quantum mechanics](https://gist.github.com/tukamilano/311759e88a5ec11647aa2b83f42ce8a1)
-
-## Generated Results
-
-Concrete outputs produced by the system:
-
-- [Application to provability logic](https://gist.github.com/tukamilano/ba2c5719e0c5e2e1093b5b4dd174c182) (update 3.25)
-- [Application to Pure Type System λU⁻](https://gist.github.com/tukamilano/cc1f22efd19a7553c9b9883f30e119af)
-- [Application to canonical commutation relations in quantum mechanics](https://gist.github.com/tukamilano/311759e88a5ec11647aa2b83f42ce8a1)
-These are **fully generated and verified Lean developments**, not manually curated examples.
-
-## Why This Matters
-
-Most current theorem provers focus on *proving given statements*.
-
-This project targets a different layer:
-
-- generating the statements themselves  
-- organizing them into coherent theory  
-- and doing so without predefined goals  
-
-In other words, this shifts the problem from **proof automation** to **theory construction**.
-
-This distinction is critical:
-
-- proof search scales within a fixed space  
-- theory construction expands the space itself  
-
-The CCR example demonstrates that nontrivial mathematical structure can emerge purely from local exploration of minimal axioms — without embedding domain knowledge or target representations in advance.
-
-## Mechanism (High-Level)
-
-1. Start from a base theory (`Theory.lean`)  
-2. Generate candidate statements (bottom-up, local transformations)  
-3. Attempt formalization and proof in Lean  
-4. Verify and append successful theorems (`Derived.lean`)  
-5. Recycle failures into refined subproblems  
-
-This loop runs continuously, producing a growing body of verified results.
-
-## Refactor Design
-
-The refactor pipeline is intentionally split into two phases.
-
-First, use whole-file cleanup passes on the accumulated theory:
-
-- pass 1.5: lightweight rewrite cleanup
-- pass 2.0: review-focused non-semantic cleanup
-
-Then split the accumulated theory into multiple `Generated/C000x_*.lean` files and run local structure-improving passes inside each generated file:
-
-- pass 1.2: exact-duplicate collapse
-- pass 1.3: proof retargeting
-
-This ordering is deliberate. Passes 1.2 and 1.3 are local reuse/compression passes, so they are more effective and easier to repair after the theory has been partitioned into smaller files. After each local refactor, the system rechecks the full `AutomatedTheoryConstruction.Generated.Manifest` target so that integration errors are repaired at the whole-Generated level rather than only inside one file.
-
-## Design Principle
-
-> Do not aim directly at the final theorem.  
-> Instead, generate the surrounding structure until the theorem becomes inevitable.
-
-## Documentation
-
-- Getting started: [`docs/GETTING_STARTED.md`](docs/GETTING_STARTED.md)
-- User guide: [`docs/USER_GUIDE.md`](docs/USER_GUIDE.md)
-- Repository ownership map: [`docs/REPO_MAP.md`](docs/REPO_MAP.md)
-- Proof execution interface: [`docs/PROOF_EXECUTOR.md`](docs/PROOF_EXECUTOR.md)
-- Internal runtime design notes: [`design/RUNTIME.md`](design/RUNTIME.md)
-
-## 3-Minute Quick Start
-
-If you want the fastest possible first run, use the bundled example theory and the mock worker.
-This path does not require Codex CLI.
-
-Requirements:
+Prerequisites:
 
 - Lean toolchain from `lean-toolchain`
 - Lake + Mathlib dependencies
@@ -118,46 +37,78 @@ Run:
 
 ```bash
 make build
-make check-scratch
+make materials-cache
+make research-agenda REPORT_FILE=materials/your_report.md
+make seed-loop-refactor-derived
+```
+
+This builds the project, refreshes `data/materials_cache`, writes `AutomatedTheoryConstruction/research_agenda.md`, and runs the main loop plus whole-file refactor path on `Derived.lean`.
+
+For subsequent iterations after the first `make seed-loop-refactor-derived`, prefer `make loop-continue-refactor-derived` so the loop/refactor cycle continues from the current runtime state instead of resetting it.
+If you want to continue only the loop without the refactor stages, use `make loop-continue`.
+If you only want to refresh derived `materials/` artifacts without fetch/extract, use `make materials-derive`.
+If you want the fastest smoke path without Codex CLI, you can still run:
+
+```bash
 uv run python scripts/atc_cli.py loop \
   --worker-command "uv run scripts/mock_worker.py" \
   --max-iterations 1
 ```
 
-What this does:
+## Documentation
 
-- builds the project
-- checks that `AutomatedTheoryConstruction/Scratch.lean` verifies
-- runs one loop iteration against the current theory and seed state
+Start with the doc hub: [`docs/README.md`](docs/README.md)
 
-Notes:
+| If you want to... | Read |
+| --- | --- |
+| Set up the repo and do a first run | [`docs/GETTING_STARTED.md`](docs/GETTING_STARTED.md) |
+| Run the loop day to day | [`docs/USER_GUIDE.md`](docs/USER_GUIDE.md) |
+| Know what files are safe to edit | [`docs/REPO_MAP.md`](docs/REPO_MAP.md) |
+| Swap the Lean verification backend | [`docs/PROOF_EXECUTOR.md`](docs/PROOF_EXECUTOR.md) |
+| See implementation-oriented runtime notes | [`design/RUNTIME.md`](design/RUNTIME.md) |
 
-- `make loop` is now a thin wrapper around `scripts/atc_cli.py loop`.
-- `make loop` resets the runtime state by default. Use `make loop-continue` if you want to keep the current `Derived.lean` and queue state.
-- If you want a real LLM-backed run instead of the mock worker, see [`docs/USER_GUIDE.md`](docs/USER_GUIDE.md).
+## Repository Shape
 
-## Notes and Progress
+- `AutomatedTheoryConstruction/Theory.lean`: entry point for the active base theory
+- `AutomatedTheoryConstruction/Theory/*.lean`: optional local theory modules
+- `AutomatedTheoryConstruction/Derived.lean`: accumulated verified theorems
+- `AutomatedTheoryConstruction/Scratch.lean`: temporary verification target
+- `AutomatedTheoryConstruction/research_agenda.md`: persistent guidance for problem selection
+- `materials/`: recommended place to keep organized deep-research outputs, literature summaries, source-link lists, and problem-seed notes used as optional external context
+- `prompts/research_agenda/`: templates for turning deep-research reports into strict `research_agenda.md` drafts
+- `scripts/atc_cli.py`: unified operational CLI
 
-- [Progress](https://tukamilano.github.io/automated-theory-construction-lean/notes/progress/draft/2026/04/03/progress-update.html) (update 4.3)
+`materials/` is the recommended home for deep research that you want the system to reuse later.
+Treat it as external research context, not as part of the core runtime state: the loop may consult it for seed generation, prioritization, and expansion, but it should not be folded into `theory_state.json`.
+Also treat summary reports in `materials/` as potentially time-sensitive: they are useful for context, but source-link lists or primary papers should win when novelty or closest-known-result judgment matters.
+
+To regenerate `AutomatedTheoryConstruction/research_agenda.md` from a deep-research report, use:
+
+```bash
+make research-agenda REPORT_FILE=materials/your_report.md
+```
+
+## Refactor Pipeline
+
+The post-loop refactor path is intentionally staged:
+
+1. Alpha-equivalent theorem dedupe on the preview copy
+2. Whole-file rewrite cleanup (`rewrite`, pass 1.5)
+3. Whole-file review-focused cleanup (`review`, pass 2.0)
+4. Copy the reviewed result back into `Derived.lean`
+5. Recheck the main Lean targets against the updated derived theory
+
+This keeps global cleanup separate from proof search while still ending on a verified `Derived.lean`.
 
 ## License
 
 This repository is licensed under the MIT License. See `LICENSE`.
 
-## Reference
-
-- Xin et al. (2025). *BFS-Prover-V2*.
-- Lev Beklemishev and Daniyar Shamkanov. *Some abstract versions of Gödel's second incompleteness theorem based on non-classical logics*. arXiv:1602.05728.
-- Antonius J.C. Hurkens. *A simplification of Girard's paradox*. *In Proceedings of the Typed Lambda Calculi and Applications.*Mariangiola Dezani-Ciancaglini and Gordon Plotkin (Eds.), Springer, Berlin, 266-278.
-- Girard, J.-Y. "Interprétation fonctionnelle et élimination des coupures de l'arithmétique d'ordre supérieur." Thèse de doctorat d'état, 1972.
-- Coquand, T. "An Analysis of Girard's Paradox." LICS 1986.
-
 ## Acknowledgements
 
-The prompting strategy for solving Lean problems was partially inspired by a private repository (`kmd710/lean4-codex-skills`).
+The prompting strategy for solving Lean problems was partially inspired by a private repository, `kmd710/lean4-codex-skills`.
 
-This repository also includes one file that was copied and then adapted from SnO2WMaN's `provability-toy` repository:
-<https://github.com/SnO2WMaN/provability-toy>
+This repository also includes material adapted from:
 
-This repository also includes files that was adapted from tani/mathling:
-<https://github.com/tani/mathling/tree/main>
+- <https://github.com/SnO2WMaN/provability-toy>
+- <https://github.com/tani/mathling/tree/main>

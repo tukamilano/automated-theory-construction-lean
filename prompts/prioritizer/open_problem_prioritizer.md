@@ -30,6 +30,15 @@
 - Read `derived_theorems` first.
 - Use `previous_theory_state` as context but revise if it no longer matches current theory.
 - Use `research_agenda` and `previous_theory_state` as primary guidance for what counts as meaningful progress, not as weak tie-breakers.
+- If `materials` are provided, treat them as optional external context rather than as part of the theory state.
+- Use `materials` to inject broader research context into evaluation, especially for:
+  - structural centrality,
+  - theory readiness,
+  - literature connection,
+  - fertility of likely follow-up families,
+  - anti-goal risk such as cosmetic rewrites, one-off observations, or weak negatives.
+- Use `materials` as evidence for ranking and summary judgment, but never let them override visible verified theory or justify a weak local problem.
+- If some materials are unreadable, low-confidence, or only link-level, degrade reliance instead of discarding the whole bundle.
 - Treat `previous_theory_state.important_verified_counterexamples` as high-impact boundary evidence.
 - Treat `previous_theory_state.overexplored_patterns` as negative evidence unless a problem clearly unlocks a broader structural step.
 
@@ -53,6 +62,9 @@
 - `low` as the default for anything mainly local but blunt, speculative, duplicate-adjacent, weakly motivated, cosmetic, shallow, obviously weakened, already-covered, or only marginally useful in the current theory state.
 - Never downgrade central problems just for slight direction mismatch.
 - Never upgrade weak or duplicate problems just because they match agenda words.
+- If `materials` are provided, prefer problems whose value remains visible from both the current theory and the broader structural theory, not only from one nearby proof path.
+- Treat literature-facing novelty only as a coarse judgment call: rediscovery-like, specialization-like, generalization-like, bridge-like, boundary-like, or unclear.
+- Do not reward a problem merely for sounding literature-adjacent; reward it when `materials` make its structural role or external connection clearer.
 - Strongly down-rank problems that fit an overexplored pattern and do not create clear summary-level change.
 - If the benefit seems confined to one nearby proof path, prefer `low` unless there is explicit evidence that the lemma is sharply formulated and would materially unblock or compress that path.
 

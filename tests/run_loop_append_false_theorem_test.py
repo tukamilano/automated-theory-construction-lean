@@ -7,9 +7,9 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT / "scripts"))
+sys.path.insert(0, str(REPO_ROOT / "scripts" / "loop"))
 
-
-import run_loop
+import theorem_commit
 
 
 def main() -> int:
@@ -54,7 +54,7 @@ end AutomatedTheoryConstruction
             encoding="utf-8",
         )
 
-        original_run = run_loop.subprocess.run
+        original_run = theorem_commit.subprocess.run
         try:
             def fake_run(*_args, **_kwargs):
                 class Result:
@@ -64,15 +64,15 @@ end AutomatedTheoryConstruction
 
                 return Result()
 
-            run_loop.subprocess.run = fake_run
-            appended = run_loop.append_verified_theorem_from_scratch(
+            theorem_commit.subprocess.run = fake_run
+            appended = theorem_commit.append_verified_theorem_from_scratch(
                 scratch_path=scratch_path,
                 derived_file=derived_path,
                 derived_entries=[],
                 docstring="negative theorem should still be recorded",
             )
         finally:
-            run_loop.subprocess.run = original_run
+            theorem_commit.subprocess.run = original_run
 
         if "theorem thm_example_is_false" not in appended:
             raise RuntimeError("false theorem was not returned from append_verified_theorem_from_scratch")
@@ -83,7 +83,7 @@ end AutomatedTheoryConstruction
 
         bad_scratch_path = tmp / "ScratchBad.lean"
         bad_scratch_path.write_text(scratch_with_sorry, encoding="utf-8")
-        rejected = run_loop.append_verified_theorem_from_scratch(
+        rejected = theorem_commit.append_verified_theorem_from_scratch(
             scratch_path=bad_scratch_path,
             derived_file=derived_path,
             derived_entries=[],

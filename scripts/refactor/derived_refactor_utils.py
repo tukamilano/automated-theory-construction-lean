@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import sys
 import time
 from pathlib import Path
@@ -396,6 +397,100 @@ def theorem_statement_map(entries: list[dict[str, str]]) -> dict[str, str]:
         for entry in entries
         if str(entry.get("theorem_name", "")).strip()
     }
+
+
+def extract_theorem_header_spans_from_code(code: str) -> dict[str, dict[str, Any]]:
+    theorem_matcher = re.compile(r"\btheorem\s+([A-Za-z0-9_']+)\s*:\s*", re.MULTILINE)
+    headers: dict[str, dict[str, Any]] = {}
+
+    for match in theorem_matcher.finditer(code):
+        theorem_name = match.group(1).strip()
+        if not theorem_name:
+            continue
+
+        theorem_start = match.start()
+        i = match.end()
+        paren_depth = 0
+        bracket_depth = 0
+        brace_depth = 0
+        while i + 1 < len(code):
+            ch = code[i]
+            nxt = code[i + 1]
+            if ch == "(":
+                paren_depth += 1
+            elif ch == ")":
+                paren_depth = max(paren_depth - 1, 0)
+            elif ch == "[":
+                bracket_depth += 1
+            elif ch == "]":
+                bracket_depth = max(bracket_depth - 1, 0)
+            elif ch == "{":
+                brace_depth += 1
+            elif ch == "}":
+                brace_depth = max(brace_depth - 1, 0)
+            elif (
+                ch == ":"
+                and nxt == "="
+                and paren_depth == 0
+                and bracket_depth == 0
+                and brace_depth == 0
+            ):
+                j = i + 2
+                while j < len(code) and code[j].isspace():
+                    j += 1
+                if code.startswith("by", j):
+                    header_end = j + 2
+                    headers[theorem_name] = {
+                        "statement": normalize_statement_text(code[match.end() : i]),
+                        "header": code[theorem_start:header_end],
+                        "start": theorem_start,
+                        "end": header_end,
+                    }
+                    break
+            i += 1
+
+    return headers
+
+
+def repair_theorem_headers_from_source(
+    source_code: str,
+    target_code: str,
+    theorem_names: list[str],
+) -> tuple[str, list[str]]:
+    source_headers = extract_theorem_header_spans_from_code(source_code)
+    target_headers = extract_theorem_header_spans_from_code(target_code)
+
+    requested_names = []
+    seen: set[str] = set()
+    for raw_name in theorem_names:
+        theorem_name = str(raw_name).strip()
+        if not theorem_name or theorem_name in seen:
+            continue
+        requested_names.append(theorem_name)
+        seen.add(theorem_name)
+
+    repaired_code = target_code
+    repaired_names: list[str] = []
+    for theorem_name in sorted(
+        requested_names,
+        key=lambda name: int(target_headers.get(name, {}).get("start", -1)),
+        reverse=True,
+    ):
+        source_header = source_headers.get(theorem_name)
+        target_header = target_headers.get(theorem_name)
+        if not source_header or not target_header:
+            continue
+        if source_header["header"] == target_header["header"]:
+            continue
+        repaired_code = (
+            repaired_code[: int(target_header["start"])]
+            + str(source_header["header"])
+            + repaired_code[int(target_header["end"]) :]
+        )
+        repaired_names.append(theorem_name)
+
+    repaired_names.reverse()
+    return repaired_code, repaired_names
 
 
 def compare_theorem_inventories(

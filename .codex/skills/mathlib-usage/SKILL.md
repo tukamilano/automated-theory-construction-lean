@@ -9,6 +9,7 @@ description: Mathlib usage principles (imports, search, existence checks, confir
 
 - Assume `import Mathlib`. Use Mathlib defs/lemmas/theorems without extra imports.
 - Add imports sparingly (aim 1–3 lines) and comment why.
+- When importing multiple local files, watch for circular dependencies and avoid relying on transitive imports implicitly; after changing imports, re-check the edited file and the public entry point.
 - Prefer `open` / `open scoped` / `local` instead of extra imports.
 - Do not add imports for one-off experiments.
 - Try existing Mathlib lemmas first; only if absent, add a minimal helper lemma (1–3 lines to close).

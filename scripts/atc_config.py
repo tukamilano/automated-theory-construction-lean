@@ -7,6 +7,10 @@ from pathlib import Path
 from typing import Any
 from typing import Iterable
 
+from atc_paths import loop_theorem_reuse_memory_path
+from atc_paths import refactor_review_report_path
+from atc_paths import refactor_try_at_each_step_apply_report_path
+from atc_paths import refactor_try_at_each_step_raw_output_path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 TASK_NAMES = (
@@ -69,7 +73,6 @@ class RuntimeConfig:
     run_refactor_pass_2: bool = True
     try_at_each_step_tactic: str = "with_reducible exact?"
     open_problem_failure_threshold: int = 2
-    generated_repair_verify_timeout: int = 300
     prover_retry_budget_sec: int = 120
     formalization_retry_budget_sec: int = 300
     max_same_error_streak: int = 5
@@ -108,7 +111,12 @@ def _find_config_path(explicit: str | None) -> Path | None:
         candidate = Path(explicit)
         return candidate.resolve() if candidate.is_absolute() else (Path.cwd() / candidate).resolve()
 
-    for candidate in (REPO_ROOT / "atc.json", REPO_ROOT / "atc.toml"):
+    for candidate in (
+        REPO_ROOT / "configs" / "atc.json",
+        REPO_ROOT / "configs" / "atc.toml",
+        REPO_ROOT / "atc.json",
+        REPO_ROOT / "atc.toml",
+    ):
         if candidate.exists():
             return candidate
     return None
@@ -127,7 +135,7 @@ def _load_toml_module() -> Any:
         except ModuleNotFoundError as exc:
             raise RuntimeError(
                 "TOML config requires Python 3.11+ (`tomllib`) or the `tomli` package. "
-                "Use a JSON config file such as `atc.json` if you want zero extra dependencies."
+                "Use a JSON config file such as `configs/atc.json` if you want zero extra dependencies."
             ) from exc
 
 
@@ -353,19 +361,19 @@ def load_app_config(args: Any) -> tuple[AppConfig, dict[str, str]]:
         review_report_file=choose_path(
             cli_names=("review_report_file",),
             file_keys=("paths", "review_report_file"),
-            default="AutomatedTheoryConstruction/Derived.refactored.reviewed.report.json",
+            default=str(refactor_review_report_path(Path("data"))),
             label="paths.review_report_file",
         ),
         try_at_each_step_raw_output_file=choose_path(
             cli_names=("try_at_each_step_raw_output_file",),
             file_keys=("paths", "try_at_each_step_raw_output_file"),
-            default="AutomatedTheoryConstruction/Derived.tryAtEachStep.json",
+            default=str(refactor_try_at_each_step_raw_output_path(Path("data"))),
             label="paths.try_at_each_step_raw_output_file",
         ),
         try_at_each_step_apply_report_file=choose_path(
             cli_names=("try_at_each_step_apply_report_file",),
             file_keys=("paths", "try_at_each_step_apply_report_file"),
-            default="AutomatedTheoryConstruction/Derived.tryAtEachStep.apply_report.json",
+            default=str(refactor_try_at_each_step_apply_report_path(Path("data"))),
             label="paths.try_at_each_step_apply_report_file",
         ),
         data_dir=choose_path(
@@ -389,7 +397,7 @@ def load_app_config(args: Any) -> tuple[AppConfig, dict[str, str]]:
         theorem_reuse_memory_file=choose_path(
             cli_names=("theorem_reuse_memory_file",),
             file_keys=("paths", "theorem_reuse_memory_file"),
-            default="data/theorem_reuse_memory.json",
+            default=str(loop_theorem_reuse_memory_path(Path("data"))),
             label="paths.theorem_reuse_memory_file",
         ),
         snapshot_root=choose_path(
@@ -574,15 +582,6 @@ def load_app_config(args: Any) -> tuple[AppConfig, dict[str, str]]:
                 label="runtime.open_problem_failure_threshold",
             )
         ),
-        generated_repair_verify_timeout=int(
-            choose_int(
-                cli_names=("generated_repair_verify_timeout",),
-                file_keys=("runtime", "generated_repair_verify_timeout"),
-                default=300,
-                minimum=0,
-                label="runtime.generated_repair_verify_timeout",
-            )
-        ),
         prover_retry_budget_sec=int(
             choose_int(
                 cli_names=("prover_retry_budget_sec",),
@@ -703,7 +702,6 @@ def build_worker_env(config: AppConfig, *, task_names: Iterable[str] = TASK_NAME
     put("ATC_WORKER_TIMEOUT", config.worker.timeout)
     put("ATC_CODEX_MODEL", config.worker.codex_model)
     put("ATC_CODEX_TIMEOUT", config.worker.codex_timeout)
-
     for task_name in task_names:
         task = config.worker.tasks.get(task_name)
         if task is None:

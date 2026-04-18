@@ -22,7 +22,7 @@
 - Prefer existing names/notation from `Theory.lean` and `Derived.lean`.
 - Prefer explicit quantification and repository notation style.
 - Prefer notation-first statements when the repository already provides notation or abbreviations.
-- In particular, prefer forms like `x ≐ y`, `⊠x`, `□x`, `¬⊬ x`, `GödelFixpoint`, and `HenkinFixpoint` over expanded forms like `ACR.Equivalent x y`, `ACR.Reft.reft x`, `ACR.Prov.prov x`, or unnecessary fully-qualified operator paths.
+- In particular, prefer forms like `x ≐ y`, `¬⊬ x` over expanded forms like `ACR.Equivalent x y`, `ACR.Prov.prov x`, or unnecessary fully-qualified operator paths.
 - Avoid mixing expanded operator names with notation in the same proposition unless full qualification is required for correctness.
 - Do not use `letI` in the proposition.
 - Do not introduce generated names (`u_op_000044` etc.); prefer short conventional names.
@@ -34,6 +34,9 @@
 - `statement_prelude_code` is optional and only for required parsing/reuse improvements.
 - Allowed content: Lean declarations that can appear immediately before theorem (no `import`, `namespace`, `section`, `axiom`, `theorem`, `example`, or tactic proofs).
 - Do not add cosmetic or one-off helpers.
+- If the statement would otherwise repeat a long bundle of assumptions or a long predicate several times, prefer a short local `def` or `abbrev` in `statement_prelude_code` and then state the theorem in terms of that name.
+- Any `def`/`abbrev` introduced here must be small, directly used by the target statement, and aimed at shortening the theorem face rather than changing mathematical meaning.
+- Do not introduce `structure`/`class`/`inductive` or proof-carrying helper lemmas here; reserve those for later formalize/repair proof stages.
 - If previous repair had prelude code, revise it minimally when needed.
 - If `result` is `stuck`, set both `lean_statement` and `statement_prelude_code` to empty string.
 

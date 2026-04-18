@@ -13,10 +13,13 @@ from llm_exec import resolve_provider
 from llm_exec import run_llm_exec
 
 
-TASK_TYPE_ENV_ALIASES = {
-    "plan_derived_compression": "refactor_derived",
-    "apply_derived_compression_item": "refactor_derived",
-}
+TASK_TYPE_ENV_ALIASES = {}
+
+
+def _task_is_unbounded_by_default(task_type: str) -> bool:
+    return task_type in {
+        "refactor_derived",
+    }
 
 
 def _single_line_excerpt(text: str, limit: int = 400) -> str:
@@ -48,16 +51,20 @@ def _resolve_codex_timeout_env(task_type: str) -> str:
     task_override = (os.getenv(_task_env_key(task_type, "CODEX_TIMEOUT")) or "").strip()
     if task_override:
         return task_override
-    # Refactor runs are intentionally unbounded unless the refactor task itself sets a timeout.
-    if task_type in {"refactor_derived", "plan_derived_compression", "apply_derived_compression_item"}:
+    # Refactor and problem-design runs are intentionally unbounded unless the task itself sets a timeout.
+    if _task_is_unbounded_by_default(task_type):
         return ""
     return (os.getenv("ATC_CODEX_TIMEOUT") or "").strip()
 
 
 def _default_worker_timeout_for_task(task_type: str) -> int | None:
-    if task_type in {"refactor_derived", "plan_derived_compression", "apply_derived_compression_item"}:
+    if _task_is_unbounded_by_default(task_type):
         return None
     return 180
+
+
+def _sandbox_for_task(task_type: str) -> str:
+    return "read-only"
 
 
 def _resolve_timeout_seconds(timeout_text: str | None, default: int | None) -> int | None:
@@ -217,7 +224,7 @@ def _run_codex(task_type: str, prompt: str, timeout_sec: int | None) -> tuple[st
             return run_llm_exec(
                 provider=provider,
                 prompt=prompt,
-                sandbox="read-only",
+                sandbox=_sandbox_for_task(task_type),
                 model=model if use_model else None,
                 output_last_message_path=output_path,
                 timeout_sec=timeout_sec,
@@ -292,11 +299,7 @@ def main() -> None:
             "repair",
             "expand",
             "refactor_derived",
-            "plan_derived_compression",
-            "apply_derived_compression_item",
             "prioritize_open_problems",
-            "main_theorem_generate",
-            "main_theorem_select",
             "post_theorem_expand",
         }:
             raise ValueError(f"unsupported task_type: {task_type}")

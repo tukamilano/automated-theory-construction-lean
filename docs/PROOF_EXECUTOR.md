@@ -2,6 +2,7 @@
 
 This repository treats Lean final verification as a separate `Proof Engine` while planning, theorem generation, and repair remain in the existing worker loop.
 That means you can replace only the `Proof Engine` and connect another system without changing the higher-level solver pipeline.
+If you are looking for normal setup or day-to-day usage, start from the documentation guide [`README.md`](README.md) or [`USER_GUIDE.md`](USER_GUIDE.md) instead.
 
 ## Overview
 

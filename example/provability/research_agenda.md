@@ -1,38 +1,64 @@
-# Research Agenda (Provability)
+# Research Agenda for the APS Provability Toy
 
-## Themes
+This document sets out the current research agenda for APS, the very simple model proposed by Beklemishev and Shamkanov for understanding provability. The aim is to organize work around structural questions about fixed points of composites of the operators `□` and `⊠`, rather than around isolated example calculations alone.
 
-- Develop an abstract existence theory for fixed points of operators built from provability and refutability, not only consequences of already-given Gödelian fixed points.
-- Clarify which structural assumptions force or obstruct the existence of fixed points, prefixpoints, periodic points, and uniqueness phenomena.
-- Treat implication, contraction, and weakening as structural resources whose presence or absence changes what kinds of fixed points can actually be constructed.
-- Build toward a reusable account of positive constructions and non-classical counterexamples for operator-level fixed-point principles.
+## 1. Themes
 
-## Valued Problem Types
+Let `△` denote any operator obtained by composing `□` and `⊠` finitely many times, for example `□⊠□`.
 
-- Weakest-assumption theorems for existence of fixed points of operators or operator words built from `□` and `⊠`.
-- Classification results separating existence, uniqueness up to equivalence, multiplicity, periodicity, and stabilization behavior of such fixed points.
-- Systematic test cases for concrete operator words under varied assumptions, such as asking how the fixed-point behavior changes for `(□⊠)^n` as `n` varies, and comparing existence, uniqueness, periodicity, and stabilization across structural settings.
-- Sharp boundary theorems identifying which structural assumptions are really responsible for constructing the desired fixed points.
-- Counterexamples showing that fixed-point existence for one operator does not automatically transfer to nearby operators or presentations.
-- Formal developments that reorganize the story into reusable abstractions for constructing fixed points, not only deriving consequences from them.
+* **Existence and uniqueness of fixed points for composites `△`**
+  Clarify when a given composite `△` has a fixed point, and when such a fixed point must be unique.
+* **Structural conditions for generalized composites**
+  When `△` is generalized, identify conditions that genuinely characterize the existence or uniqueness of fixed points, rather than conditions tailored to a single construction.
+* **Counterexample models for nonexistence of fixed points**
+  If `△` has no fixed point, determine what kinds of APS models can witness this failure.
+* **Minimal causes of counterexample formation**
+  Isolate which structural assumptions are truly necessary for constructing a model in which a given `△` has no fixed point.
 
-## Anti-Goals
+## 2. Valued Problem Types
 
-- Isolated reproving of paper lemmas when they do not clarify why a desired fixed point exists, fails to exist, or ceases to be unique.
-- Example-specific calculations in a single sequent system unless they witness a genuine separation result or expose a reusable construction pattern.
-- Overcommitting early to arithmetic codings, syntactic Gödel-number machinery, or implementation-heavy encodings before the abstract existence theory is stable.
-- Cosmetic variants of fixed-point theorems that do not change the map of which assumptions are essential for construction.
+Within this agenda, the following kinds of results are especially valuable:
 
-## Canonical Targets
+* **Order-theoretic proofs with reuse value**
+  Prefer proofs that connect APS fixed-point questions to existing order-theoretic ideas, since such methods may apply more broadly. In particular, meaningful connections with major fixed-point principles such as the Knaster-Tarski theorem would be highly valuable.
+* **Sharp separation between finite and infinite underlying sets**
+  Establish results that distinguish the role of finiteness from that of infiniteness in APS. For example, it would be valuable to show that certain counterexample models exist on infinite underlying sets but cannot occur on finite ones.
+* **Results stated for genuinely general classes of `△`**
+  Favor statements that continue to make sense beyond one narrowly specified syntactic form of composite operator.
+* **Logically meaningful phenomena even in restricted settings**
+  Even when a result is not maximally general, it is valuable if it reveals phenomena relevant to mathematical logic or to themes surrounding the incompleteness theorems.
 
-- A reusable abstraction for operator-level fixed points that subsumes Gödel and Henkin fixed points as special cases.
-- A characterization theorem, or sharp boundary theorem, for when a desired operator admits a fixed point under abstract provability structure assumptions.
-- Boundary results isolating which forms of contraction, weakening, or implication are the real drivers of fixed-point existence and uniqueness.
-- A formalized non-classical example showing existence for some fixed-point principles together with failure of transfer, uniqueness, or formalized G2.
-- A theory-level summary theorem explaining which fixed-point phenomena belong to the abstract operator theory and which require stronger presentation-specific structure.
+## 3. Anti-Goals
 
-## Soft Constraints
+The following kinds of outputs are not mathematically interesting for this project and should be avoided:
 
-- Prefer operator-level existence and boundary statements over consequence-only corollaries.
-- When extending the library, introduce assumptions in the weakest reusable form available, so separation results remain visible.
-- Favor a small number of definitions that support both positive existence theorems and negative counterexamples.
+* **Superficial reformulations**
+  Avoid proposals that merely rewrite existing statements or proofs in different notation without producing new mathematical insight.
+* **Complexity without conceptual gain**
+  Avoid making `△` or its surrounding assumptions more complicated when the only effect is to make calculations harder without creating new structure or explanation.
+* **Overly specialized conditions**
+  Avoid generating conditions that are optimized for a very specific situation but do not plausibly capture broader fixed-point behavior.
+
+## 4. Canonical Targets
+
+1. **A characterization of fixed-point existence and uniqueness**
+   Develop conditions on composites `△` that explain when fixed points exist and when they are uniquely determined.
+2. **A theory of counterexample construction**
+   Determine what kinds of APS models witness the nonexistence of fixed points, and identify which structural ingredients are genuinely necessary in such constructions.
+3. **A finite-versus-infinite dichotomy**
+   Clarify whether the existence of certain counterexamples depends essentially on the underlying set being infinite, or whether similar failures already occur in finite APS models.
+4. **Odd-parity and even-parity generalizations**
+   Define and study two generalizations of `△`: one in which `⊠` appears an odd number of times, and one in which `⊠` appears an even number of times.
+
+## 5. Soft Constraints
+
+* **Keep `□`, `⊠`, and their composites visibly central**
+  Generalization should not obscure the concrete operator patterns whose fixed-point behavior is under investigation.
+* **Prefer structural results over isolated examples**
+  Individual examples are useful only insofar as they contribute to a broader explanation of existence, uniqueness, or nonexistence of fixed points.
+* **State clearly which phenomena depend on finiteness or infiniteness**
+  Whenever possible, separate effects that arise from the size of the underlying set from effects caused by other structural assumptions.
+* **Distinguish essential assumptions from technical conveniences**
+  When presenting a theorem or counterexample, indicate which hypotheses drive the phenomenon and which are merely artifacts of the proof.
+* **Favor generality only when it preserves explanatory force**
+  Broader formulations of `△` are desirable only when they sharpen the classification of fixed-point behavior or reveal mathematically meaningful logical phenomena.

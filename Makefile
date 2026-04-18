@@ -3,22 +3,21 @@ SHELL := /bin/sh
 LAKE ?= lake
 PYTHON ?= uv run python
 ATC ?= $(PYTHON) scripts/atc_cli.py
+CONTINUE_CONFIG ?= configs/atc.continue.json
+ATC_COMMON_ARGS ?=
 
 THEORY_FILE ?= AutomatedTheoryConstruction/Theory.lean
 DERIVED_FILE ?= AutomatedTheoryConstruction/Derived.lean
 SCRATCH_FILE ?= AutomatedTheoryConstruction/Scratch.lean
 SEEDS_FILE ?= AutomatedTheoryConstruction/seeds.jsonl
 PREVIEW_FILE ?= AutomatedTheoryConstruction/Derived.refactored.preview.lean
+ALPHA_DEDUPE_REPORT_FILE ?= AutomatedTheoryConstruction/Derived.alpha_dedupe.report.json
+ALPHA_DEDUPE_EQUIVALENCE_MODE ?= defeq
 REVIEWED_FILE ?= AutomatedTheoryConstruction/Derived.refactored.reviewed.lean
-TRY_AT_EACH_STEP_RAW_OUTPUT_FILE ?= AutomatedTheoryConstruction/Derived.tryAtEachStep.json
-TRY_AT_EACH_STEP_APPLY_REPORT_FILE ?= AutomatedTheoryConstruction/Derived.tryAtEachStep.apply_report.json
-DEPS_FILE ?= data/derived-deps.json
-DERIVED_CHUNK_PLAN_FILE ?= data/derived-chunk-plan.json
-GENERATED_ROOT ?= AutomatedTheoryConstruction/Generated
-GENERATED_MANIFEST_FILE ?= $(GENERATED_ROOT)/Manifest.lean
-GENERATED_CATALOG_FILE ?= $(GENERATED_ROOT)/catalog.json
-GENERATED_LOCAL_MANIFEST_VERIFY_TIMEOUT ?= 300
+TRY_AT_EACH_STEP_RAW_OUTPUT_FILE ?= data/refactor/Derived.tryAtEachStep.json
+TRY_AT_EACH_STEP_APPLY_REPORT_FILE ?= data/refactor/Derived.tryAtEachStep.apply_report.json
 SNAPSHOT_ROOT ?= snapshots
+REPORT_FILE ?=
 
 WORKER_COMMAND ?= uv run scripts/codex_worker.py
 WORKER_TIMEOUT ?= 420
@@ -28,13 +27,10 @@ SEED_ARGS ?=
 LOOP_ARGS ?=
 CYCLE_ARGS ?=
 PIPELINE_ARGS ?=
-MAIN_THEOREM_ARGS ?=
 REWRITE_ARGS ?=
 REVIEW_ARGS ?=
-MATERIALIZE_ARGS ?=
-GENERATED_LOCAL_ARGS ?=
 
-.PHONY: help build check check-theory check-derived check-scratch smoke seed loop loop-continue cycle pipeline main-theorem rewrite review refactor-to-generated
+.PHONY: help build check check-theory check-derived check-scratch smoke test seed seed-loop-refactor-derived loop loop-continue loop-refactor-derived loop-continue-refactor-derived cycle pipeline theorem-dedupe alpha-dedupe rewrite review refactor-derived research-agenda materials-cache materials-derive data-migrate-layout-dry-run data-migrate-layout
 
 help:
 	@printf '%s\n' \
@@ -45,25 +41,36 @@ help:
 		'  make check-derived - lake env lean $(DERIVED_FILE)' \
 		'  make check-scratch - lake env lean $(SCRATCH_FILE)' \
 		'  make smoke         - isolated mock-worker smoke test in a temp repo copy' \
+		'  make test          - run all tests under tests/*_test.py' \
 		'  make seed          - generate seeds.jsonl via scripts/atc_cli.py seed' \
+		'  make seed-loop-refactor-derived - run materials-cache -> seed -> loop -> theorem-dedupe -> pass1.5 -> pass2 -> update Derived.lean' \
 		'  make loop          - run the default worker loop via scripts/atc_cli.py loop' \
 		'  make loop-continue - same as loop, but keep current runtime state' \
-		'  make cycle         - run one cycle: loop -> main theorem -> refactor -> snapshot' \
-		'  make pipeline      - run seed -> loop -> rewrite -> review via scripts/atc_cli.py pipeline' \
-		'  make main-theorem  - run a one-shot main theorem session via scripts/atc_cli.py main-theorem' \
+		'  make loop-refactor-derived - run loop -> theorem-dedupe -> pass1.5 -> pass2 -> update Derived.lean' \
+		'  make loop-continue-refactor-derived - run loop-continue -> theorem-dedupe -> pass1.5 -> pass2 -> update Derived.lean using $(CONTINUE_CONFIG)' \
+		'  make cycle         - run one cycle: loop -> refactor -> snapshot' \
+		'  make pipeline      - run seed -> loop -> theorem-dedupe -> rewrite -> review via scripts/atc_cli.py pipeline' \
+		'  make theorem-dedupe - delete later theorems whose theorem types are definitionally equivalent' \
 		'  make rewrite       - run scripts/atc_cli.py rewrite' \
 		'  make review        - run scripts/atc_cli.py review' \
-		'  make refactor-to-generated - run pass1.5 -> pass2 -> split -> local pass1.2 -> local pass1.3' \
+		'  make refactor-derived - run theorem-dedupe -> pass1.5 -> pass2 -> copy reviewed result back to Derived.lean' \
+		'  make research-agenda REPORT_FILE=materials/your_report.md - regenerate AutomatedTheoryConstruction/research_agenda.md' \
+		'  make materials-cache - build materials-derived files and refresh data/materials_cache' \
+		'  make materials-derive - build materials-derived files only, without fetch/extract' \
+		'  make data-migrate-layout-dry-run - show how legacy data/* files would move into role directories' \
+		'  make data-migrate-layout - migrate legacy data/* files into role directories' \
 		'' \
 		'Common overrides:' \
 		'  WORKER_COMMAND="uv run scripts/mock_worker.py"' \
 		'  WORKER_TIMEOUT=600 CODEX_TIMEOUT=540' \
+		'  ATC_COMMON_ARGS="--config configs/atc.continue.json"' \
 		'  THEORY_FILE=... DERIVED_FILE=... SCRATCH_FILE=...' \
+		'  CONTINUE_CONFIG=configs/atc.continue.json' \
+		'  ALPHA_DEDUPE_EQUIVALENCE_MODE=defeq|alpha' \
 		'  THEORY_FILE should point to the Theory.lean entry module' \
 		'  SEED_ARGS="--context-file path/to/context.tex --seed-count 4"' \
 		'  LOOP_ARGS="--max-iterations 40"' \
 		'  CYCLE_ARGS="--cycle-iterations 20 --snapshot-root snapshots"' \
-		'  MAIN_THEOREM_ARGS="--skip-verify --current-iteration 0"' \
 		'  PIPELINE_ARGS="--context-file path/to/context.tex --max-iterations 40"'
 
 build:
@@ -83,15 +90,43 @@ check-scratch:
 smoke:
 	python3 tests/smoke_test.py
 
+test:
+	@for f in tests/*_test.py; do \
+		printf '[test] %s\n' "$$f"; \
+		python3 "$$f" || exit 1; \
+	done
+
+data-migrate-layout-dry-run:
+	python3 scripts/migrate_data_layout.py
+
+data-migrate-layout:
+	python3 scripts/migrate_data_layout.py --apply
+
 seed:
 	$(ATC) seed \
+		$(ATC_COMMON_ARGS) \
 		--theory-file $(THEORY_FILE) \
 		--derived-file $(DERIVED_FILE) \
 		--seeds-file $(SEEDS_FILE) \
 		$(SEED_ARGS)
 
+# Keep the combined seed -> loop -> refactor flow aligned with the latest
+# materials-derived artifacts and data/materials_cache before seed generation.
+seed-loop-refactor-derived: materials-cache seed loop-refactor-derived
+
+materials-cache:
+	$(PYTHON) scripts/materials_sync.py --materials-dir materials
+
+materials-derive:
+	$(PYTHON) scripts/materials_sync.py --materials-dir materials --derive-only
+
+research-agenda:
+	@test -n "$(REPORT_FILE)" || { echo 'REPORT_FILE is required, e.g. make research-agenda REPORT_FILE=materials/your_report.md'; exit 1; }
+	$(ATC) research-agenda --report-file $(REPORT_FILE)
+
 loop:
 	$(ATC) loop \
+		$(ATC_COMMON_ARGS) \
 		--worker-command "$(WORKER_COMMAND)" \
 		--worker-timeout "$(WORKER_TIMEOUT)" \
 		--codex-timeout "$(CODEX_TIMEOUT)" \
@@ -99,14 +134,21 @@ loop:
 
 loop-continue:
 	$(ATC) loop \
+		$(ATC_COMMON_ARGS) \
 		--worker-command "$(WORKER_COMMAND)" \
 		--worker-timeout "$(WORKER_TIMEOUT)" \
 		--codex-timeout "$(CODEX_TIMEOUT)" \
 		--no-initialize-on-start \
 		$(LOOP_ARGS)
 
+loop-refactor-derived: loop refactor-derived
+
+loop-continue-refactor-derived: ATC_COMMON_ARGS = --config $(CONTINUE_CONFIG)
+loop-continue-refactor-derived: loop-continue refactor-derived
+
 cycle:
 	$(ATC) cycle \
+		$(ATC_COMMON_ARGS) \
 		--worker-command "$(WORKER_COMMAND)" \
 		--worker-timeout "$(WORKER_TIMEOUT)" \
 		--codex-timeout "$(CODEX_TIMEOUT)" \
@@ -115,6 +157,7 @@ cycle:
 
 pipeline:
 	$(ATC) pipeline \
+		$(ATC_COMMON_ARGS) \
 		--worker-command "$(WORKER_COMMAND)" \
 		--worker-timeout "$(WORKER_TIMEOUT)" \
 		--codex-timeout "$(CODEX_TIMEOUT)" \
@@ -122,15 +165,19 @@ pipeline:
 		--review-output-file $(REVIEWED_FILE) \
 		$(PIPELINE_ARGS)
 
-main-theorem:
-	$(ATC) main-theorem \
-		--theory-file $(THEORY_FILE) \
-		--derived-file $(DERIVED_FILE) \
-		--scratch-file $(SCRATCH_FILE) \
-		$(MAIN_THEOREM_ARGS)
+theorem-dedupe alpha-dedupe:
+	cp $(DERIVED_FILE) $(PREVIEW_FILE)
+	$(PYTHON) scripts/refactor/delete_alpha_equiv_duplicates.py \
+		--input-file $(PREVIEW_FILE) \
+		--output-file $(PREVIEW_FILE) \
+		--alpha-source-file $(DERIVED_FILE) \
+		--build-target AutomatedTheoryConstruction.Derived \
+		--equivalence-mode $(ALPHA_DEDUPE_EQUIVALENCE_MODE) \
+		--report-file $(ALPHA_DEDUPE_REPORT_FILE)
 
 rewrite:
 	$(ATC) rewrite \
+		$(ATC_COMMON_ARGS) \
 		--input-file $(PREVIEW_FILE) \
 		--output-file $(PREVIEW_FILE) \
 		--raw-output-file $(TRY_AT_EACH_STEP_RAW_OUTPUT_FILE) \
@@ -139,35 +186,30 @@ rewrite:
 
 review:
 	$(ATC) review \
+		$(ATC_COMMON_ARGS) \
 		--input-file $(PREVIEW_FILE) \
 		--output-file $(REVIEWED_FILE) \
 		$(REVIEW_ARGS)
 
-refactor-to-generated:
+refactor-derived:
 	cp $(DERIVED_FILE) $(PREVIEW_FILE)
+	$(PYTHON) scripts/refactor/delete_alpha_equiv_duplicates.py \
+		--input-file $(PREVIEW_FILE) \
+		--output-file $(PREVIEW_FILE) \
+		--alpha-source-file $(DERIVED_FILE) \
+		--build-target AutomatedTheoryConstruction.Derived \
+		--equivalence-mode $(ALPHA_DEDUPE_EQUIVALENCE_MODE) \
+		--report-file $(ALPHA_DEDUPE_REPORT_FILE)
 	$(ATC) rewrite \
+		$(ATC_COMMON_ARGS) \
 		--input-file $(PREVIEW_FILE) \
 		--output-file $(PREVIEW_FILE) \
 		--raw-output-file $(TRY_AT_EACH_STEP_RAW_OUTPUT_FILE) \
 		--apply-report-file $(TRY_AT_EACH_STEP_APPLY_REPORT_FILE) \
 		$(REWRITE_ARGS)
 	$(ATC) review \
+		$(ATC_COMMON_ARGS) \
 		--input-file $(PREVIEW_FILE) \
 		--output-file $(REVIEWED_FILE) \
 		$(REVIEW_ARGS)
 	cp $(REVIEWED_FILE) $(DERIVED_FILE)
-	$(ATC) materialize-generated \
-		--derived-file $(DERIVED_FILE) \
-		--deps-file $(DEPS_FILE) \
-		--generated-root $(GENERATED_ROOT) \
-		--manifest-file $(GENERATED_MANIFEST_FILE) \
-		--catalog-file $(GENERATED_CATALOG_FILE) \
-		--plan-file $(DERIVED_CHUNK_PLAN_FILE) \
-		$(MATERIALIZE_ARGS)
-	$(PYTHON) scripts/refactor/run_generated_local_passes.py \
-		--generated-root $(GENERATED_ROOT) \
-		--theory-file $(THEORY_FILE) \
-		--worker-command "$(WORKER_COMMAND)" \
-		--worker-timeout $(WORKER_TIMEOUT) \
-		--manifest-verify-timeout $(GENERATED_LOCAL_MANIFEST_VERIFY_TIMEOUT) \
-		$(GENERATED_LOCAL_ARGS)

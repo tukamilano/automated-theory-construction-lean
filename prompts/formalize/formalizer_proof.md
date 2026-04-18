@@ -36,7 +36,7 @@
 ## prelude_rules
 - `prelude_code` is optional and only for genuinely helpful declarations (no `import`, `namespace`, `section`, `axiom`, `theorem`).
 - Keep it material: avoid cosmetic aliases or one-off helper names.
-- If structural cleanup helps the proof, introduce `def`/`abbrev`/`structure`/`inductive`/short helper lemmas when reusable.
+- If structural cleanup helps the proof, introduce `def`/`abbrev`/`structure`/`class`/`inductive`/short helper lemmas only when they isolate a real verification step or are reused; keep them small and proof-oriented rather than turning prelude into a parallel mini-development.
 
 ## output_behavior
 - If a valid direction remains: keep `result` as `proof`.

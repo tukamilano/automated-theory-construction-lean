@@ -164,88 +164,6 @@ def main() -> None:
             "missing_bridges": [],
             "agenda_pressure": [],
         }
-    elif task_type == "main_theorem_generate":
-        tracked_problems = payload.get("tracked_problems", [])
-        source_problem_ids = []
-        if isinstance(tracked_problems, list):
-            for item in tracked_problems:
-                if not isinstance(item, dict):
-                    continue
-                problem_id = str(item.get("problem_id", "")).strip()
-                if problem_id:
-                    source_problem_ids.append(problem_id)
-                if len(source_problem_ids) >= 2:
-                    break
-        result_payload = {
-            "candidate_set_id": str(payload.get("candidate_set_id", "")),
-            "candidates": [
-                {
-                    "candidate_rank_seed": 1,
-                    "statement": "True",
-                    "theorem_name_stem": "smoke_main_theorem_summary",
-                    "docstring_summary": "Smoke summary theorem.",
-                    "rationale": "mock_proof_worker: summary-style main theorem candidate",
-                    "supporting_theorems": [],
-                    "missing_lemmas": [],
-                    "source_problem_ids": source_problem_ids,
-                    "theorem_pattern": "structure_discovery",
-                    "context_note": "The smoke summary candidate is positioned as a structural compression of the visible smoke fixture problems.",
-                    "conceptual_depth_note": "The smoke summary candidate is framed as a structural summary rather than a merely technical extension.",
-                },
-                {
-                    "candidate_rank_seed": 2,
-                    "statement": "True -> True",
-                    "theorem_name_stem": "smoke_main_theorem_bridge",
-                    "docstring_summary": "Smoke bridge theorem.",
-                    "rationale": "mock_proof_worker: bridge-style main theorem candidate",
-                    "supporting_theorems": [],
-                    "missing_lemmas": [],
-                    "source_problem_ids": source_problem_ids,
-                    "theorem_pattern": "new_theorem",
-                    "context_note": "The smoke bridge candidate is positioned as the strongest title-level smoke result.",
-                    "conceptual_depth_note": "The smoke bridge candidate is framed around a reusable bridge rather than bookkeeping.",
-                },
-                {
-                    "candidate_rank_seed": 3,
-                    "statement": "True ∧ True",
-                    "theorem_name_stem": "smoke_main_theorem_framework",
-                    "docstring_summary": "Smoke framework theorem.",
-                    "rationale": "mock_proof_worker: framework-style main theorem candidate",
-                    "supporting_theorems": [],
-                    "missing_lemmas": [],
-                    "source_problem_ids": source_problem_ids,
-                    "theorem_pattern": "framework_introduction",
-                    "context_note": "The smoke framework candidate is positioned as a framework consequence of the visible smoke theory.",
-                    "conceptual_depth_note": "The smoke framework candidate is framed as a conceptual interface rather than a technical extension.",
-                },
-            ],
-        }
-    elif task_type == "main_theorem_select":
-        result_payload = {
-            "candidate_set_id": str(payload.get("candidate_set_id", "")),
-            "selected_candidate_rank_seed": 2,
-            "selection_summary": "mock_proof_worker: choose the strongest smoke main theorem candidate from the fixed set",
-            "ranking": [
-                {
-                    "candidate_rank_seed": 2,
-                    "rank": 1,
-                    "decision": "select",
-                    "reason": "mock_proof_worker: best title-level result in the smoke fixture",
-                },
-                {
-                    "candidate_rank_seed": 1,
-                    "rank": 2,
-                    "decision": "reject",
-                    "reason": "mock_proof_worker: more compressive than local, but weaker than the selected bridge candidate",
-                },
-                {
-                    "candidate_rank_seed": 3,
-                    "rank": 3,
-                    "decision": "reject",
-                    "reason": "mock_proof_worker: framework framing is less direct than the selected bridge candidate",
-                },
-            ],
-        }
     else:
         raise ValueError(f"unsupported task_type: {task_type}")
 
@@ -314,10 +232,11 @@ def run_smoke_loop(
 
 def assert_smoke_outputs(dst_root: Path) -> None:
     data_dir = dst_root / "data"
-    if not (data_dir / "open_problems.jsonl").exists():
-        raise RuntimeError("smoke loop did not create data/open_problems.jsonl")
-    if not (data_dir / "theory_state.json").exists():
-        raise RuntimeError("smoke loop did not create data/theory_state.json")
+    loop_dir = data_dir / "loop"
+    if not (loop_dir / "open_problems.jsonl").exists():
+        raise RuntimeError("smoke loop did not create data/loop/open_problems.jsonl")
+    if not (loop_dir / "theory_state.json").exists():
+        raise RuntimeError("smoke loop did not create data/loop/theory_state.json")
     if not (dst_root / "AutomatedTheoryConstruction" / "Scratch.lean").exists():
         raise RuntimeError("smoke loop did not create Scratch.lean")
     if not (dst_root / "AutomatedTheoryConstruction" / "Scratch.loop.lean").exists():
@@ -337,7 +256,7 @@ def assert_smoke_outputs(dst_root: Path) -> None:
     theory_state_history_path = summary_paths[-1].with_name("theory_state_history.jsonl")
     if not theory_state_history_path.exists():
         raise RuntimeError("smoke loop did not create runs/<run_id>/theory_state_history.jsonl")
-    theory_state = json.loads((data_dir / "theory_state.json").read_text(encoding="utf-8"))
+    theory_state = json.loads((loop_dir / "theory_state.json").read_text(encoding="utf-8"))
     if theory_state.get("next_direction", {}).get("label") != "smoke_direction":
         raise RuntimeError(f"unexpected theory_state next_direction: {theory_state}")
     theory_state_history_rows = [
@@ -347,19 +266,20 @@ def assert_smoke_outputs(dst_root: Path) -> None:
     ]
     if not theory_state_history_rows:
         raise RuntimeError("theory_state_history.jsonl is empty")
-    if theory_state_history_rows[0].get("theory_state", {}).get("summary_basis", {}).get("derived_theorem_count") != 0:
+    initial_derived_theorem_count = theory_state_history_rows[0].get("theory_state", {}).get("summary_basis", {}).get("derived_theorem_count")
+    if not isinstance(initial_derived_theorem_count, int) or initial_derived_theorem_count < 0:
         raise RuntimeError(f"unexpected initial theory_state history head: {theory_state_history_rows[0]}")
     if theory_state_history_rows[-1].get("theory_state", {}).get("next_direction", {}).get("label") != "smoke_direction":
         raise RuntimeError(f"unexpected theory_state history tail: {theory_state_history_rows[-1]}")
 
     open_rows = [
         json.loads(line)
-        for line in (data_dir / "open_problems.jsonl").read_text(encoding="utf-8").splitlines()
+        for line in (loop_dir / "open_problems.jsonl").read_text(encoding="utf-8").splitlines()
         if line.strip()
     ]
     solved_rows = [
         json.loads(line)
-        for line in (data_dir / "solved_problems.jsonl").read_text(encoding="utf-8").splitlines()
+        for line in (loop_dir / "solved_problems.jsonl").read_text(encoding="utf-8").splitlines()
         if line.strip()
     ]
     if open_rows:

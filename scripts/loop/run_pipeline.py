@@ -9,16 +9,23 @@ from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 SCRIPTS_ROOT = SCRIPT_DIR.parent
+scripts_root_str = str(SCRIPTS_ROOT)
+if scripts_root_str not in sys.path:
+    sys.path.insert(0, scripts_root_str)
+
+from atc_paths import refactor_data_dir
+
 REPO_ROOT = SCRIPTS_ROOT.parent
 DEFAULT_THEORY = Path("AutomatedTheoryConstruction/Theory.lean")
 DEFAULT_DERIVED = Path("AutomatedTheoryConstruction/Derived.lean")
 DEFAULT_SEEDS = Path("AutomatedTheoryConstruction/seeds.jsonl")
 DEFAULT_PREVIEW = Path("AutomatedTheoryConstruction/Derived.refactored.preview.lean")
+DEFAULT_ALPHA_DEDUPE_REPORT = Path("AutomatedTheoryConstruction/Derived.alpha_dedupe.report.json")
 DEFAULT_REVIEWED = Path("AutomatedTheoryConstruction/Derived.refactored.reviewed.lean")
 DEFAULT_REVIEW_REPORT = Path("AutomatedTheoryConstruction/Derived.refactored.reviewed.report.json")
 DEFAULT_TRY_AT_EACH_STEP_RAW = Path("AutomatedTheoryConstruction/Derived.tryAtEachStep.json")
 DEFAULT_TRY_AT_EACH_STEP_REPORT = Path("AutomatedTheoryConstruction/Derived.tryAtEachStep.apply_report.json")
-DEFAULT_REFACTOR_ARTIFACT_DIR = Path("data/pipeline_artifacts")
+DEFAULT_REFACTOR_ARTIFACT_DIR = refactor_data_dir(Path("data"))
 LEAN_BUILD_TARGETS = (
     "AutomatedTheoryConstruction.Theory",
     "AutomatedTheoryConstruction.Derived",
@@ -86,13 +93,6 @@ def require_success(stage_name: str, completed: subprocess.CompletedProcess[str]
             flush=True,
         )
         raise SystemExit(completed.returncode)
-
-
-def stage_timed_out(completed: subprocess.CompletedProcess[str] | None) -> bool:
-    if completed is None or completed.returncode == 0:
-        return False
-    combined = "\n".join(part for part in (completed.stdout, completed.stderr) if part).lower()
-    return "timed out after" in combined or "timeoutexpired" in combined
 
 
 def prepare_preview_file(source_file: Path, preview_file: Path, *, dry_run: bool) -> None:
@@ -208,6 +208,33 @@ def build_rewrite_command(args: argparse.Namespace, *, input_file: str, output_f
     return cmd
 
 
+def build_alpha_dedupe_command(
+    args: argparse.Namespace,
+    *,
+    input_file: str,
+    output_file: str,
+    alpha_source_file: str,
+    build_target: str,
+) -> list[str]:
+    cmd = [
+        "uv",
+        "run",
+        "python",
+        "scripts/refactor/delete_alpha_equiv_duplicates.py",
+        "--input-file",
+        input_file,
+        "--output-file",
+        output_file,
+        "--alpha-source-file",
+        alpha_source_file,
+        "--build-target",
+        build_target,
+    ]
+    append_optional_flag(cmd, "--report-file", args.alpha_dedupe_report_file)
+    append_optional_flag(cmd, "--equivalence-mode", args.alpha_dedupe_equivalence_mode)
+    return cmd
+
+
 def _add_context_flags(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--article-file",
@@ -237,8 +264,6 @@ def _add_main_worker_flags(parser: argparse.ArgumentParser, *, worker_timeout_he
     for prefix in task_prefixes:
         parser.add_argument(f"--{prefix}-worker-command")
         parser.add_argument(f"--{prefix}-worker-timeout", type=int, help=worker_timeout_help)
-    parser.add_argument("--refactor-worker-command")
-    parser.add_argument("--refactor-worker-timeout", type=int, help=worker_timeout_help)
 
 
 def _add_budget_flags(parser: argparse.ArgumentParser) -> None:
@@ -247,19 +272,22 @@ def _add_budget_flags(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--formalization-retry-budget-sec", type=int, help=retry_budget_help)
 
 
-def _add_loop_tuning_flags(parser: argparse.ArgumentParser, *, worker_timeout_help: str, verify_timeout_help: str) -> None:
+def _add_loop_tuning_flags(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--open-problem-failure-threshold", type=int)
     parser.add_argument("--max-same-error-streak", type=int)
 
 
 def _add_pass_toggles(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--run-seed", action=argparse.BooleanOptionalAction, default=True)
+    parser.add_argument("--run-alpha-dedupe-before-pass-1_5", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--run-refactor-pass-1_5", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--run-refactor-pass-2", action=argparse.BooleanOptionalAction, default=True)
 
 
 def _add_path_flags(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--preview-file", default=str(DEFAULT_PREVIEW))
+    parser.add_argument("--alpha-dedupe-report-file", default=str(DEFAULT_ALPHA_DEDUPE_REPORT))
+    parser.add_argument("--alpha-dedupe-equivalence-mode", choices=("alpha", "defeq"), default="defeq")
     parser.add_argument("--review-output-file", default=str(DEFAULT_REVIEWED))
     parser.add_argument("--review-report-file", default=str(DEFAULT_REVIEW_REPORT))
     parser.add_argument("--try-at-each-step-raw-output-file", default=str(DEFAULT_TRY_AT_EACH_STEP_RAW))
@@ -283,7 +311,6 @@ def parse_args() -> argparse.Namespace:
         )
     )
     worker_timeout_help = "Per worker subprocess timeout in seconds."
-    verify_timeout_help = "Per Lean verification timeout in seconds."
     _add_context_flags(parser)
     parser.add_argument("--seed-count", type=int, default=4)
     parser.add_argument("--seed-src", default="seed")
@@ -293,12 +320,7 @@ def parse_args() -> argparse.Namespace:
     _add_initialize_phase_flags(parser)
     _add_loop_flags(parser)
     _add_main_worker_flags(parser, worker_timeout_help=worker_timeout_help)
-    parser.add_argument("--refactor-verify-timeout", type=int, help=verify_timeout_help)
-    _add_loop_tuning_flags(
-        parser,
-        worker_timeout_help=worker_timeout_help,
-        verify_timeout_help=verify_timeout_help,
-    )
+    _add_loop_tuning_flags(parser)
     _add_budget_flags(parser)
     _add_path_flags(parser)
     _add_rewrite_and_review_flags(parser)
@@ -324,6 +346,11 @@ def main() -> int:
         default_path=DEFAULT_REVIEWED,
         artifact_dir=refactor_artifact_dir,
     )
+    alpha_dedupe_report_file = _resolve_refactor_artifact_path(
+        raw_path=args.alpha_dedupe_report_file,
+        default_path=DEFAULT_ALPHA_DEDUPE_REPORT,
+        artifact_dir=refactor_artifact_dir,
+    )
     review_report_file = _resolve_refactor_artifact_path(
         raw_path=args.review_report_file,
         default_path=DEFAULT_REVIEW_REPORT,
@@ -340,6 +367,7 @@ def main() -> int:
         artifact_dir=refactor_artifact_dir,
     )
     args.preview_file = str(preview_file)
+    args.alpha_dedupe_report_file = str(alpha_dedupe_report_file)
     args.review_output_file = str(review_output_file)
     args.review_report_file = str(review_report_file)
     args.try_at_each_step_raw_output_file = str(raw_output_file)
@@ -351,6 +379,7 @@ def main() -> int:
                 path
                 for path in [
                     args.preview_file,
+                    args.alpha_dedupe_report_file,
                     args.review_output_file,
                     args.review_report_file,
                     args.try_at_each_step_raw_output_file,
@@ -384,6 +413,25 @@ def main() -> int:
     refactor_artifact_dir.mkdir(parents=True, exist_ok=True)
     prepare_preview_file(DEFAULT_DERIVED, Path(args.preview_file), dry_run=args.dry_run)
 
+    if args.run_alpha_dedupe_before_pass_1_5:
+        alpha_dedupe_cmd = build_alpha_dedupe_command(
+            args,
+            input_file=args.preview_file,
+            output_file=args.preview_file,
+            alpha_source_file=str(DEFAULT_DERIVED),
+            build_target="AutomatedTheoryConstruction.Derived",
+        )
+        require_success(
+            "alpha-dedupe-pre-pass-1_5",
+            run_stage("alpha-dedupe-pre-pass-1_5", alpha_dedupe_cmd, dry_run=args.dry_run),
+        )
+    else:
+        print(
+            "[pipeline] alpha-dedupe-pre-pass-1_5: skipped (--no-run-alpha-dedupe-before-pass-1_5)",
+            file=sys.stderr,
+            flush=True,
+        )
+
     if args.run_refactor_pass_1_5:
         rewrite_cmd = build_rewrite_command(args, input_file=rewrite_input, output_file=rewrite_output)
         rewrite_result = run_stage("refactor-pass-1_5", rewrite_cmd, dry_run=args.dry_run)
@@ -414,6 +462,8 @@ def main() -> int:
         f"- seeds: {DEFAULT_SEEDS}\n"
         f"- derived: {DEFAULT_DERIVED}\n"
         f"- refactor preview: {args.preview_file}\n"
+        + f"- alpha-dedupe report: {args.alpha_dedupe_report_file}\n"
+        + f"- alpha-dedupe mode: {args.alpha_dedupe_equivalence_mode}\n"
         + (
             f"- tryAtEachStep raw: {args.try_at_each_step_raw_output_file}\n"
             if args.try_at_each_step_raw_output_file

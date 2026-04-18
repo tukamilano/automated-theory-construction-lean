@@ -1,0 +1,19 @@
+# Lambek Materials Index
+
+This directory organizes the materials derived from `Lambek_Calculus_Structural_Theory_Research.md` without rewriting the main report.
+
+## Files
+
+- `../Lambek_Calculus_Structural_Theory_Research.md`
+  The main report. Use this when wording, context, or references matter.
+- `02_section_map.md`
+  Section-to-task map for problem generation and problem evaluation.
+- `03_source_links.md`
+  Reference list extracted from the report for direct paper access.
+
+## Usage
+
+- Problem generation:
+  Read `02_section_map.md` first. Use the main report when a section needs more context.
+- Problem evaluation:
+  Read `02_section_map.md` first. Use the main report when deciding whether a candidate is central, duplicative, or merely local.

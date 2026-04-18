@@ -3,7 +3,9 @@ import AutomatedTheoryConstruction.Lambek.Basic
 
 namespace Mathling.Lambek.ProductFree
 
-open scoped Mathling.Lambek.ProductFree
+local prefix:65 "#" => Tp.atom
+local infixr:60 " ⧹ " => Tp.ldiv
+local infixl:60 " ⧸ " => Tp.rdiv
 
 @[grind]
 def splits {α} : List α → List (List α × List α)

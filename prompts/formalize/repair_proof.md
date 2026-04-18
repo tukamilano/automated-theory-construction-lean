@@ -36,4 +36,5 @@
 
 ## prelude_rules
 - `prelude_code` only for verification-critical shaping, not cosmetic cleanup.
+- Use `def`/`abbrev`/`structure`/`class`/`inductive`/short helper lemmas only when they isolate the failing verification step or are reused; keep them small and local.
 - No `import`, `namespace`, `section`, `axiom`, `theorem`.

@@ -228,6 +228,11 @@ Imports are transitive. Downstream may rely on this file’s imports implicitly.
 - If a theorem is intended as a structural summary of an existing cluster, its proof should make that reuse visible when possible through `exact`, `simpa`, short `have`s, or targeted rewrites.
 - Only keep a direct-from-axioms proof when no stable reuse path exists or the reuse version would be materially more brittle.
 
+### 6.11 Long claims
+
+- Prefer shorter, more legible theorem statements when an equivalent formulation exists.
+- If shortening the claim would change the public statement/type, treat it as a separate design change rather than a review-only refactor.
+
 ---
 
 ## 7. `def` / `abbrev` / `opaque` (transparency)

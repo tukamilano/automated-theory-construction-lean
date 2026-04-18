@@ -154,6 +154,54 @@ end AutomatedTheoryConstruction
                 raise RuntimeError(f"unexpected destructive-output report: {report}")
             if report["before_theorem_count"] <= report["after_theorem_count"]:
                 raise RuntimeError(f"expected theorem inventory shrinkage: {report}")
+
+            input_file.write_text(
+                "theorem foo : (∃ h : True, True) := by\n  exact ⟨trivial, trivial⟩\n",
+                encoding="utf-8",
+            )
+
+            def fake_run_llm_exec_header_only(**_: object) -> subprocess.CompletedProcess[str]:
+                output_file.write_text(
+                    "theorem foo : (∃ _ : True, True) := by\n  exact ⟨trivial, trivial⟩\n",
+                    encoding="utf-8",
+                )
+                return subprocess.CompletedProcess(
+                    args=["codex"],
+                    returncode=0,
+                    stdout="worker stdout line 1\n",
+                    stderr="",
+                )
+
+            review_mod.run_llm_exec = fake_run_llm_exec_header_only
+            code, stdout_text, stderr_text = _run_main(
+                [
+                    "direct_refactor_derived.py",
+                    "--input-file",
+                    str(input_file),
+                    "--output-file",
+                    str(output_file),
+                    "--report-file",
+                    str(report_file),
+                    "--policy-file",
+                    str(policy_file),
+                    "--lean-rule-file",
+                    str(lean_rule_file),
+                    "--mathlib-usage-file",
+                    str(mathlib_usage_file),
+                ]
+            )
+            if code != 0:
+                raise RuntimeError(f"expected success after deterministic inventory repair, got {code}")
+            report = json.loads(stdout_text)
+            if report["status"] != "ok":
+                raise RuntimeError(f"unexpected repaired-output report: {report}")
+            if not report.get("inventory_repair_attempted"):
+                raise RuntimeError(f"expected inventory repair attempt metadata: {report}")
+            if report.get("inventory_repair_replaced_headers") != ["foo"]:
+                raise RuntimeError(f"unexpected repaired theorem names: {report}")
+            repaired_output = output_file.read_text(encoding="utf-8")
+            if "∃ h : True" not in repaired_output or "∃ _ : True" in repaired_output:
+                raise RuntimeError(f"expected theorem header repair in output file: {repaired_output!r}")
     finally:
         review_mod.run_llm_exec = original_run_llm_exec
     return 0

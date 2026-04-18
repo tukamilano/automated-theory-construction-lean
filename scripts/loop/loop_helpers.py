@@ -9,19 +9,24 @@ from pathlib import Path
 from typing import Any
 from typing import Callable
 
+from atc_paths import loop_theory_state_path
 from common import append_jsonl
 from common import normalize_open_problem_priority
 from guidance import build_guidance_context
+from materials import DEFAULT_MATERIALS_DIR
+from materials import load_materials
+from materials_sync import ensure_materials_derived_current
 from research_agenda import DEFAULT_RESEARCH_AGENDA_PATH
 from research_agenda import load_research_agenda
 
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
-THEORY_STATE_FILENAME = "theory_state.json"
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 THEOREM_NAME_STEM_PATTERN = re.compile(r"^[a-z][a-z0-9_]*$")
-DERIVED_THEOREM_HEADER_PATTERN = re.compile(r"\btheorem\s+([A-Za-z0-9_']+)\s*:")
+DERIVED_THEOREM_HEADER_PATTERN = re.compile(r"\btheorem\s+([A-Za-z0-9_']+)\b")
+LOCAL_STATEMENT_ALIAS_PATTERN = re.compile(r"(?m)^\s*(?:local\s+)?(?:def|abbrev)\b")
 PHASE_ATTEMPT_LOCK = threading.Lock()
 FORMALIZATION_MEMORY_LOCK = threading.RLock()
+NORMALIZED_STATEMENT_MAX_CHARS = 299
 
 
 def debug_log(msg: str) -> None:
@@ -30,11 +35,16 @@ def debug_log(msg: str) -> None:
 
 
 def theory_state_path(data_dir: Path) -> Path:
-    return data_dir / THEORY_STATE_FILENAME
+    return loop_theory_state_path(data_dir)
 
 
 def load_current_research_agenda() -> dict[str, Any]:
     return load_research_agenda(REPO_ROOT / DEFAULT_RESEARCH_AGENDA_PATH)
+
+
+def load_current_materials() -> dict[str, Any]:
+    ensure_materials_derived_current(REPO_ROOT / DEFAULT_MATERIALS_DIR)
+    return load_materials(REPO_ROOT / DEFAULT_MATERIALS_DIR)
 
 
 def load_theory_state(data_dir: Path) -> dict[str, Any]:
@@ -45,15 +55,14 @@ def load_theory_state(data_dir: Path) -> dict[str, Any]:
         payload = json.loads(path.read_text(encoding="utf-8"))
     except Exception:
         return {}
-    if not isinstance(payload, dict):
-        return {}
-    return payload
+    return payload if isinstance(payload, dict) else {}
 
 
 def load_current_guidance(data_dir: Path) -> dict[str, dict[str, Any]]:
     return build_guidance_context(
         theory_state=load_theory_state(data_dir),
         research_agenda=load_current_research_agenda(),
+        materials=load_current_materials(),
     )
 
 
@@ -99,6 +108,57 @@ def append_phase_attempt_record(
 
 def normalize_stmt_text(stmt: str) -> str:
     return " ".join(stmt.split())
+
+
+def statement_within_char_budget(stmt: str, *, max_chars: int = NORMALIZED_STATEMENT_MAX_CHARS) -> bool:
+    return len(normalize_stmt_text(stmt)) <= max_chars
+
+
+def analyze_lean_statement_compactness(
+    lean_statement: str,
+    *,
+    statement_prelude_code: str = "",
+    max_chars: int = NORMALIZED_STATEMENT_MAX_CHARS,
+) -> dict[str, Any] | None:
+    normalized_statement = normalize_stmt_text(lean_statement)
+    if not normalized_statement:
+        return None
+
+    reasons: list[str] = []
+
+    if len(normalized_statement) > max_chars:
+        reasons.append(
+            "theorem face is too long"
+            f" ({len(normalized_statement)} normalized chars; must be fewer than 300)"
+        )
+
+    if not reasons:
+        return None
+
+    message = "Statement compactness check failed: " + "; ".join(reasons) + "."
+    retry_instruction = (
+        "Previous statement_prelude_code and lean_statement failed a local compactness check before proof search. "
+        "Keep the mathematical meaning of `stmt`, but shorten the theorem face. "
+        "If a long hypothesis bundle or predicate repeats, introduce a small local `def` or `abbrev` in statement_prelude_code "
+        "and rewrite lean_statement using that name. "
+        "Target fewer than 300 normalized characters in lean_statement. "
+        "Return only statement_prelude_code plus one proposition statement, not a theorem or proof."
+    )
+    diagnostics = "\n".join(
+        [
+            message,
+            f"normalized_chars: {len(normalized_statement)}",
+            f"normalized_char_limit: {max_chars}",
+            f"has_local_alias: {'yes' if bool(LOCAL_STATEMENT_ALIAS_PATTERN.search(statement_prelude_code or '')) else 'no'}",
+        ]
+    )
+    return {
+        "message": message,
+        "diagnostics": diagnostics,
+        "retry_instruction": retry_instruction,
+        "normalized_chars": len(normalized_statement),
+        "has_local_alias": bool(LOCAL_STATEMENT_ALIAS_PATTERN.search(statement_prelude_code or "")),
+    }
 
 
 def open_problem_priority_label(row: dict[str, Any]) -> str:
@@ -340,7 +400,7 @@ def render_relevant_derived_context(entries: list[dict[str, Any]], max_chars: in
 
     lines = [
         "",
-        "-- Relevant verified theorems from Generated/Derived:",
+        "-- Relevant verified theorems from Derived:",
         "-- Check these theorem names before re-deriving from axioms.",
     ]
     for entry in entries:

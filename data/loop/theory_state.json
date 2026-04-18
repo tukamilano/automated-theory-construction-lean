@@ -1,0 +1,44 @@
+{
+  "agenda_pressure": [
+    "Prefer structural correspondences and criterion theorems over one-off derivation facts.",
+    "Prefer reusable invariants that could later support complexity or proof-search analysis.",
+    "Down-rank cosmetic example tweaking unless it sharpens a genuine boundary or converse."
+  ],
+  "current_bottlenecks": [
+    "No verified theorem currently explains derivability through a reusable structural criterion.",
+    "No invariant yet constrains proof search or type complexity across the calculus.",
+    "Boundary evidence for shallow variants is only example-level and not yet theory-level."
+  ],
+  "derived_generation": 0,
+  "desired_summary_changes": [
+    "Verify left/right division as explicit residuation characterizations of derivability.",
+    "Establish a global invariant connecting derivability to formula or context complexity.",
+    "Turn shallow-fragment failures into a genuine separability statement instead of isolated examples."
+  ],
+  "important_verified_counterexamples": [],
+  "missing_bridges": [
+    "Bridge from operational sequent rules to bidirectional residuation equivalences.",
+    "Bridge from derivability to quantitative complexity measures such as degree bounds.",
+    "Bridge from shallow counterexamples to explicit fragment separation or admissibility failure statements."
+  ],
+  "next_direction": {
+    "guidance": "Prioritize problems that convert sequent derivability into reusable division characterizations or global structural invariants rather than isolated derivation tricks or single examples.",
+    "label": "residuation_and_invariant_characterization",
+    "rationale": "The queue has no verified theorem base, and the strongest visible pressure from both the current theory state and the materials is to establish structural correspondences first; shallow counterexample candidates are too local unless later supported by broader separation evidence."
+  },
+  "overexplored_patterns": [
+    "Single-instance shallow non-derivability examples without a general separation theorem.",
+    "Local introduction/elimination lemmas that are likely corollaries of a stronger residuation fact.",
+    "Narrow rigidity statements that do not yet connect to a broader normal-form or criterion result."
+  ],
+  "research_agenda": {},
+  "summary_basis": {
+    "archived_problem_count": 4,
+    "derived_theorem_count": 0,
+    "open_problem_count": 3
+  },
+  "theory_snapshot": "The current frontier is still pre-structural: there are no verified derived theorems yet, and the queue is dominated by attempts to turn the raw product-free Lambek sequent rules into reusable correspondences and invariants. The most central missing step is a verified residuation-style characterization for left and right division, together with a complexity-relevant invariant such as degree control. Boundary work is only present as unverified shallow-system counterexample candidates, so there is not yet a confirmed separability picture constraining the theory summary.",
+  "updated_at_iteration": 1,
+  "updated_at_run_id": "20260418-112924-loop",
+  "version": 1
+}

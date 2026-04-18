@@ -1,4 +1,3 @@
 import AutomatedTheoryConstruction.Theory
 import AutomatedTheoryConstruction.Derived
 import AutomatedTheoryConstruction.Scratch
-import AutomatedTheoryConstruction.Lambek

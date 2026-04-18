@@ -19,6 +19,7 @@ from derived_refactor_utils import compare_theorem_inventories
 from derived_refactor_utils import debug_log
 from derived_refactor_utils import extract_theorem_entries_from_code
 from derived_refactor_utils import print_report
+from derived_refactor_utils import repair_theorem_headers_from_source
 from derived_refactor_utils import write_report
 from llm_exec import build_exec_command
 from llm_exec import resolve_provider
@@ -120,8 +121,7 @@ Task:
 - Preserve all public theorem names, theorem statements, namespace structure, and intended API.
 - Do not redesign the theorem inventory.
 - Prefer review-focused cleanup only: localize `classical`, remove brittle proof steps, tidy `have` structure, remove `by exact`, and prefer stable rewrites / `simpa` / short `calc` blocks.
-- For main-theorem-style results, prefer rewriting proofs to explicitly reuse existing `Derived.lean` theorems when that can be done without changing statements.
-- If two theorems have the same statement, prefer reducing the duplication by rewriting the later proof into an explicit alias/delegation to the earlier theorem rather than keeping two independent proofs.
+- Prefer rewriting proofs to explicitly reuse existing `Derived.lean` theorems when that can be done without changing statements.
 - Do not introduce `sorry`.
 - Do not add or remove global instances, `[simp]` attributes, notation, coercions, or transparency changes.
 {extra_step}{verify_step}{final_step}
@@ -350,9 +350,26 @@ def main() -> int:
             extra["before_theorem_count"] = inventory_check["before_theorem_count"]
             extra["after_theorem_count"] = inventory_check["after_theorem_count"]
             if not inventory_check["ok"]:
-                stop_reason = "inventory_changed"
                 extra["missing_names"] = inventory_check["missing_names"]
                 extra["changed_statements"] = inventory_check["changed_statements"]
+                if inventory_check["changed_statements"] and not inventory_check["missing_names"]:
+                    repaired_code, repaired_names = repair_theorem_headers_from_source(
+                        input_file.read_text(encoding="utf-8"),
+                        refactored_code,
+                        inventory_check["changed_statements"],
+                    )
+                    extra["inventory_repair_attempted"] = True
+                    extra["inventory_repair_replaced_headers"] = repaired_names
+                    if repaired_names:
+                        output_file.write_text(repaired_code, encoding="utf-8")
+                        repaired_entries = extract_theorem_entries_from_code(output_file, repaired_code)
+                        inventory_check = compare_theorem_inventories(before_entries, repaired_entries)
+                        extra["before_theorem_count"] = inventory_check["before_theorem_count"]
+                        extra["after_theorem_count"] = inventory_check["after_theorem_count"]
+                        extra["missing_names"] = inventory_check["missing_names"]
+                        extra["changed_statements"] = inventory_check["changed_statements"]
+                if not inventory_check["ok"]:
+                    stop_reason = "inventory_changed"
     else:
         extra["stdout_excerpt"] = stdout_excerpt
         extra["stderr_excerpt"] = stderr_excerpt

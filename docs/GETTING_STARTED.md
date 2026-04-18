@@ -1,57 +1,125 @@
 # Getting Started
 
-This page is the recommended first-read for using this repository.
+This is the recommended first read after the root [`README.md`](../README.md).
+Its job is narrow: get the repository building, point you at the first files to edit, and show the shortest path to a first successful run.
 
-## Order
+## 1. Prerequisites
 
-1. Set up Lean 4 and Mathlib.
-2. Set up Codex.
-3. Enable `lean-lsp-mcp`.
-4. Put your base theory code in `AutomatedTheoryConstruction/Theory/Core.lean`.
-5. Avoid notation or symbols that are likely to conflict with Mathlib.
-6. Edit `AutomatedTheoryConstruction/research_agenda.md` to state what kinds of problems are worth generating.
-7. Generate seeds or run the loop.
+Install or prepare:
 
-Use the toolchain from `lean-toolchain`, then run `lake build` in the repo.
-Make sure the Codex CLI works in this repository before running the worker loop.
-Set up `lean-lsp-mcp` in the environment where you want Lean-aware agent/tool support.
-Keep `AutomatedTheoryConstruction/Theory.lean` as the entry point that imports your local theory files.
-If you split your theory across multiple files under `AutomatedTheoryConstruction/Theory/`, add the corresponding `import` lines to `AutomatedTheoryConstruction/Theory.lean`.
-Reusing common Mathlib notation names without a good reason will make the Lean side harder to maintain.
-`AutomatedTheoryConstruction/research_agenda.md` is read automatically by seed generation, prioritization, and expansion.
-Optional extra reference files can still be passed with `--context-file`.
+- Lean toolchain from `lean-toolchain`
+- Lake + Mathlib dependencies
+- Python
+- `uv`
 
-## First File To Edit
+Then bootstrap the repository:
 
-Start with:
+```bash
+make build
+```
 
+If you plan to use the real Codex-backed worker, also make sure Codex CLI works in this repository.
+If you want Lean-aware agent tooling, enable `lean-lsp-mcp` in the environment where you run the worker.
+
+## 2. Know The Main Files
+
+Start with these paths:
+
+- `AutomatedTheoryConstruction/Theory.lean`
 - `AutomatedTheoryConstruction/Theory/Core.lean`
+- `AutomatedTheoryConstruction/research_agenda.md`
+- `materials/` if you want to keep reusable literature context alongside the theory
 
-Then check that the project still builds:
+Keep `AutomatedTheoryConstruction/Theory.lean` as the public entry point for your active theory.
+If you split the theory across multiple files under `AutomatedTheoryConstruction/Theory/`, add the corresponding `import` lines there.
+When one file imports multiple local theory files, be careful not to create circular dependencies or to rely on transitive imports accidentally.
+Keep the dependency direction intentional, and re-check both the edited file and `AutomatedTheoryConstruction/Theory.lean` after changing imports.
+
+## 3. Make Your First Edits
+
+The usual first changes are:
+
+1. Put your base theory definitions and axioms in `AutomatedTheoryConstruction/Theory/Core.lean`.
+2. Add helper lemmas or additional modules under `AutomatedTheoryConstruction/Theory/` if needed.
+3. If you do deep research, put the organized output under `materials/`.
+4. Regenerate `AutomatedTheoryConstruction/research_agenda.md` from that report instead of editing it ad hoc when possible.
+
+Keep notation choices conservative. Reusing common Mathlib notation names without a strong reason tends to make maintenance harder.
+
+`materials/` is the recommended place to keep:
+
+- structured deep-research notes
+- literature summaries
+- source-link lists
+- extracted problem families or evaluation checklists
+
+Treat `materials/` as optional external context rather than internal runtime state.
+In particular, keep it separate from `data/loop/theory_state.json`.
+If a deep-research summary becomes old, keep using it as context, but treat its claims as lower-confidence than direct source links or primary papers.
+
+## 4. Check The Lean Targets
+
+After your first edits, verify the repository still checks:
 
 ```bash
 make build
 make check
 ```
 
-## Research Agenda
+If you only want to check the temporary verification target:
 
-Use `AutomatedTheoryConstruction/research_agenda.md` for the persistent value function that should guide problem generation. Keep it short and concrete. The default template covers:
+```bash
+make check-scratch
+```
 
-- themes
-- valued problem types
-- anti-goals
-- canonical targets
-- soft constraints
+## 5. Recommended Quick Start
 
-You can still provide one-off extra reference files with `--context-file` when generating seeds.
+For the main workflow, use this order:
 
-Examples:
+```bash
+make build
+make materials-cache
+make research-agenda REPORT_FILE=materials/your_report.md
+make seed-loop-refactor-derived
+```
+
+This is the recommended path when you have a real deep-research report under `materials/`.
+Gemini Deep Research is the recommended default for producing that report.
+It refreshes `data/materials_cache`, rewrites `AutomatedTheoryConstruction/research_agenda.md`, and runs the main loop plus whole-file refactor path on `Derived.lean`.
+After the first run, prefer:
+
+```bash
+make loop-continue-refactor-derived
+```
+
+Use that when you want to keep the current runtime state and continue the loop plus refactor cycle instead of resetting from scratch.
+
+If you want the fastest smoke test without Codex CLI, you can still use the bundled mock worker:
+
+```bash
+uv run python scripts/atc_cli.py loop \
+  --worker-command "uv run scripts/mock_worker.py" \
+  --max-iterations 1
+```
+
+## 6. Seed Generation
+
+`AutomatedTheoryConstruction/research_agenda.md` acts as the persistent value function for seed generation, prioritization, and expansion.
+Keep it short and concrete. The default template covers themes, valued problem types, anti-goals, canonical targets, and soft constraints.
+
+If you have domain-specific deep research, prefer storing it in `materials/` in an organized form rather than scattering it across ad hoc notes.
+The runtime treats those files as optional external anchors for outward-looking generation and evaluation.
+This is intentionally fail-soft: readable material can be used, and unreadable or partial material should only lower confidence rather than block the run.
+The same applies to freshness: older summary reports can still be useful, but novelty-sensitive judgments should defer to source-link lists and the underlying papers.
+
+Generate seeds from the current theory:
 
 ```bash
 uv run python scripts/atc_cli.py seed \
   --seed-count 4
 ```
+
+You can attach one-off extra context files when needed:
 
 ```bash
 uv run python scripts/atc_cli.py seed \
@@ -59,9 +127,8 @@ uv run python scripts/atc_cli.py seed \
   --seed-count 4
 ```
 
-## After Setup
+## Next Reads
 
-Useful next pages:
-
-- [`USER_GUIDE.md`](USER_GUIDE.md)
-- [`REPO_MAP.md`](REPO_MAP.md)
+- Operational workflows: [`USER_GUIDE.md`](USER_GUIDE.md)
+- Ownership and safe edit boundaries: [`REPO_MAP.md`](REPO_MAP.md)
+- Full doc index: [`README.md`](README.md)

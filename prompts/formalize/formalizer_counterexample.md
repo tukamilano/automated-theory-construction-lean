@@ -30,6 +30,6 @@
 - Prefer existing theory objects and short contradiction arguments over building a full model.
 
 ## prelude_rules
-- By default avoid new `def`/`abbrev`/`structure`/`class`/`inductive` in `prelude_code`.
-- Allowed only when essential for refutation.
+- By default avoid new `def`/`abbrev`/`structure`/`class`/`inductive`/short helper lemmas in `prelude_code`.
+- Introduce them only when essential for refutation, such as isolating a reusable contradiction step or instance fact; keep them small and directly tied to the refutation.
 - No `import`, `namespace`, `section`, `axiom`, `theorem` in prelude.

@@ -7,6 +7,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT / "scripts"))
+sys.path.insert(0, str(REPO_ROOT / "scripts" / "loop"))
 
 
 import run_loop
@@ -17,9 +18,11 @@ def main() -> int:
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp = Path(tmpdir)
         data_dir = tmp / "data"
+        loop_dir = data_dir / "loop"
         data_dir.mkdir(parents=True, exist_ok=True)
+        loop_dir.mkdir(parents=True, exist_ok=True)
         write_jsonl_atomic(
-            data_dir / "open_problems.jsonl",
+            loop_dir / "open_problems.jsonl",
             [
                 {
                     "id": "op_000001",
@@ -39,9 +42,9 @@ def main() -> int:
                 },
             ],
         )
-        write_jsonl_atomic(data_dir / "archived_problems.jsonl", [])
-        write_jsonl_atomic(data_dir / "solved_problems.jsonl", [])
-        write_jsonl_atomic(data_dir / "counterexamples.jsonl", [])
+        write_jsonl_atomic(loop_dir / "archived_problems.jsonl", [])
+        write_jsonl_atomic(loop_dir / "solved_problems.jsonl", [])
+        write_jsonl_atomic(loop_dir / "counterexamples.jsonl", [])
 
         original_batch_generator = run_loop.run_batch_generator_subprocess
         try:
@@ -69,11 +72,13 @@ def main() -> int:
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp = Path(tmpdir)
         data_dir = tmp / "data"
+        loop_dir = data_dir / "loop"
         data_dir.mkdir(parents=True, exist_ok=True)
-        write_jsonl_atomic(data_dir / "open_problems.jsonl", [])
-        write_jsonl_atomic(data_dir / "archived_problems.jsonl", [])
-        write_jsonl_atomic(data_dir / "solved_problems.jsonl", [])
-        write_jsonl_atomic(data_dir / "counterexamples.jsonl", [])
+        loop_dir.mkdir(parents=True, exist_ok=True)
+        write_jsonl_atomic(loop_dir / "open_problems.jsonl", [])
+        write_jsonl_atomic(loop_dir / "archived_problems.jsonl", [])
+        write_jsonl_atomic(loop_dir / "solved_problems.jsonl", [])
+        write_jsonl_atomic(loop_dir / "counterexamples.jsonl", [])
 
         captured_events: list[dict[str, object]] = []
         original_batch_generator = run_loop.run_batch_generator_subprocess
