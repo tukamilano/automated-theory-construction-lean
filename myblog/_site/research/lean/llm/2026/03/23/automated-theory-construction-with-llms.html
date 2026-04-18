@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Growing Theories with LLMs and Lean | Automated Theory Construction</title>
+<meta name="generator" content="Jekyll v4.4.1" />
+<meta property="og:title" content="Growing Theories with LLMs and Lean" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="About six years ago, when I was in high school, I often felt overwhelmed by the rows of advanced mathematics books in large bookstores. At the same time, I was fascinated by the fact that such rich theories could emerge from relatively small sets of axioms." />
+<meta property="og:description" content="About six years ago, when I was in high school, I often felt overwhelmed by the rows of advanced mathematics books in large bookstores. At the same time, I was fascinated by the fact that such rich theories could emerge from relatively small sets of axioms." />
+<link rel="canonical" href="https://tukamilano.github.io/Automated_Theory_Construction/research/lean/llm/2026/03/23/automated-theory-construction-with-llms.html" />
+<meta property="og:url" content="https://tukamilano.github.io/Automated_Theory_Construction/research/lean/llm/2026/03/23/automated-theory-construction-with-llms.html" />
+<meta property="og:site_name" content="Automated Theory Construction" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2026-03-23T09:00:00+09:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Growing Theories with LLMs and Lean" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","dateModified":"2026-03-23T09:00:00+09:00","datePublished":"2026-03-23T09:00:00+09:00","description":"About six years ago, when I was in high school, I often felt overwhelmed by the rows of advanced mathematics books in large bookstores. At the same time, I was fascinated by the fact that such rich theories could emerge from relatively small sets of axioms.","headline":"Growing Theories with LLMs and Lean","mainEntityOfPage":{"@type":"WebPage","@id":"https://tukamilano.github.io/Automated_Theory_Construction/research/lean/llm/2026/03/23/automated-theory-construction-with-llms.html"},"url":"https://tukamilano.github.io/Automated_Theory_Construction/research/lean/llm/2026/03/23/automated-theory-construction-with-llms.html"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="stylesheet" href="/Automated_Theory_Construction/assets/main.css"><link type="application/atom+xml" rel="alternate" href="https://tukamilano.github.io/Automated_Theory_Construction/feed.xml" title="Automated Theory Construction" /></head>
+<body><header class="site-header" role="banner">
+
+  <div class="wrapper"><a class="site-title" rel="author" href="/Automated_Theory_Construction/">Automated Theory Construction</a><nav class="site-nav">
+        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+        <label for="nav-trigger">
+          <span class="menu-icon">
+            <svg viewBox="0 0 18 15" width="18px" height="15px">
+              <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z"/>
+            </svg>
+          </span>
+        </label>
+
+        <div class="trigger"><a class="page-link" href="/Automated_Theory_Construction/about/">About</a></div>
+      </nav></div>
+</header>
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="name headline">Growing Theories with LLMs and Lean</h1>
+    <p class="post-meta">
+      <time class="dt-published" datetime="2026-03-23T09:00:00+09:00" itemprop="datePublished">Mar 23, 2026
+      </time></p>
+  </header>
+
+  <div class="post-content e-content" itemprop="articleBody">
+    <p>About six years ago, when I was in high school, I often felt overwhelmed by the rows of advanced mathematics books in large bookstores. At the same time, I was fascinated by the fact that such rich theories could emerge from relatively small sets of axioms.</p>
+
+<p>Since then, I have been interested in the idea of generating mathematical structure automatically from simple foundations. Traditional automated theorem proving has been powerful for proving individual statements, but it has been less effective as a tool for exploring and extending theories at a higher level.</p>
+
+<p>Recently, the mathematical abilities of large language models have improved substantially. They can assist with proofs, suggest reformulations, and sometimes propose useful follow-up questions. Motivated by this, I started the <a href="https://github.com/tukamilano/Automated_Theory_Construction"><code class="language-plaintext highlighter-rouge">automated-theory-construction-lean4</code></a> repository to explore how LLMs can complement formal verification and help with theory construction itself.</p>
+
+<h2 id="overview">Overview</h2>
+
+<p>The basic idea is simple: start from a small axiom system, introduce a few seed propositions, and then repeatedly try to formalize, verify, and extend the resulting theory.</p>
+
+<p>Each iteration looks roughly like this:</p>
+
+<ol>
+  <li>Put a base axiom system and a collection of elementary seed propositions into an open problem queue.</li>
+  <li>Retrieve one proposition from the queue and ask Codex CLI to formalize either a proof or a counterexample within a fixed time budget.</li>
+  <li>If the proposition is successfully formalized and verified, add it to <code class="language-plaintext highlighter-rouge">Derived.lean</code> as a theorem.</li>
+  <li>Use the logs produced during the attempt to decide what to do next:
+if the proposition was not formalized, put it back into the queue together with its subgoals;
+if it was formalized, generate more general candidate problems and add them to the queue.</li>
+</ol>
+
+<p>In this way, the system alternates between proving statements and proposing new directions for exploration.</p>
+
+<p>The most important part is the prompt used to generate follow-up problems after a successful result:</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>When the current problem is solved and verified (`verify_success = true` and `result = proof|counterexample`):
+- Prefer outward-looking follow-up problems that extend the theory rather than merely staying near the last proof script.
+- Favor, in roughly this order:
+  1. natural generalizations or reusable abstractions
+  2. converses, strict separations, or failure-of-converse statements
+  3. existence, uniqueness, impossibility, or rigidity phenomena
+  4. finite-model behavior, extremal behavior, boundary cases, or classification fragments
+  5. adjacent structural consequences that clarify the global shape of the theory
+- It is good to return at least one candidate that meaningfully broadens, reinterprets, or reuses the verified result beyond the immediate local target.
+- Prefer candidates whose resolution would teach something non-obvious about the theory or its models, rather than merely restating the solved fact in slightly altered form.
+- If a more informative model-level, structural, or boundary-case follow-up is available, prefer it over a nearby local rewrite.
+</code></pre></div></div>
+
+<p>The goal is not merely to stay close to the last proof, but to push outward toward statements that clarify the structure of the theory.</p>
+
+<h2 id="how-it-works">How It Works</h2>
+
+<p>The core loop lives in <code class="language-plaintext highlighter-rouge">scripts/run_loop.py</code>. At the moment, the implementation uses fixed paths:</p>
+
+<ul>
+  <li>theory: <code class="language-plaintext highlighter-rouge">AutomatedTheoryConstruction/Theory.lean</code></li>
+  <li>accumulated theorems: <code class="language-plaintext highlighter-rouge">AutomatedTheoryConstruction/Derived.lean</code></li>
+  <li>temporary verification file: <code class="language-plaintext highlighter-rouge">AutomatedTheoryConstruction/Scratch.lean</code></li>
+  <li>initial seeds: <code class="language-plaintext highlighter-rouge">AutomatedTheoryConstruction/seeds.jsonl</code></li>
+  <li>runtime state: <code class="language-plaintext highlighter-rouge">data/</code></li>
+</ul>
+
+<p>So this is not yet a fully generic multi-theory runner. Switching to a different theory currently requires editing these files directly.</p>
+
+<p>Each iteration proceeds as follows:</p>
+
+<ol>
+  <li>Select the next open problem deterministically.</li>
+  <li>If the problem is not already in Lean form, use <code class="language-plaintext highlighter-rouge">prover_statement</code> to translate it into a formal statement.</li>
+  <li>Use <code class="language-plaintext highlighter-rouge">prover</code> to attempt a proof, a counterexample, or determine that the problem is currently stuck.</li>
+  <li>Run <code class="language-plaintext highlighter-rouge">formalize</code>, then verify the result with:</li>
+</ol>
+
+<p><code class="language-plaintext highlighter-rouge">lake env lean AutomatedTheoryConstruction/Scratch.lean</code></p>
+
+<ol>
+  <li>If verification fails, invoke <code class="language-plaintext highlighter-rouge">repair</code> repeatedly until the retry budget is exhausted.</li>
+  <li>If verification succeeds, append the resulting theorem to <code class="language-plaintext highlighter-rouge">Derived.lean</code>.</li>
+  <li>Run <code class="language-plaintext highlighter-rouge">expand</code> to generate additional candidate problems.</li>
+  <li>Update the system state deterministically (<code class="language-plaintext highlighter-rouge">open</code>, <code class="language-plaintext highlighter-rouge">solved</code>, <code class="language-plaintext highlighter-rouge">counterexamples</code>).</li>
+</ol>
+
+<p>Open problems may be either Lean-formal statements or semi-formal natural language prompts. Problems that cannot yet be formalized remain in the queue.</p>
+
+<h2 id="three-stage-formalization">Three-Stage Formalization</h2>
+
+<p>Proof formalization is split into three stages:</p>
+
+<ol>
+  <li>formalization of the statement</li>
+  <li>natural language proof generation</li>
+  <li>formalization of the proof in Lean</li>
+</ol>
+
+<p>This decomposition helps separate semantic understanding from syntactic verification.</p>
+
+<h2 id="current-experiment">Current Experiment</h2>
+
+<p>At the moment, I am experimenting with code adapted from <a href="https://github.com/SnO2WMaN/provability-toy">SnO2WMaN/provability-toy</a>, which I incorporated into <code class="language-plaintext highlighter-rouge">Theory.lean</code>. I also added the following four propositions to <code class="language-plaintext highlighter-rouge">seeds.jsonl</code>:</p>
+
+<div class="language-lean highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">∀</span> <span class="err">{</span>α : <span class="kt">Type</span> <span class="n">u</span><span class="err">}</span> [<span class="n">ACR</span> α] [<span class="n">ACR</span><span class="o">.</span><span class="n">Prov</span> α] [<span class="n">ACR</span><span class="o">.</span><span class="n">Reft</span> α] [<span class="n">ACR</span><span class="o">.</span><span class="n">APS</span> α], <span class="o">∀</span> <span class="n">g</span> : <span class="n">ACR</span><span class="o">.</span><span class="n">G</span><span class="err">ö</span><span class="n">delFixpoint</span> α, <span class="n">g</span><span class="o">.1</span> <span class="o">≤</span> <span class="err">□</span><span class="n">g</span><span class="o">.1</span>
+<span class="o">∀</span> <span class="err">{</span>α : <span class="kt">Type</span> <span class="n">u</span><span class="err">}</span> [<span class="n">ACR</span> α] [<span class="n">ACR</span><span class="o">.</span><span class="n">Prov</span> α] [<span class="n">ACR</span><span class="o">.</span><span class="n">Reft</span> α] [<span class="n">ACR</span><span class="o">.</span><span class="n">APS</span> α] [<span class="n">ACR</span><span class="o">.</span><span class="n">C5</span> α], <span class="o">∀</span> <span class="n">g</span> <span class="n">h</span> : <span class="n">ACR</span><span class="o">.</span><span class="n">G</span><span class="err">ö</span><span class="n">delFixpoint</span> α, <span class="n">g</span><span class="o">.1</span> <span class="o">≡</span> <span class="n">h</span><span class="o">.1</span>
+<span class="o">∀</span> <span class="err">{</span>α : <span class="kt">Type</span> <span class="n">u</span><span class="err">}</span> [<span class="n">ACR</span> α] [<span class="n">ACR</span><span class="o">.</span><span class="n">Prov</span> α] [<span class="n">ACR</span><span class="o">.</span><span class="n">Reft</span> α] [<span class="n">ACR</span><span class="o">.</span><span class="n">APS</span> α] [<span class="n">ACR</span><span class="o">.</span><span class="n">C5</span> α] [<span class="n">Nonempty</span> (<span class="n">ACR</span><span class="o">.</span><span class="n">G</span><span class="err">ö</span><span class="n">delFixpoint</span> α)], <span class="err">⊠</span>(<span class="err">⊤</span> : α) <span class="o">≡</span> <span class="err">⊠⊠</span>(<span class="err">⊤</span> : α)
+<span class="o">∀</span> <span class="err">{</span>α : <span class="kt">Type</span> <span class="n">u</span><span class="err">}</span> [<span class="n">ACR</span> α] [<span class="n">ACR</span><span class="o">.</span><span class="n">Prov</span> α] [<span class="n">ACR</span><span class="o">.</span><span class="n">Reft</span> α] [<span class="n">ACR</span><span class="o">.</span><span class="n">APS</span> α] [<span class="n">ACR</span><span class="o">.</span><span class="n">C5</span> α] [<span class="n">Nonempty</span> (<span class="n">ACR</span><span class="o">.</span><span class="n">G</span><span class="err">ö</span><span class="n">delFixpoint</span> α)], <span class="o">∃</span> <span class="n">g</span> : <span class="n">ACR</span><span class="o">.</span><span class="n">G</span><span class="err">ö</span><span class="n">delFixpoint</span> α, <span class="n">g</span><span class="o">.1</span> <span class="o">≡</span> <span class="err">⊠</span>(<span class="err">⊤</span> : α)
+</code></pre></div></div>
+
+<p>These are formalized versions of statements from Sections 2 and 3 of <a href="https://arxiv.org/abs/1602.05728v1">arXiv:1602.05728v1</a>.</p>
+
+<p>The results obtained so far are available in <a href="https://gist.github.com/tukamilano/d25609aeb416005e24be23308c4abd3d">this gist</a>. I am currently receiving feedback on the generated code.</p>
+
+<h2 id="what-i-still-do-not-fully-understand">What I Still Do Not Fully Understand</h2>
+
+<p>I am not a specialist in provability logic, so there are still parts of the underlying mathematics that I do not fully understand. For now, I see this project primarily as an experiment in how LLMs and Lean can be combined to support theory exploration.</p>
+
+<p>I plan to study this area more carefully and write a more detailed explanation later. If you work in provability logic or related areas, I would be very happy to hear your thoughts.</p>
+
+<h2 id="goals">Goals</h2>
+
+<p>One major goal is to enable the system to incorporate more general propositions into the theory as theorems, especially statements that are less tightly tied to a specific internal language.</p>
+
+<p>Ideally, I would also like the resulting theories to acquire a consistent style and structure, closer to files such as <code class="language-plaintext highlighter-rouge">Basic.lean</code> in mathlib.</p>
+
+<p>In logic, language theory, and type theory, it is common to come up with small axiom systems whose importance is not immediately clear. As a result, they tend to be deprioritized. I hope this project can serve as a tool for exploring what kinds of theories emerge from such systems and for deciding which ones are worth developing further.</p>
+
+<p>I plan to keep improving the system as AI tools continue to advance. If you have small axiom systems you would like to experiment with, feel free to let me know.</p>
+
+<h2 id="acknowledgments">Acknowledgments</h2>
+
+<p>I am grateful to SnO2WMaN for publishing <code class="language-plaintext highlighter-rouge">provability-toy</code>.</p>
+
+  </div><a class="u-url" href="/Automated_Theory_Construction/research/lean/llm/2026/03/23/automated-theory-construction-with-llms.html" hidden></a>
+</article>
+
+      </div>
+    </main><footer class="site-footer h-card">
+  <data class="u-url" href="/Automated_Theory_Construction/"></data>
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">Automated Theory Construction</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li class="p-name">Automated Theory Construction</li><li><a class="u-email" href="mailto:milanotukamoto@g.ecc.u-tokyo.ac.jp">milanotukamoto@g.ecc.u-tokyo.ac.jp</a></li></ul>
+      </div>
+
+      <div class="footer-col footer-col-2"><ul class="social-media-list"><li><a href="https://github.com/tukamilano"><svg class="svg-icon"><use xlink:href="/Automated_Theory_Construction/assets/minima-social-icons.svg#github"></use></svg> <span class="username">tukamilano</span></a></li></ul>
+</div>
+
+      <div class="footer-col footer-col-3">
+        <p>Research notes and posts for the Automated Theory Construction project.</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+</body>
+
+</html>

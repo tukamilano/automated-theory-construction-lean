@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://tukamilano.github.io/Automated_Theory_Construction/feed.xml" rel="self" type="application/atom+xml" /><link href="https://tukamilano.github.io/Automated_Theory_Construction/" rel="alternate" type="text/html" /><updated>2026-03-23T16:13:14+09:00</updated><id>https://tukamilano.github.io/Automated_Theory_Construction/feed.xml</id><title type="html">Automated Theory Construction</title><subtitle>Research notes and posts for the Automated Theory Construction project.</subtitle><entry><title type="html">Growing Theories with LLMs and Lean</title><link href="https://tukamilano.github.io/Automated_Theory_Construction/research/lean/llm/2026/03/23/automated-theory-construction-with-llms.html" rel="alternate" type="text/html" title="Growing Theories with LLMs and Lean" /><published>2026-03-23T09:00:00+09:00</published><updated>2026-03-23T09:00:00+09:00</updated><id>https://tukamilano.github.io/Automated_Theory_Construction/research/lean/llm/2026/03/23/automated-theory-construction-with-llms</id><content type="html" xml:base="https://tukamilano.github.io/Automated_Theory_Construction/research/lean/llm/2026/03/23/automated-theory-construction-with-llms.html"><![CDATA[<p>About six years ago, when I was in high school, I often felt overwhelmed by the rows of advanced mathematics books in large bookstores. At the same time, I was fascinated by the fact that such rich theories could emerge from relatively small sets of axioms.</p>
+
+<p>Since then, I have been interested in the idea of generating mathematical structure automatically from simple foundations. Traditional automated theorem proving has been powerful for proving individual statements, but it has been less effective as a tool for exploring and extending theories at a higher level.</p>
+
+<p>Recently, the mathematical abilities of large language models have improved substantially. They can assist with proofs, suggest reformulations, and sometimes propose useful follow-up questions. Motivated by this, I started the <a href="https://github.com/tukamilano/Automated_Theory_Construction"><code class="language-plaintext highlighter-rouge">automated-theory-construction-lean4</code></a> repository to explore how LLMs can complement formal verification and help with theory construction itself.</p>
+
+<h2 id="overview">Overview</h2>
+
+<p>The basic idea is simple: start from a small axiom system, introduce a few seed propositions, and then repeatedly try to formalize, verify, and extend the resulting theory.</p>
+
+<p>Each iteration looks roughly like this:</p>
+
+<ol>
+  <li>Put a base axiom system and a collection of elementary seed propositions into an open problem queue.</li>
+  <li>Retrieve one proposition from the queue and ask Codex CLI to formalize either a proof or a counterexample within a fixed time budget.</li>
+  <li>If the proposition is successfully formalized and verified, add it to <code class="language-plaintext highlighter-rouge">Derived.lean</code> as a theorem.</li>
+  <li>Use the logs produced during the attempt to decide what to do next:
+if the proposition was not formalized, put it back into the queue together with its subgoals;
+if it was formalized, generate more general candidate problems and add them to the queue.</li>
+</ol>
+
+<p>In this way, the system alternates between proving statements and proposing new directions for exploration.</p>
+
+<p>The most important part is the prompt used to generate follow-up problems after a successful result:</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>When the current problem is solved and verified (`verify_success = true` and `result = proof|counterexample`):
+- Prefer outward-looking follow-up problems that extend the theory rather than merely staying near the last proof script.
+- Favor, in roughly this order:
+  1. natural generalizations or reusable abstractions
+  2. converses, strict separations, or failure-of-converse statements
+  3. existence, uniqueness, impossibility, or rigidity phenomena
+  4. finite-model behavior, extremal behavior, boundary cases, or classification fragments
+  5. adjacent structural consequences that clarify the global shape of the theory
+- It is good to return at least one candidate that meaningfully broadens, reinterprets, or reuses the verified result beyond the immediate local target.
+- Prefer candidates whose resolution would teach something non-obvious about the theory or its models, rather than merely restating the solved fact in slightly altered form.
+- If a more informative model-level, structural, or boundary-case follow-up is available, prefer it over a nearby local rewrite.
+</code></pre></div></div>
+
+<p>The goal is not merely to stay close to the last proof, but to push outward toward statements that clarify the structure of the theory.</p>
+
+<h2 id="how-it-works">How It Works</h2>
+
+<p>The core loop lives in <code class="language-plaintext highlighter-rouge">scripts/run_loop.py</code>. At the moment, the implementation uses fixed paths:</p>
+
+<ul>
+  <li>theory: <code class="language-plaintext highlighter-rouge">AutomatedTheoryConstruction/Theory.lean</code></li>
+  <li>accumulated theorems: <code class="language-plaintext highlighter-rouge">AutomatedTheoryConstruction/Derived.lean</code></li>
+  <li>temporary verification file: <code class="language-plaintext highlighter-rouge">AutomatedTheoryConstruction/Scratch.lean</code></li>
+  <li>initial seeds: <code class="language-plaintext highlighter-rouge">AutomatedTheoryConstruction/seeds.jsonl</code></li>
+  <li>runtime state: <code class="language-plaintext highlighter-rouge">data/</code></li>
+</ul>
+
+<p>So this is not yet a fully generic multi-theory runner. Switching to a different theory currently requires editing these files directly.</p>
+
+<p>Each iteration proceeds as follows:</p>
+
+<ol>
+  <li>Select the next open problem deterministically.</li>
+  <li>If the problem is not already in Lean form, use <code class="language-plaintext highlighter-rouge">prover_statement</code> to translate it into a formal statement.</li>
+  <li>Use <code class="language-plaintext highlighter-rouge">prover</code> to attempt a proof, a counterexample, or determine that the problem is currently stuck.</li>
+  <li>Run <code class="language-plaintext highlighter-rouge">formalize</code>, then verify the result with:</li>
+</ol>
+
+<p><code class="language-plaintext highlighter-rouge">lake env lean AutomatedTheoryConstruction/Scratch.lean</code></p>
+
+<ol>
+  <li>If verification fails, invoke <code class="language-plaintext highlighter-rouge">repair</code> repeatedly until the retry budget is exhausted.</li>
+  <li>If verification succeeds, append the resulting theorem to <code class="language-plaintext highlighter-rouge">Derived.lean</code>.</li>
+  <li>Run <code class="language-plaintext highlighter-rouge">expand</code> to generate additional candidate problems.</li>
+  <li>Update the system state deterministically (<code class="language-plaintext highlighter-rouge">open</code>, <code class="language-plaintext highlighter-rouge">solved</code>, <code class="language-plaintext highlighter-rouge">counterexamples</code>).</li>
+</ol>
+
+<p>Open problems may be either Lean-formal statements or semi-formal natural language prompts. Problems that cannot yet be formalized remain in the queue.</p>
+
+<h2 id="three-stage-formalization">Three-Stage Formalization</h2>
+
+<p>Proof formalization is split into three stages:</p>
+
+<ol>
+  <li>formalization of the statement</li>
+  <li>natural language proof generation</li>
+  <li>formalization of the proof in Lean</li>
+</ol>
+
+<p>This decomposition helps separate semantic understanding from syntactic verification.</p>
+
+<h2 id="current-experiment">Current Experiment</h2>
+
+<p>At the moment, I am experimenting with code adapted from <a href="https://github.com/SnO2WMaN/provability-toy">SnO2WMaN/provability-toy</a>, which I incorporated into <code class="language-plaintext highlighter-rouge">Theory.lean</code>. I also added the following four propositions to <code class="language-plaintext highlighter-rouge">seeds.jsonl</code>:</p>
+
+<div class="language-lean highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">∀</span> <span class="err">{</span>α : <span class="kt">Type</span> <span class="n">u</span><span class="err">}</span> [<span class="n">ACR</span> α] [<span class="n">ACR</span><span class="o">.</span><span class="n">Prov</span> α] [<span class="n">ACR</span><span class="o">.</span><span class="n">Reft</span> α] [<span class="n">ACR</span><span class="o">.</span><span class="n">APS</span> α], <span class="o">∀</span> <span class="n">g</span> : <span class="n">ACR</span><span class="o">.</span><span class="n">G</span><span class="err">ö</span><span class="n">delFixpoint</span> α, <span class="n">g</span><span class="o">.1</span> <span class="o">≤</span> <span class="err">□</span><span class="n">g</span><span class="o">.1</span>
+<span class="o">∀</span> <span class="err">{</span>α : <span class="kt">Type</span> <span class="n">u</span><span class="err">}</span> [<span class="n">ACR</span> α] [<span class="n">ACR</span><span class="o">.</span><span class="n">Prov</span> α] [<span class="n">ACR</span><span class="o">.</span><span class="n">Reft</span> α] [<span class="n">ACR</span><span class="o">.</span><span class="n">APS</span> α] [<span class="n">ACR</span><span class="o">.</span><span class="n">C5</span> α], <span class="o">∀</span> <span class="n">g</span> <span class="n">h</span> : <span class="n">ACR</span><span class="o">.</span><span class="n">G</span><span class="err">ö</span><span class="n">delFixpoint</span> α, <span class="n">g</span><span class="o">.1</span> <span class="o">≡</span> <span class="n">h</span><span class="o">.1</span>
+<span class="o">∀</span> <span class="err">{</span>α : <span class="kt">Type</span> <span class="n">u</span><span class="err">}</span> [<span class="n">ACR</span> α] [<span class="n">ACR</span><span class="o">.</span><span class="n">Prov</span> α] [<span class="n">ACR</span><span class="o">.</span><span class="n">Reft</span> α] [<span class="n">ACR</span><span class="o">.</span><span class="n">APS</span> α] [<span class="n">ACR</span><span class="o">.</span><span class="n">C5</span> α] [<span class="n">Nonempty</span> (<span class="n">ACR</span><span class="o">.</span><span class="n">G</span><span class="err">ö</span><span class="n">delFixpoint</span> α)], <span class="err">⊠</span>(<span class="err">⊤</span> : α) <span class="o">≡</span> <span class="err">⊠⊠</span>(<span class="err">⊤</span> : α)
+<span class="o">∀</span> <span class="err">{</span>α : <span class="kt">Type</span> <span class="n">u</span><span class="err">}</span> [<span class="n">ACR</span> α] [<span class="n">ACR</span><span class="o">.</span><span class="n">Prov</span> α] [<span class="n">ACR</span><span class="o">.</span><span class="n">Reft</span> α] [<span class="n">ACR</span><span class="o">.</span><span class="n">APS</span> α] [<span class="n">ACR</span><span class="o">.</span><span class="n">C5</span> α] [<span class="n">Nonempty</span> (<span class="n">ACR</span><span class="o">.</span><span class="n">G</span><span class="err">ö</span><span class="n">delFixpoint</span> α)], <span class="o">∃</span> <span class="n">g</span> : <span class="n">ACR</span><span class="o">.</span><span class="n">G</span><span class="err">ö</span><span class="n">delFixpoint</span> α, <span class="n">g</span><span class="o">.1</span> <span class="o">≡</span> <span class="err">⊠</span>(<span class="err">⊤</span> : α)
+</code></pre></div></div>
+
+<p>These are formalized versions of statements from Sections 2 and 3 of <a href="https://arxiv.org/abs/1602.05728v1">arXiv:1602.05728v1</a>.</p>
+
+<p>The results obtained so far are available in <a href="https://gist.github.com/tukamilano/d25609aeb416005e24be23308c4abd3d">this gist</a>. I am currently receiving feedback on the generated code.</p>
+
+<h2 id="what-i-still-do-not-fully-understand">What I Still Do Not Fully Understand</h2>
+
+<p>I am not a specialist in provability logic, so there are still parts of the underlying mathematics that I do not fully understand. For now, I see this project primarily as an experiment in how LLMs and Lean can be combined to support theory exploration.</p>
+
+<p>I plan to study this area more carefully and write a more detailed explanation later. If you work in provability logic or related areas, I would be very happy to hear your thoughts.</p>
+
+<h2 id="goals">Goals</h2>
+
+<p>One major goal is to enable the system to incorporate more general propositions into the theory as theorems, especially statements that are less tightly tied to a specific internal language.</p>
+
+<p>Ideally, I would also like the resulting theories to acquire a consistent style and structure, closer to files such as <code class="language-plaintext highlighter-rouge">Basic.lean</code> in mathlib.</p>
+
+<p>In logic, language theory, and type theory, it is common to come up with small axiom systems whose importance is not immediately clear. As a result, they tend to be deprioritized. I hope this project can serve as a tool for exploring what kinds of theories emerge from such systems and for deciding which ones are worth developing further.</p>
+
+<p>I plan to keep improving the system as AI tools continue to advance. If you have small axiom systems you would like to experiment with, feel free to let me know.</p>
+
+<h2 id="acknowledgments">Acknowledgments</h2>
+
+<p>I am grateful to SnO2WMaN for publishing <code class="language-plaintext highlighter-rouge">provability-toy</code>.</p>]]></content><author><name></name></author><category term="research" /><category term="lean" /><category term="llm" /><summary type="html"><![CDATA[About six years ago, when I was in high school, I often felt overwhelmed by the rows of advanced mathematics books in large bookstores. At the same time, I was fascinated by the fact that such rich theories could emerge from relatively small sets of axioms.]]></summary></entry></feed>
