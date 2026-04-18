@@ -17,6 +17,14 @@ The main loop works like this:
 
 This is theory construction rather than ordinary proof search: the system expands the space of statements as it works.
 
+## Example Artifact
+
+A concrete generated Lean artifact is available here:
+
+- [`Lambek_generated_example.lean`](https://gist.github.com/tukamilano/8a02143aae1be8b986ae73ab84d4b8ac)
+
+This gist shows the kind of output ATC accumulates: a large Lean file of generated and verified statements over the Lambek-calculus-based theory used in this repository.
+
 ## Quick Start
 
 The recommended end-to-end path is:
