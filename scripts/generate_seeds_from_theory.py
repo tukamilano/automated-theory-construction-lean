@@ -125,7 +125,6 @@ def reset_runtime_before_seed_generation(
         derived_file=derived_file,
         open_problem_rows=[],
         archived_problems_file=archived_problems_file,
-        clear_paper_claim_rejection_memory=False,
     )
     reset_loop_work_files(
         scratch_file=scratch_file,

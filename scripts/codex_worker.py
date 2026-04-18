@@ -19,8 +19,7 @@ TASK_TYPE_ENV_ALIASES = {}
 def _task_is_unbounded_by_default(task_type: str) -> bool:
     return task_type in {
         "refactor_derived",
-        "paper_claim_codex_prove",
-    } or task_type.startswith("problem_design_")
+    }
 
 
 def _single_line_excerpt(text: str, limit: int = 400) -> str:
@@ -65,8 +64,6 @@ def _default_worker_timeout_for_task(task_type: str) -> int | None:
 
 
 def _sandbox_for_task(task_type: str) -> str:
-    if task_type == "paper_claim_codex_prove":
-        return "workspace-write"
     return "read-only"
 
 
@@ -303,14 +300,6 @@ def main() -> None:
             "expand",
             "refactor_derived",
             "prioritize_open_problems",
-            "problem_design_cluster",
-            "problem_design_contextualize",
-            "problem_design_core_extract",
-            "paper_claim_select",
-            "paper_claim_retrieve",
-            "paper_claim_map",
-            "paper_claim_plan",
-            "paper_claim_codex_prove",
             "post_theorem_expand",
         }:
             raise ValueError(f"unsupported task_type: {task_type}")

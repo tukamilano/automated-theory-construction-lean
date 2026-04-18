@@ -27,7 +27,6 @@ For setup and operational workflows, use this together with [`GETTING_STARTED.md
 | `data/loop/counterexamples.jsonl` | AI | Not recommended | Counterexample log |
 | `data/loop/formalization_memory.json` | AI | Not recommended | Retry/history memory |
 | `data/loop/theory_state.json` | AI | Not recommended | Latest global theory summary, current next-direction bias, and compact research-agenda summary |
-| `data/paper_claim/` | AI | Do not edit | Standalone paper-claim session events and derived local artifacts |
 | `data/refactor/` | AI | Do not edit | Refactor reports, dependency snapshots, and chunk plans |
 | `data/runs/` | AI | Do not edit | Run artifacts and logs |
 

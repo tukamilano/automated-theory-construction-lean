@@ -5,7 +5,6 @@ from pathlib import Path
 
 DATA_ROOT = Path("data")
 LOOP_DIRNAME = "loop"
-PAPER_CLAIM_DIRNAME = "paper_claim"
 REFRACTOR_DIRNAME = "refactor"
 RUNS_DIRNAME = "runs"
 MATERIALS_CACHE_DIRNAME = "materials_cache"
@@ -17,10 +16,7 @@ COUNTEREXAMPLES_FILENAME = "counterexamples.jsonl"
 THEORY_STATE_FILENAME = "theory_state.json"
 FORMALIZATION_MEMORY_FILENAME = "formalization_memory.json"
 THEOREM_REUSE_MEMORY_FILENAME = "theorem_reuse_memory.json"
-PAPER_CLAIM_REJECTION_MEMORY_FILENAME = "paper_claim_rejection_memory.json"
 EXPAND_CANDIDATES_FILENAME = "expand_candidates.jsonl"
-PAPER_CLAIM_EVENTS_FILENAME = "paper_claim.events.jsonl"
-PAPER_CLAIM_REPORT_FILENAME = "paper_claim.report.json"
 
 REFACTOR_PREVIEW_FILENAME = "Derived.refactored.preview.lean"
 REFACTOR_REVIEWED_FILENAME = "Derived.refactored.reviewed.lean"
@@ -33,10 +29,6 @@ REFACTOR_CHUNK_PLAN_FILENAME = "derived-chunk-plan.json"
 
 def loop_data_dir(data_dir: Path) -> Path:
     return data_dir if data_dir.name == LOOP_DIRNAME else data_dir / LOOP_DIRNAME
-
-
-def paper_claim_data_dir(data_dir: Path) -> Path:
-    return data_dir if data_dir.name == PAPER_CLAIM_DIRNAME else data_dir / PAPER_CLAIM_DIRNAME
 
 
 def refactor_data_dir(data_dir: Path) -> Path:
@@ -71,10 +63,6 @@ def loop_theorem_reuse_memory_path(data_dir: Path) -> Path:
     return loop_data_dir(data_dir) / THEOREM_REUSE_MEMORY_FILENAME
 
 
-def loop_paper_claim_rejection_memory_path(data_dir: Path) -> Path:
-    return loop_data_dir(data_dir) / PAPER_CLAIM_REJECTION_MEMORY_FILENAME
-
-
 def loop_expand_candidates_path(data_dir: Path) -> Path:
     return loop_data_dir(data_dir) / EXPAND_CANDIDATES_FILENAME
 
@@ -106,14 +94,3 @@ def refactor_deps_path(data_dir: Path) -> Path:
 def refactor_chunk_plan_path(data_dir: Path) -> Path:
     return refactor_data_dir(data_dir) / REFACTOR_CHUNK_PLAN_FILENAME
 
-
-def paper_claim_run_dir(data_dir: Path, run_id: str) -> Path:
-    return paper_claim_data_dir(data_dir) / run_id
-
-
-def paper_claim_session_events_path(data_dir: Path, run_id: str) -> Path:
-    return paper_claim_run_dir(data_dir, run_id) / PAPER_CLAIM_EVENTS_FILENAME
-
-
-def paper_claim_report_path(data_dir: Path, run_id: str) -> Path:
-    return paper_claim_run_dir(data_dir, run_id) / PAPER_CLAIM_REPORT_FILENAME

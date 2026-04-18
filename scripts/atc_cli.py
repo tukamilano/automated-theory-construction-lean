@@ -256,9 +256,7 @@ def _cycle_command(args: argparse.Namespace, config: AppConfig) -> tuple[list[st
             ("--seed-count", config.runtime.seed_count),
             ("--open-problem-failure-threshold", config.runtime.open_problem_failure_threshold),
             ("--prover-retry-budget-sec", config.runtime.prover_retry_budget_sec),
-            ("--paper-claim-retry-budget-sec", config.runtime.formalization_retry_budget_sec),
             ("--max-same-error-streak", config.runtime.max_same_error_streak),
-            ("--batch-generator-open-target-min", args.batch_generator_open_target_min),
         ],
     )
     _append_bool_flag(
@@ -273,50 +271,6 @@ def _cycle_command(args: argparse.Namespace, config: AppConfig) -> tuple[list[st
     )
     if args.skip_verify:
         cmd.append("--skip-verify")
-    return cmd, build_worker_env(config)
-
-
-def _paper_claim_command(args: argparse.Namespace, config: AppConfig) -> tuple[list[str], dict[str, str]]:
-    cmd = _python_command("paper_claim/run_paper_claim_session.py")
-    cmd.append("--enable-worker")
-    open_problem_failure_threshold = (
-        args.open_problem_failure_threshold
-        if args.open_problem_failure_threshold is not None
-        else config.runtime.open_problem_failure_threshold
-    )
-    batch_generator_seed_count = (
-        args.batch_generator_seed_count if args.batch_generator_seed_count is not None else config.runtime.seed_count
-    )
-    _append_flag(cmd, "--theory-file", args.theory_file or config.paths.theory_file)
-    _append_flag(cmd, "--derived-file", args.derived_file or config.paths.derived_file)
-    _append_flag(cmd, "--scratch-file", args.scratch_file or config.paths.scratch_file)
-    _append_flag(cmd, "--data-dir", args.data_dir or config.paths.data_dir)
-    _append_flag(
-        cmd,
-        "--phase-attempts-file",
-        args.phase_attempts_file,
-    )
-    _append_flag(cmd, "--session-events-file", getattr(args, "session_events_file", None))
-    _append_flag(cmd, "--resume-from-session-events-file", getattr(args, "resume_from_session_events_file", None))
-    _append_flag(cmd, "--resume-plan-id", getattr(args, "resume_plan_id", None))
-    _append_flag(cmd, "--run-id", args.run_id)
-    _append_flag(cmd, "--current-iteration", args.current_iteration)
-    _append_bool_flag(
-        cmd,
-        "--phase-logs",
-        config.runtime.phase_logs if args.phase_logs is None else args.phase_logs,
-    )
-    if args.skip_verify:
-        cmd.append("--skip-verify")
-    _append_flag(cmd, "--verify-timeout", args.verify_timeout)
-    _append_flag(
-        cmd,
-        "--paper-claim-retry-budget-sec",
-        args.paper_claim_retry_budget_sec if args.paper_claim_retry_budget_sec is not None else config.runtime.formalization_retry_budget_sec,
-    )
-    _append_flag(cmd, "--open-problem-failure-threshold", open_problem_failure_threshold)
-    _append_flag(cmd, "--batch-generator-seed-count", batch_generator_seed_count)
-    _append_flag(cmd, "--batch-generator-open-target-min", args.batch_generator_open_target_min)
     return cmd, build_worker_env(config)
 
 
@@ -427,7 +381,7 @@ def _build_parser() -> argparse.ArgumentParser:
     _add_initialize_phase_flags(loop, default=None)
     _add_loop_tuning_flags(loop)
 
-    cycle = subparsers.add_parser("cycle", help="Run one cycle: loop -> paper claim -> refactor -> snapshot.")
+    cycle = subparsers.add_parser("cycle", help="Run one cycle: loop -> refactor -> snapshot.")
     _add_common_flags(cycle)
     _add_worker_flags(cycle, include_refactor_task=True)
     _add_loop_task_worker_flags(cycle)
@@ -441,7 +395,6 @@ def _build_parser() -> argparse.ArgumentParser:
     cycle.add_argument("--skip-verify", action="store_true")
     cycle.add_argument("--initialize-on-start", action=argparse.BooleanOptionalAction, default=None)
     cycle.add_argument("--phase-logs", action=argparse.BooleanOptionalAction, default=None)
-    cycle.add_argument("--batch-generator-open-target-min", type=int, default=2)
 
     pipeline = subparsers.add_parser("pipeline", help="Run seed -> loop -> preview copy -> alpha-dedupe -> rewrite -> review.")
     _add_common_flags(pipeline)
@@ -460,31 +413,6 @@ def _build_parser() -> argparse.ArgumentParser:
     _add_pipeline_artifact_flags(pipeline, include_review_output_file=True)
     _add_review_flags(pipeline)
     _add_pipeline_refactor_toggles(pipeline, default=None)
-
-    def _add_paper_claim_parser(name: str, help_text: str) -> None:
-        parser = subparsers.add_parser(name, help=help_text)
-        _add_common_flags(parser)
-        _add_worker_flags(parser)
-        _add_loop_task_worker_flags(parser)
-        parser.add_argument("--theory-file")
-        parser.add_argument("--derived-file")
-        parser.add_argument("--scratch-file")
-        parser.add_argument("--data-dir")
-        parser.add_argument("--phase-attempts-file")
-        parser.add_argument("--session-events-file")
-        parser.add_argument("--resume-from-session-events-file")
-        parser.add_argument("--resume-plan-id")
-        parser.add_argument("--run-id")
-        parser.add_argument("--current-iteration", type=int)
-        parser.add_argument("--phase-logs", action=argparse.BooleanOptionalAction, default=None)
-        parser.add_argument("--skip-verify", action="store_true")
-        parser.add_argument("--verify-timeout", type=int)
-        parser.add_argument("--paper-claim-retry-budget-sec", type=int)
-        parser.add_argument("--open-problem-failure-threshold", type=int)
-        parser.add_argument("--batch-generator-seed-count", type=int)
-        parser.add_argument("--batch-generator-open-target-min", type=int)
-
-    _add_paper_claim_parser("paper-claim", "Run a one-shot paper claim session.")
 
     review = subparsers.add_parser("review", help="Run the second review-polish pass.")
     _add_common_flags(review)
@@ -578,7 +506,6 @@ def main() -> int:
         "loop": _loop_command,
         "cycle": _cycle_command,
         "pipeline": _pipeline_command,
-        "paper-claim": _paper_claim_command,
         "rewrite": _rewrite_command,
         "review": _review_command,
         "extract-derived-deps": _extract_derived_deps_command,

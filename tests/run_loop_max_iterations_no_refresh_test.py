@@ -59,16 +59,11 @@ def main() -> int:
             max_iterations=1,
             parallel_sessions=1,
             open_problem_failure_threshold=2,
-            main_theorem_interval=0,
             seed_count=7,
             skip_verify=True,
             max_same_error_streak=5,
             prover_retry_budget_sec=120,
             formalization_retry_budget_sec=300,
-            main_theorem_verify_timeout=600,
-            main_theorem_formalization_retry_budget_sec=3600,
-            main_theorem_formalize_worker_timeout=900,
-            main_theorem_repair_worker_timeout=600,
         )
 
         refresh_calls: list[int] = []

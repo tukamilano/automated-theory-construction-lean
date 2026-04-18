@@ -25,7 +25,6 @@ The recommended end-to-end path is:
 2. Build the materials cache.
 3. Regenerate `AutomatedTheoryConstruction/research_agenda.md` from that report.
 4. Run the main seed -> loop -> refactor pipeline.
-5. Run a one-shot paper-claim session.
 
 Prerequisites:
 
@@ -41,10 +40,9 @@ make build
 make materials-cache
 make research-agenda REPORT_FILE=materials/your_report.md
 make seed-loop-refactor-derived
-make paper-claim
 ```
 
-This builds the project, refreshes `data/materials_cache`, writes `AutomatedTheoryConstruction/research_agenda.md`, runs the main loop plus whole-file refactor path on `Derived.lean`, and then runs a paper-claim session.
+This builds the project, refreshes `data/materials_cache`, writes `AutomatedTheoryConstruction/research_agenda.md`, and runs the main loop plus whole-file refactor path on `Derived.lean`.
 
 For subsequent iterations after the first `make seed-loop-refactor-derived`, prefer `make loop-continue-refactor-derived` so the loop/refactor cycle continues from the current runtime state instead of resetting it.
 If you want to continue only the loop without the refactor stages, use `make loop-continue`.
@@ -81,7 +79,7 @@ Start with the doc hub: [`docs/README.md`](docs/README.md)
 - `scripts/atc_cli.py`: unified operational CLI
 
 `materials/` is the recommended home for deep research that you want the system to reuse later.
-Treat it as external research context, not as part of the core runtime state: the loop may consult it for seed generation, prioritization, expansion, and paper-claim positioning, but it should not be folded into `theory_state.json`.
+Treat it as external research context, not as part of the core runtime state: the loop may consult it for seed generation, prioritization, and expansion, but it should not be folded into `theory_state.json`.
 Also treat summary reports in `materials/` as potentially time-sensitive: they are useful for context, but source-link lists or primary papers should win when novelty or closest-known-result judgment matters.
 
 To regenerate `AutomatedTheoryConstruction/research_agenda.md` from a deep-research report, use:

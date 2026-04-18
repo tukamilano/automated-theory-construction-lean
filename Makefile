@@ -27,11 +27,10 @@ SEED_ARGS ?=
 LOOP_ARGS ?=
 CYCLE_ARGS ?=
 PIPELINE_ARGS ?=
-PAPER_CLAIM_ARGS ?=
 REWRITE_ARGS ?=
 REVIEW_ARGS ?=
 
-.PHONY: help build check check-theory check-derived check-scratch smoke test seed seed-loop-refactor-derived loop loop-continue loop-refactor-derived loop-continue-refactor-derived cycle pipeline paper-claim theorem-dedupe alpha-dedupe rewrite review refactor-derived research-agenda materials-cache materials-derive data-migrate-layout-dry-run data-migrate-layout
+.PHONY: help build check check-theory check-derived check-scratch smoke test seed seed-loop-refactor-derived loop loop-continue loop-refactor-derived loop-continue-refactor-derived cycle pipeline theorem-dedupe alpha-dedupe rewrite review refactor-derived research-agenda materials-cache materials-derive data-migrate-layout-dry-run data-migrate-layout
 
 help:
 	@printf '%s\n' \
@@ -44,14 +43,13 @@ help:
 		'  make smoke         - isolated mock-worker smoke test in a temp repo copy' \
 		'  make test          - run all tests under tests/*_test.py' \
 		'  make seed          - generate seeds.jsonl via scripts/atc_cli.py seed' \
-		'  make seed-loop-refactor-derived - run seed -> loop -> theorem-dedupe -> pass1.5 -> pass2 -> update Derived.lean' \
+		'  make seed-loop-refactor-derived - run materials-cache -> seed -> loop -> theorem-dedupe -> pass1.5 -> pass2 -> update Derived.lean' \
 		'  make loop          - run the default worker loop via scripts/atc_cli.py loop' \
 		'  make loop-continue - same as loop, but keep current runtime state' \
 		'  make loop-refactor-derived - run loop -> theorem-dedupe -> pass1.5 -> pass2 -> update Derived.lean' \
 		'  make loop-continue-refactor-derived - run loop-continue -> theorem-dedupe -> pass1.5 -> pass2 -> update Derived.lean using $(CONTINUE_CONFIG)' \
-		'  make cycle         - run one cycle: loop -> paper claim -> refactor -> snapshot' \
+		'  make cycle         - run one cycle: loop -> refactor -> snapshot' \
 		'  make pipeline      - run seed -> loop -> theorem-dedupe -> rewrite -> review via scripts/atc_cli.py pipeline' \
-		'  make paper-claim   - run a one-shot paper claim session via scripts/atc_cli.py paper-claim' \
 		'  make theorem-dedupe - delete later theorems whose theorem types are definitionally equivalent' \
 		'  make rewrite       - run scripts/atc_cli.py rewrite' \
 		'  make review        - run scripts/atc_cli.py review' \
@@ -73,7 +71,6 @@ help:
 		'  SEED_ARGS="--context-file path/to/context.tex --seed-count 4"' \
 		'  LOOP_ARGS="--max-iterations 40"' \
 		'  CYCLE_ARGS="--cycle-iterations 20 --snapshot-root snapshots"' \
-		'  PAPER_CLAIM_ARGS="--skip-verify --current-iteration 0"' \
 		'  PIPELINE_ARGS="--context-file path/to/context.tex --max-iterations 40"'
 
 build:
@@ -113,7 +110,9 @@ seed:
 		--seeds-file $(SEEDS_FILE) \
 		$(SEED_ARGS)
 
-seed-loop-refactor-derived: seed loop-refactor-derived
+# Keep the combined seed -> loop -> refactor flow aligned with the latest
+# materials-derived artifacts and data/materials_cache before seed generation.
+seed-loop-refactor-derived: materials-cache seed loop-refactor-derived
 
 materials-cache:
 	$(PYTHON) scripts/materials_sync.py --materials-dir materials
@@ -165,14 +164,6 @@ pipeline:
 		--preview-file $(PREVIEW_FILE) \
 		--review-output-file $(REVIEWED_FILE) \
 		$(PIPELINE_ARGS)
-
-paper-claim:
-	$(ATC) paper-claim \
-		$(ATC_COMMON_ARGS) \
-		--theory-file $(THEORY_FILE) \
-		--derived-file $(DERIVED_FILE) \
-		--scratch-file $(SCRATCH_FILE) \
-		$(PAPER_CLAIM_ARGS)
 
 theorem-dedupe alpha-dedupe:
 	cp $(DERIVED_FILE) $(PREVIEW_FILE)

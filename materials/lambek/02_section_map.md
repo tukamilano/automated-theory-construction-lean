@@ -30,8 +30,3 @@
 - Prefer candidates that align with the report's main themes, scope, and stated research pressure.
 - Down-rank candidates that only tweak one local example, derivation path, or implementation detail without changing the report-level picture.
 - Use the report to distinguish broad contribution vs. local continuation, central claim vs. side observation, and real extension vs. rediscovery.
-
-## Paper Claim Deep Access
-
-- Start from the main report when candidate construction depends on the report's main claims, scope, or future-direction framing.
-- Read `03_source_links.md` when closest-known-result checks or literature positioning depend on cited sources rather than only the report summary.

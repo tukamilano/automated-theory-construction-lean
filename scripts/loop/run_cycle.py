@@ -49,10 +49,8 @@ class RefactorPaths:
 @dataclass
 class CycleStatus:
     loop_status: str
-    paper_claim_status: str
     refactor_status: str
     fatal_stage: str
-    paper_claim_report: dict[str, Any]
     current_iteration: int
 
 
@@ -139,19 +137,6 @@ def _write_cycle_manifest(snapshot_dir: Path, payload: dict[str, Any]) -> None:
     )
 
 
-def _summarize_paper_claim_report(report: dict[str, Any]) -> dict[str, Any]:
-    return {
-        "status": str(report.get("status", "")),
-        "processed": bool(report.get("processed", False)),
-        "verify_success": bool(report.get("verify_success", False)),
-        "candidate_id": str(report.get("candidate_id", "")),
-        "theorem_name": str(report.get("theorem_name", "")),
-        "stored_expand_row_count": len(report.get("stored_expand_rows", [])),
-        "followup_candidate_count": len(report.get("followup_candidates", [])),
-        "post_theorem_expand_candidate_count": len(report.get("post_theorem_expand_candidates", [])),
-    }
-
-
 def _resolve_refactor_paths(args: argparse.Namespace, *, data_dir: Path, cycle_id: str) -> RefactorPaths:
     artifact_dir = refactor_data_dir(data_dir) / cycle_id
     return RefactorPaths(
@@ -211,72 +196,6 @@ def _run_loop_stage(
     _append_flag(loop_cmd, "--formalization-retry-budget-sec", args.formalization_retry_budget_sec)
     _append_flag(loop_cmd, "--max-same-error-streak", args.max_same_error_streak)
     return _run_stage("loop", loop_cmd, env=env)
-
-
-def _run_paper_claim_stage(
-    *,
-    args: argparse.Namespace,
-    env: dict[str, str],
-    theory_file: Path,
-    derived_file: Path,
-    scratch_file: Path,
-    data_dir: Path,
-    cycle_id: str,
-    current_iteration: int,
-    phase_attempts_file: Path | None,
-) -> tuple[str, dict[str, Any]]:
-    with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as tmp:
-        report_file = Path(tmp.name)
-    try:
-        paper_claim_cmd = [
-            sys.executable,
-            _script_path("paper_claim/run_paper_claim_session.py"),
-            "--enable-worker",
-            "--theory-file",
-            str(theory_file),
-            "--derived-file",
-            str(derived_file),
-            "--scratch-file",
-            str(scratch_file),
-            "--data-dir",
-            str(data_dir),
-            "--run-id",
-            cycle_id,
-            "--current-iteration",
-            str(current_iteration),
-            "--report-file",
-            str(report_file),
-            "--batch-generator-seed-count",
-            str(args.seed_count),
-            "--batch-generator-open-target-min",
-            str(args.batch_generator_open_target_min),
-            "--open-problem-failure-threshold",
-            str(args.open_problem_failure_threshold),
-            "--paper-claim-retry-budget-sec",
-            str(args.formalization_retry_budget_sec),
-        ]
-        _append_flag(paper_claim_cmd, "--phase-attempts-file", phase_attempts_file)
-        _append_flag(paper_claim_cmd, "--worker-command", args.worker_command)
-        _append_flag(paper_claim_cmd, "--worker-timeout", args.worker_timeout)
-        _append_bool_flag(paper_claim_cmd, "--phase-logs", bool(args.phase_logs))
-        if args.skip_verify:
-            paper_claim_cmd.append("--skip-verify")
-        paper_claim_returncode = _run_stage("paper-claim", paper_claim_cmd, env=env)
-        paper_claim_report = (
-            json.loads(report_file.read_text(encoding="utf-8"))
-            if report_file.exists()
-            else {}
-        )
-        if paper_claim_returncode != 0 and not paper_claim_report:
-            paper_claim_report = {
-                "status": "paper_claim_error",
-                "processed": False,
-                "verify_success": False,
-            }
-        paper_claim_status = str(paper_claim_report.get("status", "ok" if paper_claim_returncode == 0 else "error"))
-        return paper_claim_status, paper_claim_report
-    finally:
-        report_file.unlink(missing_ok=True)
 
 
 def _run_refactor_stage(
@@ -406,9 +325,7 @@ def _write_cycle_snapshot(
             "target_iteration": target_iteration,
             "end_iteration": status.current_iteration,
             "loop_status": status.loop_status,
-            "paper_claim_status": status.paper_claim_status,
             "refactor_status": status.refactor_status,
-            "paper_claim_report": _summarize_paper_claim_report(status.paper_claim_report),
             "paths": {
                 "theory_file": str(theory_file),
                 "product_file": str(product_file),
@@ -427,7 +344,7 @@ def _write_cycle_snapshot(
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Run one ATC cycle: loop -> paper claim -> refactor -> snapshot.")
+    parser = argparse.ArgumentParser(description="Run one ATC cycle: loop -> refactor -> snapshot.")
     parser.add_argument("--theory-file", default="AutomatedTheoryConstruction/Theory.lean")
     parser.add_argument("--derived-file", default="AutomatedTheoryConstruction/Derived.lean")
     parser.add_argument("--scratch-file", default="AutomatedTheoryConstruction/Scratch.lean")
@@ -439,7 +356,6 @@ def main() -> int:
     parser.add_argument("--cycle-iterations", type=int, default=20)
     parser.add_argument("--parallel-sessions", type=int, default=1)
     parser.add_argument("--seed-count", type=int, default=4)
-    parser.add_argument("--batch-generator-open-target-min", type=int, default=2)
     parser.add_argument("--open-problem-failure-threshold", type=int, default=2)
     parser.add_argument("--prover-retry-budget-sec", type=int, default=120)
     parser.add_argument("--formalization-retry-budget-sec", type=int, default=300)
@@ -464,10 +380,8 @@ def main() -> int:
     env = os.environ.copy()
     status = CycleStatus(
         loop_status="pending",
-        paper_claim_status="pending",
         refactor_status="pending",
         fatal_stage="",
-        paper_claim_report={},
         current_iteration=start_iteration,
     )
 
@@ -482,18 +396,6 @@ def main() -> int:
         if loop_returncode != 0:
             status.fatal_stage = "loop"
             return 1
-
-        status.paper_claim_status, status.paper_claim_report = _run_paper_claim_stage(
-            args=args,
-            env=env,
-            theory_file=theory_file,
-            derived_file=derived_file,
-            scratch_file=scratch_file,
-            data_dir=data_dir,
-            cycle_id=cycle_id,
-            current_iteration=status.current_iteration,
-            phase_attempts_file=phase_attempts_file,
-        )
 
         status.refactor_status = _run_refactor_stage(
             args=args,

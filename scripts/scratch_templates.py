@@ -17,7 +17,6 @@ def module_exists(module_name: str, *, repo_root: Path = DEFAULT_REPO_ROOT) -> b
 def scratch_import_modules(*, repo_root: Path = DEFAULT_REPO_ROOT) -> list[str]:
     modules = ["Mathlib"]
     for module_name in (
-        "AutomatedTheoryConstruction.Lambek",
         "AutomatedTheoryConstruction.Derived",
     ):
         if module_exists(module_name, repo_root=repo_root):

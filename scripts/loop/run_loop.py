@@ -26,7 +26,6 @@ from atc_paths import loop_data_dir
 from atc_paths import loop_expand_candidates_path
 from atc_paths import loop_formalization_memory_path
 from atc_paths import loop_open_problems_path
-from atc_paths import loop_paper_claim_rejection_memory_path
 from atc_paths import loop_solved_problems_path
 from atc_paths import loop_theorem_reuse_memory_path
 from proof_packets import (
@@ -2456,7 +2455,6 @@ def initialize_runtime_state(
         derived_file=derived_file,
         open_problem_rows=seed_rows,
         archived_problems_file=archived_problems_file,
-        clear_paper_claim_rejection_memory=True,
     )
     reset_loop_work_files(
         scratch_file=scratch_file,
@@ -2487,7 +2485,6 @@ def capture_continuation_runtime_snapshot(
         loop_solved_problems_path(data_dir),
         loop_counterexamples_path(data_dir),
         loop_theorem_reuse_memory_path(data_dir),
-        loop_paper_claim_rejection_memory_path(data_dir),
         theory_state_path(data_dir),
         formalization_memory_file,
         scratch_file,

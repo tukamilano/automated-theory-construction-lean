@@ -92,7 +92,7 @@ uv run python scripts/atc_cli.py seed \
 ```
 
 For reusable domain knowledge, prefer curating it under `materials/` instead of repeatedly passing one-off files.
-That keeps deep research available across prioritization, expansion, and paper-claim work.
+That keeps deep research available across prioritization and expansion work.
 Gemini Deep Research is the recommended default for producing those reports.
 When a report may be out of date, keep the report for structure and wording, but use source-link bundles for novelty checks and literature positioning.
 

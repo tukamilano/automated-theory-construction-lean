@@ -37,14 +37,9 @@
     "run_seed": true,
     "run_refactor_pass_1_5": false,
     "run_refactor_pass_2": false,
-    "run_paper_claim_session": true,
     "try_at_each_step_tactic": "with_reducible exact?",
     "open_problem_failure_threshold": 2,
-    "paper_claim_interval": 2,
-    "paper_claim_formalize_worker_timeout": 60,
-    "paper_claim_repair_worker_timeout": 60,
-    "paper_claim_verify_timeout": 60,
-    "paper_claim_formalization_retry_budget_sec": 120
+    "formalization_retry_budget_sec": 120
   },
   "logging": {
     "console_level": "info",

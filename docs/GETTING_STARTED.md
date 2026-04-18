@@ -81,12 +81,11 @@ make build
 make materials-cache
 make research-agenda REPORT_FILE=materials/your_report.md
 make seed-loop-refactor-derived
-make paper-claim
 ```
 
 This is the recommended path when you have a real deep-research report under `materials/`.
 Gemini Deep Research is the recommended default for producing that report.
-It refreshes `data/materials_cache`, rewrites `AutomatedTheoryConstruction/research_agenda.md`, runs the main loop plus whole-file refactor path on `Derived.lean`, and then runs a one-shot paper-claim session.
+It refreshes `data/materials_cache`, rewrites `AutomatedTheoryConstruction/research_agenda.md`, and runs the main loop plus whole-file refactor path on `Derived.lean`.
 After the first run, prefer:
 
 ```bash

@@ -22,9 +22,6 @@ def main() -> int:
         legacy_refactor_dir = data_root / "pipeline_artifacts"
         legacy_refactor_dir.mkdir(parents=True, exist_ok=True)
         (legacy_refactor_dir / "derived-deps.json").write_text("{}\n", encoding="utf-8")
-        legacy_paper_claim_dir = data_root / "paper-claim-session"
-        legacy_paper_claim_dir.mkdir(parents=True, exist_ok=True)
-        (legacy_paper_claim_dir / "paper_claim.events.jsonl").write_text('{"event":"x"}\n', encoding="utf-8")
 
         plans = migrate_data_layout.build_move_plan(data_root)
         errors = migrate_data_layout.validate_move_plan(plans)
@@ -38,15 +35,12 @@ def main() -> int:
             data_root / "loop" / "open_problems.jsonl",
             data_root / "loop" / "theory_state.json",
             data_root / "refactor" / "derived-deps.json",
-            data_root / "paper_claim" / "paper-claim-session" / "paper_claim.events.jsonl",
         ]
         for path in expected_paths:
             if not path.exists():
                 raise RuntimeError(f"expected migrated path missing: {path}")
         if (data_root / "pipeline_artifacts").exists():
             raise RuntimeError("legacy pipeline_artifacts dir should have been removed after migration")
-        if (data_root / "paper-claim-session").exists():
-            raise RuntimeError("legacy paper-claim-session dir should have been removed after migration")
 
     with tempfile.TemporaryDirectory() as tmpdir:
         data_root = Path(tmpdir) / "data"

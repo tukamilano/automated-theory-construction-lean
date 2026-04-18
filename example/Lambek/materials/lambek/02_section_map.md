@@ -28,10 +28,3 @@
 - Down-rank candidates that do not connect to the report's structural themes and only produce narrow local continuation.
 - Use the report to distinguish:
   special case vs. generalization, local lemma vs. structural bridge, and benchmark rediscovery vs. research-facing problem.
-
-## Main Theorem Deep Access
-
-- Read the main report directly when:
-  the candidate depends on a completeness boundary, a decidability boundary, a separation claim, or a syntax-semantics preservation claim.
-- Read `03_source_links.md` when:
-  a candidate's novelty, closest known result, or intended comparison depends on a cited paper rather than only the report summary.

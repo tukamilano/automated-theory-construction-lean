@@ -12,8 +12,6 @@ from atc_paths import COUNTEREXAMPLES_FILENAME
 from atc_paths import EXPAND_CANDIDATES_FILENAME
 from atc_paths import FORMALIZATION_MEMORY_FILENAME
 from atc_paths import OPEN_PROBLEMS_FILENAME
-from atc_paths import PAPER_CLAIM_DIRNAME
-from atc_paths import PAPER_CLAIM_REJECTION_MEMORY_FILENAME
 from atc_paths import REFRACTOR_DIRNAME
 from atc_paths import SOLVED_PROBLEMS_FILENAME
 from atc_paths import THEOREM_REUSE_MEMORY_FILENAME
@@ -36,7 +34,6 @@ def _legacy_loop_moves(data_root: Path) -> list[MovePlan]:
         MovePlan(data_root / COUNTEREXAMPLES_FILENAME, data_root / "loop" / COUNTEREXAMPLES_FILENAME),
         MovePlan(data_root / FORMALIZATION_MEMORY_FILENAME, data_root / "loop" / FORMALIZATION_MEMORY_FILENAME),
         MovePlan(data_root / THEOREM_REUSE_MEMORY_FILENAME, data_root / "loop" / THEOREM_REUSE_MEMORY_FILENAME),
-        MovePlan(data_root / PAPER_CLAIM_REJECTION_MEMORY_FILENAME, data_root / "loop" / PAPER_CLAIM_REJECTION_MEMORY_FILENAME),
         MovePlan(data_root / THEORY_STATE_FILENAME, data_root / "loop" / THEORY_STATE_FILENAME),
         MovePlan(data_root / EXPAND_CANDIDATES_FILENAME, data_root / "loop" / EXPAND_CANDIDATES_FILENAME),
         MovePlan(data_root / LEGACY_DEFERRED_PROBLEMS_FILENAME, data_root / "loop" / LEGACY_DEFERRED_PROBLEMS_FILENAME),
@@ -58,15 +55,6 @@ def _legacy_dir_moves(data_root: Path, source_dir_name: str, destination_dir: Pa
 def build_move_plan(data_root: Path) -> list[MovePlan]:
     plans = [plan for plan in _legacy_loop_moves(data_root) if plan.source.exists()]
     plans.extend(_legacy_dir_moves(data_root, "pipeline_artifacts", data_root / REFRACTOR_DIRNAME))
-    plans.extend(_legacy_dir_moves(data_root, "paper-claim-session", data_root / PAPER_CLAIM_DIRNAME / "paper-claim-session"))
-    legacy_root_paper_claim_event = data_root / "paper-claim.events.jsonl"
-    if legacy_root_paper_claim_event.exists():
-        plans.append(
-            MovePlan(
-                legacy_root_paper_claim_event,
-                data_root / PAPER_CLAIM_DIRNAME / "paper-claim-session" / "paper_claim.events.jsonl",
-            )
-        )
     return plans
 
 
@@ -107,7 +95,6 @@ def apply_move_plan(plans: list[MovePlan]) -> None:
 def cleanup_empty_legacy_dirs(data_root: Path) -> None:
     for path in (
         data_root / "pipeline_artifacts",
-        data_root / "paper-claim-session",
     ):
         if path.exists() and path.is_dir() and not any(path.iterdir()):
             path.rmdir()

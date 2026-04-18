@@ -7,7 +7,7 @@ This directory organizes the materials derived from `Lambek_Calculus_Structural_
 - `../Lambek_Calculus_Structural_Theory_Research.md`
   The main report. Use this when wording, context, or references matter.
 - `02_section_map.md`
-  Section-to-task map for problem generation, problem evaluation, and paper claim work.
+  Section-to-task map for problem generation and problem evaluation.
 - `03_source_links.md`
   Reference list extracted from the report for direct paper access.
 
@@ -17,5 +17,3 @@ This directory organizes the materials derived from `Lambek_Calculus_Structural_
   Read `02_section_map.md` first. Use the main report when a section needs more context.
 - Problem evaluation:
   Read `02_section_map.md` first. Use the main report when deciding whether a candidate is central, duplicative, or merely local.
-- Paper claim session:
-  Start from the main report and `03_source_links.md` when candidate construction or novelty pressure depends on the literature.
