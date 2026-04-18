@@ -3,6 +3,8 @@
 Automated Theory Construction (ATC) is a Lean 4 workflow for building verified theory from a small axiom base.
 Instead of aiming at one hand-picked theorem, the system generates candidate statements, formalizes them, verifies them in Lean, and accumulates successful results into a growing derived theory.
 
+![ATC screenshot](assets/readme-screenshot.png)
+
 ## Core Idea
 
 > Do not aim directly at the final theorem. Generate the surrounding structure until the theorem becomes inevitable.
